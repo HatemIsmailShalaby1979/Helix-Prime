@@ -29,10 +29,16 @@ ENV/
 node_modules/
 dist/
 
-# Logs
+# Logs & local databases (C2/C3: do not commit workflow.db)
 *.log
 *.sqlite
 *.sqlite-journal
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+control_plane/workflow.db
+control_plane/*.db
 !engines/wfm/src/data/*.csv
 cockpit/memory/cognitive_log.jsonl
 cockpit/memory/cognitive_log.sqlite

@@ -72,18 +72,20 @@ class Store:
         """
         Idempotent creation: if idempotency_key already exists, return existing workflow.
         Otherwise insert new workflow and emit workflow_created event via caller (not here).
+        Uses BEGIN IMMEDIATE for safe concurrent check-then-insert.
         """
         cur = self.conn.cursor()
-        # Check idempotency
-        cur.execute("SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,))
-        row = cur.fetchone()
-        if row is not None:
-            # Return existing workflow (do not duplicate)
-            data = json.loads(row[0])
-            return Workflow.from_dict(data)
-        # Insert new
-        data_json = json.dumps(workflow.to_dict())
         try:
+            cur.execute("BEGIN IMMEDIATE")
+            # Check idempotency inside transaction
+            cur.execute("SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,))
+            row = cur.fetchone()
+            if row is not None:
+                self.conn.execute("ROLLBACK")
+                data = json.loads(row[0])
+                return Workflow.from_dict(data)
+            # Insert new
+            data_json = json.dumps(workflow.to_dict())
             cur.execute(
                 "INSERT INTO workflows (workflow_id, idempotency_key, correlation_id, data, updated_at) VALUES (?, ?, ?, ?, ?)",
                 (
@@ -96,6 +98,10 @@ class Store:
             )
             self.conn.commit()
         except sqlite3.IntegrityError as e:
+            try:
+                self.conn.execute("ROLLBACK")
+            except Exception:
+                pass
             # Race: another insert with same idempotency_key succeeded
             cur.execute("SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,))
             row = cur.fetchone()
@@ -103,6 +109,12 @@ class Store:
                 data = json.loads(row[0])
                 return Workflow.from_dict(data)
             raise ValueError(f"Store.create_workflow integrity error: {e}") from e
+        except Exception:
+            try:
+                self.conn.execute("ROLLBACK")
+            except Exception:
+                pass
+            raise
         return workflow
 
     def get_workflow(self, workflow_id: str) -> Optional[Workflow]:
@@ -148,34 +160,42 @@ class Store:
         - event_id unique
         - per-aggregate sequence must be exactly next (0,1,2...) — detects duplicate/out-of-order
         - idempotency: if same event_id already exists, return existing (idempotent)
+        Uses BEGIN IMMEDIATE for safe per-aggregate sequence enforcement.
         """
         cur = self.conn.cursor()
-        # Idempotency: if event_id already exists, return existing
-        cur.execute("SELECT data FROM events WHERE event_id = ?", (event.event_id,))
-        row = cur.fetchone()
-        if row is not None:
-            data = json.loads(row[0])
-            return Event.from_dict(data)
-
-        # Check sequence: must be next for this aggregate
-        cur.execute("SELECT MAX(sequence) FROM events WHERE aggregate_id = ?", (event.aggregate_id,))
-        row = cur.fetchone()
-        max_seq = row[0] if row[0] is not None else -1
-        expected = max_seq + 1
-        if event.sequence != expected:
-            raise ValueError(
-                f"Store.append_event: out-of-order sequence for {event.aggregate_id!r}: "
-                f"expected {expected}, got {event.sequence} (max existing {max_seq})"
-            )
-
-        data_json = json.dumps(event.to_dict())
         try:
+            cur.execute("BEGIN IMMEDIATE")
+            # Idempotency: if event_id already exists, return existing
+            cur.execute("SELECT data FROM events WHERE event_id = ?", (event.event_id,))
+            row = cur.fetchone()
+            if row is not None:
+                self.conn.execute("ROLLBACK")
+                data = json.loads(row[0])
+                return Event.from_dict(data)
+
+            # Check sequence: must be next for this aggregate
+            cur.execute("SELECT MAX(sequence) FROM events WHERE aggregate_id = ?", (event.aggregate_id,))
+            row = cur.fetchone()
+            max_seq = row[0] if row[0] is not None else -1
+            expected = max_seq + 1
+            if event.sequence != expected:
+                self.conn.execute("ROLLBACK")
+                raise ValueError(
+                    f"Store.append_event: out-of-order sequence for {event.aggregate_id!r}: "
+                    f"expected {expected}, got {event.sequence} (max existing {max_seq})"
+                )
+
+            data_json = json.dumps(event.to_dict())
             cur.execute(
                 "INSERT INTO events (event_id, aggregate_id, sequence, correlation_id, data, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                 (event.event_id, event.aggregate_id, event.sequence, event.correlation_id, data_json, event.timestamp),
             )
             self.conn.commit()
         except sqlite3.IntegrityError as e:
+            try:
+                self.conn.execute("ROLLBACK")
+            except Exception:
+                pass
             # Check if it's duplicate event_id
             cur.execute("SELECT data FROM events WHERE event_id = ?", (event.event_id,))
             row = cur.fetchone()
@@ -183,6 +203,12 @@ class Store:
                 data = json.loads(row[0])
                 return Event.from_dict(data)
             raise ValueError(f"Store.append_event integrity error: {e}") from e
+        except Exception:
+            try:
+                self.conn.execute("ROLLBACK")
+            except Exception:
+                pass
+            raise
         return event
 
     def get_events(self, aggregate_id: str) -> List[Event]:

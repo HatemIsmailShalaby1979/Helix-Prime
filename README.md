@@ -7,61 +7,88 @@ Helix Prime is a unified operations system with six business engines, four AI ag
 
 ## Current status
 
-Helix Prime is **alpha**. The repository is public and real. Core modules, the agents, the engines, the orchestrator, and the Operations Cockpit are present. Full agent inter-communication through the live UI is still pending, as are incremental improvements to automated test coverage and CI polish.
+Helix Prime is **alpha**. The repository is public and real. The Operations Cockpit is fully functional and can be launched locally. The six business engines, four AI agents, and content-based orchestrator are implemented. Full agent inter-communication through the live UI is still pending.
 
 There are no client deployments or production enterprise deployments to claim.
 
-## What is included
+## Quick Start (Windows)
 
-- **Six business engines:** WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, and CRM.
-- **Four AI agents:** SAMI, SUBY, PHILI, and WILI.
-- **Content-based routing:** the orchestrator routes requests based on their content.
-- **Operations Cockpit:** a Streamlit interface for the system.
-- **Local model connection:** the agents connect to Ollama.
-- **CI:** the repository has a live CI pipeline with pre-commit linting.
+### Option 1: One-click setup
 
-## Tech stack
+```batch
+setup.bat
+```
 
-- Local Ollama model connection
-- Streamlit Operations Cockpit
-- Six domain-specific business engines
-- Four-agent framework
-- Content-based orchestration
-- CI with pre-commit linting
+Then launch:
 
-## Setup
+```batch
+launch.bat
+```
 
-### Prerequisites
-
-- Python 3.13+
-- Optional: Ollama for local model inference
-
-### Run the Operations Cockpit
+### Option 2: Manual setup
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate     # Windows
 pip install -r cockpit/requirements.txt
-python launch.py --dash-only
+python launch.py
 ```
 
-The dashboard is available at `http://localhost:8501`.
+On macOS or Linux:
 
-On macOS or Linux, activate the environment with `source .venv/bin/activate`.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r cockpit/requirements.txt
+python launch.py
+```
+
+The cockpit opens at **http://127.0.0.1:8501**.
+
+### Optional: AI Agents
+
+For full agent functionality, install [Ollama](https://ollama.com) and pull a model:
+
+```bash
+ollama pull qwen2.5:1.5b
+```
+
+The cockpit works without Ollama — agents show as "Offline" but all other features are available.
+
+## What is included
+
+- **Operations Cockpit:** Streamlit dashboard with dark theme, real-time monitoring, and agent interface.
+- **Six business engines:** WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, and CRM.
+- **Four AI agents:** SAMI, SUBY, PHILI, and WILI.
+- **Content-based routing:** the orchestrator routes requests based on their content.
+- **Local model connection:** the agents connect to Ollama when available.
+
+## Tech stack
+
+- Python 3.10+
+- Streamlit Operations Cockpit
+- Six domain-specific business engines
+- Four-agent framework with Ollama integration
+- Content-based orchestration
+- Pre-commit linting with Ruff
 
 ## Repository layout
 
 ```text
+cockpit/                    Streamlit Operations Cockpit (start here)
 app/command_center/agents/  SAMI, SUBY, PHILI, and WILI
 engines/                    WFM, RTA, CX, B2B, Personnel, and CRM
 orchestration/              Content-based request routing
-cockpit/                    Streamlit Operations Cockpit
 api/                        API layer
 marketing/                  Project pages and assets
 ```
 
 ## Verification status
 
-The repository is alpha. The full live-UI proof of agent inter-communication is pending, and automated test coverage and CI polish remain ongoing work.
+- Operations Cockpit: verified launchable and functional
+- Six engines: implemented with individual READMEs
+- Four agents: implemented with base agent framework
+- Orchestrator: content-based routing implemented
+- Full live-UI agent inter-communication: pending
 
-Part of a larger body of work — see [Hatem Shalaby's profile](https://github.com/HatemShelby) for the full story.
+Part of a larger body of work — see [Hatem Shalaby's profile](https://github.com/HatemIsmailShalaby1979) for the full story.

@@ -2,13 +2,12 @@
 """
 Helix Prime - Unified Launcher
 ===============================
-Starts both the Flask webapp (helix-story) and the Streamlit dashboard
-(Ecosystem) from a single command.
+Starts the Streamlit Operations Cockpit.
 
 Usage:
-    python launch.py                    # start both
-    python launch.py --web-only         # start only webapp
-    python launch.py --dash-only        # start only dashboard
+    python launch.py                    # start cockpit
+    python launch.py --dash-only        # start cockpit (alias)
+    python launch.py --port 8502        # custom port
 """
 
 from __future__ import annotations
@@ -21,22 +20,12 @@ import time
 import urllib.request
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-WEBAPP_DIR = os.path.join(ROOT, 'helix-story')
-DASHBOARD_DIR = os.path.join(
-    ROOT, 'AI Automation Engineering', '04_helix_mini', 'Helix Prime Ecosystem'
-)
+COCKPIT_DIR = os.path.join(ROOT, 'cockpit')
+COCKPIT_APP = os.path.join(COCKPIT_DIR, 'cockpit.py')
 
-# Check if dashboard path exists; if not, warn user and disable dashboard launch
-if not os.path.exists(DASHBOARD_DIR):
-    print(f'Warning: Dashboard directory not found at {DASHBOARD_DIR}')
-    print('   Launching webapp only. To enable dashboard, ensure the module is present.')
-    DASHBOARD_DIR = None
-
-# Check if webapp path exists; if not, warn user and disable webapp launch
-if not os.path.exists(WEBAPP_DIR):
-    print(f'Warning: Webapp directory not found at {WEBAPP_DIR}')
-    print('   Launching dashboard only. To enable webapp, ensure helix-story is present.')
-    WEBAPP_DIR = None
+if not os.path.exists(COCKPIT_APP):
+    print(f'Error: Cockpit app not found at {COCKPIT_APP}')
+    sys.exit(1)
 
 processes = []
 
@@ -62,31 +51,13 @@ signal.signal(signal.SIGINT, handle_signal)
 signal.signal(signal.SIGTERM, handle_signal)
 
 
-def start_webapp():
-    if WEBAPP_DIR is None:
-        print('Skipping webapp: directory not found.')
-        return None
-    print('Starting Helix Prime Story (webapp) on http://localhost:5000')
-    env = os.environ.copy()
-    env['PORT'] = '5000'
-    env['PYTHONUNBUFFERED'] = '1'
+def start_cockpit(port=8501):
+    print(f'Starting Helix Prime Operations Cockpit on http://127.0.0.1:{port}')
     p = subprocess.Popen(
-        [sys.executable, 'app.py'],
-        cwd=WEBAPP_DIR,
-        env=env,
-    )
-    processes.append(p)
-    return p
-
-
-def start_dashboard():
-    if DASHBOARD_DIR is None:
-        print('Skipping dashboard: directory not found.')
-        return None
-    print('Starting Helix Prime Dashboard on http://localhost:8501')
-    p = subprocess.Popen(
-        [sys.executable, 'run.py'],
-        cwd=DASHBOARD_DIR,
+        [sys.executable, '-m', 'streamlit', 'run', COCKPIT_APP,
+         '--server.headless=true', f'--server.port={port}',
+         '--server.address=127.0.0.1'],
+        cwd=ROOT,
     )
     processes.append(p)
     return p
@@ -111,31 +82,23 @@ def wait_for_health(url: str, label: str, timeout: float = 30.0) -> bool:
 
 
 if __name__ == '__main__':
-    web_only = '--web-only' in sys.argv
-    dash_only = '--dash-only' in sys.argv
+    port = 8501
+    for i, arg in enumerate(sys.argv):
+        if arg == '--port' and i + 1 < len(sys.argv):
+            port = int(sys.argv[i + 1])
 
-    if not dash_only:
-        start_webapp()
-    if not web_only:
-        time.sleep(1.5)
-        start_dashboard()
+    start_cockpit(port)
 
     print()
-    print('Waiting for services to start...')
+    print('Waiting for cockpit to start...')
 
-    all_healthy = True
-    if WEBAPP_DIR and not dash_only:
-        all_healthy &= wait_for_health('http://localhost:5000/health', 'Webapp')
-    if DASHBOARD_DIR and not web_only:
-        all_healthy &= wait_for_health('http://localhost:8501', 'Dashboard')
-
-    if all_healthy:
+    if wait_for_health(f'http://127.0.0.1:{port}', 'Cockpit'):
         print()
-        print('All services are running!')
-        print('Press Ctrl+C to stop both services.')
+        print(f'Cockpit is running at http://127.0.0.1:{port}')
+        print('Press Ctrl+C to stop.')
     else:
         print()
-        print('Some services failed to start. See errors above.')
+        print('Cockpit failed to start. See errors above.')
         cleanup()
 
     try:

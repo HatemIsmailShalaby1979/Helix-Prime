@@ -1,0 +1,332 @@
+{
+  "version": "1.0.0",
+  "schema": "helix-prime/capability-matrix/v1",
+  "generated": "2026-08-27T18:00:00Z",
+  "commit": "1411df94d98ccc2c49b97baaec196b61e55df565",
+  "branch": "main",
+  "release_label": "alpha",
+  "classification": "C0_TRUTH_LOCK",
+  "note": "Machine-readable truth lock per Codex Phase C0. Replaces unverified claims in MASTER_STORY.md/CHANGE_LOG.md with filesystem-proven state. See GIT_HISTORY_RECONCILIATION.md.",
+  "agents": [
+    {
+      "name": "SAMI",
+      "role": "CEO / Strategist",
+      "gm_mapping": "Executive Coordinator (retains SAMI); also serves as interim Sales GM & Marketing fallback until dedicated GMs are instantiated",
+      "file": "app/command_center/agents/sami.py",
+      "base": "app/command_center/agents/base_agent.py",
+      "class": "SAMIAgent",
+      "registry": "AgentRegistry alias SAMI",
+      "model": "qwen3:8b",
+      "timeout_s": 120,
+      "lines_base": 430,
+      "lines_wrapper": 15,
+      "status": "implemented",
+      "evidence": "probe_agent_connection(SAMI) via AgentRegistry; can_run requires Ollama 11434",
+      "capabilities": ["strategic oversight", "resource allocation", "cross-department routing via call_agent"],
+      "tools": ["call_agent(PHILI|SUBY|WILI)", "call_llm(Ollama)"],
+      "ownership": "strategy, pipeline review (CRM), executive summary",
+      "known_gap": "No typed TaskRequest; inter-agent via LLM-invented call_agent() text, depth limit 5"
+    },
+    {
+      "name": "SUBY",
+      "role": "Operations Executive",
+      "gm_mapping": "OPS GM (maps 1:1)",
+      "file": "app/command_center/agents/suby.py",
+      "base": "app/command_center/agents/base_agent.py",
+      "class": "SUBYAgent",
+      "registry": "SUBY",
+      "model": "qwen3:8b",
+      "timeout_s": 120,
+      "lines_base": 430,
+      "lines_wrapper": 14,
+      "status": "implemented",
+      "evidence": "probe_agent_connection(SUBY)",
+      "capabilities": ["operational KPI analysis", "staffing/service-level/shrinkage/handle-time reasoning"],
+      "tools": ["call_agent(PHILI|WILI|SAMI)"],
+      "ownership": "WFM/RTA/CX operational execution",
+      "known_gap": "Same as SAMI - no engine typed adapter, data seeded via cockpit synthetic when engine unavailable"
+    },
+    {
+      "name": "PHILI",
+      "role": "Personnel Director",
+      "gm_mapping": "HR & Personnel GM (maps 1:1)",
+      "file": "app/command_center/agents/phili.py",
+      "base": "app/command_center/agents/base_agent.py",
+      "class": "PHILIAgent",
+      "registry": "PHILI",
+      "model": "qwen3:8b",
+      "timeout_s": 120,
+      "lines_base": 430,
+      "lines_wrapper": 14,
+      "status": "implemented",
+      "evidence": "probe_agent_connection(PHILI)",
+      "capabilities": ["talent lifecycle", "headcount/pipeline/attrition modeling"],
+      "tools": ["call_agent(SUBY|WILI|SAMI)"],
+      "ownership": "Personnel engine + WFM inputs",
+      "known_gap": "No typed hiring workflow; bias/privacy controls pending C6"
+    },
+    {
+      "name": "WILI",
+      "role": "Learning & Development Director",
+      "gm_mapping": "L&D GM (maps 1:1)",
+      "file": "app/command_center/agents/wili.py",
+      "base": "app/command_center/agents/base_agent.py",
+      "class": "WILIAgent",
+      "registry": "WILI",
+      "model": "qwen3:8b",
+      "timeout_s": 120,
+      "lines_base": 430,
+      "lines_wrapper": 14,
+      "status": "implemented",
+      "evidence": "probe_agent_connection(WILI)",
+      "capabilities": ["competency gap analysis", "curriculum/training pipeline design"],
+      "tools": ["call_agent(PHILI|SUBY|SAMI)"],
+      "ownership": "WILI + sibling Education/Study Studio/LDCC when contracted",
+      "known_gap": "No competency event contracts yet (CompetencyGapDetected etc. deferred to C1/C7)"
+    }
+  ],
+  "gms_requested": [
+    {
+      "gm": "HR & Personnel GM",
+      "status": "covered_by_PHILI",
+      "contract": "pending C1 role catalog",
+      "system_ownership": "Personnel + WFM inputs"
+    },
+    {
+      "gm": "Marketing GM",
+      "status": "not_implemented",
+      "contract": "pending C1 - requires CRM content approval + market intel",
+      "system_ownership": "CRM/Sales data and approved content"
+    },
+    {
+      "gm": "Sales GM",
+      "status": "not_implemented",
+      "interim": "SAMI",
+      "contract": "pending C1",
+      "system_ownership": "CRM + B2B onboarding"
+    },
+    {
+      "gm": "Compliance & Quality GM",
+      "status": "not_implemented",
+      "contract": "pending C1/C2 policy/approval seam",
+      "system_ownership": "Cross-system control plane"
+    },
+    {
+      "gm": "ICT GM",
+      "status": "not_implemented",
+      "contract": "pending C1/C3",
+      "system_ownership": "Runtime and infrastructure"
+    },
+    {
+      "gm": "Fraud Analysis & Revenue Assurance GM",
+      "status": "not_implemented",
+      "contract": "pending C1/C6",
+      "system_ownership": "CRM/B2B/operations signals"
+    },
+    {
+      "gm": "L&D GM",
+      "status": "covered_by_WILI",
+      "contract": "pending C1/C7 sibling contracts",
+      "system_ownership": "WILI + Education/Study Studio/LDCC"
+    },
+    {
+      "gm": "OPS GM",
+      "status": "covered_by_SUBY",
+      "contract": "pending C1 workflow runtime",
+      "system_ownership": "SUBY + WFM/RTA/CX"
+    }
+  ],
+  "engines": [
+    {
+      "name": "WFM Forecasting",
+      "domain": "Erlang C staffing",
+      "status": "implemented_importable",
+      "files": [
+        "engines/wfm/src/app_wfm.py (623 lines)",
+        "engines/wfm/src/erlang_c.py (338 lines)",
+        "engines/wfm/src/data_pipeline.py (485 lines)",
+        "engines/wfm/src/variance_engine.py (699 lines)"
+      ],
+      "entrypoint": "engines/wfm/src/app_wfm.py",
+      "api": "ErlangCParameters, create_erlang_c_engine -> ErlangCResult",
+      "sample_data": "engines/wfm/src/data/sample_intervals.csv, actuals.csv",
+      "cockpit_caller": "cockpit/cockpit.py:call_wfm() -> pd.DataFrame(Optimal Agents, Probability Waiting, ASA, Service Level, Traffic Intensity, Utilization)",
+      "adapter": "none_typed_pending C2",
+      "evidence": "probe_engine(WFM Forecasting) py_compile + importlib",
+      "dependencies": ["numpy", "pandas", "scipy"]
+    },
+    {
+      "name": "RTA Command Center",
+      "domain": "Real-time adherence",
+      "status": "implemented_importable",
+      "files": [
+        "engines/rta/src/app.py (269 lines)",
+        "engines/rta/src/calculations.py (647 lines)",
+        "engines/rta/src/visualizations.py (337 lines)"
+      ],
+      "entrypoint": "engines/rta/src/app.py",
+      "api": "create_rta_calculator(adherence_threshold=0.85, variance_threshold=2.0).analyze(schedule_data, actual_data)",
+      "sample_data": "synthetic per-client (cockpit/cockpit.py:call_rta)",
+      "cockpit_caller": "call_rta() -> DataFrame(Overall Adherence %, Schedule Efficiency %)",
+      "adapter": "none_typed_pending C2",
+      "evidence": "probe_engine(RTA Command Center)",
+      "dependencies": ["numpy", "pandas", "scikit-learn"]
+    },
+    {
+      "name": "CX Churn Sentinel",
+      "domain": "4-KPI churn risk scoring",
+      "status": "implemented_importable",
+      "files": [
+        "engines/cx/src/risk_scorer.py (597 lines)",
+        "engines/cx/src/kpi_aggregator.py (369 lines)",
+        "engines/cx/src/alert_dispatcher.py (301 lines)",
+        "engines/cx/src/dashboard_feed.py (217 lines)",
+        "engines/cx/src/sql_extractor.py (220 lines)",
+        "engines/cx/src/sql/v_client_*.sql (4 views)"
+      ],
+      "entrypoint": "engines/cx/src/risk_scorer.py",
+      "api": "create_risk_scorer().score_customers(list[csat,fcr,churn_risk,sentiment]) -> RiskScoringResult",
+      "sample_data": "10 synthetic customers per call_cx",
+      "cockpit_caller": "call_cx() -> DataFrame(Overall Risk Score, High Risk Customers)",
+      "adapter": "none_typed_pending C2",
+      "evidence": "probe_engine(CX Churn Sentinel)",
+      "config": "engines/cx/config/risk_thresholds.yaml",
+      "dependencies": ["numpy"]
+    },
+    {
+      "name": "B2B Onboarding",
+      "domain": "Client pipeline & SOP generation",
+      "status": "implemented_importable",
+      "files": [
+        "engines/b2b/src/main.py (334 lines)",
+        "engines/b2b/src/automator.py (547 lines)",
+        "engines/b2b/notion_adapter/notion_adapter.py"
+      ],
+      "entrypoint": "engines/b2b/src/main.py",
+      "api": "OnboardingAutomator.add_client(ClientProfile) -> get_client_summary()",
+      "sample_data": "ClientProfile(Technology/Mid-Market/Standard)",
+      "cockpit_caller": "call_b2b() -> DataFrame(Field/Value from summary)",
+      "adapter": "none_typed_pending C2",
+      "evidence": "probe_engine(B2B Onboarding)",
+      "dependencies": ["pandas", "requests"]
+    },
+    {
+      "name": "Personnel Engine",
+      "domain": "Talent & workforce planning",
+      "status": "implemented_importable",
+      "files": [
+        "engines/personnel/src/main.py (537 lines)",
+        "engines/personnel/src/pipeline_manager.py (681 lines)",
+        "engines/personnel/src/talent_acquisition.py (531 lines)",
+        "engines/personnel/src/workforce_planning.py (595 lines)"
+      ],
+      "entrypoint": "engines/personnel/src/main.py",
+      "api": "PipelineManager.get_pipeline_analytics()",
+      "cockpit_caller": "call_personnel() -> DataFrame(Field/Value)",
+      "adapter": "none_typed_pending C2",
+      "evidence": "probe_engine(Personnel Engine)"
+    },
+    {
+      "name": "CRM Engine",
+      "domain": "Sales pipeline & support",
+      "status": "implemented_importable",
+      "files": [
+        "engines/crm/src/sales_pipeline.py (610 lines)",
+        "engines/crm/src/customer_support.py (453 lines)"
+      ],
+      "entrypoint": "engines/crm/src/sales_pipeline.py",
+      "api": "create_sales_pipeline().get_sales_analytics()",
+      "cockpit_caller": "call_crm() -> DataFrame(Metric/Value)",
+      "adapter": "none_typed_pending C2",
+      "evidence": "probe_engine(CRM Engine)"
+    }
+  ],
+  "ui_flows": {
+    "cockpit_entry": "cockpit/cockpit.py",
+    "lines": 1332,
+    "launcher": "launch.py (port 8501, health check wait_for_health)",
+    "pages": [
+      {
+        "name": "Dashboard",
+        "content": "engine probes (6), agent probes (4), Ask-Any-Agent bar, client snapshot (5 metrics)"
+      },
+      {
+        "name": "Agents",
+        "content": "4 chat panels with reasoning_trace + inter-agent call boxes"
+      },
+      {
+        "name": "Engines",
+        "content": "6 tabs, each probe_engine + ENGINE_CALLERS(client) -> DataFrame + numerical summary"
+      },
+      {
+        "name": "Memory",
+        "content": "cognitive_log query_interactions with filters (agent, session, date, search) - cockpit/memory/cognitive_log.py (JSONL+SQLite)"
+      },
+      {
+        "name": "System Status",
+        "content": "agent rows (4) + engine rows (6) + infra table (Governance/Orchestrator/Memory/Ollama/Dashboard) + truth string"
+      },
+      {
+        "name": "Client Simulation",
+        "content": "5-step scenario walkthrough (planned)"
+      }
+    ],
+    "ask_any_agent_bar": "permanent bar: text_input + agent select (SAMI/SUBY/PHILI/WILI) + Go -> AgentRegistry.get_agent().process_request(_recursion_depth=0)",
+    "client_contexts": ["Account Alpha (420 agents, 8500 calls/d, 0.78 SL)", "Account Beta (180 agents, 2400 calls/d, 0.80 SL)", "Account Gamma (650 agents, 12000 calls/d, 0.85 SL)"],
+    "status": "functional_6_pages_verified_5_endpoints_200 (2026-07-28)",
+    "known_gap": "Not yet a control plane: no workflow/task state, approvals, RBAC, tenant/client isolation, audit evidence per action"
+  },
+  "orchestration": {
+    "file": "orchestration/orchestrator.py (303 lines)",
+    "mode": "content-based keyword routing",
+    "rules": 5,
+    "rule_order": ["Personnel/HR (PHILI)", "Operations/WFM (SUBY)", "CX (SUBY)", "B2B/Sales (SAMI)", "Training/L&D (WILI)", "Strategic/CEO (SAMI) + DEFAULT [sami,suby,phili]"],
+    "discovery": "lazy _discover_agents via app/command_center/agents/*.py; _discover_engines via hardcoded ENGINE_MODULE_PATHS",
+    "agent_loading": "importlib.import_module via AGENT_CLASSES map",
+    "inter_agent": "BaseAgent.call_agent() + LLM text call_agent(\"NAME\", \"msg\") regex, depth<=5, dual logging to cognitive_log",
+    "known_gap": "No typed TaskRequest/TaskResult, no capability-based discovery, no timeouts/idempotency/durable state, no authorization"
+  },
+  "dependencies": {
+    "python": "3.10+ (mypy.ini python_version 3.12, cockpit requires 3.10+)",
+    "cockpit_requirements": "streamlit, pandas, numpy, python-dotenv, ollama, scipy, scikit-learn, matplotlib, seaborn, plotly, Flask, flask-cors (pinned in cockpit/requirements.txt)",
+    "engine_requirements": {
+      "b2b": "pandas, numpy, scipy, plotly, dash, requests",
+      "cx": "numpy (plus risk_thresholds.yaml)",
+      "rta": "numpy, pandas, scikit-learn",
+      "wfm": "numpy, pandas, scipy"
+    },
+    "inference": "Ollama http://localhost:11434/api/generate, model qwen3:8b, temperature 0.3 top_p 0.9",
+    "storage": "local files + SQLite cockpit/memory/cognitive_log.sqlite + JSONL",
+    "tauri": "Cargo.toml tauri 1.0 + icons/src-tauri (scaffolding, no build verified on Linux)",
+    "ci_lint": "ruff (0.1.15), mypy, pre-commit (trailing-whitespace, check-yaml, detect-private-key)"
+  },
+  "evidence_and_commands": {
+    "one_test_command": "python3 -m pytest -q (pytest.ini testpaths=tests, pythonpath=.)",
+    "one_smoke_command_no_ollama": "python3 -m pytest -q -k \"not smoke\" && python3 -c \"from orchestration.orchestrator import Orchestrator; print(Orchestrator().status())\" && python3 scripts/smoke.py",
+    "smoke_script": "scripts/smoke.py (C0: engine imports + agent probes + orchestrator status + evidence write)",
+    "evidence_dir": "evidence/ (evidence/README.md sets convention; baseline/signed matrix at GOVERNANCE/capability-matrix.json)",
+    "proof_before": "verified/pilot/production_ready require evidence in evidence/ not console output",
+    "baseline_output": "GOVERNANCE/capability-matrix.json + GOVERNANCE/codex-baseline-report.md + evidence/baseline/smoke.log (git-ignored except signed matrix)"
+  },
+  "known_gaps_codex_backlog": [
+    "Git history: 2 commits (1411df9, 03185c6) vs GOVERNANCE/CHANGE_LOG.md 7 sessions - reconciliation required (see GIT_HISTORY_RECONCILIATION.md)",
+    ".venv tracked (26,630 files) - fixed C0 via .gitignore .venv/ + git rm --cached, local .venv retained",
+    "pytest.ini pointed to AI OPS Engineering/helix-prime-ecosystem - fixed to tests/",
+    "run_tests.ps1 hardcoded h:\\Project Helix Prime Ecosystem - replaced with cross-platform pytest",
+    "No typed contracts (TaskRequest/TaskResult etc.) - pending C1",
+    "No workflow runtime (states, correlation, idempotency, DLQ) - pending C2",
+    "Cockpit dashboard fabricates placeholder metrics when engine data unavailable - needs real engine outputs with provenance (C4/C5)",
+    "No policy/approval seam; Compliance & Quality GM cannot review OPS decisions yet - pending C2",
+    "No tenant/client boundaries, RBAC, secrets, audit integrity - pending C3",
+    "Sibling projects (helix-education, study-studio, L&D Command Center) not contracted - pending C7"
+  ],
+  "verification": {
+    "c0_exit_gate": {
+      "clean_status_except_intentional": "pending: .venv untracked, .gitignore fixed, docs/HELIX_CODEX_UPGRADE_PLAN.md untracked to commit",
+      "reproducible_setup": "python3 -m venv .venv && pip install -r cockpit/requirements.txt && python launch.py (verified on 2026-07-28 start.ps1)",
+      "baseline_test": "tests/test_cockpit_client_profiles.py (6 tests) must pass via python3 -m pytest -q",
+      "smoke": "scripts/smoke.py must report 6/6 engines OK, 4/4 agents import OK, orchestrator routing deterministic",
+      "signed_matrix": "GOVERNANCE/capability-matrix.json signed by C0"
+    }
+  }
+}

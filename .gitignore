@@ -1,35 +1,59 @@
-﻿__pycache__/
-*.py[cod]
-*.class
-*.so
-.Python
-env/
-venv/
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.mypy_cache/
+﻿# Python
 __pycache__/
 *.py[cod]
-*.class
+*.pyo
+*.pyd
 *.so
 .Python
-env/
-venv/
-ENV/
 *.egg-info/
 dist/
 build/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+*.cover
+
+# Virtual environments — DO NOT TRACK (see C0 hygiene fix 2026-08-27)
+.venv/
+.venv*/
+venv/
+env/
+ENV/
+.env/
+.conda/
+
+# Node
 node_modules/
 dist/
+
+# Logs
 *.log
+*.sqlite
+*.sqlite-journal
+!engines/wfm/src/data/*.csv
+cockpit/memory/cognitive_log.jsonl
+cockpit/memory/cognitive_log.sqlite
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Env secrets
 .env
 .env.local
 .env.*.local
+!.env.example
+
+# Tauri / Rust
 src-tauri/target/
 src-tauri/releases/
+
+# Evidence & generated artifacts (replace with evidence/ convention)
+evidence/*
+!evidence/README.md
+!evidence/.gitkeep
+.pytest-tmp/
+*.tmp

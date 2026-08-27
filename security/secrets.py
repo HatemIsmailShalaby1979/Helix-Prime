@@ -94,10 +94,13 @@ def validate_no_secrets(payload: Dict[str, Any], field_path: str = "payload") ->
     """
     if not isinstance(payload, dict):
         raise ValueError(f"{field_path}: must be dict, got {type(payload).__name__}")
-    # Stringify and check
+    # Stringify and check (handle DataFrames and other non-serializable via default=str)
     import json
 
-    text = json.dumps(payload, ensure_ascii=False)
+    try:
+        text = json.dumps(payload, ensure_ascii=False, default=str)
+    except Exception:
+        text = str(payload)
     if is_secret_present(text):
         raise ValueError(f"{field_path}: appears to contain secret — fail closed (keys: {SECRET_KEYWORDS})")
     # Also check for redacted placeholder already? If payload already redacted, it's okay

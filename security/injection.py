@@ -52,7 +52,7 @@ def is_suspicious_tool_request(tool: str, capability: str, payload: Dict[str, An
     # Check payload for injection
     import json
 
-    payload_text = json.dumps(payload, ensure_ascii=False) if isinstance(payload, dict) else str(payload)
+    payload_text = json.dumps(payload, ensure_ascii=False, default=str) if isinstance(payload, dict) else str(payload)
     suspicious, reason = is_suspicious_prompt(payload_text)
     if suspicious:
         return True, f"suspicious payload: {reason}"
@@ -67,7 +67,7 @@ def scan_for_injection(payload: Dict[str, Any]) -> List[str]:
     reasons: List[str] = []
     import json
 
-    text = json.dumps(payload, ensure_ascii=False)
+    text = json.dumps(payload, ensure_ascii=False, default=str)
     for pat in INJECTION_PATTERNS:
         if pat.search(text):
             reasons.append(pat.pattern)

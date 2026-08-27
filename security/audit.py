@@ -49,7 +49,7 @@ def _validate_schema_version(value: Any, field_path: str) -> str:
 
 def _hash_record(data: Dict[str, Any]) -> str:
     """Deterministic SHA-256 over canonical JSON (sorted keys, no whitespace)."""
-    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -286,7 +286,7 @@ class AuditTrail:
         if expected_hash != record.current_hash:
             raise ValueError(f"AuditTrail.append: current_hash mismatch: expected {expected_hash}, got {record.current_hash}")
 
-        data_json = json.dumps(record.to_dict())
+        data_json = json.dumps(record.to_dict(), default=str)
         try:
             cur.execute("BEGIN IMMEDIATE")
             cur.execute(

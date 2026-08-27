@@ -85,7 +85,7 @@ class Store:
                 data = json.loads(row[0])
                 return Workflow.from_dict(data)
             # Insert new
-            data_json = json.dumps(workflow.to_dict())
+            data_json = json.dumps(workflow.to_dict(), default=str)
             cur.execute(
                 "INSERT INTO workflows (workflow_id, idempotency_key, correlation_id, data, updated_at) VALUES (?, ?, ?, ?, ?)",
                 (
@@ -136,7 +136,7 @@ class Store:
         return Workflow.from_dict(data)
 
     def update_workflow(self, workflow: Workflow) -> None:
-        data_json = json.dumps(workflow.to_dict())
+        data_json = json.dumps(workflow.to_dict(), default=str)
         cur = self.conn.cursor()
         cur.execute(
             "UPDATE workflows SET data = ?, updated_at = ?, correlation_id = ? WHERE workflow_id = ?",
@@ -185,7 +185,7 @@ class Store:
                     f"expected {expected}, got {event.sequence} (max existing {max_seq})"
                 )
 
-            data_json = json.dumps(event.to_dict())
+            data_json = json.dumps(event.to_dict(), default=str)
             cur.execute(
                 "INSERT INTO events (event_id, aggregate_id, sequence, correlation_id, data, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
                 (event.event_id, event.aggregate_id, event.sequence, event.correlation_id, data_json, event.timestamp),

@@ -97,7 +97,7 @@ def log_structured(
     pathlib.Path(log_path).parent.mkdir(parents=True, exist_ok=True)
     # Append JSONL (one JSON per line)
     with open(log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
     return entry
 
 

@@ -20,13 +20,13 @@ Helix Prime Codex: a human-supervised, enterprise-grade AI organization (8 GMs +
 - [C1a Capability-Based Discovery](tickets/C1a-capability-discovery.md) — Closed 2026-08-27: `organization/capability-registry.yaml` + `organization/capabilities.json` + `contracts/capabilities.yaml` (16 engine caps) + `organization/capability_registry.py` (7 helpers, deterministic, fail-closed unknown/ambiguous) + `orchestration/registry.py` + `orchestration/discovery.py` + `tests/test_c1a_capability_discovery.py` 14 tests (agent/engine discovery, role ownership, allowed/denied tools, unknown, ambiguous, legacy compatibility, deterministic routing, no regression); 62 total tests green, smoke 6/6 engines 4/4 agents unchanged, compileall clean, legacy `orchestration/orchestrator.py:211` preserved.
 - [C2 Control Plane and Workflow Runtime](tickets/C2-control-plane.md) — Closed 2026-08-27: `control_plane/` (workflow.py 11-state machine, events.py envelope, store.py SQLite WAL, engine.py deterministic handler+retry/timeout/approval, README) 6 new files + `tests/test_c2_control_plane.py` 30 tests (valid/invalid transitions, event replay, sequence, idempotent duplicate, duplicate event, deadline, bounded retry, cancellation, dead_letter, approval required/granted/denied, SOD self/same-role, unknown capability, unauthorized tool, handler success/failure, restart persistence, tenant/client, correlation/causation, drift, no silent retry, no duplicate execution) + `tests/test_c2_preflight_regression.py` 5 tests (per-aggregate, duplicate, idempotent, DB ignored, restart); 102 total tests green, smoke 6/6 engines 4/4 agents, compileall clean, `control_plane/workflow.db` durable (Harden C2 persistence invariants).
 - [C3 Security, Data Governance and Observability](tickets/C3-security-observability.md) — Closed 2026-08-27: `security/` (classification 6, identity, policy deny-by-default, secrets redact, audit hash-chain, injection) + `observability/` (logging JSONL, health 6 checks) + `docs/C3-threat-model.md` (11 threats) + `docs/operations/C3-security-runbook.md` (10 playbooks) + `tests/test_c3_security.py` 22 tests (all classifications, unknown, tenant isolation, deny-by-default, allowed/denied, SOD, secret/PII redaction, audit chain/tamper/correlation, logging, health, auth-denied event, injection, C2 regressions); 124 total tests green, smoke 6/6 engines 4/4 agents, compileall clean, `.gitignore` `*.db`/`logs.jsonl`.
+- [C4 Six-Engine Productization](tickets/C4-engine-productization.md) — Closed 2026-08-27: `engines/contracts.py` + 6 adapters (`wfm`, `rta`, `cx`, `b2b`, `personnel`, `crm`) + `engines/registry.py` + `engines/README.md` + `tests/test_c4_engines.py` 32 tests + `tests/test_c3_c2_integration_preflight.py` 7 preflight now 7 passed; 163 total tests green (6+42+14+5+5+30+22+32+7), smoke 6/6 engines 4/4 agents, compileall clean, actual engine code invoked (`ErlangCEngine.optimize_agents`, `RTACalculator.calculate_adherence`, `RiskScorerEngine.score_customers`, `OnboardingAutomator`, `PipelineManager`, `SalesPipeline`), sample vs real labeled, calculated vs recommended distinct, unauthorized blocked before invocation.
 
 ## Not yet specified
 
 - Sibling integration transport: file/event exchange locally first vs network services; competency event schema details (`CompetencyGapDetected` etc.) need contract-test draft.
 - Deployment profiles (local single-node, private-network pilot, optional cloud) — build/migration/rollback evidence needed at C8.
 - Marketing GM attribution model and approved-content boundary (CRM feedback loop).
-- C4 engine productization details per engine (typed I/O, validation, provenance) — pending C3 classification/policy integration.
 
 ## Out of scope
 
@@ -39,8 +39,7 @@ Helix Prime Codex: a human-supervised, enterprise-grade AI organization (8 GMs +
 
 See `tickets/` — order below is charter order, blocking wired second-pass:
 
-1. C4 — Six-Engine Productization (depends C2 + C3 seam) ← **next frontier**
-2. C5 — Contact-Centre Vertical Slice Proof (depends C4)
-3. C6 — GM Expansion (Compliance,Fraud,HR,L&D,Sales,Marketing,ICT) (depends C5)
-4. C7 — Sibling-Project Integration (depends C1; implement after C5 contracts)
-5. C8 — Production Candidate & Controlled Pilot Pack (depends C5)
+1. C5 — Contact-Centre Vertical Slice Proof (depends C4) ← **next frontier**
+2. C6 — GM Expansion (Compliance,Fraud,HR,L&D,Sales,Marketing,ICT) (depends C5)
+3. C7 — Sibling-Project Integration (depends C1; implement after C5 contracts)
+4. C8 — Production Candidate & Controlled Pilot Pack (depends C5)

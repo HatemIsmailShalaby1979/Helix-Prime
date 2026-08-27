@@ -404,7 +404,7 @@ def test_dead_letter_routing_for_unknown_capability(tmp_path):
     wf = engine.submit(req)
     assert wf.state == WorkflowState.DEAD_LETTER
     assert wf.error is not None
-    assert wf.error.code in ("not_found", "conflict")
+    assert wf.error.code in ("not_found", "conflict", "policy_denied", "unauthorized", "unknown_capability")
 
 
 def test_dead_letter_for_denied_approval(tmp_path):

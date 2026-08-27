@@ -201,6 +201,8 @@ roles:
       - revenue_execution
       - crm_operations
       - b2b_handoff
+      - sales_pipeline
+      - customer_support
     allowed_tools:
       - crm_engine
       - b2b_engine

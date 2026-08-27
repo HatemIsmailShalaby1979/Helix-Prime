@@ -8,7 +8,7 @@ Six business engines. Four local AI agents. One Streamlit cockpit. All running o
 
 **Engines inside:** WFM/Erlang C, Real-Time Adherence, CX Churn Sentinel, B2B Onboarding, Personnel, CRM.
 
-**Agents:** SAMI (staffing), SUBY (adherence), PHILI (churn), WILI (onboarding). They connect to Ollama locally ? no cloud, no API keys.
+**Agents:** SAMI (staffing), SUBY (adherence), PHILI (churn), WILI (onboarding). They connect to Ollama locally — no cloud, no API keys.
 
 **Orchestrator:** Content-based routing. You drop a request in, it figures out which engine handles it.
 
@@ -20,35 +20,45 @@ No production deployments. No enterprise case studies. Just code that works on m
 
 ## Run it (Windows)
 
-`atch
+```batch
 setup.bat
 launch.bat
-`
+```
 
-Opens at http://127.0.0.1:8501.
+Opens at `http://127.0.0.1:8501`.
 
 ## Run it (macOS/Linux)
 
-`ash
+```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r cockpit/requirements.txt
 python launch.py
-`
+```
 
 ## Want the AI agents?
 
 Install [Ollama](https://ollama.com) and pull a small model:
 
-`ash
+```bash
 ollama pull qwen2.5:1.5b
-`
+```
 
-Without Ollama, the cockpit still works ? agents just show \"Offline.\"
+Without Ollama, the cockpit still works — agents just show "Offline."
+
+## Where the engines came from
+
+Helix Prime is the consolidation of five prototypes I built first. They're private now because the code moved into this repo, but they tell the story:
+
+- **wfm-forecasting-calculator** — Erlang C staffing, shrinkage, interval planning, FTE costs
+- **RTA_command_center** — real-time adherence with auto-alerts and anomaly detection
+- **cx-sentiment-sentinel** — NLP churn prediction and sentiment pipeline
+- **Dynamic-Ops-Automation-Engine** — client intake → staffing schedule + Notion SOPs
+- **META-COGNITIVE-WFM-ENGINE** — advanced modeling experiments
 
 ## Why I built this
 
-28 years in ops taught me one thing: the best tool is the one that's already open on your screen. Helix Prime is the dashboard I wanted ? one place to see staffing, adherence, churn risk, onboarding pipeline, people data, and customer context. With local AI that actually helps instead of hallucinating.
+28 years in ops taught me one thing: the best tool is the one that's already open on your screen. Helix Prime is the dashboard I wanted — one place to see staffing, adherence, churn risk, onboarding pipeline, people data, and customer context. With local AI that actually helps instead of hallucinating.
 
 ## Stack
 
@@ -64,4 +74,4 @@ This is the operational core. The learning side lives in [Study Studio](https://
 
 ## License
 
-MIT ? use it, break it, improve it.
+MIT — use it, break it, improve it.

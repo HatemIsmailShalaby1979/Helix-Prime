@@ -1,10 +1,12 @@
-# Helix Prime — Canonical Capability Registry (Codex C1a) — Contracts view
-# Mirrors organization/capability-registry.yaml engine capabilities.
+# Helix Prime — GENERATED MIRROR — DO NOT HAND-EDIT INDEPENDENTLY
+# Canonical: organization/capability-registry.yaml (engine_capabilities)
+# This file: contracts/capabilities.yaml — YAML mirror for contracts consumers
+# Mirrors are validated against canonical by tests/test_capability_registry_drift.py
 # Agent capabilities are canonical in organization/role-catalog.yaml (owned_capabilities).
-# This file is provided to satisfy ticket prototype expected path contracts/capabilities.yaml
 schema_version: "1.0"
 generated: "2026-08-27"
-classification: "C1A_CANONICAL"
+classification: "C1A_MIRROR"
+canonical_source: "organization/capability-registry.yaml"
 
 engine_capabilities:
   erlang_c: "WFM Forecasting"

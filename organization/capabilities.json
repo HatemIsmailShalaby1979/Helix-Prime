@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "generated": "2026-08-27",
-  "classification": "C1A_CANONICAL",
+  "classification": "C1A_MIRROR",
   "engine_capabilities": {
     "erlang_c": "WFM Forecasting",
     "variance_analysis": "WFM Forecasting",
@@ -25,5 +25,7 @@
     "sales_pipeline": "CRM Engine",
     "customer_support": "CRM Engine",
     "crm_operations": "CRM Engine"
-  }
+  },
+  "canonical_source": "organization/capability-registry.yaml",
+  "note": "GENERATED MIRROR \u2014 do not hand-edit; validated against organization/capability-registry.yaml"
 }

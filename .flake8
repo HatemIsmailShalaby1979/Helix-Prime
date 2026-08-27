@@ -1,0 +1,18 @@
+[flake8]
+# Pragmatic defaults for the Helix Prime workspace.
+# Code intentionally uses longer lines for readability; 100 is a common team standard.
+max-line-length = 100
+extend-ignore = E203, W503, E704
+# Exclude generated/third-party/venv artifacts.
+exclude =
+    .git,
+    .venv,
+    __pycache__,
+    node_modules,
+    build,
+    dist,
+    *.egg-info
+# Per-file: allow very long lines in test data / SQL strings.
+per-file-ignores =
+    **/tests/*:E501
+    **/test_*.py:E501

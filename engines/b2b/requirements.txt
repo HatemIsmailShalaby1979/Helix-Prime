@@ -1,0 +1,7 @@
+# B2B Client Onboarding Automator — Python dependencies
+pandas>=2.0
+numpy>=1.24
+scipy>=1.10
+plotly>=5.15
+dash>=2.14
+requests>=2.31

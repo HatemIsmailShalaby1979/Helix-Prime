@@ -1,0 +1,20 @@
+{
+  "buildCommand": "python -m venv /tmp/venv && /tmp/venv/bin/pip install -r requirements-demo.txt && /tmp/venv/bin/python assets/build_demo.py",
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/assets/(.*)\\.(mp4|vtt)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=86400" },
+        { "key": "Accept-Ranges", "value": "bytes" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)\\.(css|js|svg|woff2?)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=604800, immutable" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="22%" r="55%">
+      <stop offset="0%" stop-color="#e94560" stop-opacity="0.30"/>
+      <stop offset="60%" stop-color="#e94560" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#e94560" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="border" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e94560"/>
+      <stop offset="100%" stop-color="#533483"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="#0b0b14"/>
+  <rect width="1920" height="1080" fill="url(#glow)"/>
+  <rect x="0" y="0" width="1920" height="6" fill="#e94560"/>
+  <text x="60" y="80" font-family="Segoe UI, system-ui, sans-serif" font-size="28" font-weight="800" fill="#e94560" letter-spacing="2">HELIX  PRIME</text>
+  <text x="60" y="120" font-family="Segoe UI, system-ui, sans-serif" font-size="22" fill="#9a9ab0" letter-spacing="1">CHAPTER 01  ·  0:00 – 1:00</text>
+  <text x="960" y="540" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="120" font-weight="800" fill="#e8e8f0">▶  5-Minute Demo</text>
+  <rect x="660" y="600" width="600" height="6" fill="#e94560"/>
+  <text x="960" y="700" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-size="32" fill="#9a9ab0">Helix Prime Ecosystem  ·  An AI Organization</text>
+  <text x="960" y="760" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif" font-style="italic" font-size="26" fill="#9a9ab0">"Architecture serves as the expression of truth."</text>
+  <text x="60" y="1030" font-family="Segoe UI, system-ui, sans-serif" font-size="20" fill="#9a9ab0">Constitution 000  ·  Author: Hatem Shalaby</text>
+  <text x="1860" y="1030" text-anchor="end" font-family="Segoe UI, system-ui, sans-serif" font-size="20" fill="#9a9ab0">1920 × 1080  ·  5:00</text>
+</svg>

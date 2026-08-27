@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: helix-prime-marketing
+metadata:
+  template: helix-prime-marketing@0.1.0
+  author: Hatem Shalaby
+
+infra:
+  provider: bicep
+  path: ./infra
+
+services:
+  static-web-app:
+    project: .
+    dist: .
+    type: static-webapp
+    # Static Web Apps expects a build output directory. We use a small
+    # pre-deploy step that copies index.html + assets/ into a `dist/` folder
+    # so SWA picks them up as the static bundle.
+    predeploy:
+      shell: sh
+      script: |
+        mkdir -p dist
+        cp index.html dist/
+        cp -r assets dist/
+        ls -la dist

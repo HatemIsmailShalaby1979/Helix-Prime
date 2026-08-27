@@ -1,0 +1,48 @@
+# Windows ffmpeg binaries (Vercel uses Linux; imageio-ffmpeg bundles its own)
+ffmpeg-master-latest-win64-gpl/
+ffmpeg.zip
+
+# Audiobook source files (too large, not needed for site itself)
+audiobook_voiceclips/
+educational_audiobook.mp3
+helix_prime_interview_podcast.mp3
+test_voice.mp3
+
+# Python virtual environment
+.venv/
+__pycache__/
+*.pyc
+
+# Build intermediates (generated during cloud build)
+assets/_build/
+
+# IDE and tooling
+.vscode/
+.opencode/
+.zcode/
+.sentinel/
+.anima/
+.aider.tags.cache.v4/
+
+# Documentation and scripts not needed at runtime
+# NOTE: DEMO_SCRIPT.md is required by build_demo.py — do NOT exclude
+educational_audiobook_script.md
+podcast_script.py
+combine_audiobook_clips.py
+convert_audiobook_to_voiceclips.py
+Untitled-1.json
+README.md
+Dockerfile
+nginx.conf
+render.yaml
+azure.yaml
+requirements-demo.txt.bak
+
+# Infra and marketing subfolders not part of the static site
+infra/
+marketing/
+
+# Git
+.git/
+.gitignore
+.vercelignore

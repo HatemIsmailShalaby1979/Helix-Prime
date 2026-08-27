@@ -1,0 +1,10 @@
+[package]
+name = "helix-prime"
+version = "0.1.0"
+
+[dependencies]
+tauri = { version = "1.0", features = ["internal-logging", "serde"] }
+ollama = { version = "0.32.0", features = ["json", "async"] }
+
+[lib]
+target = "lib.rs"

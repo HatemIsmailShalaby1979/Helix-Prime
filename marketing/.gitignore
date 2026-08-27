@@ -1,0 +1,10 @@
+# Build artifacts (re-generate with assets/build_demo.py)
+assets/_build/
+assets/_build/**
+__pycache__/
+*.pyc
+
+# Vercel
+.vercel
+
+.vercel

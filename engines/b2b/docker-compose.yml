@@ -1,0 +1,19 @@
+# B2B Client Onboarding Automator — local orchestration
+# Run with: docker compose run --rm b2b-onboarding <command>
+# Notion API token is read from .env (gitignored) — never committed.
+version: "3.9"
+
+services:
+  b2b-onboarding:
+    build: .
+    container_name: b2b-onboarding
+    environment:
+      - NOTION_TOKEN=${NOTION_TOKEN:-}
+      - NOTION_DATABASE_ID=${NOTION_DATABASE_ID:-}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+    # Examples:
+    #   docker compose run --rm b2b-onboarding add-client --client-id c1 --name "Acme" --industry Tech --size medium --complexity medium --requirements "Cloud DevOps"
+    #   docker compose run --rm b2b-onboarding generate-sop --client-id c1

@@ -1,0 +1,16 @@
+{
+  "package": {
+    "name": "helix-prime",
+    "version": "0.1.0"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": true
+    },
+    "sidecar": {
+      "enable": true,
+      "model": "qwen2.5:1.5b",
+      "endpoint": "http://localhost:11434"
+    }
+  }
+}

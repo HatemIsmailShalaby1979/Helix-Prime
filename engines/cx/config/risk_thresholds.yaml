@@ -1,0 +1,35 @@
+# CX Churn Sentinel — risk thresholds & KPI weights
+# Single source of truth for tunable scoring parameters.
+# Loaded by callers and passed into create_risk_scorer(kpi_weights=...);
+# the engine never reads this file itself (Constitution 000: no hardcoded config).
+
+kpi_weights:
+  csat: 0.3   # Customer Satisfaction
+  sla: 0.3    # Service Level Agreement compliance
+  fcr: 0.2    # First Contact Resolution
+  aht: 0.2    # Average Handle Time (lower is better)
+
+kpi_thresholds:
+  csat: { critical: 0.6, high: 0.7, medium: 0.8 }
+  sla:  { critical: 0.8, high: 0.9, medium: 0.95 }
+  fcr:  { critical: 0.7, high: 0.8, medium: 0.9 }
+  aht:  { critical: 0.3, high: 0.2, medium: 0.1 }   # lower is better → inverted
+
+# Overall weighted-score → risk level bands
+risk_bands:
+  critical: 0.8
+  high: 0.6
+  medium: 0.4
+  # below 0.4 → low
+
+# KPIAggregator tuning
+aggregation:
+  decay_factor: 0.9
+  quality_threshold: 0.8
+
+# AlertDispatcher routing policy
+alert_routing:
+  critical: [log, email, webhook]
+  high:     [log, email]
+  medium:   [log]
+  low:      [log]

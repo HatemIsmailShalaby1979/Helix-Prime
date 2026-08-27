@@ -1,0 +1,5 @@
+windowTitle: "Helix Prime"
+build: { release: true }
+package: { name: "helix-prime", version: "0.1.0" }
+build: { debug: false }
+web: { port: 3000 }

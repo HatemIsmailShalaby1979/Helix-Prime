@@ -36,9 +36,9 @@ def _audit(event_type: str, correlation_id: str, actor: str, workflow_id: str | 
         pass
 
 
-def _log(event_type: str, correlation_id: str, actor: str, workflow_id: str | None, result_status: str, **kwargs):
+def _log(event_type: str, correlation_id: str, actor: str, result_status: str, **kwargs):
     try:
-        log_structured(event_type=event_type, correlation_id=correlation_id, workflow_id=workflow_id, actor=actor, capability=CAPABILITY_IDS[0], tool="wfm_engine", result_status=result_status, **kwargs)
+        log_structured(event_type=event_type, correlation_id=correlation_id, actor=actor, capability=CAPABILITY_IDS[0], tool="wfm_engine", result_status=result_status, **kwargs)
     except Exception:
         pass
 
@@ -61,7 +61,7 @@ def adapt(
         validate_no_secrets(input_payload)
     except ValueError as e:
         _audit("wfm_policy_denied", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_policy_denied", correlation_id, actor, None, "denied", error_code="secret_detected", tenant_id=tenant_id, client_id=client_id)
+        _log("wfm_policy_denied", correlation_id, actor, "denied", error_code="secret_detected", tenant_id=tenant_id, client_id=client_id)
         return EngineResult.failure(
             engine_id=ENGINE_ID,
             display_name=DISPLAY_NAME,
@@ -223,7 +223,7 @@ def adapt(
 
     except (ValueError, TypeError) as e:
         _audit("wfm_validation_failed", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_validation_failed", correlation_id, actor, None, "failed", error_code="invalid_input", tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
+        _log("wfm_validation_failed", correlation_id, actor, "failed", error_code="invalid_input", tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
         return EngineResult.failure(
             engine_id=ENGINE_ID,
             display_name=DISPLAY_NAME,
@@ -283,8 +283,8 @@ def adapt(
             metrics.setdefault("optimal_agents", metrics.get("required_staffing", 0))
         # Add calculated vs recommended distinction: metrics are calculated, recommendations are separate
         recommendations = []
-        if metrics.get("optimal_agents"):
-            recommendations.append({"type": "staffing", "value": metrics["optimal_agents"], "rationale": "Erlang C calculated", "source": "calculated"})
+        if metrics.get("optimal_agents") is not None:
+            recommendations.append({"type": "staffing", "value": int(metrics.get("optimal_agents", 0) or 0), "rationale": "Erlang C calculated", "source": "calculated"})
 
         # Handle missing/partial data warnings
         if is_sample:
@@ -298,7 +298,7 @@ def adapt(
         ]
 
         _audit("wfm_executed", correlation_id, actor, decision="succeeded", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_executed", correlation_id, actor, None, "succeeded", tenant_id=tenant_id, client_id=client_id, capability=CAPABILITY_IDS[0], tool="wfm_engine", duration_ms=duration)
+        _log("wfm_executed", correlation_id, actor, "succeeded", tenant_id=tenant_id, client_id=client_id, capability=CAPABILITY_IDS[0], tool="wfm_engine", duration_ms=duration)
 
         return EngineResult.success(
             engine_id=ENGINE_ID,
@@ -328,7 +328,7 @@ def adapt(
         else:
             code = "engine_error"
         _audit("wfm_failed", correlation_id, actor, decision="failed", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_failed", correlation_id, actor, None, "failed", error_code=code, tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
+        _log("wfm_failed", correlation_id, actor, "failed", error_code=code, tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
         return EngineResult.failure(
             engine_id=ENGINE_ID,
             display_name=DISPLAY_NAME,

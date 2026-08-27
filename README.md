@@ -1,94 +1,67 @@
-﻿# Helix Prime
+# Helix Prime
 
-Helix Prime is a unified operations system with six business engines, four AI agents, a content-based orchestrator, and a Streamlit Operations Cockpit. The agents connect to a local Ollama model.
+The ops platform I built because I was tired of stitching together five different tools that didn't talk to each other.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](ROADMAP.md)
+## What this actually is
 
-## Current status
+Six business engines. Four local AI agents. One Streamlit cockpit. All running on your laptop.
 
-Helix Prime is **alpha**. The repository is public and real. The Operations Cockpit is fully functional and can be launched locally. The six business engines, four AI agents, and content-based orchestrator are implemented. Full agent inter-communication through the live UI is still pending.
+**Engines inside:** WFM/Erlang C, Real-Time Adherence, CX Churn Sentinel, B2B Onboarding, Personnel, CRM.
 
-There are no client deployments or production enterprise deployments to claim.
+**Agents:** SAMI (staffing), SUBY (adherence), PHILI (churn), WILI (onboarding). They connect to Ollama locally ? no cloud, no API keys.
 
-## Quick Start (Windows)
+**Orchestrator:** Content-based routing. You drop a request in, it figures out which engine handles it.
 
-### Option 1: One-click setup
+## Honest status
 
-```batch
+**Alpha.** The cockpit works. The engines run. The agents respond (if you have Ollama). What's missing: full agent-to-agent chatter through the UI, and I haven't put this in front of a real client yet.
+
+No production deployments. No enterprise case studies. Just code that works on my machine and hopefully yours.
+
+## Run it (Windows)
+
+`atch
 setup.bat
-```
-
-Then launch:
-
-```batch
 launch.bat
-```
+`
 
-### Option 2: Manual setup
+Opens at http://127.0.0.1:8501.
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate     # Windows
-pip install -r cockpit/requirements.txt
-python launch.py
-```
+## Run it (macOS/Linux)
 
-On macOS or Linux:
-
-```bash
+`ash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r cockpit/requirements.txt
 python launch.py
-```
+`
 
-The cockpit opens at **http://127.0.0.1:8501**.
+## Want the AI agents?
 
-### Optional: AI Agents
+Install [Ollama](https://ollama.com) and pull a small model:
 
-For full agent functionality, install [Ollama](https://ollama.com) and pull a model:
-
-```bash
+`ash
 ollama pull qwen2.5:1.5b
-```
+`
 
-The cockpit works without Ollama — agents show as "Offline" but all other features are available.
+Without Ollama, the cockpit still works ? agents just show \"Offline.\"
 
-## What is included
+## Why I built this
 
-- **Operations Cockpit:** Streamlit dashboard with dark theme, real-time monitoring, and agent interface.
-- **Six business engines:** WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, and CRM.
-- **Four AI agents:** SAMI, SUBY, PHILI, and WILI.
-- **Content-based routing:** the orchestrator routes requests based on their content.
-- **Local model connection:** the agents connect to Ollama when available.
+28 years in ops taught me one thing: the best tool is the one that's already open on your screen. Helix Prime is the dashboard I wanted ? one place to see staffing, adherence, churn risk, onboarding pipeline, people data, and customer context. With local AI that actually helps instead of hallucinating.
 
-## Tech stack
+## Stack
 
 - Python 3.10+
-- Streamlit Operations Cockpit
-- Six domain-specific business engines
-- Four-agent framework with Ollama integration
-- Content-based orchestration
-- Pre-commit linting with Ruff
+- Streamlit for the cockpit
+- Ollama for local LLM (optional but recommended)
+- Pandas, Plotly, Flask for the engines
+- Pydantic for data contracts
 
-## Repository layout
+## Part of a bigger thing
 
-```text
-cockpit/                    Streamlit Operations Cockpit (start here)
-app/command_center/agents/  SAMI, SUBY, PHILI, and WILI
-engines/                    WFM, RTA, CX, B2B, Personnel, and CRM
-orchestration/              Content-based request routing
-api/                        API layer
-marketing/                  Project pages and assets
-```
+This is the operational core. The learning side lives in [Study Studio](https://github.com/HatemIsmailShalaby1979/Study-Studio), [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education), and [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center).
 
-## Verification status
+## License
 
-- Operations Cockpit: verified launchable and functional
-- Six engines: implemented with individual READMEs
-- Four agents: implemented with base agent framework
-- Orchestrator: content-based routing implemented
-- Full live-UI agent inter-communication: pending
-
-Part of a larger body of work — see [Hatem Shalaby's profile](https://github.com/HatemIsmailShalaby1979) for the full story.
+MIT ? use it, break it, improve it.

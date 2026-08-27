@@ -1,0 +1,43 @@
+# Helix Prime — Canonical Capability Registry (Codex C1a)
+# One source of truth for capability → owner (agent/role) and capability → engine.
+# Agents' capabilities are derived from organization/role-catalog.yaml owned_capabilities (canonical there).
+# Engines' capabilities are declared here. No capability is silently ambiguous — duplicates fail closed.
+schema_version: "1.0"
+generated: "2026-08-27"
+classification: "C1A_CANONICAL"
+
+# Engine capabilities: capability -> engine name (must match engines/* names)
+engine_capabilities:
+  # WFM Forecasting (Erlang C)
+  erlang_c: "WFM Forecasting"
+  variance_analysis: "WFM Forecasting"
+  wfm_forecast_engine: "WFM Forecasting"
+  data_pipeline: "WFM Forecasting"
+  # RTA Command Center
+  rta_adherence: "RTA Command Center"
+  schedule_tracking: "RTA Command Center"
+  adherence_calculation: "RTA Command Center"
+  # CX Churn Sentinel
+  churn_risk_scoring: "CX Churn Sentinel"
+  risk_scoring: "CX Churn Sentinel"
+  sentiment_analysis: "CX Churn Sentinel"
+  kpi_aggregation: "CX Churn Sentinel"
+  alert_dispatch: "CX Churn Sentinel"
+  # B2B Onboarding
+  b2b_onboarding: "B2B Onboarding"
+  sop_generation: "B2B Onboarding"
+  client_profiling_b2b: "B2B Onboarding"
+  notion_integration: "B2B Onboarding"
+  # Personnel Engine (use _engine suffix to avoid collision with HR GM agent capabilities)
+  talent_acquisition_engine: "Personnel Engine"
+  hiring_pipeline_engine: "Personnel Engine"
+  workforce_planning_engine: "Personnel Engine"
+  # CRM Engine
+  sales_pipeline: "CRM Engine"
+  customer_support: "CRM Engine"
+  crm_operations: "CRM Engine"
+
+# Agent capabilities are NOT duplicated here — they are canonical in role-catalog.yaml.
+# This registry is for engine lookup; agent lookup is built dynamically from role catalog.
+# For C1a, the Python registry (organization/capability_registry.py) merges both sources
+# and enforces determinism + fail-closed for unknown/ambiguous.

@@ -17,6 +17,7 @@ Helix Prime Codex: a human-supervised, enterprise-grade AI organization (8 GMs +
 
 - [C0 Truth Lock — Capability Matrix + Hygiene + Smoke](tickets/C0-truth-lock.md) — Closed 2026-08-27: `GOVERNANCE/capability-matrix.json` (4 agents,6 engines,6 cockpit pages,keyword routing,2→26630 .venv hygiene fix via `git rm --cached`, `pytest.ini` → `tests`, `evidence/README.md` convention, `scripts/smoke.py` 6/6 engines + 4/4 agents + 6/6 pytest green, `GOVERNANCE/RELEASE_LABELS.md` + `GIT_HISTORY_RECONCILIATION.md`; test cmd `python3 -m pytest -q`, smoke `python3 scripts/smoke.py`).
 - [C1 Organization Model & Typed Contracts](tickets/C1-organization-contracts.md) — Closed 2026-08-27 (corrected): 9 new files (`organization/` 4 + `contracts/` 4 + `tests/test_c1_contracts.py` 1; `GOVERNANCE/wayfinder` 2 modified) `organization/role-catalog.yaml` (9 roles: sami + 8 GMs, PHILI→hr_personnel_gm/WILI→ld_gm/SUBY→ops_gm/SAMI→sami, catalog_only for new GMs, SOD compliance can_review OPS/Sales/HR/Fraud) + `organization/role_catalog.py` validator + `contracts/task.py` 8 models `SCHEMA_VERSION = "1.0"` (canonical, not 12, consistent across all) + `contracts/adapter.py` (parse_legacy_calls + to_task_request + validate_request_against_catalog, fail-closed) + `tests/test_c1_contracts.py` 42 tests (38 + 4 schema_version `1.0` consistency); 48 total tests green, smoke 6/6 engines 4/4 agents unchanged, compileall clean.
+- [C1a Capability-Based Discovery](tickets/C1a-capability-discovery.md) — Closed 2026-08-27: `organization/capability-registry.yaml` + `organization/capabilities.json` + `contracts/capabilities.yaml` (16 engine caps) + `organization/capability_registry.py` (7 helpers, deterministic, fail-closed unknown/ambiguous) + `orchestration/registry.py` + `orchestration/discovery.py` + `tests/test_c1a_capability_discovery.py` 14 tests (agent/engine discovery, role ownership, allowed/denied tools, unknown, ambiguous, legacy compatibility, deterministic routing, no regression); 62 total tests green, smoke 6/6 engines 4/4 agents unchanged, compileall clean, legacy `orchestration/orchestrator.py:211` preserved.
 
 ## Not yet specified
 
@@ -38,9 +39,8 @@ Helix Prime Codex: a human-supervised, enterprise-grade AI organization (8 GMs +
 
 See `tickets/` — order below is charter order, blocking wired second-pass:
 
-1. C1a — Capability-Based Discovery (depends C1) ← **next frontier**
-2. C2 — Control Plane & Workflow Runtime (depends C1a)
-3. C3 — Security/Privacy & Observability (parallel with C2, depends C1)
+1. C2 — Control Plane & Workflow Runtime (depends C1a) ← **next frontier**
+2. C3 — Security/Privacy & Observability (parallel with C2, depends C1)
 4. C4 — Six-Engine Productization (depends C2 + C3 seam)
 5. C5 — Contact-Centre Vertical Slice Proof (depends C4)
 6. C6 — GM Expansion (Compliance,Fraud,HR,L&D,Sales,Marketing,ICT) (depends C5)

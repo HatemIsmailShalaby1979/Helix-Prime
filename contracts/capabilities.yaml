@@ -1,0 +1,34 @@
+# Helix Prime — Canonical Capability Registry (Codex C1a) — Contracts view
+# Mirrors organization/capability-registry.yaml engine capabilities.
+# Agent capabilities are canonical in organization/role-catalog.yaml (owned_capabilities).
+# This file is provided to satisfy ticket prototype expected path contracts/capabilities.yaml
+schema_version: "1.0"
+generated: "2026-08-27"
+classification: "C1A_CANONICAL"
+
+engine_capabilities:
+  erlang_c: "WFM Forecasting"
+  variance_analysis: "WFM Forecasting"
+  wfm_forecast_engine: "WFM Forecasting"
+  data_pipeline: "WFM Forecasting"
+  rta_adherence: "RTA Command Center"
+  schedule_tracking: "RTA Command Center"
+  adherence_calculation: "RTA Command Center"
+  churn_risk_scoring: "CX Churn Sentinel"
+  risk_scoring: "CX Churn Sentinel"
+  sentiment_analysis: "CX Churn Sentinel"
+  kpi_aggregation: "CX Churn Sentinel"
+  alert_dispatch: "CX Churn Sentinel"
+  b2b_onboarding: "B2B Onboarding"
+  sop_generation: "B2B Onboarding"
+  client_profiling_b2b: "B2B Onboarding"
+  notion_integration: "B2B Onboarding"
+  talent_acquisition_engine: "Personnel Engine"
+  hiring_pipeline_engine: "Personnel Engine"
+  workforce_planning_engine: "Personnel Engine"
+  sales_pipeline: "CRM Engine"
+  customer_support: "CRM Engine"
+  crm_operations: "CRM Engine"
+
+# Agent capabilities reference (do not duplicate — see organization/role-catalog.yaml)
+agent_capabilities_source: "organization/role-catalog.yaml"

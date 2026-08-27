@@ -16,6 +16,7 @@ Helix Prime Codex: a human-supervised, enterprise-grade AI organization (8 GMs +
 ## Decisions so far
 
 - [C0 Truth Lock — Capability Matrix + Hygiene + Smoke](tickets/C0-truth-lock.md) — Closed 2026-08-27: `GOVERNANCE/capability-matrix.json` (4 agents,6 engines,6 cockpit pages,keyword routing,2→26630 .venv hygiene fix via `git rm --cached`, `pytest.ini` → `tests`, `evidence/README.md` convention, `scripts/smoke.py` 6/6 engines + 4/4 agents + 6/6 pytest green, `GOVERNANCE/RELEASE_LABELS.md` + `GIT_HISTORY_RECONCILIATION.md`; test cmd `python3 -m pytest -q`, smoke `python3 scripts/smoke.py`).
+- [C1 Organization Model & Typed Contracts](tickets/C1-organization-contracts.md) — Closed 2026-08-27 (corrected): 9 new files (`organization/` 4 + `contracts/` 4 + `tests/test_c1_contracts.py` 1; `GOVERNANCE/wayfinder` 2 modified) `organization/role-catalog.yaml` (9 roles: sami + 8 GMs, PHILI→hr_personnel_gm/WILI→ld_gm/SUBY→ops_gm/SAMI→sami, catalog_only for new GMs, SOD compliance can_review OPS/Sales/HR/Fraud) + `organization/role_catalog.py` validator + `contracts/task.py` 8 models `SCHEMA_VERSION = "1.0"` (canonical, not 12, consistent across all) + `contracts/adapter.py` (parse_legacy_calls + to_task_request + validate_request_against_catalog, fail-closed) + `tests/test_c1_contracts.py` 42 tests (38 + 4 schema_version `1.0` consistency); 48 total tests green, smoke 6/6 engines 4/4 agents unchanged, compileall clean.
 
 ## Not yet specified
 
@@ -37,12 +38,11 @@ Helix Prime Codex: a human-supervised, enterprise-grade AI organization (8 GMs +
 
 See `tickets/` — order below is charter order, blocking wired second-pass:
 
-1. C1 — Organization Model & Typed Contracts
-2. C1a — Capability-Based Discovery (depends C1)
-3. C2 — Control Plane & Workflow Runtime (depends C1)
-4. C3 — Security/Privacy & Observability (parallel with C2, depends C1)
-5. C4 — Six-Engine Productization (depends C2 + C3 seam)
-6. C5 — Contact-Centre Vertical Slice Proof (depends C4)
-7. C6 — GM Expansion (Compliance,Fraud,HR,L&D,Sales,Marketing,ICT) (depends C5)
-8. C7 — Sibling-Project Integration (depends C1; implement after C5 contracts)
-9. C8 — Production Candidate & Controlled Pilot Pack (depends C5)
+1. C1a — Capability-Based Discovery (depends C1) ← **next frontier**
+2. C2 — Control Plane & Workflow Runtime (depends C1a)
+3. C3 — Security/Privacy & Observability (parallel with C2, depends C1)
+4. C4 — Six-Engine Productization (depends C2 + C3 seam)
+5. C5 — Contact-Centre Vertical Slice Proof (depends C4)
+6. C6 — GM Expansion (Compliance,Fraud,HR,L&D,Sales,Marketing,ICT) (depends C5)
+7. C7 — Sibling-Project Integration (depends C1; implement after C5 contracts)
+8. C8 — Production Candidate & Controlled Pilot Pack (depends C5)

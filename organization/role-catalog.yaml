@@ -1,0 +1,573 @@
+# Helix Prime — Canonical Role Catalog (Codex C1)
+# One source of truth for GM roles, capabilities, tools, data access, approvals, KPIs, peer calls, and SOD constraints.
+# See organization/role_catalog.py for loader/validator and organization/README.md for usage.
+# Existing agents are mapped without rename: PHILI→hr_personnel_gm, WILI→ld_gm, SUBY→ops_gm, SAMI→sami.
+# New GM roles are catalog-only (no functional agent) until C6.
+schema_version: "1.0"
+generated: "2026-08-27"
+classification: "C1_CANONICAL"
+
+roles:
+  - id: sami
+    display_name: "SAMI — Executive Coordinator / CEO"
+    mission: "Provide executive coordination, strategic oversight, and cross-GM escalation. Owns the north star and approves initiatives that exceed GM limits."
+    implementation_status: functional_agent
+    maps_to_agent: SAMI
+    agent_class: "SAMIAgent"
+    owned_capabilities:
+      - strategic_oversight
+      - executive_coordination
+      - cross_gm_escalation
+      - resource_allocation
+      - enterprise_summary
+    allowed_tools:
+      - ollama
+      - cognitive_log
+      - orchestrator_routing
+      - crm_engine_read
+      - wfm_engine_read
+      - cx_engine_read
+    readable_data_domains:
+      - strategy
+      - crm
+      - wfm
+      - rta
+      - cx
+      - personnel
+      - b2b
+      - platform_health
+    approval_limits:
+      tier: executive
+      can_approve:
+        - standard
+        - financial
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+      max_financial_amount: null
+      requires_escalation_for:
+        - board_level
+    escalation_owner: sami
+    kpis:
+      - service_level
+      - churn_risk
+      - pipeline_value
+      - quality_score
+      - competency
+      - time_to_competency
+    allowed_peer_calls:
+      - hr_personnel_gm
+      - marketing_gm
+      - sales_gm
+      - compliance_quality_gm
+      - ict_gm
+      - fraud_gm
+      - ld_gm
+      - ops_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: false
+      must_be_reviewed_by: []
+      can_review:
+        - hr_personnel_gm
+        - marketing_gm
+        - sales_gm
+        - compliance_quality_gm
+        - ict_gm
+        - fraud_gm
+        - ld_gm
+        - ops_gm
+      restrictions:
+        - "Executive decisions over $500k require board evidence pack (C8 gate) — not enforced in C1 catalog"
+
+  - id: hr_personnel_gm
+    display_name: "HR & Personnel GM"
+    mission: "Own people lifecycle, hiring, workforce policy, and retention. Ensure right people in right roles with right skills."
+    implementation_status: functional_agent
+    maps_to_agent: PHILI
+    agent_class: "PHILIAgent"
+    owned_capabilities:
+      - talent_acquisition
+      - hiring_pipeline
+      - workforce_planning
+      - attrition_analysis
+      - retention_strategy
+      - personnel_policy
+    allowed_tools:
+      - personnel_engine
+      - wfm_engine_read
+      - ollama
+      - cognitive_log
+    readable_data_domains:
+      - personnel
+      - workforce
+      - wfm
+      - hiring
+      - personnel-sensitive
+    approval_limits:
+      tier: personnel
+      can_approve:
+        - standard
+        - personnel
+      max_financial_amount: 50000
+      requires_escalation_for:
+        - financial
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: sami
+    kpis:
+      - attrition
+      - time_to_competency
+      - competency
+      - quality_score
+      - occupancy
+    allowed_peer_calls:
+      - ops_gm
+      - ld_gm
+      - sami
+      - compliance_quality_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+      can_review: []
+      restrictions:
+        - "Hiring decisions require compliance review when bias/privacy risk flagged"
+        - "Personnel GM cannot approve own hiring actions"
+
+  - id: marketing_gm
+    display_name: "Marketing GM"
+    mission: "Own market intelligence, campaigns, positioning, and demand generation using approved CRM/Sales data and content."
+    implementation_status: catalog_only
+    maps_to_agent: null
+    owned_capabilities:
+      - market_intelligence
+      - campaign_management
+      - positioning
+      - demand_generation
+      - content_review
+      - attribution
+    allowed_tools:
+      - crm_engine_read
+      - approved_content
+      - ollama
+      - cognitive_log
+    readable_data_domains:
+      - crm
+      - marketing
+      - sales
+      - public
+      - internal
+    approval_limits:
+      tier: standard
+      can_approve:
+        - standard
+      max_financial_amount: 10000
+      requires_escalation_for:
+        - financial
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: sami
+    kpis:
+      - pipeline_value
+      - churn_risk
+      - csat
+      - quality_score
+    allowed_peer_calls:
+      - sales_gm
+      - sami
+      - compliance_quality_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+      can_review: []
+      restrictions:
+        - "External campaigns require compliance review for positioning/content"
+        - "Market intelligence sharing requires approval for external_communication"
+
+  - id: sales_gm
+    display_name: "Sales GM"
+    mission: "Own pipeline, qualification, proposals, and revenue execution through CRM and B2B onboarding handoff."
+    implementation_status: catalog_only
+    maps_to_agent: null
+    owned_capabilities:
+      - pipeline_management
+      - deal_qualification
+      - proposal_generation
+      - revenue_execution
+      - crm_operations
+      - b2b_handoff
+    allowed_tools:
+      - crm_engine
+      - b2b_engine
+      - ollama
+      - cognitive_log
+    readable_data_domains:
+      - crm
+      - b2b
+      - sales
+      - financial
+    approval_limits:
+      tier: financial
+      can_approve:
+        - standard
+        - financial
+      max_financial_amount: 100000
+      requires_escalation_for:
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: sami
+    kpis:
+      - pipeline_value
+      - leakage
+      - quality_score
+      - csat
+      - churn_risk
+    allowed_peer_calls:
+      - marketing_gm
+      - ops_gm
+      - sami
+      - compliance_quality_gm
+      - fraud_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+      can_review: []
+      restrictions:
+        - "Proposals over $100k require compliance review"
+        - "Financial actions require fraud review when leakage risk flagged"
+
+  - id: compliance_quality_gm
+    display_name: "Compliance & Quality GM"
+    mission: "Own policy, QA, risk controls, evidence, and escalation. Control plane for cross-system review and approval."
+    implementation_status: catalog_only
+    maps_to_agent: null
+    owned_capabilities:
+      - policy_enforcement
+      - qa_sampling
+      - risk_controls
+      - evidence_pack
+      - escalation_review
+      - calibration
+      - corrective_actions
+    allowed_tools:
+      - policy_engine
+      - audit_log
+      - evidence_store
+      - ollama
+      - cognitive_log
+      - all_engines_read
+    readable_data_domains:
+      - audit
+      - policy
+      - quality
+      - personnel
+      - financial
+      - client-confidential
+      - regulated
+    approval_limits:
+      tier: compliance
+      can_approve:
+        - standard
+        - financial
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+      max_financial_amount: null
+      requires_escalation_for: []
+    escalation_owner: sami
+    kpis:
+      - quality_score
+      - adherence
+      - sla
+      - service_level
+      - leakage
+      - competency
+    allowed_peer_calls:
+      - ops_gm
+      - hr_personnel_gm
+      - sales_gm
+      - fraud_gm
+      - ld_gm
+      - marketing_gm
+      - ict_gm
+      - sami
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by: []
+      can_review:
+        - ops_gm
+        - hr_personnel_gm
+        - sales_gm
+        - fraud_gm
+        - marketing_gm
+        - ld_gm
+        - ict_gm
+      restrictions:
+        - "Compliance & Quality is the mandatory reviewer for OPS, Sales, HR, and Fraud decisions per C1 SOD"
+        - "Compliance cannot approve own corrective actions; requires SAMI escalation"
+
+  - id: ict_gm
+    display_name: "ICT GM"
+    mission: "Own platform, integrations, security, reliability, and release operations for runtime and infrastructure."
+    implementation_status: catalog_only
+    maps_to_agent: null
+    owned_capabilities:
+      - platform_ops
+      - integration_management
+      - security
+      - reliability
+      - release_operations
+      - incident_management
+    allowed_tools:
+      - platform_runtime
+      - integration_hub
+      - deployment_pipeline
+      - observability
+      - ollama
+      - cognitive_log
+    readable_data_domains:
+      - platform
+      - infrastructure
+      - security
+      - internal
+      - audit
+    approval_limits:
+      tier: platform
+      can_approve:
+        - standard
+        - platform
+      max_financial_amount: 25000
+      requires_escalation_for:
+        - financial
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: sami
+    kpis:
+      - service_level
+      - sla
+      - occupancy
+      - adherence
+      - quality_score
+    allowed_peer_calls:
+      - compliance_quality_gm
+      - sami
+      - ops_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+      can_review: []
+      restrictions:
+        - "Platform changes with client data impact require compliance review"
+        - "ICT cannot self-approve release operations; requires compliance gate"
+
+  - id: fraud_gm
+    display_name: "Fraud Analysis & Revenue Assurance GM"
+    mission: "Own leakage, abuse, anomaly detection, and revenue protection across CRM/B2B/operations signals."
+    implementation_status: catalog_only
+    maps_to_agent: null
+    owned_capabilities:
+      - anomaly_detection
+      - leakage_analysis
+      - fraud_investigation
+      - revenue_assurance
+      - abuse_detection
+    allowed_tools:
+      - crm_engine_read
+      - b2b_engine_read
+      - cx_engine_read
+      - anomaly_engine
+      - ollama
+      - cognitive_log
+    readable_data_domains:
+      - crm
+      - b2b
+      - operations
+      - financial
+      - client-confidential
+    approval_limits:
+      tier: financial
+      can_approve:
+        - standard
+        - financial
+      max_financial_amount: 75000
+      requires_escalation_for:
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: compliance_quality_gm
+    kpis:
+      - leakage
+      - pipeline_value
+      - quality_score
+      - churn_risk
+    allowed_peer_calls:
+      - compliance_quality_gm
+      - sales_gm
+      - ops_gm
+      - sami
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+      can_review: []
+      restrictions:
+        - "Fraud financial-action approvals require compliance review"
+        - "Fraud findings on sales pipeline must be reviewed by Sales GM before client action"
+
+  - id: ld_gm
+    display_name: "L&D GM"
+    mission: "Own competency, training, assessment, and knowledge transfer via WILI and sibling Education/Study Studio/LDCC."
+    implementation_status: functional_agent
+    maps_to_agent: WILI
+    agent_class: "WILIAgent"
+    owned_capabilities:
+      - competency_analysis
+      - training_design
+      - curriculum_development
+      - assessment
+      - certification
+      - knowledge_transfer
+    allowed_tools:
+      - wili_engine
+      - personnel_engine_read
+      - ollama
+      - cognitive_log
+      - education_service_read
+      - studio_service_read
+      - ldcc_service_read
+    readable_data_domains:
+      - competency
+      - training
+      - personnel
+      - workforce
+      - internal
+    approval_limits:
+      tier: standard
+      can_approve:
+        - standard
+      max_financial_amount: 15000
+      requires_escalation_for:
+        - financial
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: hr_personnel_gm
+    kpis:
+      - competency
+      - time_to_competency
+      - quality_score
+      - adherence
+    allowed_peer_calls:
+      - hr_personnel_gm
+      - ops_gm
+      - sami
+      - compliance_quality_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+        - hr_personnel_gm
+      can_review: []
+      restrictions:
+        - "Certification decisions require HR review when personnel-sensitive"
+        - "Training content for regulated domains requires compliance review"
+
+  - id: ops_gm
+    display_name: "OPS GM"
+    mission: "Own contact-centre execution and service performance via SUBY + WFM/RTA/CX."
+    implementation_status: functional_agent
+    maps_to_agent: SUBY
+    agent_class: "SUBYAgent"
+    owned_capabilities:
+      - ops_execution
+      - service_performance
+      - wfm_forecast
+      - rta_adherence
+      - cx_monitoring
+      - staffing_optimization
+      - schedule_adherence
+    allowed_tools:
+      - wfm_engine
+      - rta_engine
+      - cx_engine
+      - ollama
+      - cognitive_log
+    readable_data_domains:
+      - wfm
+      - rta
+      - cx
+      - operations
+      - sla
+      - occupancy
+      - adherence
+      - aht
+      - fcr
+      - csat
+    approval_limits:
+      tier: operational
+      can_approve:
+        - standard
+      max_financial_amount: 20000
+      requires_escalation_for:
+        - financial
+        - personnel
+        - compliance
+        - external_communication
+        - irreversible
+    escalation_owner: sami
+    kpis:
+      - sla
+      - service_level
+      - occupancy
+      - adherence
+      - aht
+      - fcr
+      - csat
+      - churn_risk
+      - quality_score
+    allowed_peer_calls:
+      - hr_personnel_gm
+      - ld_gm
+      - sami
+      - compliance_quality_gm
+      - fraud_gm
+    segregation_of_duties:
+      cannot_approve_own_actions: true
+      must_be_reviewed_by:
+        - compliance_quality_gm
+      can_review: []
+      restrictions:
+        - "OPS staffing actions over 20% headcount change require HR + Compliance review"
+        - "OPS cannot approve own service-level exceptions; requires compliance"
+
+# Shared KPI vocabulary (canonical per C1, must match HELIX_CODEX_UPGRADE_PLAN.md §1 and §4)
+# Added attrition as C0-verified workforce KPI (see capability-matrix.json client snapshot) — shared vocab extended for HR GM.
+kpi_vocabulary:
+  - sla
+  - service_level
+  - occupancy
+  - adherence
+  - aht
+  - fcr
+  - csat
+  - churn_risk
+  - pipeline_value
+  - leakage
+  - quality_score
+  - competency
+  - time_to_competency
+  - attrition

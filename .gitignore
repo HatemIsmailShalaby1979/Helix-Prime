@@ -63,3 +63,8 @@ evidence/*
 !evidence/.gitkeep
 .pytest-tmp/
 *.tmp
+# C3 observability & audit (local-first, do not commit)
+observability/logs.jsonl
+security/audit.db
+security/audit.db-*
+*.jsonl

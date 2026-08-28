@@ -114,6 +114,91 @@ def test_default_db_path_is_ignored():
     assert result.returncode != 0, f"{DEFAULT_DB_PATH} should not be tracked by git"
 
 
+def test_cognitive_log_db_creates_on_import(tmp_path):
+    """Clean-start: importing cognitive_log recreates the SQLite database outside version control."""
+    import importlib
+    import sys
+    import os
+
+    # Simulate clean environment: add cockpit/memory to path, reload module fresh
+    cockpit_memory = str(pathlib.Path("cockpit/memory").resolve())
+    if cockpit_memory not in sys.path:
+        sys.path.insert(0, cockpit_memory)
+
+    # Remove cached module to force fresh import
+    mod_name = "cognitive_log"
+    if mod_name in sys.modules:
+        del sys.modules[mod_name]
+
+    # Patch LOG_DIR before import to use tmp_path
+    import cognitive_log as cl
+    original_dir = cl.LOG_DIR
+    original_sqlite = cl.SQLITE_DB
+    original_json = cl.JSON_LOG
+    target = tmp_path / "cognitive_log_test.sqlite"
+    cl.LOG_DIR = tmp_path
+    cl.SQLITE_DB = target
+    cl.JSON_LOG = tmp_path / "cognitive_log.jsonl"
+    try:
+        cl._init_sqlite()
+        assert target.exists(), "cognitive_log.sqlite must be recreated on _init_sqlite()"
+        import sqlite3
+        conn = sqlite3.connect(str(target))
+        tables = [r[0] for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()]
+        conn.close()
+        assert "interactions" in tables, "interactions table must exist"
+    finally:
+        cl.LOG_DIR = original_dir
+        cl.SQLITE_DB = original_sqlite
+        cl.JSON_LOG = original_json
+        # Clean up module cache
+        if mod_name in sys.modules:
+            del sys.modules[mod_name]
+
+
+def test_runtime_artifacts_not_tracked():
+    """Repository artifact scan: runtime databases, logs, caches, evidence, and .venv are not tracked."""
+    import subprocess
+
+    runtime_patterns = [
+        "cockpit/memory/cognitive_log.sqlite",
+        "cockpit/memory/cognitive_log.jsonl",
+        "control_plane/workflow.db",
+        "security/audit.db",
+        "observability/logs.jsonl",
+    ]
+    for pattern in runtime_patterns:
+        result = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", pattern],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode != 0, (
+            f"{pattern} should not be tracked by git (exit {result.returncode})"
+        )
+
+    # Verify .venv and __pycache__ are not tracked
+    result_venv = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", ".venv/"],
+        capture_output=True,
+        text=True,
+    )
+    assert result_venv.returncode != 0, ".venv/ should not be tracked by git"
+
+    # Verify evidence directory only contains README.md
+    result_ev = subprocess.run(
+        ["git", "ls-files", "evidence/"],
+        capture_output=True,
+        text=True,
+    )
+    tracked_evidence = [f for f in result_ev.stdout.strip().split("\n") if f]
+    assert tracked_evidence == ["evidence/README.md"], (
+        f"Only evidence/README.md should be tracked, found: {tracked_evidence}"
+    )
+
+
 def test_store_preserves_across_restart(tmp_path):
     # Verify persistence across process restart (re-open)
     from contracts.task import TaskRequest, CorrelationContext

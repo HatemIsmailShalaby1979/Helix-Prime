@@ -251,6 +251,24 @@ must be filled only by real humans or external parties.
 - **Nothing was pushed.** Branch `main` is ahead 14 of `origin/main`; no `git push`
   was executed.
 
+### Pre-existing tracked artifact: remediation
+
+- **Discovery:** `cockpit/memory/cognitive_log.sqlite` was tracked in Git despite
+  `.gitignore` already containing `cockpit/memory/cognitive_log.sqlite` (line 44).
+  The file was tracked before the ignore rule was added or was force-added.
+- **Classification:** Empty runtime artifact. Schema only: `interactions` table
+  with 0 rows. No secrets, no customer data, no personnel data, no real content.
+- **Local file preserved:** Yes. The file remains on disk at
+  `cockpit/memory/cognitive_log.sqlite`.
+- **Remediation:** `git rm --cached cockpit/memory/cognitive_log.sqlite` (removed
+  from tracking, file preserved locally).
+- **Clean-start test added:** `test_cognitive_log_db_creates_on_import` — proves the
+  application recreates the SQLite database on import via `_init_sqlite()`.
+- **Artifact tracking test added:** `test_runtime_artifacts_not_tracked` — proves
+  runtime databases (`cognitive_log.sqlite`, `workflow.db`, `audit.db`, `logs.jsonl`),
+  `.venv/`, and `evidence/` contents are not tracked by Git.
+- **Test count:** 307 → 309 (2 new tests, both passing).
+
 ## 10. Final Git status
 
 ```

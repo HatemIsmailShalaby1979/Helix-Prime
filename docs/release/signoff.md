@@ -22,7 +22,9 @@ itself.
 
 ## Rules enforced by `release/signoff.py`
 
-- `validate_signoff(state, go_no_go)` returns `(ok, reason)`.
+- `validate_signoff(s: SignOff)` returns `(ok, reason)`. It takes a single
+  `SignOff` whose state is `s.state`; it does not take a `(state, go_no_go)`
+  pair. (Corrected to match `release/signoff.py`.)
 - `unsigned` and `internal_review` require no decision; `pilot_approved` and
   `production_approved` require `decision == "approve"`, a reviewer identity and
   role, a decision timestamp, an evidence pack id, and at least one evidence

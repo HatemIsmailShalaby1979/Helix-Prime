@@ -61,6 +61,22 @@ def _all_c8_gates() -> List[str]:
     return list(GATE_NAMES)
 
 
+# Production-only gate: external evidence / ownership commitments that C8 (and
+# any local automated run) cannot satisfy. These keep the production profile
+# permanently NOT_READY until genuine external approvals and evidence exist.
+PRODUCTION_ONLY_GATES = [
+    "signed_production_evidence",       # external signed production evidence
+    "certified_data_isolation",         # certified tenant/data isolation
+    "external_observer_audit",          # independent external observer audit
+    "production_deployment_architecture",  # reviewed prod deployment architecture
+    "disaster_recovery_evidence",       # DR / restore evidence from a real environment
+    "operational_ownership",            # assigned operational owner
+    "incident_oncall_ownership",        # assigned incident/on-call owner
+    "security_review",                  # security review signed off
+    "legal_privacy_review",            # legal/privacy review where applicable
+]
+
+
 PROFILE_REQUIRED_GATES: Dict[str, List[str]] = {
     "alpha": ["repository_state"],
     "internal_pilot": [
@@ -71,12 +87,7 @@ PROFILE_REQUIRED_GATES: Dict[str, List[str]] = {
     ],
     "controlled_pilot": _all_c8_gates(),
     "production_candidate": _all_c8_gates(),
-    "production": _all_c8_gates()
-    + [
-        "signed_production_evidence",
-        "certified_data_isolation",
-        "external_observer_audit",
-    ],
+    "production": _all_c8_gates() + PRODUCTION_ONLY_GATES,
 }
 
 
@@ -126,15 +137,19 @@ def classify_from_gate_results(
     missing = [g for g in required if g not in green_gates]
 
     if profile == "production":
-        # Production adds signed evidence/certified isolation/external audit—
-        # none of which are satisfied in C8.
+        # Production adds external-only gates — none of which C8 or any local
+        # automated run can satisfy. A bare PRODUCTION label is therefore
+        # unreachable here: every production-only gate must be independently
+        # green before it could be considered.
         base_missing = [g for g in _all_c8_gates() if g not in green_gates]
         extra_missing = [
-            g for g in required if g not in _all_c8_gates() and g not in green_gates
+            g for g in PRODUCTION_ONLY_GATES
+            if g not in _all_c8_gates() and g not in green_gates
         ]
-        if base_missing or extra_missing or not release_approved:
+        required_extra = list(PRODUCTION_ONLY_GATES)
+        all_prod_gates = all(g in green_gates for g in required_extra)
+        if base_missing or extra_missing or not all_prod_gates or not release_approved:
             return "NOT_READY"
-        # Would be PRODUCTION-labelled only here; we never reach it in C8.
         return "PRODUCTION"
 
     if not missing:

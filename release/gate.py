@@ -201,11 +201,62 @@ def _gate_release_approval() -> tuple[bool, str]:
         data = json.loads(p.read_text(encoding="utf-8"))
         approved = bool(data.get("approved", False))
         scope_ok = str(data.get("data_scope", "")) == "SYNTHETIC_OR_CONSENTED_ONLY"
+        # The C8 go/no-go is a LOCAL consent flag scoped to candidate/pilot
+        # classification only. It is NOT a human production approval; the
+        # production profile additionally requires all production-only gates.
         return approved and scope_ok, (
             f"release_approval: approved={approved} scope_ok={scope_ok}"
         )
     except Exception as e:  # noqa: BLE001
         return False, f"release_approval: {type(e).__name__}: {e}"
+
+
+# ── production-only gates ─────────────────────────────────────────────────
+# These are external blockers that a local automated run CANNOT satisfy. Each
+# returns red with a documented reason so the production profile fails closed
+# and can never be claimed locally. They are recorded (not fabricated) here.
+def _prod_gate_reason(name: str, evidence_type: str) -> tuple[bool, str]:
+    return False, f"{name}: requires {evidence_type} — not present (production NOT approved)"
+
+
+def _gate_signed_production_evidence() -> tuple[bool, str]:
+    return _prod_gate_reason("signed_production_evidence", "external signed production evidence")
+
+
+def _gate_certified_data_isolation() -> tuple[bool, str]:
+    return _prod_gate_reason("certified_data_isolation", "certified tenant/data isolation")
+
+
+def _gate_external_observer_audit() -> tuple[bool, str]:
+    return _prod_gate_reason("external_observer_audit", "independent external observer audit")
+
+
+def _gate_production_deployment_architecture() -> tuple[bool, str]:
+    return _prod_gate_reason(
+        "production_deployment_architecture", "reviewed deployment architecture"
+    )
+
+
+def _gate_disaster_recovery_evidence() -> tuple[bool, str]:
+    return _prod_gate_reason(
+        "disaster_recovery_evidence", "disaster-recovery evidence from production"
+    )
+
+
+def _gate_operational_ownership() -> tuple[bool, str]:
+    return _prod_gate_reason("operational_ownership", "assigned operational ownership")
+
+
+def _gate_incident_oncall_ownership() -> tuple[bool, str]:
+    return _prod_gate_reason("incident_oncall_ownership", "assigned incident/on-call ownership")
+
+
+def _gate_security_review() -> tuple[bool, str]:
+    return _prod_gate_reason("security_review", "signed security review")
+
+
+def _gate_legal_privacy_review() -> tuple[bool, str]:
+    return _prod_gate_reason("legal_privacy_review", "signed legal/privacy review where applicable")
 
 
 GATE_IMPL = {
@@ -223,6 +274,15 @@ GATE_IMPL = {
     "performance_limits": _gate_performance_limits,
     "operator_readiness": _gate_operator_readiness,
     "release_approval": _gate_release_approval,
+    "signed_production_evidence": _gate_signed_production_evidence,
+    "certified_data_isolation": _gate_certified_data_isolation,
+    "external_observer_audit": _gate_external_observer_audit,
+    "production_deployment_architecture": _gate_production_deployment_architecture,
+    "disaster_recovery_evidence": _gate_disaster_recovery_evidence,
+    "operational_ownership": _gate_operational_ownership,
+    "incident_oncall_ownership": _gate_incident_oncall_ownership,
+    "security_review": _gate_security_review,
+    "legal_privacy_review": _gate_legal_privacy_review,
 }
 
 

@@ -87,6 +87,12 @@ required_gates:
     - signed_production_evidence
     - certified_data_isolation
     - external_observer_audit
+    - production_deployment_architecture
+    - disaster_recovery_evidence
+    - operational_ownership
+    - incident_oncall_ownership
+    - security_review
+    - legal_privacy_review
 
 allowed_final:
   - CONTROLLED_PILOT_READY

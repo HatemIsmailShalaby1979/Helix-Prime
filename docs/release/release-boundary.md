@@ -27,13 +27,23 @@ operator_readiness, release_approval.
 
 ## Production-only gates (never claimed in C8)
 
-- `signed_production_evidence`
-- `certified_data_isolation`
-- `external_observer_audit`
+The nine production-only gates (see `production-blockers.md` and
+`release/profiles.py` → `PRODUCTION_ONLY_GATES`) are fail-closed red locally:
 
-Because these are not satisfied, the C8 gate can only ever emit
-`CONTROLLED_PILOT_READY` or `PRODUCTION_CANDIDATE` — never a bare
-`PRODUCTION` label.
+1. `signed_production_evidence`
+2. `certified_data_isolation`
+3. `external_observer_audit`
+4. `production_deployment_architecture`
+5. `disaster_recovery_evidence`
+6. `operational_ownership`
+7. `incident_oncall_ownership`
+8. `security_review`
+9. `legal_privacy_review`
+
+`PRODUCTION` is emitted only if ALL NINE are green AND a genuine human
+`production_approved` sign-off exists. Because these are never satisfiable
+locally, the C8 gate can only ever emit `CONTROLLED_PILOT_READY` or
+`PRODUCTION_CANDIDATE` — never a bare `PRODUCTION` label.
 
 ## Classification
 

@@ -731,8 +731,12 @@ def test_role_catalog_loads_and_contains_required_roles():
     assert roles_by_id["ld_gm"]["maps_to_agent"] == "WILI"
     assert roles_by_id["ops_gm"]["maps_to_agent"] == "SUBY"
     assert roles_by_id["sami"]["maps_to_agent"] == "SAMI"
-    # catalog-only roles have no agent
-    assert roles_by_id["marketing_gm"]["implementation_status"] == "catalog_only"
+    # all 9 GMs are now functional_agent with canonical crew names
+    for rid in ["marketing_gm", "sales_gm", "compliance_quality_gm", "ict_gm", "fraud_gm"]:
+        assert roles_by_id[rid]["implementation_status"] == "functional_agent"
+        assert roles_by_id[rid]["maps_to_agent"] is not None
+        assert roles_by_id[rid]["agent_class"] is not None
+        assert "agent_name" in roles_by_id[rid]
     # SOD: compliance can review ops etc
     can = set(roles_by_id["compliance_quality_gm"]["segregation_of_duties"]["can_review"])
     assert {"ops_gm", "sales_gm", "hr_personnel_gm", "fraud_gm"}.issubset(can)

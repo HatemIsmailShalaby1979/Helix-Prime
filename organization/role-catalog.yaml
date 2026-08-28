@@ -1,14 +1,16 @@
 # Helix Prime — Canonical Role Catalog (Codex C1)
 # One source of truth for GM roles, capabilities, tools, data access, approvals, KPIs, peer calls, and SOD constraints.
 # See organization/role_catalog.py for loader/validator and organization/README.md for usage.
-# Existing agents are mapped without rename: PHILI→hr_personnel_gm, WILI→ld_gm, SUBY→ops_gm, SAMI→sami.
-# New GM roles are catalog-only (no functional agent) until C6.
+# Canonical crew names (agent_name) are the official runtime/display identities.
+# Existing agents: SAMI→sami, SUBY→ops_gm, PHILI→hr_personnel_gm, WILI→ld_gm.
+# New GM agents (C6): MAYA→marketing_gm, LIZA→sales_gm, ANDY→compliance_quality_gm, TOMY→ict_gm, NONO→fraud_gm.
 schema_version: "1.0"
-generated: "2026-08-27"
+generated: "2026-08-28"
 classification: "C1_CANONICAL"
 
 roles:
   - id: sami
+    agent_name: "SAMI"
     display_name: "SAMI — Executive Coordinator / CEO"
     mission: "Provide executive coordination, strategic oversight, and cross-GM escalation. Owns the north star and approves initiatives that exceed GM limits."
     implementation_status: functional_agent
@@ -81,7 +83,8 @@ roles:
         - "Executive decisions over $500k require board evidence pack (C8 gate) — not enforced in C1 catalog"
 
   - id: hr_personnel_gm
-    display_name: "HR & Personnel GM"
+    agent_name: "PHILI"
+    display_name: "PHILI — HR & Personnel GM"
     mission: "Own people lifecycle, hiring, workforce policy, and retention. Ensure right people in right roles with right skills."
     implementation_status: functional_agent
     maps_to_agent: PHILI
@@ -137,10 +140,12 @@ roles:
         - "Personnel GM cannot approve own hiring actions"
 
   - id: marketing_gm
-    display_name: "Marketing GM"
+    agent_name: "MAYA"
+    display_name: "MAYA — Marketing GM"
     mission: "Own market intelligence, campaigns, positioning, and demand generation using approved CRM/Sales data and content."
-    implementation_status: catalog_only
-    maps_to_agent: null
+    implementation_status: functional_agent
+    maps_to_agent: MAYA
+    agent_class: "MarketingAgent"
     owned_capabilities:
       - market_intelligence
       - campaign_management
@@ -190,10 +195,12 @@ roles:
         - "Market intelligence sharing requires approval for external_communication"
 
   - id: sales_gm
-    display_name: "Sales GM"
+    agent_name: "LIZA"
+    display_name: "LIZA — Sales GM"
     mission: "Own pipeline, qualification, proposals, and revenue execution through CRM and B2B onboarding handoff."
-    implementation_status: catalog_only
-    maps_to_agent: null
+    implementation_status: functional_agent
+    maps_to_agent: LIZA
+    agent_class: "SalesAgent"
     owned_capabilities:
       - pipeline_management
       - deal_qualification
@@ -247,10 +254,12 @@ roles:
         - "Financial actions require fraud review when leakage risk flagged"
 
   - id: compliance_quality_gm
-    display_name: "Compliance & Quality GM"
+    agent_name: "ANDY"
+    display_name: "ANDY — Compliance & Quality GM"
     mission: "Own policy, QA, risk controls, evidence, and escalation. Control plane for cross-system review and approval."
-    implementation_status: catalog_only
-    maps_to_agent: null
+    implementation_status: functional_agent
+    maps_to_agent: ANDY
+    agent_class: "ComplianceQualityAgent"
     owned_capabilities:
       - policy_enforcement
       - qa_sampling
@@ -318,10 +327,12 @@ roles:
         - "Compliance cannot approve own corrective actions; requires SAMI escalation"
 
   - id: ict_gm
-    display_name: "ICT GM"
+    agent_name: "TOMY"
+    display_name: "TOMY — ICT GM"
     mission: "Own platform, integrations, security, reliability, and release operations for runtime and infrastructure."
-    implementation_status: catalog_only
-    maps_to_agent: null
+    implementation_status: functional_agent
+    maps_to_agent: TOMY
+    agent_class: "ICTAgent"
     owned_capabilities:
       - platform_ops
       - integration_management
@@ -375,10 +386,12 @@ roles:
         - "ICT cannot self-approve release operations; requires compliance gate"
 
   - id: fraud_gm
-    display_name: "Fraud Analysis & Revenue Assurance GM"
+    agent_name: "NONO"
+    display_name: "NONO — Fraud Analysis & Revenue Assurance GM"
     mission: "Own leakage, abuse, anomaly detection, and revenue protection across CRM/B2B/operations signals."
-    implementation_status: catalog_only
-    maps_to_agent: null
+    implementation_status: functional_agent
+    maps_to_agent: NONO
+    agent_class: "FraudAgent"
     owned_capabilities:
       - anomaly_detection
       - leakage_analysis
@@ -430,7 +443,8 @@ roles:
         - "Fraud findings on sales pipeline must be reviewed by Sales GM before client action"
 
   - id: ld_gm
-    display_name: "L&D GM"
+    agent_name: "WILI"
+    display_name: "WILI — L&D GM"
     mission: "Own competency, training, assessment, and knowledge transfer via WILI and sibling Education/Study Studio/LDCC."
     implementation_status: functional_agent
     maps_to_agent: WILI
@@ -489,7 +503,8 @@ roles:
         - "Training content for regulated domains requires compliance review"
 
   - id: ops_gm
-    display_name: "OPS GM"
+    agent_name: "SUBY"
+    display_name: "SUBY — OPS GM"
     mission: "Own contact-centre execution and service performance via SUBY + WFM/RTA/CX."
     implementation_status: functional_agent
     maps_to_agent: SUBY

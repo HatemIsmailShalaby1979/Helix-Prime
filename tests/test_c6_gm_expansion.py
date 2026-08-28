@@ -58,17 +58,40 @@ def test_all_nine_gms_in_catalog():
     assert role_ids == expected, f"Missing roles: {expected - role_ids}"
 
 
-def test_new_gms_are_catalog_only():
-    """New GMs have implementation_status=catalog_only until functional."""
+def test_role_catalog_has_agent_name_field():
+    """All roles have agent_name field with canonical crew names."""
+    catalog = load_role_catalog("organization/role-catalog.yaml")
+    expected_names = {
+        "sami": "SAMI",
+        "ops_gm": "SUBY",
+        "hr_personnel_gm": "PHILI",
+        "ld_gm": "WILI",
+        "marketing_gm": "MAYA",
+        "sales_gm": "LIZA",
+        "compliance_quality_gm": "ANDY",
+        "ict_gm": "TOMY",
+        "fraud_gm": "NONO",
+    }
+    for role in catalog["roles"]:
+        rid = role["id"]
+        assert "agent_name" in role, f"Role {rid} missing agent_name field"
+        assert role["agent_name"] == expected_names[rid], \
+            f"Role {rid} agent_name {role['agent_name']!r} != expected {expected_names[rid]!r}"
+
+
+def test_canonical_gms_are_functional():
+    """All 9 canonical GMs are now functional_agent with canonical crew names."""
     catalog = load_role_catalog("organization/role-catalog.yaml")
     for role in catalog["roles"]:
-        if role["id"] in {"compliance_quality_gm", "fraud_gm", "marketing_gm", "sales_gm", "ict_gm"}:
-            assert role["implementation_status"] == "catalog_only", \
-                f"{role['id']} should be catalog_only, got {role['implementation_status']}"
-            assert role["maps_to_agent"] is None
-        elif role["id"] in {"sami", "ops_gm", "hr_personnel_gm", "ld_gm"}:
-            assert role["implementation_status"] == "functional_agent"
-            assert role["maps_to_agent"] is not None
+        # All 9 GMs should be functional_agent
+        assert role["implementation_status"] == "functional_agent", \
+            f"{role['id']} should be functional_agent, got {role['implementation_status']}"
+        assert role["maps_to_agent"] is not None, f"{role['id']} missing maps_to_agent"
+        assert role["agent_class"] is not None, f"{role['id']} missing agent_class"
+        # Verify agent_name field exists and matches canonical crew
+        assert "agent_name" in role, f"{role['id']} missing agent_name field"
+        assert role["agent_name"] == role["maps_to_agent"], \
+            f"{role['id']} agent_name ({role['agent_name']}) != maps_to_agent ({role['maps_to_agent']})"
 
 
 def test_new_gm_capabilities_registered():
@@ -203,33 +226,76 @@ def test_capability_registry_mirror_drift():
 
 # ── Agent Registry Tests ──
 
-def test_all_nine_agents_registered():
-    """All 9 agents (4 existing + 5 new) are registered in AgentRegistry."""
-    agents = AgentRegistry.list_available()
-    expected = {"SAMI", "SUBY", "PHILI", "WILI", "COMPLIANCE", "FRAUD", "MARKETING", "SALES", "ICT"}
-    assert set(agents) == expected
+# Canonical crew names (official runtime identities)
+CANONICAL_CREW = {"SAMI", "SUBY", "PHILI", "WILI", "ANDY", "NONO", "MAYA", "LIZA", "TOMY"}
+
+# Backward compatibility aliases (old C6 class-based names)
+LEGACY_ALIASES = {"COMPLIANCE", "FRAUD", "MARKETING", "SALES", "ICT"}
+
+def test_all_nine_canonical_agents_registered():
+    """All 9 canonical crew agents are registered in AgentRegistry."""
+    agents = set(AgentRegistry.list_available())
+    # Must include all canonical names
+    assert CANONICAL_CREW.issubset(agents), f"Missing canonical agents: {CANONICAL_CREW - agents}"
+    # Must include legacy aliases for backward compatibility
+    assert LEGACY_ALIASES.issubset(agents), f"Missing legacy aliases: {LEGACY_ALIASES - agents}"
+    # Total should be at least 14 (9 canonical + 5 legacy)
+    assert len(agents) >= 14
 
 
-def test_new_agents_have_correct_roles():
-    """New agents have correct role names."""
-    for name, expected_role in [
-        ("COMPLIANCE", "Compliance & Quality GM"),
-        ("FRAUD", "Fraud Analysis & Revenue Assurance GM"),
-        ("MARKETING", "Marketing GM"),
-        ("SALES", "Sales GM"),
-        ("ICT", "ICT GM"),
-    ]:
+def test_canonical_crew_names_exact():
+    """Verify exact canonical crew names and their role mappings."""
+    expected = {
+        "SAMI": "CEO / Strategist",
+        "SUBY": "Operations Executive",
+        "PHILI": "Personnel Director",
+        "WILI": "Learning & Development Director",
+        "ANDY": "Compliance & Quality GM",
+        "NONO": "Fraud Analysis & Revenue Assurance GM",
+        "MAYA": "Marketing GM",
+        "LIZA": "Sales GM",
+        "TOMY": "ICT GM",
+    }
+    for name, expected_role in expected.items():
         agent = AgentRegistry.get_agent(name)
-        assert agent is not None, f"Agent {name} not registered"
+        assert agent is not None, f"Canonical agent {name} not registered"
+        assert agent.name == name, f"Agent name mismatch: {agent.name!r} != {name!r}"
         assert agent.role == expected_role, f"{name} role mismatch: {agent.role!r} != {expected_role!r}"
 
 
+def test_legacy_aliases_resolve_to_same_instances():
+    """Legacy aliases resolve to the same agent instances as canonical names."""
+    canonical_to_legacy = {
+        "ANDY": "COMPLIANCE",
+        "NONO": "FRAUD",
+        "MAYA": "MARKETING",
+        "LIZA": "SALES",
+        "TOMY": "ICT",
+    }
+    for canonical, legacy in canonical_to_legacy.items():
+        canon_agent = AgentRegistry.get_agent(canonical)
+        legacy_agent = AgentRegistry.get_agent(legacy)
+        assert canon_agent is not None, f"Canonical {canonical} not found"
+        assert legacy_agent is not None, f"Legacy {legacy} not found"
+        # They should be the same instance (singleton pattern)
+        assert canon_agent is legacy_agent, f"{canonical} and {legacy} should be same instance"
+
+
+def test_name_uniqueness():
+    """All 9 canonical names are unique."""
+    agents = [AgentRegistry.get_agent(name) for name in CANONICAL_CREW]
+    names = [a.name for a in agents]
+    assert len(set(names)) == 9, f"Duplicate canonical names: {names}"
+
+
 def test_new_agents_have_system_prompts():
-    """New agents have non-empty system prompts."""
-    for name in ["COMPLIANCE", "FRAUD", "MARKETING", "SALES", "ICT"]:
+    """New agents have non-empty system prompts using canonical names."""
+    for name in ["ANDY", "NONO", "MAYA", "LIZA", "TOMY"]:
         agent = AgentRegistry.get_agent(name)
         assert agent.system_prompt, f"Agent {name} missing system_prompt"
         assert len(agent.system_prompt) > 100, f"Agent {name} system_prompt too short"
+        # System prompt should reference the canonical name
+        assert name in agent.system_prompt, f"System prompt for {name} should reference canonical name"
 
 
 # ── Authorization/SOD Regression Tests ──
@@ -270,11 +336,50 @@ def test_tenant_isolation():
     assert decision.code == "tenant_isolation"
 
 
+def test_authorization_uses_stable_role_ids():
+    """Authorization uses stable role_ids (not canonical names) for decisions."""
+    from security.identity import Identity
+    from security.policy import AuthorizationRequest, authorize
+
+    # Test with canonical role IDs
+    for role_id in ["marketing_gm", "sales_gm", "compliance_quality_gm", "ict_gm", "fraud_gm"]:
+        ident = Identity(actor="test", actor_type="agent", tenant_id="t1", client_id="c1", role_id=role_id)
+        req = AuthorizationRequest(identity=ident, capability="market_intelligence", tool="crm_engine_read", owning_role_id=role_id)
+        decision = authorize(req)
+        # Should not fail with unknown_capability or unauthorized_role due to name confusion
+        # (market_intelligence is owned by marketing_gm, so marketing_gm should be allowed)
+        if role_id == "marketing_gm":
+            assert decision.allowed is True
+            assert decision.owning_role_id == "marketing_gm"
+        else:
+            # Other roles may be denied but for correct reasons (not name confusion)
+            if not decision.allowed:
+                assert decision.code in ("unauthorized_role", "tenant_isolation", "unknown_capability")
+
+
+def test_audit_log_identity_fields_use_canonical_names():
+    """Verify audit/log identity fields would use canonical crew names."""
+    # This test verifies the identity mapping is correct
+    catalog = load_role_catalog("organization/role-catalog.yaml")
+    roles_by_id = catalog["roles_by_id"]
+
+    # Each role's agent_name should be the canonical identity used in logs/audit
+    for role in catalog["roles"]:
+        rid = role["id"]
+        agent_name = role["agent_name"]
+        # The agent_name is the canonical identity
+        assert agent_name in CANONICAL_CREW, f"Role {rid} agent_name {agent_name!r} not in canonical crew"
+        # Verify it matches maps_to_agent
+        assert agent_name == role["maps_to_agent"], f"Role {rid} agent_name != maps_to_agent"
+
+
 def test_existing_four_agent_regression():
-    """Existing four agents still work."""
+    """Existing four agents still work with unchanged identities."""
     for name in ["SAMI", "SUBY", "PHILI", "WILI"]:
         agent = AgentRegistry.get_agent(name)
         assert agent is not None, f"Existing agent {name} missing"
+        # Verify identity unchanged
+        assert agent.name == name
         # Verify they can process a simple request (no Ollama needed - will get LLM error but that's ok)
         result = agent.process_request("test")
         assert isinstance(result, str)
@@ -318,8 +423,8 @@ def test_existing_c0_c5_regression():
 
 
 def test_ollama_unavailable_behavior():
-    """New agents handle Ollama unavailable gracefully."""
-    for name in ["COMPLIANCE", "FRAUD", "MARKETING", "SALES", "ICT"]:
+    """New agents (canonical names) handle Ollama unavailable gracefully."""
+    for name in ["ANDY", "NONO", "MAYA", "LIZA", "TOMY"]:
         agent = AgentRegistry.get_agent(name)
         # This will attempt to call Ollama and get an error, but should not crash
         result = agent.process_request("test query")
@@ -328,14 +433,15 @@ def test_ollama_unavailable_behavior():
         assert len(result) > 0
 
 
-def test_catalog_only_gms_no_execution_tools():
-    """Catalog-only GMs don't claim unavailable execution tools."""
+def test_canonical_gms_no_execution_tools():
+    """Canonical GMs (except OPS/HR/L&D) don't claim unavailable execution tools."""
     catalog = load_role_catalog("organization/role-catalog.yaml")
     roles_by_id = catalog["roles_by_id"]
 
+    # These GMs should not have wfm_engine, rta_engine, cx_engine, personnel_engine
     for role_id in ["compliance_quality_gm", "fraud_gm", "marketing_gm", "sales_gm", "ict_gm"]:
         tools = roles_by_id[role_id]["allowed_tools"]
-        # Should not have wfm_engine, rta_engine, cx_engine (execution tools)
+        # Should not have execution tools
         assert "wfm_engine" not in tools
         assert "rta_engine" not in tools
         assert "cx_engine" not in tools
@@ -343,6 +449,14 @@ def test_catalog_only_gms_no_execution_tools():
         # Should have read-only or policy tools
         assert "ollama" in tools
         assert "cognitive_log" in tools
+
+    # OPS, HR, L&D have execution tools
+    for role_id, expected_tool in [
+        ("ops_gm", "wfm_engine"),
+        ("hr_personnel_gm", "personnel_engine"),
+        ("ld_gm", "wili_engine"),
+    ]:
+        assert expected_tool in roles_by_id[role_id]["allowed_tools"]
 
 
 # ── KPI Vocabulary Tests ──

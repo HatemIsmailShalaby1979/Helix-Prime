@@ -1,6 +1,6 @@
 """
 Base Agent class with inter-agent calling, visible reasoning, and memory logging.
-All agents (SAMI, SUBY, PHILI, WILI) should inherit from this.
+All agents (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY) should inherit from this.
 """
 
 import re
@@ -50,14 +50,23 @@ class AgentRegistry:
 
     _instances: dict[str, "BaseAgent"] = {}
     _factories: dict[str, Callable[[], "BaseAgent"]] = {}
+    _aliases: dict[str, str] = {}  # legacy_name -> canonical_name
 
     @classmethod
     def register_factory(cls, name: str, factory: Callable[[], "BaseAgent"]):
         cls._factories[name.upper()] = factory
 
     @classmethod
+    def register_alias(cls, legacy_name: str, canonical_name: str):
+        """Register a legacy name as an alias for a canonical agent name."""
+        cls._aliases[legacy_name.upper()] = canonical_name.upper()
+
+    @classmethod
     def get_agent(cls, name: str) -> Optional["BaseAgent"]:
         name = name.upper()
+        # Check if it's an alias first
+        if name in cls._aliases:
+            name = cls._aliases[name]
         if name in cls._instances:
             return cls._instances[name]
         if name in cls._factories:
@@ -68,7 +77,7 @@ class AgentRegistry:
 
     @classmethod
     def list_available(cls) -> list[str]:
-        return list(set(cls._instances.keys()) | set(cls._factories.keys()))
+        return list(set(cls._instances.keys()) | set(cls._factories.keys()) | set(cls._aliases.keys()))
 
 
 class BaseAgent:
@@ -437,10 +446,10 @@ Always deliver insights that are:
 
 
 class ComplianceQualityAgent(BaseAgent):
-    name = "COMPLIANCE"
+    name = "ANDY"
     role = "Compliance & Quality GM"
     model = "qwen3:8b"
-    system_prompt = """You are COMPLIANCE, the Compliance & Quality GM for Helix Prime.
+    system_prompt = """You are ANDY, the Compliance & Quality GM for Helix Prime.
 
 Your role:
 - Own policy enforcement, QA sampling, risk controls, evidence packs, and escalation review
@@ -461,10 +470,10 @@ You can call other agents when needed:
 - Call SAMI for executive escalation
 - Call SUBY for operational context on service-level exceptions
 - Call PHILI for personnel policy context
-- Call FRAUD for leakage investigation context
-- Call MARKETING for external campaign compliance
-- Call ICT for platform change impact on client data
-- Call SALES for proposal review context
+- Call NONO for leakage investigation context
+- Call MAYA for external campaign compliance
+- Call TOMY for platform change impact on client data
+- Call LIZA for proposal review context
 - Call WILI for training compliance in regulated domains
 
 To call another agent, write EXACTLY this format in your response:
@@ -487,10 +496,10 @@ Always deliver insights that are:
 
 
 class FraudAgent(BaseAgent):
-    name = "FRAUD"
+    name = "NONO"
     role = "Fraud Analysis & Revenue Assurance GM"
     model = "qwen3:8b"
-    system_prompt = """You are FRAUD, the Fraud Analysis & Revenue Assurance GM for Helix Prime.
+    system_prompt = """You are NONO, the Fraud Analysis & Revenue Assurance GM for Helix Prime.
 
 Your role:
 - Own anomaly detection, leakage analysis, fraud investigation, and revenue assurance
@@ -508,15 +517,15 @@ When analyzing signals:
 - Request compliance review for all financial-action approvals
 
 You can call other agents when needed:
-- Call COMPLIANCE for policy review on financial actions
-- Call SALES for pipeline context and leakage validation
+- Call ANDY for policy review on financial actions
+- Call LIZA for pipeline context and leakage validation
 - Call SUBY for operational signal correlation
 - Call SAMI for executive escalation on major findings
 
 To call another agent, write EXACTLY this format in your response:
 call_agent("AGENT_NAME", "your question here")
 
-Example: call_agent("SALES", "What is the pipeline status for the flagged accounts?")
+Example: call_agent("LIZA", "What is the pipeline status for the flagged accounts?")
 
 This line will be automatically detected, executed, and replaced with the
 agent's response. Use it whenever you need data from another department.
@@ -533,10 +542,10 @@ Always deliver insights that are:
 
 
 class MarketingAgent(BaseAgent):
-    name = "MARKETING"
+    name = "MAYA"
     role = "Marketing GM"
     model = "qwen3:8b"
-    system_prompt = """You are MARKETING, the Marketing GM for Helix Prime.
+    system_prompt = """You are MAYA, the Marketing GM for Helix Prime.
 
 Your role:
 - Own market intelligence, campaigns, positioning, and demand generation
@@ -553,15 +562,15 @@ When planning campaigns:
 - Ensure market intelligence sharing follows approval process
 
 You can call other agents when needed:
-- Call SALES for pipeline and win/loss data
-- Call COMPLIANCE for content and campaign review
+- Call LIZA for pipeline and win/loss data
+- Call ANDY for content and campaign review
 - Call SAMI for strategic market priorities
 - Call SUBY for operational impact of campaigns
 
 To call another agent, write EXACTLY this format in your response:
 call_agent("AGENT_NAME", "your question here")
 
-Example: call_agent("SALES", "What are the top 5 win reasons this quarter?")
+Example: call_agent("LIZA", "What are the top 5 win reasons this quarter?")
 
 This line will be automatically detected, executed, and replaced with the
 agent's response. Use it whenever you need data from another department.
@@ -578,10 +587,10 @@ Always deliver insights that are:
 
 
 class SalesAgent(BaseAgent):
-    name = "SALES"
+    name = "LIZA"
     role = "Sales GM"
     model = "qwen3:8b"
-    system_prompt = """You are SALES, the Sales GM for Helix Prime.
+    system_prompt = """You are LIZA, the Sales GM for Helix Prime.
 
 Your role:
 - Own pipeline management, deal qualification, proposal generation, and revenue execution
@@ -599,16 +608,16 @@ When managing pipeline:
 - Ensure B2B handoff includes all required context
 
 You can call other agents when needed:
-- Call MARKETING for lead source and campaign attribution
-- Call COMPLIANCE for proposal review (especially >$100k)
-- Call FRAUD for leakage investigation context
+- Call MAYA for lead source and campaign attribution
+- Call ANDY for proposal review (especially >$100k)
+- Call NONO for leakage investigation context
 - Call SUBY for operational capacity to deliver
 - Call SAMI for strategic revenue priorities
 
 To call another agent, write EXACTLY this format in your response:
 call_agent("AGENT_NAME", "your question here")
 
-Example: call_agent("COMPLIANCE", "Review this proposal for Account Beta worth $150k")
+Example: call_agent("ANDY", "Review this proposal for Account Beta worth $150k")
 
 This line will be automatically detected, executed, and replaced with the
 agent's response. Use it whenever you need data from another department.
@@ -625,10 +634,10 @@ Always deliver insights that are:
 
 
 class ICTAgent(BaseAgent):
-    name = "ICT"
+    name = "TOMY"
     role = "ICT GM"
     model = "qwen3:8b"
-    system_prompt = """You are ICT, the ICT GM for Helix Prime.
+    system_prompt = """You are TOMY, the ICT GM for Helix Prime.
 
 Your role:
 - Own platform operations, integrations, security, reliability, and release operations
@@ -647,15 +656,15 @@ When managing platform:
 - Escalate security incidents per policy
 
 You can call other agents when needed:
-- Call COMPLIANCE for platform change review (client data impact, releases)
+- Call ANDY for platform change review (client data impact, releases)
 - Call SUBY for operational impact of platform changes
-- Call FRAUD for security anomaly correlation
+- Call NONO for security anomaly correlation
 - Call SAMI for strategic platform priorities
 
 To call another agent, write EXACTLY this format in your response:
 call_agent("AGENT_NAME", "your question here")
 
-Example: call_agent("COMPLIANCE", "Review this release for client data impact")
+Example: call_agent("ANDY", "Review this release for client data impact")
 
 This line will be automatically detected, executed, and replaced with the
 agent's response. Use it whenever you need data from another department.
@@ -672,15 +681,23 @@ Always deliver insights that are:
 
 
 # Register factories
+# Canonical crew names (official runtime identities)
 AgentRegistry.register_factory("SAMI", lambda: SAMIAgent())
 AgentRegistry.register_factory("SUBY", lambda: SUBYAgent())
 AgentRegistry.register_factory("PHILI", lambda: PHILIAgent())
 AgentRegistry.register_factory("WILI", lambda: WILIAgent())
-AgentRegistry.register_factory("COMPLIANCE", lambda: ComplianceQualityAgent())
-AgentRegistry.register_factory("FRAUD", lambda: FraudAgent())
-AgentRegistry.register_factory("MARKETING", lambda: MarketingAgent())
-AgentRegistry.register_factory("SALES", lambda: SalesAgent())
-AgentRegistry.register_factory("ICT", lambda: ICTAgent())
+AgentRegistry.register_factory("ANDY", lambda: ComplianceQualityAgent())
+AgentRegistry.register_factory("NONO", lambda: FraudAgent())
+AgentRegistry.register_factory("MAYA", lambda: MarketingAgent())
+AgentRegistry.register_factory("LIZA", lambda: SalesAgent())
+AgentRegistry.register_factory("TOMY", lambda: ICTAgent())
+
+# Backward compatibility aliases (old C6 class-based names)
+AgentRegistry.register_alias("COMPLIANCE", "ANDY")
+AgentRegistry.register_alias("FRAUD", "NONO")
+AgentRegistry.register_alias("MARKETING", "MAYA")
+AgentRegistry.register_alias("SALES", "LIZA")
+AgentRegistry.register_alias("ICT", "TOMY")
 
 
 if __name__ == "__main__":

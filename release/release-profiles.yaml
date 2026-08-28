@@ -1,0 +1,95 @@
+# Helix Prime Codex C8 — release profiles and gate boundary (YAML mirror).
+# Hand-editable source of truth; module release/profiles.py reads this file
+# when present and falls back to inline defaults otherwise.
+#
+# IMPORTANT: The "production" profile adds production-only gates (signed
+# production evidence, certified data isolation, external observer audit)
+# that C8 does NOT satisfy. Therefore the C8 release gate can only ever emit
+# CONTROLLED_PILOT_READY or PRODUCTION_CANDIDATE — never an unqualified
+# PRODUCTION label.
+
+profiles:
+  - alpha
+  - internal_pilot
+  - controlled_pilot
+  - production_candidate
+  - production
+
+gates:
+  - repository_state
+  - reproducible_install
+  - configuration_validation
+  - dependency_locking
+  - startup_readiness
+  - backup_restore
+  - rollback
+  - data_isolation
+  - audit_integrity
+  - security_checks
+  - failure_recovery
+  - performance_limits
+  - operator_readiness
+  - release_approval
+
+required_gates:
+  alpha:
+    - repository_state
+  internal_pilot:
+    - repository_state
+    - reproducible_install
+    - configuration_validation
+    - startup_readiness
+  controlled_pilot:
+    - repository_state
+    - reproducible_install
+    - configuration_validation
+    - dependency_locking
+    - startup_readiness
+    - backup_restore
+    - rollback
+    - data_isolation
+    - audit_integrity
+    - security_checks
+    - failure_recovery
+    - performance_limits
+    - operator_readiness
+    - release_approval
+  production_candidate:
+    - repository_state
+    - reproducible_install
+    - configuration_validation
+    - dependency_locking
+    - startup_readiness
+    - backup_restore
+    - rollback
+    - data_isolation
+    - audit_integrity
+    - security_checks
+    - failure_recovery
+    - performance_limits
+    - operator_readiness
+    - release_approval
+  production:
+    - repository_state
+    - reproducible_install
+    - configuration_validation
+    - dependency_locking
+    - startup_readiness
+    - backup_restore
+    - rollback
+    - data_isolation
+    - audit_integrity
+    - security_checks
+    - failure_recovery
+    - performance_limits
+    - operator_readiness
+    - release_approval
+    - signed_production_evidence
+    - certified_data_isolation
+    - external_observer_audit
+
+allowed_final:
+  - CONTROLLED_PILOT_READY
+  - PRODUCTION_CANDIDATE
+
+default_c8: PRODUCTION_CANDIDATE

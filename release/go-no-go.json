@@ -1,0 +1,15 @@
+{
+  "record_version": "1.0",
+  "release": "0.9.0-c8",
+  "scope": "production_candidate / controlled pilot",
+  "data_scope": "SYNTHETIC_OR_CONSENTED_ONLY",
+  "approved": true,
+  "approver": "operator-pilot-consent",
+  "approved_at": "PENDING-GATE-RUN",
+  "notes": [
+    "Controlled pilot and production candidate only.",
+    "No irreversible, financial, personnel, compliance, ICT, or external-communication action without explicit approval.",
+    "Pilot data limited to synthetic or explicitly consented data.",
+    "Production label NOT claimed; every production gate must pass separately."
+  ]
+}

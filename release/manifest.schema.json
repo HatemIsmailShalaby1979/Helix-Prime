@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix-prime.local/schemas/release/manifest.schema.json",
+  "title": "Helix Prime Codex Release Manifest",
+  "description": "Machine-readable release manifest for a production candidate / controlled pilot. Never a bare production claim.",
+  "type": "object",
+  "required": [
+    "manifest_schema_version",
+    "product",
+    "release_profile",
+    "classification",
+    "release_approved",
+    "version",
+    "git_commit",
+    "build_timestamp",
+    "python_version",
+    "platform",
+    "supported_python",
+    "dependency_lock_ref",
+    "enabled_capabilities",
+    "disabled_capabilities",
+    "data_schema_versions",
+    "known_limitations",
+    "evidence_refs"
+  ],
+  "properties": {
+    "manifest_schema_version": { "type": "string", "const": "1.0" },
+    "product": { "type": "string", "const": "Helix-Prime-Codex" },
+    "release_profile": {
+      "type": "string",
+      "enum": ["alpha", "internal_pilot", "controlled_pilot", "production_candidate"]
+    },
+    "classification": {
+      "type": "string",
+      "enum": ["PENDING", "CONTROLLED_PILOT_READY", "PRODUCTION_CANDIDATE", "PRODUCTION"]
+    },
+    "release_approved": { "type": "boolean" },
+    "version": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "git_branch": { "type": "string" },
+    "build_timestamp": { "type": "string", "format": "date-time" },
+    "python_version": { "type": "string" },
+    "platform": { "type": "string" },
+    "supported_python": { "type": "string" },
+    "dependency_lock_ref": { "type": "string" },
+    "dependency_lock_count": { "type": "integer" },
+    "enabled_capabilities": { "type": "array", "items": { "type": "string" } },
+    "disabled_capabilities": { "type": "array", "items": { "type": "string" } },
+    "data_schema_versions": { "type": "object" },
+    "known_limitations": { "type": "array", "items": { "type": "string" } },
+    "evidence_refs": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": true
+}

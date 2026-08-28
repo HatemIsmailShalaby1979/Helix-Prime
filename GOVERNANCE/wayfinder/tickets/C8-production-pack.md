@@ -1,10 +1,11 @@
 ---
 id: C8-production-pack
 type: task
-status: open
+status: closed
 labels: [wayfinder:task]
 blocked_by: [C5-vertical-slice, C3-security-observability]
 blocks: []
+closed: 2026-08-28
 ---
 
 ## Question

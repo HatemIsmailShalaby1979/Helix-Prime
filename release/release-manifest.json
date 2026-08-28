@@ -1,0 +1,50 @@
+{
+  "manifest_schema_version": "1.0",
+  "product": "Helix-Prime-Codex",
+  "release_profile": "production_candidate",
+  "classification": "PRODUCTION_CANDIDATE",
+  "release_approved": true,
+  "version": "0.9.0-c8",
+  "git_commit": "99f9bd37f30a49facd88b412e022145d62212fce",
+  "git_branch": "main",
+  "build_timestamp": "2026-08-28T03:40:41.920775Z",
+  "python_version": "3.14.4",
+  "platform": "linux",
+  "supported_python": ">=3.10",
+  "dependency_lock_ref": "release/requirements.lock.txt",
+  "dependency_lock_count": 24,
+  "enabled_capabilities": [
+    "control_plane",
+    "six_engines",
+    "nine_agents",
+    "vertical_slice",
+    "audit",
+    "classification",
+    "authorization",
+    "sibling_transport(local)",
+    "gm_expansion"
+  ],
+  "disabled_capabilities": [
+    "cloud_deployment",
+    "external_identity_provider",
+    "cloud_observability",
+    "network_sibling_transport",
+    "autonomous_irreversible_actions"
+  ],
+  "data_schema_versions": {
+    "security.audit": "1.0",
+    "control_plane.store": "unknown"
+  },
+  "known_limitations": [
+    "Local SQLite persistence only \u2014 no cloud redundancy or HA.",
+    "Local filesystem permissions assumed; no external IdP or RBAC-backed directory.",
+    "Ollama model trust is assumed (local, user-controlled); no remote model attestation.",
+    "Sibling transport is local/in-process only; network sibling transport deferred.",
+    "No autonomous irreversible/financial/personnel/compliance/external-communication actions.",
+    "Pilot data must be limited to synthetic or explicitly consented data.",
+    "Production label not claimed without every production gate passing."
+  ],
+  "evidence_refs": [
+    "evidence/releases/20260828T034041Z"
+  ]
+}

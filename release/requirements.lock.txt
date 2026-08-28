@@ -1,0 +1,27 @@
+# Helix Prime Codex C8 — declared dependency set (lock reference).
+# This file records the dependency references used for a reproducible setup.
+# Full byte-level pinning is produced by the platform package manager (pip freeze
+# / lock). It must be regenerated on any dependency change and verified by the
+# release gate's dependency_locking check.
+
+# Core + cockpit runtime
+streamlit>=1.32.0,<2.0.0
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+python-dotenv>=1.0.0,<2.0.0
+ollama>=0.4.0,<1.0.0
+scipy>=1.12.0,<2.0.0
+scikit-learn>=1.4.0,<2.0.0
+matplotlib>=3.8.0,<4.0.0
+seaborn>=0.13.0,<1.0.0
+plotly>=5.18.0,<6.0.0
+Flask>=3.0.0,<4.0.0
+flask-cors>=4.0.0,<7.0.0
+
+# CLI / repo tooling
+ruff==0.1.15
+flake8
+pre-commit
+
+# Release gate tooling
+PyYAML>=6.0,<7.0

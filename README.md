@@ -41,9 +41,24 @@ Account context + support history + enrichment + operational signals
 
 The current demonstration uses synthetic and consented-historical modes only. It does not claim production deployment, universal business coverage, or autonomous operation.
 
-## Run locally
+## Download and run
 
-    python -m venv .venv
+- [Download current source ZIP](https://github.com/HatemIsmailShalaby1979/Helix-Prime/archive/refs/heads/main.zip)
+- [View releases](https://github.com/HatemIsmailShalaby1979/Helix-Prime/releases)
+
+### Windows
+
+1. Install Python 3.11 or newer from [python.org](https://www.python.org/downloads/windows/).
+2. Download and extract the current source ZIP.
+3. Open Command Prompt in the extracted folder.
+4. Run setup.bat.
+5. Run launch.bat.
+
+### Linux
+
+    sudo apt-get update
+    sudo apt-get install -y python3 python3-venv
+    python3 -m venv .venv
     source .venv/bin/activate
     pip install -r cockpit/requirements.txt
     python launch.py
@@ -52,13 +67,7 @@ Ollama is optional. Without it, the system uses a deterministic offline mode and
 
 ## Why Helix Prime matters
 
-It is not just a collection of agents. It is an experiment in **governable organizational intelligence**:
-
-- decisions have owners;
-- recommendations expose evidence;
-- actions have authority boundaries;
-- memory carries provenance;
-- improvement requires evaluation, review, approval, and rollback.
+It is an experiment in **governable organizational intelligence**: decisions have owners, recommendations expose evidence, actions have authority boundaries, memory carries provenance, and improvement requires evaluation, review, approval, and rollback.
 
 ## Next evidence milestone
 
@@ -74,7 +83,6 @@ A real design-partner pilot: read-only first, minimum data, explicit consent, me
 ## Author
 
 **Hatem Ismail Shalaby** — Operations Architect and AI Systems Engineer
-[LinkedIn](https://www.linkedin.com/in/hatem-shalaby-202902127/) · [Portfolio](https://github.com/HatemIsmailShalaby1979)
 
 ## License
 

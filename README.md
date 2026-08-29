@@ -1,77 +1,81 @@
 # Helix Prime
 
-The ops platform I built because I was tired of stitching together five different tools that didn't talk to each other.
+> **The governed operations core of Helix Codex.**
 
-## What this actually is
+Helix Prime is a local-first operations platform that brings business engines, governed AI roles, workflow orchestration, evidence, memory, approvals, and a command-center cockpit into one system.
 
-Six business engines. Four local AI agents. One Streamlit cockpit. All running on your laptop.
+It is the first proving product for **Helix Codex**: an accountable AI operating organization designed to help businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.
 
-**Engines inside:** WFM/Erlang C, Real-Time Adherence, CX Churn Sentinel, B2B Onboarding, Personnel, CRM.
+## Verified Phase 1 status
 
-**Agents:** SAMI (staffing), SUBY (adherence), PHILI (churn), WILI (onboarding). They connect to Ollama locally — no cloud, no API keys.
+- **Controlled-pilot ready:** CONTROLLED_PILOT_READY
+- **Production:** NOT_READY until external evidence and human approvals exist
+- **445 tests passing** across contracts, control plane, security, engines, integrations, pilot, memory, metacognition, and capability packs
+- Governance checker: **PASS**
+- Synthetic call-centre and restaurant demonstrations: verified
+- Live connectors and external writes: intentionally disabled
 
-**Orchestrator:** Content-based routing. You drop a request in, it figures out which engine handles it.
+## What is implemented
 
-## Honest status
+- Six operational engines: WFM, RTA, CX, B2B onboarding, Personnel, and CRM
+- Nine governed AI roles with orchestrator routing
+- Tenant/client identity and deny-by-default authorization
+- Workflow state machine, idempotency, approvals, retries, and dead-letter handling
+- Read-only provider-neutral boundaries for Zendesk, Salesforce, and Clay
+- Evidence-backed customer-success account-health diagnosis
+- Provenance-bearing command center
+- Tenant-isolated governed memory with retention and supersession
+- Evidence-gated improvement proposals that never self-deploy
+- Local adapters and cloud-ready interfaces without cloud lock-in
+- Synthetic controlled-pilot package with read-only period and minimum-data policy
 
-**Alpha.** The cockpit works. The engines run. The agents respond (if you have Ollama). What's missing: full agent-to-agent chatter through the UI, and I haven't put this in front of a real client yet.
+## The proving workflow
 
-No production deployments. No enterprise case studies. Just code that works on my machine and hopefully yours.
+Account context + support history + enrichment + operational signals
 
-## Run it (Windows)
+→ account-health diagnosis
+→ evidence and risk explanation
+→ next-best-action recommendation
+→ cross-role approval preview
+→ outcome recorded in governed memory
 
-```batch
-setup.bat
-launch.bat
-```
+The current demonstration uses synthetic and consented-historical modes only. It does not claim production deployment, universal business coverage, or autonomous operation.
 
-Opens at `http://127.0.0.1:8501`.
+## Run locally
 
-## Run it (macOS/Linux)
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -r cockpit/requirements.txt
+    python launch.py
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r cockpit/requirements.txt
-python launch.py
-```
+Ollama is optional. Without it, the system uses a deterministic offline mode and clearly reports that limitation.
 
-## Want the AI agents?
+## Why Helix Prime matters
 
-Install [Ollama](https://ollama.com) and pull a small model:
+It is not just a collection of agents. It is an experiment in **governable organizational intelligence**:
 
-```bash
-ollama pull qwen2.5:1.5b
-```
+- decisions have owners;
+- recommendations expose evidence;
+- actions have authority boundaries;
+- memory carries provenance;
+- improvement requires evaluation, review, approval, and rollback.
 
-Without Ollama, the cockpit still works — agents just show "Offline."
+## Next evidence milestone
 
-## Where the engines came from
+A real design-partner pilot: read-only first, minimum data, explicit consent, measured baseline, and no production claim until the production gates pass.
 
-Helix Prime is the consolidation of five prototypes I built first. They're private now because the code moved into this repo, but they tell the story:
+## Related projects
 
-- **wfm-forecasting-calculator** — Erlang C staffing, shrinkage, interval planning, FTE costs
-- **RTA_command_center** — real-time adherence with auto-alerts and anomaly detection
-- **cx-sentiment-sentinel** — NLP churn prediction and sentiment pipeline
-- **Dynamic-Ops-Automation-Engine** — client intake → staffing schedule + Notion SOPs
-- **META-COGNITIVE-WFM-ENGINE** — advanced modeling experiments
+- [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education)
+- [Study Studio](https://github.com/HatemIsmailShalaby1979/Study-Studio)
+- [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center)
+- [Hatem Shalaby portfolio](https://github.com/HatemIsmailShalaby1979)
 
-## Why I built this
+## Author
 
-28 years in ops taught me one thing: the best tool is the one that's already open on your screen. Helix Prime is the dashboard I wanted — one place to see staffing, adherence, churn risk, onboarding pipeline, people data, and customer context. With local AI that actually helps instead of hallucinating.
-
-## Stack
-
-- Python 3.10+
-- Streamlit for the cockpit
-- Ollama for local LLM (optional but recommended)
-- Pandas, Plotly, Flask for the engines
-- Pydantic for data contracts
-
-## Part of a bigger thing
-
-This is the operational core. The learning side lives in [Study Studio](https://github.com/HatemIsmailShalaby1979/Study-Studio), [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education), and [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center).
+**Hatem Ismail Shalaby** — Operations Architect and AI Systems Engineer
+[LinkedIn](https://www.linkedin.com/in/hatem-shalaby-202902127/) · [Portfolio](https://github.com/HatemIsmailShalaby1979)
 
 ## License
 
-MIT — use it, break it, improve it.
+MIT

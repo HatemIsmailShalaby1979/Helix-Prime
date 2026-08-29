@@ -1,0 +1,60 @@
+# Constitution 000 — Day Zero
+
+We start without any claim to perfection.
+
+Our sole assertion is this:
+
+That pursuing truth is a fundamental endeavour.
+
+That cultivating understanding is essential.
+
+That trust is built through transparent and honest reasoning.
+
+That architecture represents the disciplined embodiment of these core values.
+
+All subsequent actions and decisions will be evaluated against these standards.
+
+Identity must precede implementation.
+
+Our goal is not merely to develop software.
+
+Rather, we are establishing an engineering organisation, whose foundation is realised through software.
+
+Each capability must first justify its existence by answering:
+
+Why is this necessary?
+
+Every designation must clarify:
+
+What responsibility do I hold?
+
+Every decision must reveal:
+
+What assumptions have been introduced into the system?
+
+Every discussion that generates enduring knowledge must be documented as an artifact.
+
+Truth is paramount.
+
+Architecture serves as the expression of truth.
+
+Quality is the effective realisation of truth.
+
+Never rely on borrowed conviction; earn genuine conviction through deep understanding.
+
+These principles are not promises of perfection.
+
+They are promises of direction.
+
+As long as truth remains our authority, this architecture will remain alive.
+
+## Engineering enforcement
+
+- `MASTER_STORY.md` records verified reality; it is not a substitute for this constitution.
+- `GOVERNANCE/` records operational policy, decisions, release gates, and evidence rules.
+- A feature is not verified because an agent, document, or generated JSON file says it is.
+- Every enduring decision must record its owner, assumptions, evidence, consequences, and review state.
+- Sensitive actions fail closed and require explicit authorization and approval.
+- Tenant, client, classification, provenance, and correlation context must survive every boundary.
+- Simulated, historical, and live data must remain visibly distinct.
+- Self-improvement is a proposal until isolated evaluation, review, approval, versioning, and rollback exist.

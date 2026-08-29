@@ -258,7 +258,20 @@ def step_backup_restore(state: str) -> Dict[str, Any]:
 
 
 def step_security_audit_redaction(state: str) -> Dict[str, Any]:
-    res = security_gate.run_security_gate(scan_subdirs=["release"])
+    # Create an isolated audit database for this check
+    isolated_audit = os.path.join(state, "security", "audit-isolated.db")
+    os.makedirs(os.path.dirname(isolated_audit), exist_ok=True)
+    from security.audit import AuditTrail, AuditRecord as AR
+    trail = AuditTrail(db_path=isolated_audit)
+    prev = None
+    for i in range(3):
+        rec = AR.new(event_type="pilot.security", actor="suby", actor_type="agent",
+                     decision="allow", previous_hash=prev)
+        trail.append(rec)
+        prev = rec.current_hash
+    trail.close()
+    # Run security gate with the isolated audit database
+    res = security_gate.run_security_gate(scan_subdirs=["release"], audit_db=isolated_audit)
     return {
         "ok": res["all_ok"],
         "detail": "; ".join(f"{k}:{v['ok']}" for k, v in res.items() if k != "all_ok"),

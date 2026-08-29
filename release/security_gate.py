@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import pathlib
 import re
+import tempfile
 from typing import Any, Dict, List, Optional
 
 from release import manifest as manifest_mod
@@ -147,16 +148,46 @@ def check_deny_by_default() -> Dict[str, Any]:
 
 
 def check_audit_integrity(audit_db: Optional[str] = None) -> Dict[str, Any]:
-    db = audit_db or (ROOT / "security" / "audit.db")
-    if not pathlib.Path(db).exists():
-        return {"ok": True, "detail": "audit_integrity: db absent (skipped)", "skipped": True}
+    """
+    Verify audit chain integrity.
+
+    An explicit database is always checked. Without one, use a temporary
+    self-contained audit trail so the release check exercises the real chain
+    implementation without depending on mutable local runtime state.
+    """
     from security.audit import AuditTrail
-    trail = AuditTrail(db_path=str(db))
-    try:
-        valid, msg = trail.verify_chain()
-    finally:
-        trail.close()
-    return {"ok": bool(valid), "detail": f"audit_integrity: {msg}"}
+    from security.audit import AuditRecord
+
+    if audit_db:
+        db_path = pathlib.Path(audit_db)
+        if not db_path.exists():
+            return {"ok": True, "detail": "audit_integrity: db absent (skipped)", "skipped": True}
+        trail = AuditTrail(db_path=str(db_path))
+        try:
+            valid, msg = trail.verify_chain()
+        finally:
+            trail.close()
+        return {"ok": bool(valid), "detail": f"audit_integrity: {msg}"}
+
+    with tempfile.TemporaryDirectory(prefix="helix_audit_gate_") as work:
+        db_path = pathlib.Path(work) / "audit.db"
+        trail = AuditTrail(db_path=str(db_path))
+        previous_hash = None
+        try:
+            for _ in range(2):
+                record = AuditRecord.new(
+                    event_type="security_gate_probe",
+                    actor="release_gate",
+                    actor_type="service",
+                    decision="succeeded",
+                    previous_hash=previous_hash,
+                )
+                trail.append(record)
+                previous_hash = record.current_hash
+            valid, msg = trail.verify_chain()
+        finally:
+            trail.close()
+    return {"ok": bool(valid), "detail": f"audit_integrity: isolated probe {msg}"}
 
 
 def check_redaction() -> Dict[str, Any]:

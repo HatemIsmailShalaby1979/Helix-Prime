@@ -1,0 +1,9 @@
+# Keep published artifacts lean: exclude runtime DBs, caches, and local media.
+global-exclude *.pyc
+recursive-exclude * __pycache__
+global-exclude *.db
+global-exclude *.db-journal
+global-exclude *.db-wal
+global-exclude *.db-shm
+prune security/audit.db
+prune marketing/assets

@@ -12,7 +12,7 @@ Helix Prime is a **solo-built, public alpha** operations system. It is not yet a
 **What is real today (verified):**
 
 - 6 business engines: WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, CRM
-- 4 AI agents: SAMI (CEO), SUBY (Operations), PHILI (Personnel), WILI (Learning & Development), connected to a local Ollama model
+- 9 AI agents: SAMI, SUBY, PHILI, WILI, ANDY (Compliance & Quality), NONO (Fraud), MAYA (Marketing), LIZA (Sales), TOMY (ICT), connected to a local Ollama model
 - An orchestrator with content-based request routing
 - A Streamlit Operations Cockpit (dashboard)
 - A public repository at `github.com/HatemShelby/Helix-Prime`

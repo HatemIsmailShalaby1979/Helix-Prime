@@ -370,21 +370,22 @@ def test_audit_record_creation(tmp_path):
     from security.audit import AuditTrail
     import pathlib
 
-    # Clear audit DB
-    db_path = "security/audit.db"
-    trail = AuditTrail(db_path=db_path)
+    # Use isolated audit database
+    audit_db = str(tmp_path / "test_audit.db")
+    trail = AuditTrail(db_path=audit_db)
     before = len(trail.list_records(limit=10000))
     # Trigger an engine execution that should create audit
     engine, store = _engine(tmp_path)
+    engine.audit_db_path = audit_db  # Override to use isolated DB
     corr = _corr(cid="corr_audit_c4", ikey="idem_audit_c4", tenant="t", client="c")
     req = TaskRequest(request_id="req_audit_c4", correlation=corr, requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={"arrival_rate": 10, "average_handling_time": 5, "service_level_target": 0.8, "average_calls_per_period": 17}, requires_approval=False, status="proposed", created_at=FIXED_TS, client_id="c")
     wf = engine.submit(req)
     engine.register_handler("wfm_forecast", lambda w: {"optimal_agents": 5})
     engine.execute(wf.workflow_id)
-    after = len(AuditTrail(db_path=db_path).list_records(limit=10000))
+    after = len(AuditTrail(db_path=audit_db).list_records(limit=10000))
     assert after > before
     # Check that at least one new record has workflow_id
-    new_records = AuditTrail(db_path=db_path).list_records(limit=10000)[before:]
+    new_records = AuditTrail(db_path=audit_db).list_records(limit=10000)[before:]
     assert any(r.workflow_id == wf.workflow_id for r in new_records)
 
 
@@ -392,11 +393,10 @@ def test_audit_record_creation(tmp_path):
 
 def test_structured_log_fields(tmp_path):
     import pathlib, json
-    log_path = pathlib.Path("observability/logs.jsonl")
-    # Clear logs
-    if log_path.exists():
-        log_path.unlink()
+    # Use isolated log file
+    log_path = tmp_path / "test_logs.jsonl"
     engine, store = _engine(tmp_path)
+    engine.log_path = str(log_path)  # Override to use isolated log
     corr = _corr(cid="corr_log_c4", ikey="idem_log_c4", tenant="t", client="c")
     req = TaskRequest(request_id="req_log_c4", correlation=corr, requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={"arrival_rate": 10, "average_handling_time": 5, "service_level_target": 0.8, "average_calls_per_period": 17}, requires_approval=False, status="proposed", created_at=FIXED_TS, client_id="c")
     wf = engine.submit(req)

@@ -72,10 +72,18 @@ class Engine:
     - Structured tool seam: TaskRequest -> TaskResult via capability registry
     """
 
-    def __init__(self, store: Optional[Store] = None, db_path: Optional[str] = None):
+    def __init__(
+        self,
+        store: Optional[Store] = None,
+        db_path: Optional[str] = None,
+        audit_db_path: Optional[str] = None,
+        log_path: Optional[str] = None,
+    ):
         self.store = store or Store(db_path or "control_plane/workflow.db")
         self.handlers: Dict[str, Handler] = {}
         self.catalog = load_role_catalog("organization/role-catalog.yaml")
+        self.audit_db_path = audit_db_path or "security/audit.db"
+        self.log_path = log_path or "observability/logs.jsonl"
 
     def register_handler(self, capability: str, handler: Handler) -> None:
         if not isinstance(capability, str) or not capability.strip():
@@ -111,7 +119,7 @@ class Engine:
             return
         try:
             # Determine previous hash
-            trail = AuditTrail(db_path="security/audit.db")
+            trail = AuditTrail(db_path=self.audit_db_path)
             # Get last record's hash for chaining
             last = trail.list_records(limit=1)
             # Actually list_records returns oldest first; we need last
@@ -158,6 +166,7 @@ class Engine:
                 kwargs["payload"] = payload
             log_structured(
                 event_type=event_type,
+                log_path=self.log_path,
                 correlation_id=workflow.correlation.correlation_id,
                 workflow_id=workflow.workflow_id,
                 task_id=workflow.task_id or workflow.workflow_id,

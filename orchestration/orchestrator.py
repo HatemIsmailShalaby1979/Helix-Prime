@@ -132,6 +132,86 @@ ROUTING_RULES = [
         ],
         ["wili"],
     ),
+    # Compliance & Quality domain
+    (
+        [
+            "compliance",
+            "quality",
+            "qa ",
+            "audit",
+            "policy",
+            "evidence pack",
+            "calibration",
+            "risk control",
+            "escalation review",
+            "corrective action",
+            "standard operating",
+        ],
+        ["andy"],
+    ),
+    # Fraud domain
+    (
+        [
+            "fraud",
+            "fraudulent",
+            "chargeback",
+            "scam",
+            "money laundering",
+            "aml",
+            "anomaly",
+            "suspicious transaction",
+            "dispute",
+            "financial crime",
+        ],
+        ["nono"],
+    ),
+    # Marketing domain
+    (
+        [
+            "marketing",
+            "campaign",
+            "brand",
+            "lead generation",
+            "promotion",
+            "content marketing",
+            "social media",
+            "messaging",
+            "awareness",
+        ],
+        ["maya"],
+    ),
+    # Sales domain (distinct from SAMI's strategic/commercial keywords)
+    (
+        [
+            "quota",
+            "prospect",
+            "sales pipeline",
+            "account expansion",
+            "renewal",
+            "sales forecast",
+            "lead gen",
+            "territory",
+            "sales target",
+        ],
+        ["liza"],
+    ),
+    # ICT domain
+    (
+        [
+            "ict",
+            "infrastructure",
+            "network",
+            "outage",
+            "cyber",
+            "security incident",
+            "system status",
+            "tooling",
+            "data platform",
+            "vpn",
+            "endpoint",
+        ],
+        ["tomy"],
+    ),
     # Strategic / CEO domain
     (
         [
@@ -174,6 +254,11 @@ AGENT_CLASSES = {
     "suby": ("suby", "SUBYAgent"),
     "phili": ("phili", "PHILIAgent"),
     "wili": ("wili", "WILIAgent"),
+    "andy": ("base_agent", "ComplianceQualityAgent"),
+    "nono": ("base_agent", "FraudAgent"),
+    "maya": ("base_agent", "MarketingAgent"),
+    "liza": ("base_agent", "SalesAgent"),
+    "tomy": ("base_agent", "ICTAgent"),
 }
 
 
@@ -193,6 +278,12 @@ class Orchestrator:
             if f.stem.startswith("_"):
                 continue
             self.agents[f.stem] = {"path": str(f), "loaded": False}
+        # Ensure every canonical agent in AGENT_CLASSES is discoverable even when
+        # its class lives in a shared module (e.g. base_agent.py). Without this,
+        # _load_agent would early-return None for andy/nono/maya/liza/tomy.
+        for key in AGENT_CLASSES:
+            if key not in self.agents:
+                self.agents[key] = {"path": "shared", "loaded": False}
 
     def _discover_engines(self):
         engine_map = {

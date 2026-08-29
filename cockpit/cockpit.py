@@ -170,7 +170,15 @@ AGENTS = [
     {"name": "SUBY", "role": "Operations Executive", "color": "#42A5F5"},
     {"name": "PHILI", "role": "Personnel Director", "color": "#FFCA28"},
     {"name": "WILI", "role": "L&D Director", "color": "#AB47BC"},
+    {"name": "ANDY", "role": "Compliance & Quality GM", "color": "#EF5350"},
+    {"name": "NONO", "role": "Fraud GM", "color": "#FF7043"},
+    {"name": "MAYA", "role": "Marketing GM", "color": "#26C6DA"},
+    {"name": "LIZA", "role": "Sales GM", "color": "#66BB6A"},
+    {"name": "TOMY", "role": "ICT GM", "color": "#8D6E63"},
 ]
+
+# Canonical agent names (must match AgentRegistry and orchestrator AGENT_CLASSES).
+ALL_AGENT_NAMES = [a["name"] for a in AGENTS]
 
 ENGINE_DESCRIPTIONS = {
     "WFM Forecasting": "Forecasts call volume, staffing requirements, and schedule adherence by hour",
@@ -445,14 +453,105 @@ def call_crm(client):
         return None, f"RuntimeError: {ex}"
 
 
+def _wrap_with_provenance(engine_name: str, module_path: str, fn):
+    """Wrap an engine caller so every result records truthful provenance."""
+
+    def _wrapped(client):
+        df, error = fn(client)
+        _record_provenance(engine_name, client, module_path, error is None)
+        return df, error
+
+    _wrapped.__name__ = fn.__name__
+    return _wrapped
+
+
 ENGINE_CALLERS = {
-    "WFM Forecasting": call_wfm,
-    "RTA Command Center": call_rta,
-    "CX Churn Sentinel": call_cx,
-    "B2B Onboarding": call_b2b,
-    "Personnel Engine": call_personnel,
-    "CRM Engine": call_crm,
+    "WFM Forecasting": _wrap_with_provenance(
+        "WFM Forecasting", ENGINE_MODULE_PATHS["WFM Forecasting"], call_wfm
+    ),
+    "RTA Command Center": _wrap_with_provenance(
+        "RTA Command Center", ENGINE_MODULE_PATHS["RTA Command Center"], call_rta
+    ),
+    "CX Churn Sentinel": _wrap_with_provenance(
+        "CX Churn Sentinel", ENGINE_MODULE_PATHS["CX Churn Sentinel"], call_cx
+    ),
+    "B2B Onboarding": _wrap_with_provenance(
+        "B2B Onboarding", ENGINE_MODULE_PATHS["B2B Onboarding"], call_b2b
+    ),
+    "Personnel Engine": _wrap_with_provenance(
+        "Personnel Engine", ENGINE_MODULE_PATHS["Personnel Engine"], call_personnel
+    ),
+    "CRM Engine": _wrap_with_provenance(
+        "CRM Engine", ENGINE_MODULE_PATHS["CRM Engine"], call_crm
+    ),
 }
+
+# ── Metric provenance ───────────────────────────────────────────────────────
+# Every engine-derived metric records where it came from so the cockpit never
+# displays a bare number without traceable origin. Populated on each call.
+ENGINE_PROVENANCE: dict[str, dict] = {}
+
+
+def _record_provenance(engine_name: str, client: str, module_path: str, ok: bool) -> None:
+    """Record truthful provenance for the most recent engine computation."""
+    ENGINE_PROVENANCE[engine_name] = {
+        "engine": engine_name,
+        "client": client,
+        "source": module_path,
+        "data_mode": "synthetic_client_profile",
+        "computed_by": "engine",
+        "generated_at": datetime.now().astimezone().isoformat(),
+        "ok": ok,
+    }
+
+
+def get_engine_provenance(engine_name: str) -> dict | None:
+    """Return the provenance dict recorded for an engine, or None if never run."""
+    return ENGINE_PROVENANCE.get(engine_name)
+
+
+def consult_agent(
+    agent_name: str,
+    query: str,
+    client: str | None = None,
+    session_id: str | None = None,
+) -> dict:
+    """Run an agent query through the cockpit's real code path (no Streamlit).
+
+    Returns a structured result so tests can verify inter-agent calls, reasoning
+    capture, and offline behaviour without a UI. Mirrors the 'Ask any agent' bar.
+    """
+    agent = AgentRegistry.get_agent(agent_name)
+    if agent is None:
+        return {
+            "status": "unavailable",
+            "result": None,
+            "reasoning": None,
+            "inter_agent_calls": [],
+            "offline": False,
+            "error": f"Agent {agent_name} not registered",
+        }
+
+    agent.session_id = session_id or datetime.now().strftime("%Y%m%d-%H%M%S")
+    agent.client_context = client
+    try:
+        result = agent.process_request(query, _recursion_depth=0)
+    except TypeError:
+        result = agent.process_request(query)
+
+    reasoning = getattr(agent, "_last_reasoning", None)
+    inter_calls = list(getattr(agent, "_last_inter_agent_calls", []) or [])
+    offline = "[OFFLINE]" in (result or "")
+
+    return {
+        "status": "offline" if offline else "answered",
+        "result": result,
+        "reasoning": reasoning,
+        "inter_agent_calls": inter_calls,
+        "offline": offline,
+        "agent": agent_name,
+        "client": client,
+    }
 
 
 def main():
@@ -493,6 +592,7 @@ def main():
             "",
             [
                 "Dashboard",
+                "Codex Command Center",
                 "Agents",
                 "Engines",
                 "Memory",
@@ -520,14 +620,14 @@ def main():
     with ask_cols[0]:
         global_query = st.text_input(
             "Ask any agent",
-            placeholder="Ask SAMI, SUBY, PHILI, or WILI anything...",
+            placeholder="Ask SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, or TOMY anything...",
             label_visibility="collapsed",
             key="global_agent_query",
         )
     with ask_cols[1]:
         global_agent_choice = st.selectbox(
             "",
-            ["SAMI", "SUBY", "PHILI", "WILI"],
+            ALL_AGENT_NAMES,
             label_visibility="collapsed",
             key="global_agent_choice",
         )
@@ -553,7 +653,7 @@ def main():
                             f"<div class='reasoning-box'>{reasoning}</div>",
                             unsafe_allow_html=True,
                         )
-                inter_calls = getattr(agent, "_inter_agent_calls", [])
+                inter_calls = getattr(agent, "_last_inter_agent_calls", [])
                 if inter_calls:
                     for call in inter_calls:
                         st.markdown(
@@ -576,7 +676,12 @@ def main():
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
     # DASHBOARD PAGE
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
-    if page == "Dashboard":
+    if page == "Codex Command Center":
+        from codex_command_center import render as render_codex_command_center
+
+        render_codex_command_center(client)
+
+    elif page == "Dashboard":
         st.markdown(
             "<div class='section-hdr'>Business Engines</div>", unsafe_allow_html=True
         )
@@ -644,7 +749,7 @@ def main():
                                 except TypeError:
                                     r = agent.process_request(q)
                                 reasoning = getattr(agent, "_last_reasoning", None)
-                                inter_calls = getattr(agent, "_inter_agent_calls", [])
+                                inter_calls = getattr(agent, "_last_inter_agent_calls", [])
                                 st.session_state[resp_key] = r
                                 st.session_state[f"{resp_key}_reasoning"] = reasoning
                                 st.session_state[f"{resp_key}_calls"] = inter_calls
@@ -738,7 +843,7 @@ def main():
                                 except TypeError:
                                     r = agent.process_request(q)
                                 reasoning = getattr(agent, "_last_reasoning", None)
-                                inter_calls = getattr(agent, "_inter_agent_calls", [])
+                                inter_calls = getattr(agent, "_last_inter_agent_calls", [])
                                 st.session_state[resp_key] = r
                                 st.session_state[f"{resp_key}_reasoning"] = reasoning
                                 st.session_state[f"{resp_key}_calls"] = inter_calls
@@ -1088,7 +1193,7 @@ def main():
                     with st.spinner(
                         "Registering client and generating onboarding plan..."
                     ):
-                        b2b_result, err = call_b2b(profile["name"])
+                        b2b_result, err = ENGINE_CALLERS["B2B Onboarding"](profile["name"])
                         wili = AgentRegistry.get_agent("WILI")
                         wili.session_id = st.session_state.session_id
                         wili.client_context = profile["name"]
@@ -1124,7 +1229,7 @@ def main():
                 )
                 if sim_step_2:
                     with st.spinner("Running WFM Erlang-C forecast..."):
-                        wfm_result, err = call_wfm(profile["name"])
+                        wfm_result, err = ENGINE_CALLERS["WFM Forecasting"](profile["name"])
                         if wfm_result is None:
                             wfm_result = err
                         suby = AgentRegistry.get_agent("SUBY")
@@ -1162,7 +1267,7 @@ def main():
                 )
                 if sim_step_3:
                     with st.spinner("Running personnel pipeline check..."):
-                        pers_result, err = call_personnel(profile["name"])
+                        pers_result, err = ENGINE_CALLERS["Personnel Engine"](profile["name"])
                         if pers_result is None:
                             pers_result = err
                         phili = AgentRegistry.get_agent("PHILI")
@@ -1209,7 +1314,7 @@ def main():
                             f"Generate a full set of SOPs for {profile['name']}, a {profile['industry']} company. Before finalizing, check with PHILI for personnel headcount ({profile['headcount']}) and open roles to align training with actual needs. Produce onboarding SOP, quality SOP, and escalation SOP."
                         )
                         wili_reasoning = getattr(wili, "_last_reasoning", None)
-                        wili_calls = getattr(wili, "_inter_agent_calls", [])
+                        wili_calls = getattr(wili, "_last_inter_agent_calls", [])
 
                         step = {
                             "step": "WILI SOP Generation (with PHILI consult)",
@@ -1254,7 +1359,7 @@ def main():
                             f"Provide a CEO-level strategic review for {profile['name']}, a {profile['industry']} company with {profile['headcount']} agents. Here's what we've done: {summary_text}. What's your assessment of this engagement and what should our next priorities be?"
                         )
                         sami_reasoning = getattr(sami, "_last_reasoning", None)
-                        sami_calls = getattr(sami, "_inter_agent_calls", [])
+                        sami_calls = getattr(sami, "_last_inter_agent_calls", [])
 
                         step = {
                             "step": "SAMI Strategic Review",

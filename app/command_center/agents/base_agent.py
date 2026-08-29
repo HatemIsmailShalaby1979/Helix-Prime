@@ -118,8 +118,18 @@ class BaseAgent:
             return reasoning, cleaned
         return None, raw_response.strip()
 
+    # Deterministic, truthful message returned when the local LLM is unreachable.
+    # Kept constant regardless of the underlying network error so offline behaviour
+    # is reproducible and never leaks volatile error text into logs/audit.
+    OFFLINE_MARKER = "[OFFLINE]"
+
     def call_llm(self, prompt: str) -> str:
-        """Call Ollama and return raw response."""
+        """Call Ollama and return raw response.
+
+        If the local Ollama service is unreachable, return a deterministic,
+        truthful offline message rather than a volatile network error string.
+        No external write is ever attempted.
+        """
         url = "http://localhost:11434/api/generate"
         headers = {"Content-Type": "application/json"}
         data = {
@@ -134,8 +144,13 @@ class BaseAgent:
             )
             resp.raise_for_status()
             return resp.json().get("response", "")
-        except requests.exceptions.RequestException as e:
-            return f"[LLM Error: {e}]"
+        except requests.exceptions.RequestException:
+            # Deterministic, truthful offline result. No exception escapes here.
+            return (
+                f"{self.OFFLINE_MARKER} Ollama is not reachable at "
+                f"{url} — agent '{self.name}' is in offline mode and cannot "
+                f"perform live inference. No external writes were attempted."
+            )
 
     def call_agent(
         self, agent_name: str, message: str, _recursion_depth: int = 0
@@ -239,6 +254,9 @@ class BaseAgent:
         inter_agent_calls_data = (
             self._inter_agent_calls if self._inter_agent_calls else None
         )
+        # Preserve the calls on a non-resetting attribute so callers (cockpit UI,
+        # consult_agent) can read them AFTER process_request resets the buffer.
+        self._last_inter_agent_calls = list(self._inter_agent_calls) if self._inter_agent_calls else []
         if inter_agent_calls_data:
             for call in inter_agent_calls_data:
                 call_entry = LogEntry(

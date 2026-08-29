@@ -10,10 +10,10 @@ Thank you for your interest in contributing to Helix Prime! We appreciate your t
 
 **MANDATORY:** Before making any changes, read these documents in order:
 
-1. **[ROOT_BOOT.md](ROOT_BOOT.md)** - 🔴 Mandatory first-read for all agents
-2. **[SESSION_LOG.md](SESSION_LOG.md)** - Understand recent changes and decisions
-3. **[WORKSPACE_AUDIT_REPORT.md](WORKSPACE_AUDIT_REPORT.md)** - Full workspace status
-4. **[GOVERNANCE/](GOVERNANCE/)** - Governance and decision records
+1. **[00_CONSTITUTION.md](00_CONSTITUTION.md)** - 🔴 Mandatory first-read for all agents
+2. **[MASTER_STORY.md](MASTER_STORY.md)** - Verified current reality only
+3. **[GOVERNANCE/](GOVERNANCE/)** - Governance, decisions, gates, and evidence rules
+4. **[docs/](docs/)** - Architecture and product explanations after the authoritative sources
 
 ### 2. Set Up Your Environment
 
@@ -34,7 +34,7 @@ Thank you for your interest in contributing to Helix Prime! We appreciate your t
 3. Run the development environment:
 
 ```bash
-python launch.py  # Starts webapp on :5000 and dashboard on :8501
+   python launch.py  # Starts the local dashboard
 ```
 
 ### 3. Development Workflow

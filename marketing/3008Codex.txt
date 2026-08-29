@@ -1,0 +1,500 @@
+# Helix Codex Coding-Agent Prompt Pack
+
+## Shared constitutional preamble
+
+You are implementing Helix Codex under Constitution 000.
+
+Before changing code, read:
+
+- `00_CONSTITUTION.md`
+- `MASTER_STORY.md`
+- `GOVERNANCE/`
+- `ROADMAP.md`
+- `README.md`
+
+Engineering philosophy:
+
+- Truth is the authority.
+- Identity precedes implementation.
+- Governance precedes capability.
+- Every decision requires an owner, assumptions, evidence, authority boundary, and outcome.
+- Every memory requires provenance.
+- Simulated, historical, and live data must remain visibly distinct.
+- Sensitive actions must fail closed.
+- Self-improvement may propose changes, but may not silently modify itself.
+- Every change must be tested, explainable, reversible, and documented.
+- Do not claim completion based on documentation alone.
+- Do not introduce live credentials, paid infrastructure, or destructive migrations without explicit approval.
+- Preserve unrelated user changes.
+- Use `apply_patch` for edits.
+- Run focused tests, full tests, governance checks, and `git diff --check`.
+- Stop and report if evidence contradicts the requested plan.
+
+---
+
+## Prompt 1 — Establish the governed Phase 1 baseline
+
+Audit the current Helix Codex repository against Constitution 000 and the approved strategy.
+
+Determine:
+
+1. What is genuinely implemented.
+2. What is only documented.
+3. What is broken.
+4. What is unsafe or bypasses governance.
+5. What belongs to Phase 1.
+6. What must explicitly remain deferred.
+
+Create or update a truthful implementation matrix containing:
+
+- capability;
+- current status;
+- source files;
+- tests;
+- evidence;
+- risks;
+- next action;
+- owner;
+- approval requirement.
+
+Do not implement unrelated features.
+
+Verification:
+
+- Run the governance checker.
+- Run the complete test suite.
+- Report all failures and stale claims.
+- Update `MASTER_STORY.md` only with verified facts.
+
+---
+
+## Prompt 2 — Secure credentials and the L&D integration
+
+Audit the L&D integration and all credential-handling paths.
+
+Requirements:
+
+- Immediately invalidate or rotate any exposed L&D token.
+- Search source, history, logs, fixtures, documentation, and generated files for credential leakage.
+- Replace embedded tokens with a credential-free remote URL or public endpoint where appropriate.
+- Use GitHub-managed secrets or environment-backed configuration for any private credential.
+- Never place credentials in source code, URLs, fixtures, screenshots, or documentation.
+- Fail closed when a required credential is missing.
+- Add secret-scanning tests.
+- Document the rotation and validation procedure without exposing secret values.
+
+Do not print, commit, or reproduce any credential.
+
+Verification:
+
+- Run repository secret scanning.
+- Confirm the old token is absent from the working tree and tracked history where feasible.
+- Test missing-credential behavior.
+- Confirm the L&D path works through the approved credential-management boundary.
+- If GitHub secret configuration requires external approval, stop after preparing the exact required configuration and report the blocker.
+
+---
+
+## Prompt 3 — Finish the call-centre proving workflow
+
+Treat the existing Helix Prime call-centre workflow as the first proving product.
+
+Verify and complete:
+
+- workflow intake;
+- tenant and client identity;
+- workforce or operational analysis;
+- recommendation generation;
+- approval boundary;
+- execution preview;
+- evidence timeline;
+- audit event;
+- outcome recording;
+- failure and retry behavior.
+
+Every recommendation must include:
+
+- responsible role;
+- assumptions;
+- evidence;
+- confidence;
+- authority boundary;
+- approval state;
+- proposed outcome measurement.
+
+No external write may occur without explicit approval.
+
+Verification:
+
+- Add deterministic tests for normal, incomplete, conflicting, and unsafe inputs.
+- Add replay/idempotency tests.
+- Add tenant-isolation tests.
+- Add audit-chain tests.
+- Demonstrate the full workflow with synthetic data.
+
+---
+
+## Prompt 4 — Complete the provider-neutral connector layer
+
+Implement the connector boundary for:
+
+- Zendesk;
+- Salesforce;
+- Clay.
+
+The first version must be read-only and credential-neutral.
+
+Each connector must define:
+
+- connection status;
+- capabilities;
+- tenant/client scope;
+- data classification;
+- provenance;
+- correlation ID;
+- rate-limit behavior;
+- retry behavior;
+- failure behavior;
+- approval requirement for writes.
+
+Create deterministic fake adapters for local testing.
+
+Do not activate live credentials.
+
+Verification:
+
+- Test each connector independently.
+- Test malformed and unavailable providers.
+- Test cross-tenant access denial.
+- Test provenance preservation.
+- Test that write capabilities cannot execute without approval.
+- Document the later live-adapter contract.
+
+---
+
+## Prompt 5 — Build the customer-success wedge
+
+Implement the first commercial workflow:
+
+```text
+Account context
++ support-ticket history
++ enrichment signals
++ operational/customer signals
+→ account-health diagnosis
+→ risk explanation
+→ next-best-action recommendation
+→ approval preview
+→ outcome recorded in memory
+```
+
+The account-health assessment must be evidence-backed and deterministic for the proving phase.
+
+Include:
+
+- health state;
+- risk factors;
+- supporting evidence;
+- confidence;
+- recommended action;
+- responsible role;
+- approval requirement;
+- expected outcome;
+- provenance.
+
+Support both historical and simulated data, but label them visibly.
+
+Verification:
+
+- Add fixtures for healthy, at-risk, unknown, and contradictory accounts.
+- Test missing data.
+- Test stale data.
+- Test conflicting source data.
+- Test recommendation rejection.
+- Test outcome recording.
+
+---
+
+## Prompt 6 — Turn the cockpit into the command center
+
+Upgrade the cockpit into a unified operational command center.
+
+The cockpit must expose:
+
+- organization/client selector;
+- data-mode indicator;
+- connector health;
+- account/workflow health;
+- active risks;
+- recommendations;
+- approval queue;
+- evidence timeline;
+- memory timeline;
+- audit status;
+- system limitations;
+- reset/demo controls.
+
+The cockpit must never imply that simulated data is live.
+
+Every action must show:
+
+- what will happen;
+- who owns it;
+- what evidence supports it;
+- whether approval is required;
+- whether it is reversible.
+
+Do not create a generic chatbot interface.
+
+Verification:
+
+- Test the cockpit with synthetic data.
+- Test empty, degraded, and failed connector states.
+- Test approval denial.
+- Test tenant switching.
+- Test that no write action occurs from the demo cockpit.
+
+---
+
+## Prompt 7 — Implement governed organizational memory
+
+Create a governed memory model for:
+
+- decisions;
+- recommendations;
+- approvals;
+- outcomes;
+- failures;
+- corrections;
+- policies;
+- customer context;
+- workflow history.
+
+Every memory record must contain:
+
+- unique ID;
+- tenant/client;
+- source;
+- provenance;
+- classification;
+- timestamp;
+- actor;
+- confidence;
+- evidence references;
+- retention status;
+- correction history.
+
+Memory must distinguish:
+
+- observed fact;
+- user-provided claim;
+- model inference;
+- simulated event;
+- verified outcome.
+
+Implement retrieval with tenant isolation and classification checks.
+
+Verification:
+
+- Test provenance preservation.
+- Test correction and supersession.
+- Test deletion/retention behavior.
+- Test cross-tenant denial.
+- Test that unverified inference is not presented as fact.
+
+---
+
+## Prompt 8 — Add evidence-gated metacognitive improvement
+
+Implement metacognition as a controlled improvement proposal system.
+
+The system may:
+
+- detect repeated failures;
+- identify performance drift;
+- propose workflow or policy improvements;
+- compare proposed changes against a baseline;
+- evaluate changes using historical and simulated cases;
+- generate an evidence report.
+
+The system may not:
+
+- silently modify production behavior;
+- silently change policies;
+- silently alter memory rules;
+- silently change permissions;
+- deploy itself;
+- remove audit evidence.
+
+Every improvement proposal requires:
+
+- baseline;
+- hypothesis;
+- evidence;
+- evaluation results;
+- risk assessment;
+- reviewer;
+- approval state;
+- version;
+- rollback plan.
+
+Verification:
+
+- Test proposal generation.
+- Test failed evaluation.
+- Test rejection.
+- Test approval.
+- Test rollback.
+- Test that no unapproved proposal changes runtime behavior.
+
+---
+
+## Prompt 9 — Create cloud-ready interfaces without going cloud-first
+
+Prepare Helix Codex for selective deployment while keeping local execution primary.
+
+Define provider-neutral interfaces for:
+
+- database;
+- object storage;
+- queue/event transport;
+- secrets;
+- identity;
+- observability;
+- scheduled jobs;
+- model providers.
+
+Implement local adapters first.
+
+Create a synthetic cloud-demo profile with:
+
+- synthetic data only;
+- restricted API;
+- no live credentials;
+- usage limits;
+- reset procedure;
+- shutdown procedure;
+- basic monitoring;
+- spend-control documentation.
+
+Do not migrate the full cockpit or production data.
+
+Verification:
+
+- Run entirely offline/local.
+- Test configuration with missing cloud services.
+- Test safe failure.
+- Test demo reset.
+- Test cost-control settings.
+- Document which cloud services are optional and when they become justified.
+
+---
+
+## Prompt 10 — Prepare the first design-partner pilot
+
+Create a controlled pilot package.
+
+Include:
+
+- pilot scope;
+- customer consent requirements;
+- data classification;
+- connector permissions;
+- read-only period;
+- approval workflow;
+- retention policy;
+- incident procedure;
+- success metrics;
+- baseline measurement;
+- rollback procedure;
+- customer review checklist.
+
+The first real pilot must begin read-only and use minimum necessary data.
+
+Success metrics should measure business value, such as:
+
+- reduced response time;
+- improved escalation accuracy;
+- reduced unresolved-risk age;
+- improved customer-health visibility;
+- fewer missed follow-ups;
+- recommendation acceptance rate;
+- correction rate.
+
+Do not describe the system as autonomous or universal until evidence supports those claims.
+
+---
+
+## Prompt 11 — Add business capability packs
+
+After the first workflow is proven, create an extensible capability-pack architecture.
+
+The first additional pack may target restaurants, but it must reuse:
+
+- identity;
+- governance;
+- connectors;
+- memory;
+- evidence;
+- approvals;
+- workflow execution;
+- outcome measurement.
+
+A capability pack must define:
+
+- business ontology;
+- roles;
+- workflows;
+- policies;
+- metrics;
+- connector requirements;
+- data classification;
+- approval boundaries;
+- failure modes.
+
+Do not build separate incompatible systems for each industry.
+
+Verification:
+
+- Demonstrate that the call-centre and restaurant packs share the same governed core.
+- Test isolation between clients and capability packs.
+- Confirm that industry-specific behavior is configuration-driven where practical.
+
+---
+
+## Prompt 12 — Final release and career evidence package
+
+Prepare Helix Codex for review as a Founder/CTO portfolio project.
+
+Produce:
+
+- architecture overview;
+- governance model;
+- workflow demonstration;
+- security model;
+- evidence model;
+- memory model;
+- metacognitive improvement model;
+- local/cloud deployment strategy;
+- cost assumptions;
+- pilot plan;
+- known limitations;
+- roadmap;
+- five-minute demo script;
+- technical decision log;
+- verified test results.
+
+The final narrative must claim only what has been demonstrated.
+
+Position Helix Codex as:
+
+> An accountable AI operating organization that understands business context, coordinates governed workflows, remembers decisions and outcomes, and improves through evidence without silently taking control.
+
+Verification:
+
+- Run all tests.
+- Run governance checks.
+- Run security checks.
+- Run the synthetic demo from a clean setup.
+- Confirm all documentation matches repository reality.
+- Report unfinished items separately from completed items.

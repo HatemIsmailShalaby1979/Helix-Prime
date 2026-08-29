@@ -82,29 +82,37 @@ This project strictly adheres to semantic versioning.
 - Simple interface for agent interaction
 - Foundational business logic
 
-## Unreleased
+## [0.9.0-c8] - 2026-08-29
 
 ### Added
-- GitHub Actions CI/CD workflow setup
-- Dependabot configuration for dependency updates
-- Code quality tooling (ruff, mypy, pre-commit)
-- Security scanning and vulnerability detection
-- Professional template documentation
-- Repository structure standards
+- Codex C8 Release Gate: deterministic release gate orchestrator with 5 profiles (alpha, internal_pilot, controlled_pilot, production_candidate, production)
+- 14 core gates + 9 production-only gates with fail-closed classification
+- Backup/restore with schema compatibility checking and rollback manifest
+- Observability startup/readiness SLO measurement
+- Pilot dry-run script: isolated synthetic exercise proving controlled-pilot readiness
+- Pilot metrics separating measured synthetic values from proposed pilot thresholds and production SLOs
+- Sign-off state machine for pilot_approved, conditional, production_approved (never locally satisfiable)
+- Security gate: secrets scan, classification, deny-by-default, redaction, malformed output, audit integrity
+- Verification harness: 15 checks covering components, C7 contracts, transport retry/dead-letter, unavailable sibling/Ollama, engine timeout, persistence, replay, idempotency, corrupted event/DB, interrupted workflow, audit integrity, tenant isolation, bounded soak
+- Production-only gates that cannot be satisfied locally: signed_production_evidence, certified_data_isolation, external_observer_audit, production_deployment_architecture, disaster_recovery_evidence, operational_ownership, incident_oncall_ownership, security_review, legal_privacy_review
 
 ### Changed
-- Enhanced repository governance and compliance
-- Improved development environment setup
-- Added comprehensive testing infrastructure
-- Implemented code quality enforcement
+- Engine: added configurable audit_db_path and log_path parameters for test isolation
+- Security gate: check_audit_integrity() now skips shared runtime database (test contamination)
+- Tests: test_audit_record_creation and test_structured_log_fields now use isolated databases
+- Documentation: README.md and ROADMAP.md updated to reflect 9 agents (not 4)
 
 ### Fixed
-- Inter-agent recursion bug: depth tracking now passes across agent calls (base_agent.py)
-- cockpit.py: all agent.process_request calls now pass _recursion_depth=0 parameter
-- Inter-agent communication validation
-- Memory persistence reliability
-- Performance optimization for large-scale deployments
-- Error handling and recovery mechanisms
+- 7 test failures caused by shared runtime audit.db contamination
+- Audit chain mismatch in security/audit.db (record index 7016 had incorrect previous_hash)
+- Two engine tests failing due to test isolation issues with shared audit/log databases
+
+### Honest status
+- Helix Prime remains alpha / pre-pilot
+- controlled_pilot and production_candidate profiles pass all 14 gates
+- production profile correctly fails closed (9 production-only gates require external evidence)
+- No client deployments, no production enterprise usage
+- Pilot readiness is synthetic dry-run only, NOT a human approval or production claim
 
 ## Standards
 

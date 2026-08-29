@@ -68,3 +68,6 @@ observability/logs.jsonl
 security/audit.db
 security/audit.db-*
 *.jsonl
+
+# Local demo media kept out of source (use release assets instead)
+marketing/assets/*.mp4

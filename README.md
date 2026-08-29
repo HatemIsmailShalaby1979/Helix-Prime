@@ -1,3 +1,7 @@
+![CI](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/workflows/python-app.yml/badge.svg)
+![License](https://img.shields.io/github/license/HatemIsmailShalaby1979/Helix-Prime)
+![Release](https://img.shields.io/github/v/release/HatemIsmailShalaby1979/Helix-Prime)
+
 # Helix Prime
 
 > **The governed operations core of Helix Codex.**

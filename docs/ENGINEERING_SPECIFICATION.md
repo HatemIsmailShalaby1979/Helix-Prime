@@ -1,142 +1,49 @@
-﻿# Helix Prime — Engineering Specification
+# Helix Prime — Engineering Specification
 
-> **Audience:** Senior developers, engineering reviewers, technical architects.
-> **Canonical source of truth:** `MASTER_STORY.md` (workspace root).
-> **Constitution 000:** *Architecture serves as the expression of truth. Identity precedes implementation.*
-> **Truth note:** Earlier drafts of this document described a two-repository layout
-> (`AI OPS Engineering/helix-prime-ecosystem` + `helix-story`) that no longer exists,
-> and contained fabricated claims (a "proof ledger" with "57 entries across Client A
-> LIVE, VF UK, and Lufthansa"). Those claims are void. Helix Prime is one unified
-> repository. There is no proof ledger, no "immutable audit trail," and no customer
-> accounts in this codebase. The structure below reflects the repository as it exists.
+## What this is
 
----
+Helix Prime is a local-first operations platform. It runs six business engines, nine AI agents, and a Streamlit cockpit on your machine. No cloud required.
 
-## 1. Repository Architecture
+## The six engines
 
-Helix Prime is a **single public repository** (`github.com/HatemShelby/Helix-Prime`) with the following top-level areas:
+| Engine | What it does | Key files |
+|--------|-------------|-----------|
+| WFM | Erlang C staffing, interval forecasting, shrinkage analysis | `engines/wfm/src/app_wfm.py` |
+| RTA | Real-time adherence tracking, alert thresholds | `engines/rta/src/app.py` |
+| CX | Churn prediction, sentiment analysis, KPI aggregation | `engines/cx/src/kpi_aggregator.py`, `risk_scorer.py` |
+| B2B | Client onboarding automation, Notion SOP provisioning | `engines/b2b/src/main.py` |
+| Personnel | Hiring pipeline, workforce planning, talent acquisition | `engines/personnel/src/main.py` |
+| CRM | Customer support routing, sales pipeline | `engines/crm/src/customer_support.py` |
 
-```
-.
-├── app/command_center/              # Agent runtime — 4 AI agents (crash-isolated)
-│   └── agents/                      #   base_agent.py + sami, suby, phili, wili
-├── orchestration/                   # Orchestrator (content-based routing)
-│   └── orchestrator.py
-├── engines/                         # 6 kebab-case domain engines
-│   ├── b2b/                         # B2B Onboarding Automator
-│   ├── cx/                          # CX Churn Sentinel
-│   ├── crm/                         # CRM Engine (Sales Pipeline + Support)
-│   ├── personnel/                   # Personnel Engine (Talent + Workforce Planning)
-│   ├── rta/                         # RTA Command Center (Real-Time Adherence)
-│   └── wfm/                         # WFM Forecasting (Erlang C + Variance)
-├── cockpit/                         # Streamlit Operations Cockpit
-│   ├── cockpit.py                   #   Dashboard entry point
-│   ├── memory/                      #   Cognitive log (JSONL + SQLite)
-│   └── requirements.txt
-├── api/                             # TypeScript generation/metrics utilities
-├── memory/ 06_memory/               # Cross-cutting memory stores (ChromaDB)
-├── marketing/                       # Product marketing — site, demo, scripts
-├── docs/                            # Documentation (architecture, operations, archive)
-├── tests/                           # Test suite
-├── GOVERNANCE/                      # Change log and audit trail
-├── launch.py                        # Combined launcher
-└── run_tests.ps1                    # Test runner
-```
+## The nine agents
 
-### 1.1 Agent Runtime — `app/command_center/`
+| Agent | Role | Calls |
+|-------|------|-------|
+| SAMI | CEO / Strategist | PHILI, SUBY, WILI |
+| SUBY | Operations Executive | PHILI, WILI, SAMI |
+| PHILI | Personnel Director | SUBY, SAMI |
+| WILI | Training & L&D | PHILI, SUBY |
+| ANDY | Compliance & Quality | SUBY, SAMI |
+| NONO | Fraud Detection | SUBY, SAMI |
+| MAYA | Marketing | SUBY, SAMI |
+| LIZA | Sales | SUBY, SAMI |
+| TOMY | ICT / Infrastructure | SUBY, SAMI |
 
-Four AI agents, each isolated in its own subprocess so that one failing agent does not take down the system:
+Agents route by content. The orchestrator matches the request to the right agent. Agents can call each other when their domain needs input.
 
-- `sami.py` — CEO / strategy
-- `suby.py` — operations
-- `phili.py` — personnel
-- `wili.py` — learning & development
+## Governance gates
 
-All four connect to a local Ollama model (`HELIX_MODEL_BACKEND` environment → config → safe default). Agents communicate over strict JSON; there is no shared memory between language boundaries.
+The system uses a gate model from `GOVERNANCE/`. Each gate has a status: PASS, FAIL, or NOT_APPLICABLE. Gates are checked before any external write or deployment action.
 
-### 1.2 Orchestration — `orchestration/orchestrator.py`
+## Truth notes
 
-Routes requests to agents/engines according to content. The mechanism exists and is proven in isolation; **full agent inter-communication through the live UI is still pending** (verified as pending in `MASTER_STORY.md`).
+- One repository, not many. The engines, agents, and cockpit live together.
+- Local-first means the default path is your machine. Cloud connectors exist as optional adapters.
+- Evidence precedes claims. If a feature is documented, there is a test or a verified demonstration.
 
-### 1.3 Operations Cockpit — `cockpit/`
+## Security posture
 
-Streamlit dashboard exposing the six engines and the cognitive memory log. Launched via `python launch.py --dash-only` and served at `http://localhost:8501`.
-
-### 1.4 Domain Engines — `engines/`
-
-Six consolidated domain engines, each independently runnable with its own `requirements.txt` and README:
-
-| Engine | Purpose | Key files |
-|---|---|---|
-| `wfm/` | WFM Forecasting — Erlang C, data pipeline, variance | `src/erlang_c.py`, `src/data_pipeline.py`, `src/variance_engine.py` |
-| `rta/` | RTA Command Center — adherence calc + visualizations | `src/calculations.py`, `src/visualizations.py`, `src/app.py` |
-| `cx/` | CX Churn Sentinel — 4-KPI weighted risk scoring | `src/risk_scorer.py`, `src/kpi_aggregator.py`, `src/alert_dispatcher.py` |
-| `b2b/` | B2B Onboarding — SOP generation | `src/automator.py`, `notion_adapter/notion_adapter.py` |
-| `personnel/` | Personnel — talent acquisition + workforce planning | `src/talent_acquisition.py`, `src/workforce_planning.py`, `src/pipeline_manager.py` |
-| `crm/` | CRM — sales pipeline + customer support SLA | `src/sales_pipeline.py`, `src/customer_support.py` |
-
-## 2. Security Posture
-
-- **No secrets on disk**: no `.env` with real credentials; `.env.example` only.
-- **Local-first**: zero mandatory cloud dependency. Data stays on local hardware unless explicitly configured otherwise.
-- **Crash isolation**: agents run in isolated subprocesses.
-- **No hardcoded configuration**: model selection resolves via environment → config → safe default.
-
-## 3. Data Model
-
-### Cognitive Log (`cockpit/memory/`)
-
-- `cognitive_log.jsonl` — append-only log of cockpit activity
-- `cognitive_log.py` — log writer module
-- `cognitive_log.sqlite` — SQLite store
-
-### ChromaDB Vector Store (`06_memory/vector_store/`)
-
-Persistent ChromaDB index used by the memory layer.
-
-## 4. API Contracts
-
-### Orchestrator / Agent JSON
-
-```
-Request:  {"task": "analyze", "params": {...}, "model": "..."}
-Response: {"status": "success", "output": "...", "accomplishment": "..."}
-Error:    {"status": "error", "error_type": "...", "message": "..."}
-```
-
-## 5. Deployment
-
-### Local Development
-
-```powershell
-# Terminal 1 — Operations Cockpit
-python launch.py --dash-only
-# → http://localhost:8501
-
-# Or directly from cockpit/
-streamlit run cockpit/cockpit.py --server.port 8501
-```
-
-The `marketing/` folder contains `render.yaml`, `azure.yaml`, `Dockerfile`, and
-`infra/main.bicep` as **deployment scaffolding for the marketing site**. None of these
-is evidence of a hosted production service; there are no client deployments and no
-production enterprise usage.
-
-## 6. Test Status
-
-| Area | Status |
-|---|---|
-| Cockpit client profiles | `tests/test_cockpit_client_profiles.py` |
-| API utilities | `api/*.test.ts`, `verify-generate.js` |
-| Automated coverage | Ongoing work — not yet comprehensive |
-
-## 7. Known Gaps (verified)
-
-- Full agent inter-communication proven through the live UI is **pending**.
-- Automated test coverage is **ongoing work**.
-- Significant lint/style debt exists in the codebase (non-functional; see `GAP_ANALYSIS.md`).
-- No client deployments, no production enterprise usage, no "proof ledger."
-
----
-
-*Specification maintained by **Hatem Shalaby**. Source of truth: `MASTER_STORY.md`.*
+- No secrets in the repository. `.env` is gitignored.
+- Local-first: no mandatory cloud dependency.
+- Crash isolation: each engine runs independently.
+- No hardcoded configuration.

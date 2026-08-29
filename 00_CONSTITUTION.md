@@ -2,59 +2,31 @@
 
 We start without any claim to perfection.
 
-Our sole assertion is this:
+## What we believe
 
-That pursuing truth is a fundamental endeavour.
+Truth is the standard. If a test fails, we fix it or document why it cannot pass — we do not hide it. If a claim cannot be verified, we say so.
 
-That cultivating understanding is essential.
+Architecture is the expression of those standards. Quality is truth done correctly.
 
-That trust is built through transparent and honest reasoning.
+## Rules
 
-That architecture represents the disciplined embodiment of these core values.
+1. **Every capability must answer why it exists.** If you cannot state the problem it solves, it does not belong in this project.
 
-All subsequent actions and decisions will be evaluated against these standards.
+2. **Every designation must clarify what responsibility it holds.** Title without accountability is decoration.
 
-Identity must precede implementation.
+3. **Every decision must reveal its assumptions.** Future readers need to know what we believed when we built this, so they can judge whether it still holds.
 
-Our goal is not merely to develop software.
+4. **Every discussion that generates lasting knowledge becomes a document.** If it happened and was not recorded, it did not happen.
 
-Rather, we are establishing an engineering organisation, whose foundation is realised through software.
+5. **We earn conviction through understanding, not borrowed authority.** A rule exists because someone verified it, not because it appeared in a framework.
 
-Each capability must first justify its existence by answering:
+## What this means in practice
 
-Why is this necessary?
-
-Every designation must clarify:
-
-What responsibility do I hold?
-
-Every decision must reveal:
-
-What assumptions have been introduced into the system?
-
-Every discussion that generates enduring knowledge must be documented as an artifact.
-
-Truth is paramount.
-
-Architecture serves as the expression of truth.
-
-Quality is the effective realisation of truth.
-
-Never rely on borrowed conviction; earn genuine conviction through deep understanding.
-
-These principles are not promises of perfection.
-
-They are promises of direction.
-
-As long as truth remains our authority, this architecture will remain alive.
-
-## Engineering enforcement
-
-- `MASTER_STORY.md` records verified reality; it is not a substitute for this constitution.
-- `GOVERNANCE/` records operational policy, decisions, release gates, and evidence rules.
-- A feature is not verified because an agent, document, or generated JSON file says it is.
-- Every enduring decision must record its owner, assumptions, evidence, consequences, and review state.
-- Sensitive actions fail closed and require explicit authorization and approval.
-- Tenant, client, classification, provenance, and correlation context must survive every boundary.
-- Simulated, historical, and live data must remain visibly distinct.
+- `MASTER_STORY.md` records verified reality. It is not this constitution — it is the thing this constitution protects.
+- `GOVERNANCE/` records operational policy, decisions, gates, and evidence rules.
+- Sensitive actions fail closed. They require explicit authorization.
+- Tenant, client, classification, provenance, and correlation context survive every boundary.
+- Simulated, historical, and live data remain visibly distinct at all times.
 - Self-improvement is a proposal until isolated evaluation, review, approval, versioning, and rollback exist.
+
+A feature is not verified because an agent, document, or generated JSON file says it is. Verification requires evidence that survives review.

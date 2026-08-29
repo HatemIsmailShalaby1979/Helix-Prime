@@ -1,216 +1,113 @@
 # Contributing to Helix Prime
 
-## Welcome!
+## Before you start
 
-Thank you for your interest in contributing to Helix Prime! We appreciate your time and expertise to help make this project better for everyone.
+Read these documents in order:
 
-## Getting Started
+1. [00_CONSTITUTION.md](00_CONSTITUTION.md) — the rules we live by
+2. [MASTER_STORY.md](MASTER_STORY.md) — what this project actually is right now
+3. [GOVERNANCE/](GOVERNANCE/) — decisions, gates, evidence rules
+4. [docs/](docs/) — architecture and product explanations
 
-### 1. Read the Foundations
+If you haven't read them, don't start coding.
 
-**MANDATORY:** Before making any changes, read these documents in order:
+## What we need
 
-1. **[00_CONSTITUTION.md](00_CONSTITUTION.md)** - 🔴 Mandatory first-read for all agents
-2. **[MASTER_STORY.md](MASTER_STORY.md)** - Verified current reality only
-3. **[GOVERNANCE/](GOVERNANCE/)** - Governance, decisions, gates, and evidence rules
-4. **[docs/](docs/)** - Architecture and product explanations after the authoritative sources
+- Bug reports with reproduction steps
+- Test coverage for gaps you find
+- Documentation that corrects stale claims
+- Honest assessments of what works and what doesn't
 
-### 2. Set Up Your Environment
+We don't need:
+- Features that solve problems nobody has
+- Documentation that repeats what the code already says
+- Changes without test coverage
 
-#### Prerequisites
+## Setup
 
-- **Node.js 22+** - Required for development
-- **Power Apps CLI** - For deployment
-- **Go runtime** - For orchestration daemon
-- **Python 3.8+** - For orchestrator
-- **Ollama** - For local AI model inference
-- **SQLite** - For memory storage
-- **Streamlit** - For unified dashboard
+### Prerequisites
 
-#### Local Development
+- **Python 3.11+** — for the orchestrator and engines
+- **Go runtime** — for the orchestration daemon
+- **Ollama** — for local AI model inference (optional; system runs without it in deterministic mode)
+- **Streamlit** — for the cockpit dashboard
 
-1. Clone the repository
-2. Navigate to the project directory
-3. Run the development environment:
+Node.js and Power Apps CLI are **not required** for Helix Prime. They appear in older templates but don't belong here.
 
-```bash
-   python launch.py  # Starts the local dashboard
-```
-
-### 3. Development Workflow
-
-#### Branch Management
-
-1. **Always create feature branches** from main:
-   ```bash
-   git checkout -b feat/your-feature-name
-   ```
-
-2. **Keep feature branches focused** on single functionality
-3. **Prefix your branch names** appropriately:
-   - `feat/` - New features
-   - `fix/` - Bug fixes
-   - `docs/` - Documentation changes
-   - `refactor/` - Code refactoring
-   - `test/` - Tests
-   - `chore/` - Maintenance
-
-#### Code Standards
-
-- **Follow Conventional Commits** (see below)
-- **Run pre-commit hooks** before committing
-- **Update documentation** when appropriate
-- **Log sessions** by appending to SESSION_LOG.md
-
-#### Testing
-
-1. **Run all tests** before opening a pull request:
-   ```bash
-   pytest tests/ -v --cov
-   ```
-
-2. **Run linter and type checker**:
-   ```bash
-   ruff check .
-   mypy .
-   ```
-
-3. **Run pre-commit hooks**:
-   ```bash
-   pre-commit run --all-files
-   ```
-
-### 4. Opening Pull Requests
-
-1. **Target the main branch** with your PR
-2. **Ensure all CI checks pass** before opening
-3. **Add appropriate labels** and assignees
-4. **Write a clear PR description**:
-   - Summary of changes
-   - Motivation/reason for the change
-   - Any breaking changes
-   - Testing performed
-
-## Code Standards
-
-### Conventional Commits
-
-Your commit messages should follow this format:
-
-```
-<type>(<scope>): <description>
-
-<body>
-
-<footer>
-```
-
-**Types:**
-
-- `feat` - A new feature
-- `fix` - A bug fix
-- `docs` - Documentation only changes
-- `refactor` - Code refactoring
-- `test` - Adding or updating tests
-- `chore` - Changes to the build process or auxiliary tools
-- `ci` - Changes to CI/CD configuration
-
-**Examples:**
-
-```
-feat(helix-prime-ecosystem): add new agent capability
-fix(helix-story): resolve dashboard rendering bug
-docs: update architecture diagram
-refactor(command_center): simplify dispatcher
-test: add integration tests for memory layer
-chore: update dependencies
-ci: add Go test stage
-```
-
-### Pre-commit Hooks
-
-To install pre-commit hooks:
+### Local development
 
 ```bash
+# Clone the repo
+git clone https://github.com/HatemIsmailShalaby1979/Helix-Prime.git
+cd Helix-Prime
+
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Linux/macOS
+
+# Install dependencies
+pip install -r cockpit/requirements.txt
+
+# Install pre-commit hooks
 pip install pre-commit
 pre-commit install
 ```
 
-To run all hooks manually:
+## Workflow
+
+### Branches
 
 ```bash
+git checkout -b feat/your-feature-name    # New feature
+git checkout -b fix/bug-description       # Bug fix
+git checkout -b docs/update-claim         # Documentation
+```
+
+Keep branches focused. One feature, one fix, one documentation update.
+
+### Tests
+
+```bash
+pytest tests/ -v --cov
+ruff check .
+mypy .
 pre-commit run --all-files
 ```
 
-The following checks are performed:
+All tests must pass before a PR. If a test fails, fix it — don't suppress it.
 
-- **ruff** - Code linter and formatter
-- **trailing-whitespace** - Removes trailing whitespace
-- **end-of-file-fixer** - Ensures proper EOF handling
-- **check-yaml** - Validates YAML files
-- **check-added-large-files** - Prevents accidentally committing large files
-- **check-merge-conflict** - Catches merge conflict markers
-- **detect-private-key** - Identifies potential private keys
+### Commit messages
 
-## Project Structure
+```
+feat(engines/wfm): add interval variance detection
+fix(agent/recursion): cap depth at 5 to prevent stack overflow
+docs: correct agent count from 4 to 9
+```
 
-The project has two main components:
+Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `ci`
 
-### Project 1: Helix Prime Ecosystem (`ai-automation-engineering/04-helix-mini/helix-prime-ecosystem/`)
+## What makes a good PR
 
-- **Core AI organization** with four agents (SAMI, WILI, PHILI, SUBY)
-- **Five business engines** (WFM, RTA, CX, B2B, Personnel)
-- **Shared infrastructure** (memory, dashboard, orchestration)
-
-### Project 2: Helix Story Dashboard (`helix-story/`)
-
-- **Streamlit web application** for operator interaction
-- **Real-time monitoring** and visualization
-- **Deployment scripts** for Azure and cloud
+1. **Solves a specific problem** — state it in the description
+2. **Includes tests** — cover the happy path and the edge case
+3. **Updates documentation** — if the behavior changed, the docs should too
+4. **Does one thing** — split complex changes into multiple PRs
 
 ## Security
 
-### Repository Security
+- Never commit secrets. Use `.env` (gitignored) for local configuration.
+- Memory files (`data/memory/*.json`) and vector stores are in `.gitignore`.
+- Dependabot monitors dependencies via `.github/dependabot.yml`.
+- See [SECURITY.md](SECURITY.md) for the full policy.
 
-- **No secrets in repository** — Use `.env` (gitignored) for local secrets
-- **Memory files excluded** — `data/memory/*.json`, `vector_store/` in `.gitignore`
-- **Dependencies scanned** — Dependabot enabled via `.github/dependabot.yml`
-- **Security policy** — See `SECURITY.md` in each project
+## Getting help
 
-### Development Security
+- Architecture questions → `docs/architecture/`
+- Agent issues → `SESSION_LOG.md`, `WORKSPACE_AUDIT_REPORT.md`
+- Dashboard bugs → `cockpit/tests/`
+- Governance questions → `GOVERNANCE/`
 
-- **Always validate and sanitize** user inputs
-- **Use parameterized queries** for database operations
-- **Never hardcode secrets** in source code
-- **Implement proper error handling** without exposing sensitive information
-- **Use HTTPS** for all external API calls
+## Thank you
 
-## Community Guidelines
-
-### Open to All
-
-We welcome contributions from everyone, regardless of background or experience level. We have a dedicated channel for new contributors and encourage mentorship.
-
-### Communication
-
-- **Be respectful and constructive** in all discussions
-- **Ask for help** if you're unsure about anything
-- **Share your knowledge** to help others learn
-- **Celebrate successes** and learn from failures
-
-## Getting Help
-
-### Documentation
-
-- **Architecture questions** → See `docs/architecture/`
-- **Agent issues** → Check `SESSION_LOG.md`, `WORKSPACE_AUDIT_REPORT.md`
-- **Dashboard bugs** → `helix-story/tests/`, `TRACING_SETUP.md`
-- **Deployment problems** → `helix-story/DEPLOYMENT.md`, `azure.yaml`
-
-### Community
-
-For questions about contributing, please reach out through appropriate channels (GitHub discussions, project communication channels, etc.).
-
-## Thank You!
-
-Your contributions help make Helix Prime better for everyone. We look forward to your involvement!
+Your contributions make this project better. We review every PR carefully.

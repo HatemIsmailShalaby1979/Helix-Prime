@@ -1,102 +1,89 @@
 # Helix Prime
 
-Helix Prime is a unified operations system with six business engines, nine AI agents, a content-based orchestrator, and a Streamlit Operations Cockpit. The agents connect to a local Ollama model.
+> **The governed operations core of Helix Codex.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
-[![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](ROADMAP.md)
+Helix Prime is a local-first operations platform that brings business engines, governed AI roles, workflow orchestration, evidence, memory, approvals, and a command-center cockpit into one system.
 
-## Current status
+It is the first proving product for **Helix Codex**: an accountable AI operating organization designed to help businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.
 
-Helix Prime is **alpha**. The repository is public and real. The Operations Cockpit is fully functional and can be launched locally. The six business engines, nine AI agents, and content-based orchestrator are implemented. Full agent inter-communication through the live UI is still pending.
+## Verified Phase 1 status
 
-There are no client deployments or production enterprise deployments to claim.
+- **Controlled-pilot ready:** CONTROLLED_PILOT_READY
+- **Production:** NOT_READY until external evidence and human approvals exist
+- **445 tests passing** across contracts, control plane, security, engines, integrations, pilot, memory, metacognition, and capability packs
+- Governance checker: **PASS**
+- Synthetic call-centre and restaurant demonstrations: verified
+- Live connectors and external writes: intentionally disabled
 
-## Quick Start (Windows)
+## What is implemented
 
-### Option 1: One-click setup
+- Six operational engines: WFM, RTA, CX, B2B onboarding, Personnel, and CRM
+- Nine governed AI roles with orchestrator routing
+- Tenant/client identity and deny-by-default authorization
+- Workflow state machine, idempotency, approvals, retries, and dead-letter handling
+- Read-only provider-neutral boundaries for Zendesk, Salesforce, and Clay
+- Evidence-backed customer-success account-health diagnosis
+- Provenance-bearing command center
+- Tenant-isolated governed memory with retention and supersession
+- Evidence-gated improvement proposals that never self-deploy
+- Local adapters and cloud-ready interfaces without cloud lock-in
+- Synthetic controlled-pilot package with read-only period and minimum-data policy
 
-```batch
-setup.bat
-```
+## The proving workflow
 
-Then launch:
+Account context + support history + enrichment + operational signals
 
-```batch
-launch.bat
-```
+→ account-health diagnosis
+→ evidence and risk explanation
+→ next-best-action recommendation
+→ cross-role approval preview
+→ outcome recorded in governed memory
 
-### Option 2: Manual setup
+The current demonstration uses synthetic and consented-historical modes only. It does not claim production deployment, universal business coverage, or autonomous operation.
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate     # Windows
-pip install -r cockpit/requirements.txt
-python launch.py
-```
+## Download and run
 
-On macOS or Linux, use the provided setup script (requires Python 3.11+):
+- [Download current source ZIP](https://github.com/HatemIsmailShalaby1979/Helix-Prime/archive/refs/heads/main.zip)
+- [View releases](https://github.com/HatemIsmailShalaby1979/Helix-Prime/releases)
 
-```bash
-./setup.sh
-```
+### Windows
 
-Or manually:
+1. Install Python 3.11 or newer from [python.org](https://www.python.org/downloads/windows/).
+2. Download and extract the current source ZIP.
+3. Open Command Prompt in the extracted folder.
+4. Run setup.bat.
+5. Run launch.bat.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r cockpit/requirements.txt
-python launch.py
-```
+### Linux
 
-The cockpit opens at **http://127.0.0.1:8501**.
+    sudo apt-get update
+    sudo apt-get install -y python3 python3-venv
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install -r cockpit/requirements.txt
+    python launch.py
 
-### Optional: AI Agents
+Ollama is optional. Without it, the system uses a deterministic offline mode and clearly reports that limitation.
 
-For full agent functionality, install [Ollama](https://ollama.com) and pull a model:
+## Why Helix Prime matters
 
-```bash
-ollama pull qwen2.5:1.5b
-```
+It is an experiment in **governable organizational intelligence**: decisions have owners, recommendations expose evidence, actions have authority boundaries, memory carries provenance, and improvement requires evaluation, review, approval, and rollback.
 
-The cockpit works without Ollama — agents show as "Offline" but all other features are available.
+## Next evidence milestone
 
-## What is included
+A real design-partner pilot: read-only first, minimum data, explicit consent, measured baseline, and no production claim until the production gates pass.
 
-- **Operations Cockpit:** Streamlit dashboard with dark theme, real-time monitoring, and agent interface.
-- **Six business engines:** WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, and CRM.
-- **Nine AI agents:** SAMI, SUBY, PHILI, WILI, ANDY (Compliance & Quality), NONO (Fraud), MAYA (Marketing), LIZA (Sales), TOMY (ICT).
-- **Content-based routing:** the orchestrator routes requests based on their content.
-- **Local model connection:** the agents connect to Ollama when available.
+## Related projects
 
-## Tech stack
+- [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education)
+- [Study Studio](https://github.com/HatemIsmailShalaby1979/Study-Studio)
+- [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center)
+- [Hatem Shalaby portfolio](https://github.com/HatemIsmailShalaby1979)
 
-- Python 3.11+
-- Streamlit Operations Cockpit
-- Six domain-specific business engines
-- Four-agent framework with Ollama integration
-- Content-based orchestration
-- Pre-commit linting with Ruff
+## Author
 
-## Repository layout
+**Hatem Ismail Shalaby** — Operations Architect and AI Systems Engineer
 
-```text
-cockpit/                    Streamlit Operations Cockpit (start here)
-app/command_center/agents/  SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY
-engines/                    WFM, RTA, CX, B2B, Personnel, and CRM
-orchestration/              Content-based request routing
-api/                        API layer
-marketing/                  Project pages and assets
-```
+## License
 
-## Verification status
-
-- Operations Cockpit: verified launchable and functional
-- Six engines: implemented with individual READMEs
-- Nine agents: implemented with base agent framework
-- Orchestrator: content-based routing implemented
-- Full live-UI agent inter-communication: pending
-- Controlled pilot readiness: verified via deterministic dry-run (CONTROLLED_PILOT_READY)
-- Release gates: 14/14 pass for controlled_pilot and production_candidate profiles; production profile fails closed on 9 production-only gates requiring external evidence
-
-Part of a larger body of work — see [Hatem Shalaby's profile](https://github.com/HatemIsmailShalaby1979) for the full story.
+MIT

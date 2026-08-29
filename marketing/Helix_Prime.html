@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Helix Prime — Project Overview</title>
-  <meta name="description" content="Helix Prime public alpha project overview.">
+  <meta name="description" content="Helix Prime controlled-pilot foundation. Local-first operational core of Helix Codex with six engines, nine governed AI roles, workflow controls, evidence, memory, approvals, and a command center.">
   <style>
     :root{--bg:#070b14;--card:#0c1220;--muted:#9aa6d9;--text:#f5f7ff;--accent:#7c8bff;--border:rgba(255,255,255,.08)}
     *{box-sizing:border-box;margin:0;padding:0}body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}.container{max-width:1000px;margin:auto;padding:32px 24px 56px}header{display:flex;justify-content:space-between;gap:20px;align-items:center}.logo{font-weight:800}.logo span{color:var(--accent)}nav a{color:var(--muted);text-decoration:none;margin-left:16px}.hero{padding:80px 0 56px}.kicker{color:var(--accent);font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em}h1{font-size:clamp(2.5rem,6vw,4.8rem);line-height:1.05;max-width:820px;margin-top:16px}.lead{color:var(--muted);font-size:1.15rem;max-width:760px;margin-top:20px}section{border-top:1px solid var(--border);padding:48px 0}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:24px}.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px}.card p,.card li{color:var(--muted)}ul{padding-left:20px;margin-top:10px}.card li+li{margin-top:6px}.status{margin-top:20px;color:var(--muted);border-left:3px solid var(--accent);padding-left:15px}footer{color:var(--muted);padding-top:28px}@media(max-width:700px){header{align-items:flex-start;flex-direction:column}nav a{margin:0 14px 0 0}.grid{grid-template-columns:1fr}.hero{padding-top:52px}}
@@ -14,15 +14,15 @@
   <div class="container">
     <header><div class="logo">Helix <span>Prime</span></div><nav><a href="#overview">Overview</a><a href="#components">Components</a><a href="#status">Status</a></nav></header>
     <main>
-      <section id="overview" class="hero" style="border-top:0"><div class="kicker">Public alpha</div><h1>One unified operations system.</h1><p class="lead">Helix Prime contains six business engines, four AI agents, content-based request routing, a local Ollama model connection, and a Streamlit Operations Cockpit.</p></section>
-      <section id="components"><div class="kicker">Components</div><div class="grid"><article class="card"><h2>Agents</h2><p style="margin-top:10px">SAMI, SUBY, PHILI, and WILI connect to a local Ollama model.</p></article><article class="card"><h2>Orchestrator</h2><p style="margin-top:10px">Requests are routed according to their content.</p></article><article class="card"><h2>Operations Cockpit</h2><p style="margin-top:10px">A Streamlit interface for the operations system.</p></article><article class="card"><h2>Business engines</h2><ul><li>WFM/Erlang C</li><li>RTA</li><li>CX Churn Sentinel</li><li>B2B Onboarding</li><li>Personnel</li><li>CRM</li></ul></article></div></section>
-      <section id="status"><div class="kicker">Status</div><h2 style="margin-top:12px">Alpha, not overstated</h2><p class="status">The public repository is real and its core modules are present. Full agent inter-communication through the live UI is still pending, along with incremental work on automated test coverage and CI polish. There are no client deployments or production enterprise deployments to claim.</p></section>
-      <section><div class="kicker">Local setup</div><h2 style="margin-top:12px">Run the cockpit</h2><div class="card" style="margin-top:20px"><p>Requires Python 3.13+. Ollama is optional for local model inference.</p><pre style="margin-top:15px;color:var(--text);white-space:pre-wrap">python -m venv .venv
-.venv\\Scripts\\activate
+      <section id="overview" class="hero" style="border-top:0"><div class="kicker">Controlled-pilot foundation</div><h1>One unified operations system.</h1><p class="lead">Helix Prime is the local-first operational core of Helix Codex: six engines, nine governed AI roles, workflow controls, evidence, memory, approvals, and a command center.</p></section>
+      <section id="components"><div class="kicker">Components</div><div class="grid"><article class="card"><h2>Agents</h2><p style="margin-top:10px">SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, and TOMY connect to a local Ollama model.</p></article><article class="card"><h2>Orchestrator</h2><p style="margin-top:10px">Requests are routed according to their content.</p></article><article class="card"><h2>Operations Cockpit</h2><p style="margin-top:10px">A Streamlit interface for the operations system.</p></article><article class="card"><h2>Business engines</h2><ul><li>WFM/Erlang C</li><li>RTA</li><li>CX Churn Sentinel</li><li>B2B Onboarding</li><li>Personnel</li><li>CRM</li></ul></article></div></section>
+      <section id="status"><div class="kicker">Status</div><h2 style="margin-top:12px">Controlled-pilot ready</h2><p class="status">The public repository is real and its core modules are present. 445 tests passing across contracts, control plane, security, engines, integrations, pilot, memory, metacognition, and capability packs. Production remains NOT_READY; live connectors and external writes are intentionally disabled.</p></section>
+      <section><div class="kicker">Local setup</div><h2 style="margin-top:12px">Run the cockpit</h2><div class="card" style="margin-top:20px"><p>Requires Python 3.11+. Ollama is optional for local model inference.</p><pre style="margin-top:15px;color:var(--text);white-space:pre-wrap">python -m venv .venv
+.venv\Scripts\activate
 pip install -r cockpit/requirements.txt
-python launch.py --dash-only</pre><p style="margin-top:14px">Open <code>http://localhost:8501</code>.</p></div></section>
+python launch.py</pre><p style="margin-top:14px">Open <code>http://localhost:8501</code>.</p></div></section>
     </main>
-    <footer>Helix Prime — <a href="https://github.com/HatemShelby/Helix-Prime" style="color:var(--accent)">repository</a></footer>
+    <footer>Helix Prime — <a href="https://github.com/HatemIsmailShalaby1979/Helix-Prime" style="color:var(--accent)">repository</a></footer>
   </div>
 </body>
 </html>

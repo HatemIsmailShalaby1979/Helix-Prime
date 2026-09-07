@@ -113,7 +113,7 @@ def build_manifest(
         .replace("+00:00", "Z"),
         "python_version": sys.version.split()[0],
         "platform": sys.platform,
-        "supported_python": ">=3.10",
+        "supported_python": ">=3.12,<3.13",
         "dependency_lock_ref": "release/requirements.lock.txt",
         "dependency_lock_count": len(deps),
         "enabled_capabilities": [

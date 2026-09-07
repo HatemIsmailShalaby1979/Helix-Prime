@@ -1,0 +1,171 @@
+# Helix Codex OS — single packaging + tooling manifest.
+#
+# C0 collapsed five overlapping requirements manifests into requirements.txt.
+# Phase 1 W1 collapses the remaining loose tool configs into this file:
+#   ruff.toml   -> [tool.ruff]
+#   mypy.ini    -> [tool.mypy]
+#   pytest.ini  -> [tool.pytest.ini_options]
+#
+# `python scripts/check_dependencies.py` enforces that no dependency is
+# declared outside requirements.txt / requirements-dev.txt.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "helix-codex-os"
+version = "0.9.0"
+description = "Local-first collaboration and autonomous operations OS with a governed, auditable AI agent layer."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "See LICENSE — none committed yet; this blocks commercialization." }
+
+# Runtime dependencies — mirrored verbatim from requirements.txt.
+# Upper bounds on the numerical stack are HARD: pandas 3.x / numpy 2.x change
+# dtype promotion, which would silently change forecast and risk numbers.
+dependencies = [
+    "pydantic>=2.5,<3",
+    "PyYAML>=6.0,<7.0",
+    "pandas>=2.0.0,<3.0.0",
+    "numpy>=1.24.0,<2.0.0",
+    "scipy>=1.12.0,<2.0.0",
+    "scikit-learn>=1.4.0,<2.0.0",
+    "streamlit>=1.32.0,<2.0.0",
+    "matplotlib>=3.8.0,<4.0.0",
+    "seaborn>=0.13.0,<1.0.0",
+    "plotly>=5.18.0,<6.0.0",
+    "python-dotenv>=1.0.0,<2.0.0",
+    "Flask>=3.0.0,<4.0.0",
+    "flask-cors>=4.0.0,<7.0.0",
+    "ollama>=0.4.0,<1.0.0",
+]
+
+[project.optional-dependencies]
+# Mirrored from requirements-dev.txt.
+dev = [
+    "pytest>=7.4,<10",
+    "pytest-timeout>=2.2",
+    "ruff==0.1.15",
+    "flake8>=6.0",
+    "pre-commit>=3.5",
+    "mypy>=1.8",
+    "types-PyYAML>=6.0",
+]
+
+# Phase 1 W4 — the FastAPI/HTMX/SSE service spine. Python-only; no Node build step.
+web = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "sse-starlette>=2.1",
+    "pydantic-settings>=2.5",
+    "httpx>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/HatemIsmailShalaby1979/Helix-Prime"
+
+# ---------------------------------------------------------------------------
+# Build — explicit package list, NOT auto-discovery.
+# Auto-discovery would swallow demo/, release/, scripts/ and tests/ into the wheel.
+#
+# NOTE: `server` is intentionally absent. W4 creates it; add it to this list
+# in the same commit, because hatchling fails if a listed package is missing.
+# ---------------------------------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = [
+    "app",
+    "capabilities",
+    "cloud",
+    "cockpit",
+    "connectors",
+    "contracts",
+    "control_plane",
+    "customer_success",
+    "engines",
+    "integrations",
+    "memory",
+    "metacognition",
+    "observability",
+    "orchestration",
+    "organization",
+    "pilot",
+    "security",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/app",
+    "/capabilities",
+    "/cloud",
+    "/connectors",
+    "/contracts",
+    "/control_plane",
+    "/docs",
+    "/engines",
+    "/infra",
+    "/memory",
+    "/metacognition",
+    "/observability",
+    "/orchestration",
+    "/organization",
+    "/requirements.txt",
+    "/requirements-dev.txt",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff (was ruff.toml)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+# ---------------------------------------------------------------------------
+# Mypy (was mypy.ini)
+# NOTE: eight error codes are disabled here. That makes type checking largely
+# cosmetic. Tightening them is tracked as Phase 1 follow-up, not silently done.
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "app:engines/rta/src:engines/personnel/src:engines/b2b/src:cockpit"
+explicit_package_bases = true
+ignore_missing_imports = true
+disable_error_code = [
+    "var-annotated",
+    "call-overload",
+    "attr-defined",
+    "assignment",
+    "arg-type",
+    "operator",
+    "call-arg",
+    "type-var",
+    "dict-item",
+]
+exclude = [
+    "engines/b2b/src/main\\.py",
+    "engines/personnel/src/main\\.py",
+]
+
+# ---------------------------------------------------------------------------
+# Pytest (was pytest.ini)
+# `pythonpath = ["."]` is load-bearing: all 26 test modules rely on it.
+# pytest.ini takes precedence over pyproject.toml, so pytest.ini must be
+# deleted for this section to take effect.
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+markers = [
+    "smoke: marks tests as smoke tests requiring live Ollama service",
+    "unit: fast, no external dependencies",
+    "integration: requires engines or Ollama",
+]
+testpaths = ["tests"]
+addopts = "-r a --strict-markers --durations=20"
+pythonpath = ["."]
+timeout = 120
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::UserWarning",
+]

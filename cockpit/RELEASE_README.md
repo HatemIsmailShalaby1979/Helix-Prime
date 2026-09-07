@@ -5,7 +5,7 @@ This release packages the Helix Prime Operations Cockpit for local Windows use. 
 ## Requirements
 
 - Windows PowerShell
-- Python 3.11+
+- Python 3.12+
 - Optional: Ollama for local model inference
 
 ## Run

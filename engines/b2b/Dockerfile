@@ -1,6 +1,6 @@
 # B2B Client Onboarding Automator — container image
 # Local-first; Notion credentials are injected via environment at run time.
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -9,8 +9,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# NOTE: requirements.txt shim removed (Phase 1 W1). Install deps from root
+# requirements.txt or use the unified infra/docker/Dockerfile.
 
 COPY src/ ./src/
 COPY notion_adapter/ ./notion_adapter/

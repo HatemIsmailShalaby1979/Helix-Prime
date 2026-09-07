@@ -51,7 +51,7 @@ The current demo uses synthetic and consented-historical data only. This is not 
 
 ### Windows
 
-1. Install Python 3.11+ from [python.org](https://www.python.org/downloads/windows/).
+1. Install Python 3.12+ from [python.org](https://www.python.org/downloads/windows/).
 2. Download the source ZIP and extract it.
 3. Open Command Prompt in the extracted folder.
 4. Run `setup.bat`.

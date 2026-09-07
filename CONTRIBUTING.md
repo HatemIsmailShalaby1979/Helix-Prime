@@ -27,7 +27,7 @@ We don't need:
 
 ### Prerequisites
 
-- **Python 3.11+** — for the orchestrator and engines
+- **Python 3.12+** — for the orchestrator and engines
 - **Go runtime** — for the orchestration daemon
 - **Ollama** — for local AI model inference (optional; system runs without it in deterministic mode)
 - **Streamlit** — for the cockpit dashboard

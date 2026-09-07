@@ -1,4 +1,0 @@
-# DEPRECATED C0 COMPATIBILITY SHIM
-# Runtime dependencies are canonical in ../requirements.txt.
-# Install from the repository root: python -m pip install -r requirements.txt
-# This file intentionally declares no packages; do not add dependencies here.

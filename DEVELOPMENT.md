@@ -15,7 +15,7 @@ Open [http://localhost:8501](http://localhost:8501).
 
 ## What you need
 
-- **Python 3.11+** — the engines and orchestrator run on this
+- **Python 3.12+** — the engines and orchestrator run on this
 - **Go** — only if you're modifying the orchestration daemon
 - **Ollama** — optional. Without it, the system runs in deterministic offline mode
 - **SQLite** — comes with Python, no separate install needed

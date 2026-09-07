@@ -35,7 +35,14 @@ SCAN_EXTENSIONS = {
 }
 # Directories to skip (generated, vendored, venv).
 SCAN_SKIP_DIRS = {".venv", "venv", "node_modules", "__pycache__", ".git", ".pytest_cache",
-                  ".mypy_cache", ".ruff_cache", "evidence", "dist", "build", "target"}
+                  ".mypy_cache", ".ruff_cache", "evidence", "dist", "build", "target",
+                  "site-packages", ".tox", ".nox", ".hypothesis", ".eggs", ".workbuddy-ai"}
+
+
+def _is_skipped_dir(dirname: str) -> bool:
+    """Return True if *dirname* (a directory leaf name) should be skipped."""
+    return dirname in SCAN_SKIP_DIRS or dirname.startswith(".venv")
+
 
 # Regex markers for secret-like values. Deterministic, conservative.
 _SECRET_PATTERNS = [
@@ -77,8 +84,8 @@ def _iter_scan_files(subdirs: Optional[List[str]] = None) -> List[pathlib.Path]:
             dp = pathlib.Path(dirpath)
             dirnames[:] = [
                 d for d in dirnames
-                if d not in SCAN_SKIP_DIRS
-                and not any(part in SCAN_SKIP_DIRS for part in (dp / d).parts)
+                if not _is_skipped_dir(d)
+                and not any(_is_skipped_dir(part) for part in (dp / d).parts)
             ]
             for fn in sorted(filenames):
                 p = dp / fn
@@ -99,6 +106,9 @@ def scan_for_secrets(subdirs: Optional[List[str]] = None) -> Dict[str, Any]:
         for pattern in _SECRET_PATTERNS:
             for m in pattern.finditer(text):
                 seg = m.group(0)
+                # value is a function call, not a literal → not a secret
+                if m.end() < len(text) and text[m.end()] == "(":
+                    continue
                 if _is_allowed_value(seg):
                     continue
                 findings.append({

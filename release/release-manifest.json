@@ -1,15 +1,15 @@
 {
   "manifest_schema_version": "1.0",
   "product": "Helix-Prime-Codex",
-  "release_profile": "production",
+  "release_profile": "controlled_pilot",
   "classification": "NOT_READY",
   "release_approved": true,
   "version": "0.9.0-c8",
-  "git_commit": "3fc40ea5ea0ed21c0fb9acc0e468c10c9aba565e",
+  "git_commit": "1ab9bea1b45866976cb73ad4f9b7d6e5a29f0d10",
   "git_branch": "main",
-  "build_timestamp": "2026-08-29T12:26:16.586866Z",
-  "python_version": "3.14.4",
-  "platform": "linux",
+  "build_timestamp": "2026-09-07T02:41:24.676208Z",
+  "python_version": "3.10.11",
+  "platform": "win32",
   "supported_python": ">=3.10",
   "dependency_lock_ref": "release/requirements.lock.txt",
   "dependency_lock_count": 24,
@@ -45,6 +45,6 @@
     "Production label not claimed without every production gate passing."
   ],
   "evidence_refs": [
-    "evidence/releases/20260829T122616Z"
+    "evidence\\releases\\20260907T024124Z"
   ]
 }

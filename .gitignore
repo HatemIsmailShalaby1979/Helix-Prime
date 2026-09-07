@@ -71,3 +71,7 @@ security/audit.db-*
 
 # Local demo media kept out of source (use release assets instead)
 marketing/assets/*.mp4
+
+# IDE / assistant tooling — project-local data, not source (Phase 1 W0)
+.workbuddy-ai/
+.tmp/

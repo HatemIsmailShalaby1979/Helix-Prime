@@ -27,6 +27,8 @@ import tempfile
 
 import pytest
 
+from tests.support.sqlite_harness import sqlite_store
+
 # ── all data classifications ──────────────────────────────────────────────
 
 def test_all_data_classifications():
@@ -180,64 +182,67 @@ def test_approval_and_sod_enforcement():
 
     with tempfile.TemporaryDirectory() as tmp:
         db = str(pathlib.Path(tmp) / "sod.db")
-        store = Store(db_path=db)
-        engine = Engine(store=store)
-        corr = CorrelationContext(correlation_id="corr_sod_c3", idempotency_key="idem_sod_c3", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
-        from contracts.task import TaskRequest
+        # C0: the store must be closed before the temporary directory is
+        # removed. On Windows an open SQLite handle makes rmtree fail with
+        # WinError 32 / WinError 267, which hides the real assertion result.
+        with sqlite_store(db) as store:
+            engine = Engine(store=store)
+            corr = CorrelationContext(correlation_id="corr_sod_c3", idempotency_key="idem_sod_c3", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+            from contracts.task import TaskRequest
 
-        req = TaskRequest(
-            request_id="req_sod_c3",
-            correlation=corr,
-            requesting_actor="sami",
-            owning_role_id="ops_gm",
-            capability="wfm_forecast",
-            input_payload={},
-            requires_approval=True,
-            status="proposed",
-            created_at="2026-08-27T18:00:00Z",
-            client_id="c",
-        )
-        wf = engine.submit(req)
-        assert wf.state == "awaiting_approval"
-        # Self-approval should be rejected (SOD)
-        appr_self = Approval(
-            approval_id="appr_self_c3",
-            correlation_id=corr.correlation_id,
-            subject_id=wf.workflow_id,
-            approver_actor="sami",  # same as requesting_actor
-            approver_role_id="compliance_quality_gm",
-            decision="approved",
-            reason="self",
-            timestamp="2026-08-27T18:00:00Z",
-        )
-        with pytest.raises(ValueError, match="self-approval"):
-            engine.approve(wf.workflow_id, appr_self)
-        # Same-role approval should also be rejected
-        appr_samerole = Approval(
-            approval_id="appr_samerole_c3",
-            correlation_id=corr.correlation_id,
-            subject_id=wf.workflow_id,
-            approver_actor="other_user",
-            approver_role_id="ops_gm",  # same as owning role
-            decision="approved",
-            reason="same role",
-            timestamp="2026-08-27T18:00:00Z",
-        )
-        with pytest.raises(ValueError, match="same-role"):
-            engine.approve(wf.workflow_id, appr_samerole)
-        # Valid approval (compliance) should succeed
-        appr_ok = Approval(
-            approval_id="appr_ok_c3",
-            correlation_id=corr.correlation_id,
-            subject_id=wf.workflow_id,
-            approver_actor="compliance_user",
-            approver_role_id="compliance_quality_gm",
-            decision="approved",
-            reason="ok",
-            timestamp="2026-08-27T18:00:00Z",
-        )
-        wf_after = engine.approve(wf.workflow_id, appr_ok)
-        assert wf_after.state == "executing"
+            req = TaskRequest(
+                request_id="req_sod_c3",
+                correlation=corr,
+                requesting_actor="sami",
+                owning_role_id="ops_gm",
+                capability="wfm_forecast",
+                input_payload={},
+                requires_approval=True,
+                status="proposed",
+                created_at="2026-08-27T18:00:00Z",
+                client_id="c",
+            )
+            wf = engine.submit(req)
+            assert wf.state == "awaiting_approval"
+            # Self-approval should be rejected (SOD)
+            appr_self = Approval(
+                approval_id="appr_self_c3",
+                correlation_id=corr.correlation_id,
+                subject_id=wf.workflow_id,
+                approver_actor="sami",  # same as requesting_actor
+                approver_role_id="compliance_quality_gm",
+                decision="approved",
+                reason="self",
+                timestamp="2026-08-27T18:00:00Z",
+            )
+            with pytest.raises(ValueError, match="self-approval"):
+                engine.approve(wf.workflow_id, appr_self)
+            # Same-role approval should also be rejected
+            appr_samerole = Approval(
+                approval_id="appr_samerole_c3",
+                correlation_id=corr.correlation_id,
+                subject_id=wf.workflow_id,
+                approver_actor="other_user",
+                approver_role_id="ops_gm",  # same as owning role
+                decision="approved",
+                reason="same role",
+                timestamp="2026-08-27T18:00:00Z",
+            )
+            with pytest.raises(ValueError, match="same-role"):
+                engine.approve(wf.workflow_id, appr_samerole)
+            # Valid approval (compliance) should succeed
+            appr_ok = Approval(
+                approval_id="appr_ok_c3",
+                correlation_id=corr.correlation_id,
+                subject_id=wf.workflow_id,
+                approver_actor="compliance_user",
+                approver_role_id="compliance_quality_gm",
+                decision="approved",
+                reason="ok",
+                timestamp="2026-08-27T18:00:00Z",
+            )
+            wf_after = engine.approve(wf.workflow_id, appr_ok)
+            assert wf_after.state == "executing"
 
 
 # ── secret redaction ───────────────────────────────────────────────────────

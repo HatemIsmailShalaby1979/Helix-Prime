@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.codex/schemas/sibling-events/v1.0/AssessmentCompleted.json",
+  "title": "AssessmentCompleted",
+  "description": "AssessmentCompleted \u2014 inbound event owned by study_studio. Published by the Helix Codex OS sibling bus (C7).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "assessment_id",
+    "tenant_id",
+    "client_id",
+    "agent_ref",
+    "capability",
+    "score",
+    "passed",
+    "qualification_token"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "assessment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capability": {
+      "type": "string",
+      "minLength": 1
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "passed": {
+      "type": "boolean"
+    },
+    "qualification_token": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "artifact_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "assessed_at": {
+      "type": "string"
+    },
+    "token_expires_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data_mode": {
+      "type": "string",
+      "enum": [
+        "live",
+        "sample",
+        "historical"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

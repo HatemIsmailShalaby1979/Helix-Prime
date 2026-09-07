@@ -951,3 +951,476 @@ def test_existing_cockpit_and_engine_behavior_preserved():
 
     spec = importlib.util.spec_from_file_location("erlang_c", "engines/wfm/src/erlang_c.py")
     assert spec is not None
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Phase 3 — Governance runtime: contract layer + fail-closed event store.
+#
+# Covers the three execution paths required by the enterprise organization model:
+#   1. a successful valid request admitted inside every boundary
+#   2. a boundary breach (engine outside the actor's owned_engines)
+#   3. an over-budget financial trigger frozen for human validation
+# The suite also proves the database traps violations instead of crashing.
+# ══════════════════════════════════════════════════════════════════════════
+
+import uuid as _uuid
+
+from control_plane.governance import (
+    MIN_AUTONOMY_CONFIDENCE,
+    ORGANIZATION_CATALOG,
+    AccessDeniedError,
+    CorrelationContext as GovernanceCorrelationContext,
+    GovernanceStateError,
+    GovernedWorkflowManager,
+    TaskRequest as GovernanceTaskRequest,
+    detect_catalog_drift,
+    evaluate_gate,
+    get_role,
+    resolve_actor_role,
+)
+from control_plane.store import Store as GovernanceStore
+from control_plane.workflow import WorkflowState
+
+GOV_TS = "2026-09-07T00:00:00Z"
+
+# Financial approval limits from the canonical organization catalog (USD).
+SPEC_FINANCIAL_LIMITS = {
+    "sami": None,                       # unlimited, human-escalated
+    "ops_gm": 500.00,
+    "compliance_quality_gm": 0.00,
+    "fraud_revenue_gm": 0.00,
+    "hr_personnel_gm": 1_000.00,
+    "ld_gm": 200.00,
+    "sales_gm": 2_500.00,
+    "marketing_gm": 500.00,
+    "ict_gm": 5_000.00,
+}
+
+SPEC_OWNED_ENGINES = {
+    "ops_gm": {"wfm", "rta", "cx"},
+    "compliance_quality_gm": set(),
+    "fraud_revenue_gm": {"crm", "b2b"},
+    "hr_personnel_gm": {"personnel", "wfm"},
+    "ld_gm": {"wfm"},
+    "sales_gm": {"crm", "b2b"},
+    "marketing_gm": {"crm"},
+    "ict_gm": {"control_plane"},
+}
+
+
+def _gov_corr(actor: str = "suby") -> GovernanceCorrelationContext:
+    return GovernanceCorrelationContext(
+        correlation_id=str(_uuid.uuid4()),
+        idempotency_key=str(_uuid.uuid4()),
+        tenant_id="helix-prime",
+        client_id="Account Alpha",
+        created_at=GOV_TS,
+        actor_id=actor,
+    )
+
+
+def _gov_request(
+    actor: str = "suby",
+    role: str = "ops_gm",
+    engine: str = "wfm",
+    cost: float = 0.0,
+    confidence: float = 0.95,
+    classification: str = "internal",
+    requires_approval: bool = False,
+) -> GovernanceTaskRequest:
+    return GovernanceTaskRequest(
+        request_id="req_" + _uuid.uuid4().hex[:10],
+        correlation=_gov_corr(actor),
+        requesting_actor=actor,
+        owning_role_id=role,
+        capability="wfm_forecast",
+        input_payload={"client": "Account Alpha", "estimated_financial_cost": cost},
+        requires_approval=requires_approval,
+        status="proposed",
+        created_at=GOV_TS,
+        tenant_id="helix-prime",
+        client_id="Account Alpha",
+        target_engine=engine,
+        estimated_financial_cost=cost,
+        confidence_score=confidence,
+        requested_data_classification=classification,
+    )
+
+
+def _gov_manager(tmp_path) -> GovernedWorkflowManager:
+    store = GovernanceStore(db_path=str(tmp_path / "governance.db"))
+    return GovernedWorkflowManager(store=store)
+
+
+# ── canonical catalog ─────────────────────────────────────────────────────
+
+def test_organization_catalog_has_nine_seats():
+    """8 Functional GMs + SAMI, and nothing else."""
+    assert len(ORGANIZATION_CATALOG) == 9
+    assert "sami" in ORGANIZATION_CATALOG
+    assert len([r for r in ORGANIZATION_CATALOG if r.endswith("_gm")]) == 8
+
+
+def test_organization_catalog_matches_spec_financial_limits():
+    for role_id, limit in SPEC_FINANCIAL_LIMITS.items():
+        spec = get_role(role_id)
+        assert spec.financial_approval_limit_usd == limit, (
+            f"{role_id}: expected limit {limit}, got {spec.financial_approval_limit_usd}"
+        )
+
+
+def test_organization_catalog_matches_spec_engine_ownership():
+    for role_id, engines in SPEC_OWNED_ENGINES.items():
+        assert set(get_role(role_id).owned_engines) == engines, f"{role_id}: owned_engines mismatch"
+
+
+def test_sami_is_the_only_unlimited_seat():
+    unlimited = [r for r, s in ORGANIZATION_CATALOG.items() if s.financial_approval_limit_usd is None]
+    assert unlimited == ["sami"]
+
+
+def test_compliance_gm_is_oversight_only():
+    assert get_role("compliance_quality_gm").oversight_only is True
+    assert get_role("compliance_quality_gm").owned_engines == ()
+
+
+def test_unknown_role_fails_closed():
+    with pytest.raises(ValueError, match="unknown role_id"):
+        get_role("chief_vibes_officer")
+
+
+def test_actor_aliases_resolve_to_catalog_roles():
+    assert resolve_actor_role("suby") == "ops_gm"
+    assert resolve_actor_role("liza") == "sales_gm"
+    assert resolve_actor_role("wili") == "ld_gm"
+    assert resolve_actor_role("nono") == "fraud_revenue_gm"
+    assert resolve_actor_role("sami") == "sami"
+
+
+def test_catalog_drift_detector_reports_without_raising():
+    """Drift is surfaced, not swallowed. Callers decide whether it is fatal."""
+    drift = detect_catalog_drift()
+    assert isinstance(drift, list)
+    for entry in drift:
+        assert {"role_id", "field", "runtime", "yaml", "detail"} <= set(entry)
+
+
+# ── contract layer validation ─────────────────────────────────────────────
+
+def test_correlation_context_requires_uuid4():
+    with pytest.raises(ValueError, match="UUID4"):
+        GovernanceCorrelationContext(
+            correlation_id="corr_not_a_uuid",
+            idempotency_key=str(_uuid.uuid4()),
+            tenant_id="helix-prime",
+            client_id="Account Alpha",
+            created_at=GOV_TS,
+        )
+
+
+def test_correlation_context_accepts_uuid4_and_round_trips():
+    ctx = _gov_corr("suby")
+    restored = GovernanceCorrelationContext.from_dict(ctx.to_dict())
+    assert restored.correlation_id == ctx.correlation_id
+    assert restored.actor_id == "suby"
+
+
+def test_task_request_rejects_confidence_out_of_bounds():
+    with pytest.raises(ValueError, match="confidence must be 0.0-1.0"):
+        _gov_request(confidence=1.4)
+
+
+def test_task_request_rejects_negative_cost():
+    with pytest.raises(ValueError, match="must be >= 0"):
+        _gov_request(cost=-1.0)
+
+
+def test_task_request_rejects_unknown_data_classification():
+    with pytest.raises(ValueError, match="unknown classification"):
+        _gov_request(classification="top_secret")
+
+
+def test_governance_task_request_is_a_canonical_task_request():
+    """The governance contract must stay a valid input to the existing engine."""
+    from contracts.task import TaskRequest as CanonicalTaskRequest
+
+    assert isinstance(_gov_request(), CanonicalTaskRequest)
+
+
+# ── path 1: successful valid request ──────────────────────────────────────
+
+def test_valid_request_is_admitted_and_executes(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(actor="suby", role="ops_gm", engine="wfm", cost=100.0))
+
+    assert record.state == WorkflowState.EXECUTING
+    assert record.reason_code == "within_bounds"
+    assert record.actor_role_id == "ops_gm"
+    assert record.financial_limit_usd == 500.00
+
+    persisted = mgr.get_task(record.task_id)
+    assert persisted is not None
+    assert persisted.state == WorkflowState.EXECUTING
+
+
+def test_valid_request_writes_a_hash_chained_audit_trail(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=100.0))
+
+    trail = mgr.audit_trail(task_id=record.task_id)
+    assert len(trail) >= 3  # proposed -> validated -> executing
+    assert [e["to_state"] for e in trail] == [
+        WorkflowState.PROPOSED,
+        WorkflowState.VALIDATED,
+        WorkflowState.EXECUTING,
+    ]
+    assert mgr.verify_audit_chain() is True
+
+
+# ── path 2: boundary breach (wrong engine ownership) ──────────────────────
+
+def test_ownership_breach_raises_access_denied_at_contract_level():
+    """sales_gm owns crm/b2b only — requesting wfm is an Access Denied."""
+    with pytest.raises(AccessDeniedError, match="Access Denied"):
+        _gov_request(actor="liza", role="sales_gm", engine="wfm", cost=10.0)
+
+
+def test_ownership_breach_is_also_trapped_by_the_gate():
+    decision = evaluate_gate("sales_gm", target_engine="wfm", estimated_financial_cost=10.0)
+    assert decision.allowed is False
+    assert decision.reason_code == "access_denied"
+    assert decision.state == WorkflowState.DEAD_LETTER
+
+
+def test_oversight_only_role_cannot_claim_any_engine():
+    decision = evaluate_gate("compliance_quality_gm", target_engine="wfm")
+    assert decision.allowed is False
+    assert decision.reason_code == "access_denied"
+
+
+def test_classification_breach_is_isolated_not_executed(tmp_path):
+    """ops_gm may not touch regulated_high_risk data — trapped, not crashed."""
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(
+        _gov_request(engine="wfm", cost=10.0, classification="regulated_high_risk")
+    )
+    assert record.state == WorkflowState.DEAD_LETTER
+    assert record.reason_code == "classification_not_permitted"
+    assert record.error["code"] == "classification_not_permitted"
+    assert mgr.audit_trail(task_id=record.task_id)[-1]["decision"] == "denied"
+
+
+# ── path 3: over-budget financial trigger ─────────────────────────────────
+
+@pytest.mark.parametrize(
+    "role,actor,engine,cost,limit",
+    [
+        ("ops_gm", "suby", "wfm", 500.01, 500.00),
+        ("ld_gm", "wili", "wfm", 200.01, 200.00),
+        ("sales_gm", "liza", "crm", 2_500.01, 2_500.00),
+        ("hr_personnel_gm", "phili", "personnel", 1_000.01, 1_000.00),
+        ("ict_gm", "tomy", "control_plane", 5_000.01, 5_000.00),
+        ("marketing_gm", "maya", "crm", 500.01, 500.00),
+    ],
+)
+def test_over_budget_task_is_frozen_awaiting_approval(tmp_path, role, actor, engine, cost, limit):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(actor=actor, role=role, engine=engine, cost=cost))
+
+    assert record.state == WorkflowState.AWAITING_APPROVAL
+    assert record.reason_code == "financial_limit_exceeded"
+    assert record.financial_limit_usd == limit
+    assert record.estimated_financial_cost == cost
+    assert "exceeds role" in record.reason
+
+
+def test_cost_exactly_at_limit_is_autonomous():
+    """Boundary is 'crosses the threshold', not 'reaches it'."""
+    decision = evaluate_gate("ops_gm", estimated_financial_cost=500.00)
+    assert decision.requires_human_approval is False
+    assert decision.state == WorkflowState.EXECUTING
+
+
+def test_zero_limit_roles_freeze_any_spend():
+    for role in ("compliance_quality_gm", "fraud_revenue_gm"):
+        decision = evaluate_gate(role, estimated_financial_cost=0.01)
+        assert decision.requires_human_approval is True
+        assert decision.reason_code == "financial_limit_exceeded"
+
+
+def test_sami_unlimited_still_autonomous_at_scale():
+    decision = evaluate_gate("sami", estimated_financial_cost=1_000_000.00)
+    assert decision.requires_human_approval is False
+
+
+def test_low_confidence_freezes_for_human_review(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=10.0, confidence=MIN_AUTONOMY_CONFIDENCE - 0.01))
+    assert record.state == WorkflowState.AWAITING_APPROVAL
+    assert record.reason_code == "low_confidence"
+
+
+def test_frozen_task_cannot_skip_the_approval_queue(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=900.0))
+    assert record.state == WorkflowState.AWAITING_APPROVAL
+
+    # A direct attempt to jump to executing must be rejected by the state machine.
+    with pytest.raises(GovernanceStateError, match="invalid transition"):
+        mgr._commit_state(record, WorkflowState.EXECUTING, "sami")
+
+
+# ── human validation token ────────────────────────────────────────────────
+
+def test_human_approval_releases_frozen_task(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=900.0))
+    assert record.state == WorkflowState.AWAITING_APPROVAL
+
+    approved = mgr.approve(record.task_id, "sami", note="exec sign-off")
+    assert approved.state == WorkflowState.EXECUTING
+
+    done = mgr.complete(record.task_id, WorkflowState.SUCCEEDED, output_payload={"staffed": 12})
+    assert done.state == WorkflowState.SUCCEEDED
+
+
+def test_self_approval_is_refused(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(actor="suby", cost=900.0))
+    with pytest.raises(GovernanceStateError, match="segregation of duties"):
+        mgr.approve(record.task_id, "suby")
+
+
+def test_approver_own_limit_must_cover_the_task(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(actor="suby", role="ops_gm", cost=900.0))
+    # ld_gm limit is 200.00 — cannot release a 900.00 task.
+    with pytest.raises(GovernanceStateError, match="escalate to SAMI"):
+        mgr.approve(record.task_id, "wili")
+
+
+def test_reject_cancels_frozen_task(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=900.0))
+    cancelled = mgr.reject(record.task_id, "sami", note="not this quarter")
+    assert cancelled.state == WorkflowState.CANCELLED
+
+
+def test_approving_a_non_frozen_task_is_refused(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=10.0))  # executes immediately
+    with pytest.raises(GovernanceStateError, match="not awaiting_approval"):
+        mgr.approve(record.task_id, "sami")
+
+
+# ── durability: the database traps violations safely ──────────────────────
+
+def test_audit_ledger_is_append_only(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=10.0))
+
+    with pytest.raises(Exception, match="append-only"):
+        mgr.store.conn.execute("DELETE FROM audit_events WHERE task_id = ?", (record.task_id,))
+    with pytest.raises(Exception, match="append-only"):
+        mgr.store.conn.execute("UPDATE audit_events SET decision = 'allowed'")
+
+
+def test_audit_chain_detects_tampering(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    mgr.submit(_gov_request(cost=10.0))
+    assert mgr.verify_audit_chain() is True
+
+    # Tamper outside the API (drop the append-only trigger first).
+    first = mgr.audit_trail(task_id=None)[0]
+    mgr.store.conn.execute("DROP TRIGGER trg_audit_events_no_update")
+    mgr.store.conn.execute(
+        "UPDATE audit_events SET decision = 'denied' WHERE event_id = ?", (first["event_id"],)
+    )
+    mgr.store.conn.commit()
+    assert mgr.verify_audit_chain() is False
+
+
+def test_ledger_rejects_forked_append(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    mgr.submit(_gov_request(cost=10.0))
+    head = mgr.store.get_last_audit_hash()
+    assert head != ""
+
+    from control_plane.governance import AuditEventRecord
+
+    forked = AuditEventRecord(
+        event_id=str(_uuid.uuid4()),
+        occurred_at=GOV_TS,
+        correlation_id="corr_fork",
+        actor_id="attacker",
+        actor_role_id="ops_gm",
+        event_type="task_executing",
+        decision="allowed",
+        reason_code="forged",
+        reason="forged entry",
+        prev_hash="deadbeef",
+    )
+    forked.record_hash = forked.compute_hash()
+    with pytest.raises(ValueError, match="ledger fork rejected"):
+        mgr.store.append_audit_event(forked.to_dict())
+
+
+def test_unsigned_audit_event_is_rejected(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    with pytest.raises(ValueError, match="record_hash is required"):
+        mgr.store.append_audit_event({"event_id": str(_uuid.uuid4()), "prev_hash": ""})
+
+
+def test_duplicate_task_id_fails_deterministically(tmp_path):
+    mgr = _gov_manager(tmp_path)
+    record = mgr.submit(_gov_request(cost=10.0))
+    with pytest.raises(Exception):
+        mgr.store.insert_workflow_task(record.to_dict())
+
+
+def test_manager_survives_a_stream_of_violations(tmp_path):
+    """The engine must not crash while the database traps every violation."""
+    mgr = _gov_manager(tmp_path)
+
+    mgr.submit(_gov_request(cost=10.0))                                   # ok
+    mgr.submit(_gov_request(cost=9_999.0))                                # frozen
+    mgr.submit(_gov_request(cost=10.0, classification="regulated_high_risk"))  # isolated
+    mgr.submit(_gov_request(cost=10.0, confidence=0.1))                   # frozen
+
+    states = [t.state for t in mgr.list_tasks()]
+    assert WorkflowState.EXECUTING in states
+    assert states.count(WorkflowState.AWAITING_APPROVAL) == 2
+    assert WorkflowState.DEAD_LETTER in states
+    assert mgr.verify_audit_chain() is True
+
+
+# ── engine integration ────────────────────────────────────────────────────
+
+def test_engine_submit_holds_over_budget_request(tmp_path):
+    """The runtime orchestrator freezes an over-budget task before execution."""
+    from control_plane.engine import Engine
+    from control_plane.store import Store
+
+    store = Store(db_path=str(tmp_path / "engine_gate.db"))
+    engine = Engine(store=store)
+    engine.register_handler("wfm_forecast", lambda wf: {"staffed": 1})
+
+    req = _gov_request(actor="suby", role="ops_gm", engine="wfm", cost=600.0)
+    workflow = engine.submit(req)
+
+    assert workflow.state == WorkflowState.AWAITING_APPROVAL
+    assert workflow.requires_approval is True
+
+
+def test_engine_submit_still_executes_in_budget_request(tmp_path):
+    from control_plane.engine import Engine
+    from control_plane.store import Store
+
+    store = Store(db_path=str(tmp_path / "engine_gate2.db"))
+    engine = Engine(store=store)
+    engine.register_handler("wfm_forecast", lambda wf: {"staffed": 1})
+
+    req = _gov_request(actor="suby", role="ops_gm", engine="wfm", cost=100.0)
+    workflow = engine.submit(req)
+
+    assert workflow.state == WorkflowState.EXECUTING

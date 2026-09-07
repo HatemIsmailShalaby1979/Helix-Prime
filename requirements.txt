@@ -1,0 +1,48 @@
+# Helix Codex OS — canonical runtime dependency set.
+#
+# C0 (Environmental Alignment & Debt Elimination) collapsed five overlapping
+# manifests into this single source of truth:
+#
+#   cockpit/requirements.txt        (cockpit UI runtime)
+#   engines/b2b/requirements.txt    (B2B onboarding engine)
+#   engines/cx/requirements.txt     (CX churn sentinel)
+#   marketing/requirements-demo.txt (demo profile — retired, folded in)
+#   release/requirements.lock.txt   (release lock — now generated from here)
+#
+# Rule: nothing may declare a dependency outside this file and
+# requirements-dev.txt. `python scripts/check_dependencies.py` enforces it.
+
+# ── Structural requirements ─────────────────────────────────────────────────
+# Contract layer. The C1/C2 control plane validates every TaskRequest and
+# TaskResult through these. Pinned to a major line: a pydantic major bump
+# changes validation semantics, which changes what the control plane accepts.
+pydantic>=2.5,<3
+
+# Persistence. sqlite3 ships with CPython — declared here as a comment so the
+# structural dependency is documented, not installable.
+#   sqlite3 — CPython stdlib, no wheel. Requires Python >= 3.10 for the
+#   strict typing and RETURNING clauses used by control_plane/store.py.
+
+# Configuration / schema loading for organization/ and contracts/.
+PyYAML>=6.0,<7.0
+
+# ── Data-processing engines ─────────────────────────────────────────────────
+# Deterministic numerical core shared by WFM, RTA, CX, CRM, Personnel and B2B.
+# Upper bounds are hard: pandas 3.x and numpy 2.x change dtype promotion rules,
+# which would silently change forecast and risk numbers.
+pandas>=2.0.0,<3.0.0
+numpy>=1.24.0,<2.0.0
+scipy>=1.12.0,<2.0.0
+scikit-learn>=1.4.0,<2.0.0
+
+# ── Cockpit (Streamlit control plane) ───────────────────────────────────────
+streamlit>=1.32.0,<2.0.0
+matplotlib>=3.8.0,<4.0.0
+seaborn>=0.13.0,<1.0.0
+plotly>=5.18.0,<6.0.0
+
+# ── Integration & runtime services ──────────────────────────────────────────
+python-dotenv>=1.0.0,<2.0.0
+Flask>=3.0.0,<4.0.0
+flask-cors>=4.0.0,<7.0.0
+ollama>=0.4.0,<1.0.0

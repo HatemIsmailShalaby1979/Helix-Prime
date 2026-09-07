@@ -212,3 +212,41 @@ The original audit report (dated 2026-08-28, self-titled "COMPLETE AUDIT") conta
 | **2026-08-29: Prompt 11 — final status** | `RestaurantCapabilityPack.final_status()` | ✅ capability_pack_ready=TRUE; real_design_partner_approval_pending=TRUE; production_readiness=NOT_ESTABLISHED; explicitly NOT claimed to work for every business |
 | **2026-08-29: Prompt 12 — release/portfolio evidence package** | `docs/portfolio/` (15 docs) + `demo/synthetic_demo.py` | ✅ Architecture, governance, workflow demo, security, evidence, memory, metacognitive, local/cloud, cost, pilot plan, known limitations (unfinished separated), roadmap, 5-min demo script, decision log, verified test results. Positioning: accountable AI operating org that understands context, coordinates governed workflows, remembers outcomes, improves via evidence without silent control |
 | **2026-08-29: Prompt 12 — verification** | tests + `GOVERNANCE.governance_check` + `release.security_gate` + `demo/synthetic_demo.py` | ✅ **445 tests passed**; `governance=PASS`; security `all_ok=True` (0 secret findings, deny-by-default, redaction, audit integrity); synthetic demo exit 0 (read-only, synthetic, 0 live records, audit intact, no external writes); release gates controlled_pilot=READY, production=NOT_READY; docs reconcile with matrix totals; unfinished items reported separately in `11_known_limitations.md` |
+
+<!-- HELIX_ROLE_MATRIX:START -->
+## Canonical RoleSpec matrix (generated)
+
+This block is generated from `control_plane/governance.py`. Role IDs,
+engine ownership, data classifications, approval limits and KPIs below
+are structural facts; surrounding prose must not contradict them.
+
+| RoleSpec ID | Engines | Classifications | Financial limit (USD) | KPIs | Oversight only |
+|---|---|---|---:|---|---|
+| `sami` | wfm, rta, cx, crm, b2b, personnel, control_plane | public, internal, client_confidential, personnel_sensitive, financial, regulated_high_risk | unlimited (human escalation) | system_health, operational_margin | False |
+| `ops_gm` | wfm, rta, cx | internal, client_confidential | 500.00 | sla, service_level, occupancy, adherence, aht | False |
+| `compliance_quality_gm` | none | public, internal, client_confidential, personnel_sensitive, financial, regulated_high_risk | 0.00 | quality_score, compliance_drift | True |
+| `fraud_revenue_gm` | crm, b2b | internal, client_confidential, financial | 0.00 | leakage, anomaly_delta | False |
+| `hr_personnel_gm` | personnel, wfm | internal, personnel_sensitive | 1000.00 | turnover_rate, time_to_hire | False |
+| `ld_gm` | wfm | internal, personnel_sensitive | 200.00 | competency_score, time_to_competency | False |
+| `sales_gm` | crm, b2b | internal, client_confidential | 2500.00 | pipeline_value, win_rate | False |
+| `marketing_gm` | crm | public, internal | 500.00 | cac, lead_volume | False |
+| `ict_gm` | control_plane | internal, regulated_high_risk | 5000.00 | engine_latency, model_timeout | False |
+
+### Runtime aliases
+
+| Alias | Canonical role / engine |
+|---|---|
+| `SAMI` / `sami` | `sami` |
+| `SUBY` / `suby` | `ops_gm` |
+| `PHILI` / `phili` | `hr_personnel_gm` |
+| `WILI` / `wili` | `ld_gm` |
+| `NONO` / `nono` | `fraud_revenue_gm` |
+| `fraud_gm` (YAML compatibility alias) | `fraud_revenue_gm` |
+
+### Limitations
+
+- `None` financial limit does not mean autonomous unlimited approval; SAMI remains human-escalated.
+- `oversight_only=True` means the role proposes/reviews and does not execute an engine.
+- Unknown role, engine, classification or alias fails closed.
+- This matrix is not a production certification or customer deployment claim.
+<!-- HELIX_ROLE_MATRIX:END -->

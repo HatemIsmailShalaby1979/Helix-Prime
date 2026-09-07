@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.codex/schemas/sibling-events/v1.0/LearningPlanRequested.json",
+  "title": "LearningPlanRequested",
+  "description": "LearningPlanRequested \u2014 outbound event owned by helix_prime. Published by the Helix Codex OS sibling bus (C7).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request_id",
+    "tenant_id",
+    "client_id",
+    "agent_ref",
+    "target_capabilities",
+    "proficiency_target"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "proficiency_target": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "deadline": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "gap_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    "constraints": {
+      "type": "object"
+    },
+    "requested_at": {
+      "type": "string"
+    },
+    "data_mode": {
+      "type": "string",
+      "enum": [
+        "live",
+        "sample",
+        "historical"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.codex/schemas/sibling-events/v1.0/LearningArtifactReady.json",
+  "title": "LearningArtifactReady",
+  "description": "LearningArtifactReady \u2014 inbound event owned by ld_command_center. Published by the Helix Codex OS sibling bus (C7).",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "artifact_id",
+    "tenant_id",
+    "client_id",
+    "request_id",
+    "artifact_type",
+    "artifact_locator"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "artifact_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_locator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "covers_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "estimated_duration_minutes": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "exclusiveMinimum": 0
+    },
+    "content_digest": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "produced_by": {
+      "type": "string"
+    },
+    "produced_at": {
+      "type": "string"
+    },
+    "data_mode": {
+      "type": "string",
+      "enum": [
+        "live",
+        "sample",
+        "historical"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

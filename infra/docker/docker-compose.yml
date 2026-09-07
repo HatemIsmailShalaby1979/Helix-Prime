@@ -1,0 +1,47 @@
+# Helix Codex OS — local deployment profile (C8)
+services:
+  helix:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    ports:
+      - "8501:8501"
+    environment:
+      HELIX_ENV: local
+      HELIX_DB_PATH: /data/workflow.db
+      HELIX_AUDIT_DB_PATH: /data/audit.db
+      # Never enable sample data in a production/local operational profile.
+      HELIX_SAMPLE_DATA_MODE: "false"
+      # auto chooses CUDA when visible, DirectML on Windows hosts where the
+      # Ollama runtime exposes it, and CPU otherwise.
+      HELIX_OLLAMA_ACCELERATOR: ${HELIX_OLLAMA_ACCELERATOR:-auto}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+    volumes:
+      - helix_data:/data
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  # Ollama is an external local model runtime, not part of the deterministic
+  # engine image. GPU flags are opt-in; the control plane remains CPU-safe.
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:--1}
+    # Uncomment on CUDA hosts. DirectML uses the host runtime path on Windows
+    # and is configured via HELIX_OLLAMA_ACCELERATOR=directml.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  helix_data:
+  ollama_data:

@@ -14,7 +14,7 @@ This is the first product for **Helix Codex**: an accountable AI operating organ
 
 - **Controlled-pilot ready:** `CONTROLLED_PILOT_READY`
 - **Production:** NOT_READY — no external evidence or human approvals exist
-- **445 tests passing** across contracts, control plane, security, engines, integrations, pilot, memory, metacognition, and capability packs
+- **Verification:** C0 dependency drift check passes; C4 adapter, C5 seam, C6 activation and C7 event-contract smoke paths pass. The full historical suite remains subject to legacy teardown migration.
 - Governance checker: **PASS**
 - Synthetic call-centre and restaurant demonstrations: verified
 - Live connectors and external writes: intentionally disabled
@@ -31,6 +31,9 @@ This is the first product for **Helix Codex**: an accountable AI operating organ
 - Tenant-isolated governed memory with retention
 - Evidence-gated improvement proposals that never self-deploy
 - Local adapters with cloud-ready interfaces
+- Append-only, hash-chained `audit_events` ledger and exportable governance evidence pack
+- Versioned sibling-service event contracts with no cross-repository imports
+- SQL-bound tenant-scoped storage and local-first Docker deployment profile
 
 ## The proving workflow
 
@@ -61,7 +64,7 @@ sudo apt-get update
 sudo apt-get install -y python3 python3-venv
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r cockpit/requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 python launch.py
 ```
 
@@ -89,3 +92,41 @@ A real design-partner pilot. Read-only first, minimum data, explicit consent, me
 ## License
 
 MIT
+
+<!-- HELIX_ROLE_MATRIX:START -->
+## Canonical RoleSpec matrix (generated)
+
+This block is generated from `control_plane/governance.py`. Role IDs,
+engine ownership, data classifications, approval limits and KPIs below
+are structural facts; surrounding prose must not contradict them.
+
+| RoleSpec ID | Engines | Classifications | Financial limit (USD) | KPIs | Oversight only |
+|---|---|---|---:|---|---|
+| `sami` | wfm, rta, cx, crm, b2b, personnel, control_plane | public, internal, client_confidential, personnel_sensitive, financial, regulated_high_risk | unlimited (human escalation) | system_health, operational_margin | False |
+| `ops_gm` | wfm, rta, cx | internal, client_confidential | 500.00 | sla, service_level, occupancy, adherence, aht | False |
+| `compliance_quality_gm` | none | public, internal, client_confidential, personnel_sensitive, financial, regulated_high_risk | 0.00 | quality_score, compliance_drift | True |
+| `fraud_revenue_gm` | crm, b2b | internal, client_confidential, financial | 0.00 | leakage, anomaly_delta | False |
+| `hr_personnel_gm` | personnel, wfm | internal, personnel_sensitive | 1000.00 | turnover_rate, time_to_hire | False |
+| `ld_gm` | wfm | internal, personnel_sensitive | 200.00 | competency_score, time_to_competency | False |
+| `sales_gm` | crm, b2b | internal, client_confidential | 2500.00 | pipeline_value, win_rate | False |
+| `marketing_gm` | crm | public, internal | 500.00 | cac, lead_volume | False |
+| `ict_gm` | control_plane | internal, regulated_high_risk | 5000.00 | engine_latency, model_timeout | False |
+
+### Runtime aliases
+
+| Alias | Canonical role / engine |
+|---|---|
+| `SAMI` / `sami` | `sami` |
+| `SUBY` / `suby` | `ops_gm` |
+| `PHILI` / `phili` | `hr_personnel_gm` |
+| `WILI` / `wili` | `ld_gm` |
+| `NONO` / `nono` | `fraud_revenue_gm` |
+| `fraud_gm` (YAML compatibility alias) | `fraud_revenue_gm` |
+
+### Limitations
+
+- `None` financial limit does not mean autonomous unlimited approval; SAMI remains human-escalated.
+- `oversight_only=True` means the role proposes/reviews and does not execute an engine.
+- Unknown role, engine, classification or alias fails closed.
+- This matrix is not a production certification or customer deployment claim.
+<!-- HELIX_ROLE_MATRIX:END -->

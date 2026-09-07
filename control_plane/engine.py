@@ -505,6 +505,72 @@ class Engine:
             self._log("workflow_failed", workflow, request.requesting_actor, result_status="failed", error_code="invalid_input", payload={"reason": str(e)})
             return workflow
 
+        # Governance gate (enterprise control plane): bounded autonomy, fail-closed.
+        # A task that crosses a financial or confidence boundary is frozen here and
+        # held for a human validation token instead of reaching a deterministic
+        # engine. Defaults (cost 0.0, confidence 1.0) are inside every boundary, so
+        # requests that carry no cost/confidence metadata are unaffected.
+        if workflow.state == WorkflowState.VALIDATED:
+            from control_plane.governance import evaluate_gate, resolve_actor_role
+
+            gate_role = (
+                resolve_actor_role(request.requesting_actor, request.owning_role_id) or request.owning_role_id
+            )
+            cost = getattr(request, "estimated_financial_cost", None)
+            if cost is None:
+                cost = request.input_payload.get("estimated_financial_cost", 0.0) or 0.0
+            confidence = getattr(request, "confidence_score", None)
+            if confidence is None:
+                confidence = request.input_payload.get("confidence_score", 1.0)
+            classification = (
+                getattr(request, "requested_data_classification", None)
+                or request.input_payload.get("data_classification")
+                or "internal"
+            )
+            gate_decision = evaluate_gate(
+                gate_role,
+                estimated_financial_cost=cost,
+                confidence_score=confidence,
+                data_classification=classification,
+                target_engine=getattr(request, "target_engine", None)
+                or request.input_payload.get("engine")
+                or request.input_payload.get("target_engine"),
+            )
+            if gate_decision.requires_human_approval:
+                workflow.requires_approval = True
+                workflow.transition(WorkflowState.AWAITING_APPROVAL, request.requesting_actor)
+                self.store.update_workflow(workflow)
+                self._emit_event(
+                    workflow,
+                    "workflow_awaiting_approval",
+                    request.requesting_actor,
+                    {
+                        "reason_code": gate_decision.reason_code,
+                        "reason": gate_decision.reason,
+                        "estimated_financial_cost": gate_decision.estimated_cost_usd,
+                        "limit_usd": gate_decision.limit_usd,
+                    },
+                )
+                self._audit(
+                    "governance_hold",
+                    workflow,
+                    request.requesting_actor,
+                    decision="held",
+                )
+                self._log(
+                    "governance_hold",
+                    workflow,
+                    request.requesting_actor,
+                    result_status="awaiting_approval",
+                    error_code=gate_decision.reason_code,
+                    payload={
+                        "reason": gate_decision.reason,
+                        "estimated_financial_cost": gate_decision.estimated_cost_usd,
+                        "limit_usd": gate_decision.limit_usd,
+                    },
+                )
+                return workflow
+
         # Check deadline already past (timeout)
         if _is_past_deadline(workflow):
             workflow.transition(WorkflowState.DEAD_LETTER, "system")

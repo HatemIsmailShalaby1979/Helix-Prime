@@ -1,7 +1,4 @@
-# B2B Client Onboarding Automator — Python dependencies
-pandas>=2.0
-numpy>=1.24
-scipy>=1.10
-plotly>=5.15
-dash>=2.14
-requests>=2.31
+# DEPRECATED C0 COMPATIBILITY SHIM
+# B2B runtime dependencies are canonical in ../../requirements.txt.
+# Install from the repository root: python -m pip install -r requirements.txt
+# This file intentionally declares no packages; do not add dependencies here.

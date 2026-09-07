@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://helix.codex/schemas/sibling-events/v1.0/Envelope.json",
+  "title": "SiblingEventEnvelope",
+  "description": "Transport-agnostic wrapper for every sibling-project event. payload_digest is a SHA-256 over the canonical JSON of payload.",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "envelope_version",
+    "tenant_id",
+    "client_id",
+    "correlation_id",
+    "payload",
+    "payload_digest"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "AssessmentCompleted",
+        "CompetencyGapDetected",
+        "LearningArtifactReady",
+        "LearningPlanRequested"
+      ]
+    },
+    "envelope_version": {
+      "type": "string",
+      "enum": [
+        "1.0"
+      ]
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "source_system": {
+      "type": "string"
+    },
+    "target_system": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "client_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "causation_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data_mode": {
+      "type": "string",
+      "enum": [
+        "live",
+        "sample",
+        "historical"
+      ]
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": [
+        "public",
+        "internal",
+        "client_confidential",
+        "personnel_sensitive",
+        "financial",
+        "regulated_high_risk"
+      ]
+    },
+    "occurred_at": {
+      "type": "string"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "payload_digest": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,13 +1,4 @@
-# CX Churn Sentinel — Python dependencies
-# Local-first: pandas/numpy/scipy are the only hard requirements.
-pandas>=2.0
-numpy>=1.24
-scipy>=1.10
-scikit-learn>=1.3
-
-# Optional: live DB extraction (sql_extractor degrades gracefully without it)
-# psycopg2-binary>=2.9
-# SQLAlchemy>=2.0
-
-# Optional: chart rendering for local exploration
-# plotly>=5.15
+# DEPRECATED C0 COMPATIBILITY SHIM
+# CX runtime dependencies are canonical in ../../requirements.txt.
+# Install from the repository root: python -m pip install -r requirements.txt
+# This file intentionally declares no packages; do not add dependencies here.

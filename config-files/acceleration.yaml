@@ -1,0 +1,36 @@
+# Helix Codex OS — local Ollama acceleration profile (C8)
+#
+# The deterministic engines do not depend on an accelerator. This file controls
+# only optional model-runtime acceleration, so DirectML/CUDA failure degrades to
+# CPU inference instead of changing a forecast or bypassing a governance gate.
+version: "1.0"
+provider: ollama
+selection: auto
+fallback: cpu
+
+profiles:
+  auto:
+    description: "Use CUDA when visible, DirectML on supported Windows hosts, CPU otherwise."
+    environment:
+      HELIX_OLLAMA_ACCELERATOR: auto
+  cuda:
+    description: "NVIDIA CUDA host; enable the compose GPU reservation."
+    environment:
+      HELIX_OLLAMA_ACCELERATOR: cuda
+      CUDA_VISIBLE_DEVICES: "0"
+      OLLAMA_NUM_GPU: "999"
+  directml:
+    description: "Windows DirectML host; the Ollama host process must expose DirectML."
+    environment:
+      HELIX_OLLAMA_ACCELERATOR: directml
+      OLLAMA_NUM_GPU: "999"
+  cpu:
+    description: "Portable deterministic fallback."
+    environment:
+      HELIX_OLLAMA_ACCELERATOR: cpu
+      OLLAMA_NUM_GPU: "0"
+
+rules:
+  - "Never record accelerator choice as computation evidence for deterministic engines."
+  - "If the model runtime is unavailable, fail the recommendation path closed; do not fabricate output."
+  - "Sample-data mode remains independently controlled by HELIX_SAMPLE_DATA_MODE=false."

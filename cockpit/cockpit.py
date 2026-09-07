@@ -32,6 +32,14 @@ from cognitive_log import (  # noqa: E402
     query_interactions,
 )
 
+# C5/C8 control-plane surfaces are optional at import time so the legacy
+# cockpit can still render a read-only status page when the local ledger is not
+# initialized. The panels fail closed and show the operator the error.
+try:
+    from control_plane.store import Store as _ControlPlaneStore
+except Exception:  # pragma: no cover - UI fallback
+    _ControlPlaneStore = None
+
 _gov_check = (
     Path(__file__).resolve().parent.parent / "GOVERNANCE" / "governance_check.py"
 )
@@ -554,6 +562,68 @@ def consult_agent(
     }
 
 
+def _render_control_plane_panel() -> None:
+    """Render C5 approvals and the hash-chained audit timeline."""
+    st.markdown("<div class='section-hdr'>Control Plane — Approvals & Audit Timeline</div>", unsafe_allow_html=True)
+    if _ControlPlaneStore is None:
+        st.warning("Control plane store unavailable; approvals and timeline are read-only unavailable.")
+        return
+
+    db_path = Path(__import__("os").environ.get("HELIX_DB_PATH", "control_plane/workflow.db"))
+    try:
+        with _ControlPlaneStore(str(db_path)) as store:
+            awaiting = store.list_workflow_tasks(state="awaiting_approval", limit=200)
+            events = store.list_audit_events(limit=200)
+            ledger_ok = store.verify_audit_chain()
+
+            metric_cols = st.columns(3)
+            metric_cols[0].metric("Awaiting approval", len(awaiting))
+            metric_cols[1].metric("Audit events", len(events))
+            metric_cols[2].metric("Ledger integrity", "PASS" if ledger_ok else "FAIL")
+
+            st.markdown("### Awaiting approval")
+            if not awaiting:
+                st.info("No operations are currently held in AWAITING_APPROVAL.")
+            else:
+                for task in awaiting:
+                    with st.container(border=True):
+                        st.write({
+                            "task_id": task.get("task_id"),
+                            "capability": task.get("capability"),
+                            "actor": task.get("actor_id"),
+                            "role": task.get("actor_role_id"),
+                            "estimated_cost_usd": task.get("estimated_financial_cost"),
+                            "reason": task.get("reason"),
+                        })
+                        approve_col, deny_col = st.columns(2)
+                        approve_col.button("Approve", key=f"approve_{task.get('task_id')}", disabled=True, help="Approval mutation is deliberately delegated to the governed API path.")
+                        deny_col.button("Deny", key=f"deny_{task.get('task_id')}", disabled=True, help="Denial mutation is deliberately delegated to the governed API path.")
+
+            st.markdown("### Run timeline")
+            if events:
+                timeline = []
+                for event in events:
+                    timeline.append({
+                        "occurred_at": event.get("occurred_at"),
+                        "event_type": event.get("event_type"),
+                        "decision": event.get("decision"),
+                        "actor": event.get("actor_id"),
+                        "role": event.get("actor_role_id"),
+                        "from_state": event.get("from_state"),
+                        "to_state": event.get("to_state"),
+                        "correlation_id": event.get("correlation_id"),
+                        "prev_hash": event.get("prev_hash"),
+                        "record_hash": event.get("record_hash"),
+                    })
+                st.dataframe(pd.DataFrame(timeline), width="stretch", hide_index=True)
+                selected = st.selectbox("Inspect audit event", range(len(events)), format_func=lambda i: f"{i}: {events[i].get('event_type', 'event')}")
+                st.json(events[selected])
+            else:
+                st.info("No audit events in the local ledger.")
+    except Exception as exc:
+        st.error(f"Control-plane panel failed closed: {exc}")
+
+
 def main():
     """Main entry point for the Streamlit application."""
     if not _ollama_ok:
@@ -592,6 +662,7 @@ def main():
             "",
             [
                 "Dashboard",
+                "Control Plane",
                 "Codex Command Center",
                 "Agents",
                 "Engines",
@@ -676,7 +747,10 @@ def main():
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
     # DASHBOARD PAGE
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
-    if page == "Codex Command Center":
+    if page == "Control Plane":
+        _render_control_plane_panel()
+
+    elif page == "Codex Command Center":
         from codex_command_center import render as render_codex_command_center
 
         render_codex_command_center(client)

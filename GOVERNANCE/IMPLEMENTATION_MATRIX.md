@@ -626,3 +626,41 @@ NOT_ESTABLISHED; unfinished items are listed separately in `11_known_limitations
 ---
 
 *This matrix is the authoritative implementation baseline for Phase 1. Any claim not reflected here with verified evidence is not a Phase 1 deliverable.*
+
+<!-- HELIX_ROLE_MATRIX:START -->
+## Canonical RoleSpec matrix (generated)
+
+This block is generated from `control_plane/governance.py`. Role IDs,
+engine ownership, data classifications, approval limits and KPIs below
+are structural facts; surrounding prose must not contradict them.
+
+| RoleSpec ID | Engines | Classifications | Financial limit (USD) | KPIs | Oversight only |
+|---|---|---|---:|---|---|
+| `sami` | wfm, rta, cx, crm, b2b, personnel, control_plane | public, internal, client_confidential, personnel_sensitive, financial, regulated_high_risk | unlimited (human escalation) | system_health, operational_margin | False |
+| `ops_gm` | wfm, rta, cx | internal, client_confidential | 500.00 | sla, service_level, occupancy, adherence, aht | False |
+| `compliance_quality_gm` | none | public, internal, client_confidential, personnel_sensitive, financial, regulated_high_risk | 0.00 | quality_score, compliance_drift | True |
+| `fraud_revenue_gm` | crm, b2b | internal, client_confidential, financial | 0.00 | leakage, anomaly_delta | False |
+| `hr_personnel_gm` | personnel, wfm | internal, personnel_sensitive | 1000.00 | turnover_rate, time_to_hire | False |
+| `ld_gm` | wfm | internal, personnel_sensitive | 200.00 | competency_score, time_to_competency | False |
+| `sales_gm` | crm, b2b | internal, client_confidential | 2500.00 | pipeline_value, win_rate | False |
+| `marketing_gm` | crm | public, internal | 500.00 | cac, lead_volume | False |
+| `ict_gm` | control_plane | internal, regulated_high_risk | 5000.00 | engine_latency, model_timeout | False |
+
+### Runtime aliases
+
+| Alias | Canonical role / engine |
+|---|---|
+| `SAMI` / `sami` | `sami` |
+| `SUBY` / `suby` | `ops_gm` |
+| `PHILI` / `phili` | `hr_personnel_gm` |
+| `WILI` / `wili` | `ld_gm` |
+| `NONO` / `nono` | `fraud_revenue_gm` |
+| `fraud_gm` (YAML compatibility alias) | `fraud_revenue_gm` |
+
+### Limitations
+
+- `None` financial limit does not mean autonomous unlimited approval; SAMI remains human-escalated.
+- `oversight_only=True` means the role proposes/reviews and does not execute an engine.
+- Unknown role, engine, classification or alias fails closed.
+- This matrix is not a production certification or customer deployment claim.
+<!-- HELIX_ROLE_MATRIX:END -->

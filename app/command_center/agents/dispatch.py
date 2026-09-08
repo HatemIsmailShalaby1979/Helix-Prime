@@ -5,10 +5,11 @@ with a structured tool call system using JSON schema validation.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any, Mapping
 
-from ..contracts.toolcall import (
+from contracts.toolcall import (
     ToolCall,
     ToolCallEnvelope,
     ToolResult,

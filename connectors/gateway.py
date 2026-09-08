@@ -189,5 +189,7 @@ def _now() -> str:
 def _idempotency_key(connector_id: str, intent: Mapping[str, Any]) -> str:
     """Generate an idempotency key for a write intent."""
     import hashlib
-    raw = f"{connector_id}:{hash(tuple(sorted(intent.items())))}"
+    import json
+    # Serialize intent to JSON for deterministic hashing
+    raw = f"{connector_id}:{json.dumps(intent, sort_keys=True, default=str)}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]

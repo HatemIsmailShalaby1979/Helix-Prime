@@ -1,0 +1,52 @@
+<div class="page">
+    <h2>Documents</h2>
+    <div class="doc-create">
+        <input type="text" x-model="newDocTitle" @keyup.enter="createDoc()" placeholder="Document title...">
+        <textarea x-model="newDocContent" placeholder="Document content..."></textarea>
+        <button @click="createDoc()">Create</button>
+    </div>
+    <div class="doc-list">
+        <template x-for="doc in docs" :key="doc.node_id">
+            <div class="doc-item">
+                <h3 x-text="doc.body.title"></h3>
+                <p x-text="doc.body.content"></p>
+                <button @click="editDoc(doc)">Edit</button>
+            </div>
+        </template>
+    </div>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('docs', () => ({
+                docs: @json($docs),
+                newDocTitle: '',
+                newDocContent: '',
+                async createDoc() {
+                    if (!this.newDocTitle.trim()) return;
+                    const response = await fetch('/api/docs/?tenant_id=default&title=' + encodeURIComponent(this.newDocTitle) + '&content=' + encodeURIComponent(this.newDocContent), {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+                    if (data.status === 'ok') {
+                        this.docs.unshift({
+                            node_id: data.node_id,
+                            created_by: 'user',
+                            body: {title: this.newDocTitle, content: this.newDocContent}
+                        });
+                        this.newDocTitle = '';
+                        this.newDocContent = '';
+                    }
+                },
+                async editDoc(doc) {
+                    const newTitle = prompt('Edit title:', doc.body.title);
+                    if (newTitle) {
+                        const newContent = prompt('Edit content:', doc.body.content);
+                        await fetch('/api/docs/' + doc.node_id + '?tenant_id=default&title=' + encodeURIComponent(newTitle) + '&content=' + encodeURIComponent(newContent || ''), {
+                            method: 'PUT'
+                        });
+                        this.docs = this.docs.map(d => d.node_id === doc.node_id ? {...d, body: {...d.body, title: newTitle, content: newContent || ''}} : d);
+                    }
+                }
+            }));
+        });
+    </script>
+</div>

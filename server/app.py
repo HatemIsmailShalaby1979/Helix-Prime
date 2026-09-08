@@ -24,9 +24,12 @@ from server import deps
 from server.config import Settings, get_settings
 from server.errors import AppError
 from server.features.approvals.router import router as approvals_router
+from server.features.chat.router import router as chat_router
 from server.features.console.router import router as console_router
+from server.features.docs.router import router as docs_router
 from server.features.health.router import router as health_router
 from server.features.stream.router import router as stream_router
+from server.features.tasks.router import router as tasks_router
 from server.features.workflows.router import router as workflows_router
 
 logger = logging.getLogger("helix.server")
@@ -101,6 +104,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(approvals_router)
     app.include_router(stream_router)
     app.include_router(console_router)
+    app.include_router(chat_router)
+    app.include_router(tasks_router)
+    app.include_router(docs_router)
 
     app.mount("/static", StaticFiles(directory="server/static"), name="static")
     return app

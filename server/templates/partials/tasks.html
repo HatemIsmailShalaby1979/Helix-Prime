@@ -1,0 +1,55 @@
+<div class="page">
+    <h2>Tasks</h2>
+    <div class="task-create">
+        <input type="text" x-model="newTaskTitle" @keyup.enter="createTask()" placeholder="New task title...">
+        <input type="text" x-model="newTaskDesc" placeholder="Description (optional)">
+        <button @click="createTask()">Create</button>
+    </div>
+    <div class="task-list">
+        <template x-for="task in tasks" :key="task.node_id">
+            <div class="task-item" :class="'status-' + task.body.status">
+                <div class="task-content">
+                    <strong x-text="task.body.title"></strong>
+                    <p x-text="task.body.description || ''"></p>
+                </div>
+                <div class="task-actions">
+                    <select x-model="task.body.status" @change="updateTask(task)">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                    </select>
+                </div>
+            </div>
+        </template>
+    </div>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('tasks', () => ({
+                tasks: @json($tasks),
+                newTaskTitle: '',
+                newTaskDesc: '',
+                async createTask() {
+                    if (!this.newTaskTitle.trim()) return;
+                    const response = await fetch('/api/tasks/?tenant_id=default&title=' + encodeURIComponent(this.newTaskTitle) + '&description=' + encodeURIComponent(this.newTaskDesc), {
+                        method: 'POST'
+                    });
+                    const data = await response.json();
+                    if (data.status === 'ok') {
+                        this.tasks.unshift({
+                            node_id: data.node_id,
+                            created_by: 'user',
+                            body: {title: this.newTaskTitle, description: this.newTaskDesc, status: 'open'}
+                        });
+                        this.newTaskTitle = '';
+                        this.newTaskDesc = '';
+                    }
+                },
+                async updateTask(task) {
+                    await fetch('/api/tasks/' + task.node_id + '/status?status=' + task.body.status + '&tenant_id=default', {
+                        method: 'PUT'
+                    });
+                }
+            }));
+        });
+    </script>
+</div>

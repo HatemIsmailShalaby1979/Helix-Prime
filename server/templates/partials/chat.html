@@ -1,0 +1,40 @@
+<div class="page">
+    <h2>Chat</h2>
+    <div class="chat-container" id="chat-messages" x-ref="chatMessages">
+        <template x-for="msg in messages" :key="msg.node_id">
+            <div class="message" :class="msg.created_by === 'user' ? 'user' : 'agent'">
+                <strong x-text="msg.created_by"></strong>
+                <p x-text="msg.body.content"></p>
+            </div>
+        </template>
+    </div>
+    <div class="chat-input">
+        <input type="text" x-model="newMessage" @keyup.enter="sendMessage()" placeholder="Type a message...">
+        <button @click="sendMessage()">Send</button>
+    </div>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('chat', () => ({
+                messages: @json($messages),
+                newMessage: '',
+                async sendMessage() {
+                    if (!this.newMessage.trim()) return;
+                    const response = await fetch('/api/chat/messages?tenant_id=default', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({message: this.newMessage})
+                    });
+                    const data = await response.json();
+                    if (data.status === 'ok') {
+                        this.messages.unshift({
+                            node_id: data.node_id,
+                            created_by: 'user',
+                            body: {content: this.newMessage}
+                        });
+                        this.newMessage = '';
+                    }
+                }
+            }));
+        });
+    </script>
+</div>

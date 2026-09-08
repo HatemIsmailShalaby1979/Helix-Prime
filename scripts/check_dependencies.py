@@ -36,6 +36,13 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CANONICAL = REPO_ROOT / "requirements.txt"
 CANONICAL_DEV = REPO_ROOT / "requirements-dev.txt"
 
+#: A lock is a *resolution artifact*, not a manifest of intent. It is produced
+#: by `uv pip compile pyproject.toml -o release/requirements.lock.txt
+#: --generate-hashes` and necessarily pins the full transitive graph, most of
+#: which is intentionally absent from requirements.txt. It is therefore exempt
+#: from the "must be in the canonical set" rule and validated separately below.
+LOCK = REPO_ROOT / "release" / "requirements.lock.txt"
+
 #: Manifests allowed to exist. Anything else is drift by definition.
 ALLOWED_MANIFESTS = {
     CANONICAL,
@@ -119,6 +126,25 @@ def bounds_conflict(a: str, b: str) -> bool:
     return False
 
 
+def _satisfies(version: str, bound: str) -> bool:
+    """
+    True when `version` satisfies the PEP 440 specifier set `bound`.
+
+    Uses `packaging` when it is importable. If it is not, this returns True and
+    the conservative `bounds_conflict` comparison remains the only guard — the
+    check degrades rather than silently inventing a failure.
+    """
+    try:
+        from packaging.requirements import Requirement  # type: ignore[import-not-found]
+        from packaging.version import Version  # type: ignore[import-not-found]
+    except ImportError:
+        return True
+    try:
+        return Requirement(f"x{bound}").contains(Version(version), prereleases=True)
+    except Exception:
+        return True
+
+
 def _extract(spec: str, operator: str) -> Optional[Tuple[int, ...]]:
     match = re.search(re.escape(operator) + r"\s*([0-9][0-9A-Za-z.+!]*)", spec)
     if not match:
@@ -163,7 +189,7 @@ def check() -> Tuple[List[str], List[str]]:
             continue
 
 
-        if manifest == CANONICAL:
+        if manifest == CANONICAL or manifest == LOCK:
             continue
 
         for name, spec in sorted(declared.items()):
@@ -191,15 +217,33 @@ def check() -> Tuple[List[str], List[str]]:
             "distribution; document it as a comment instead"
         )
 
-    if not (REPO_ROOT / "release" / "requirements.lock.txt").exists():
+    if not LOCK.exists():
         warnings.append("release/requirements.lock.txt is missing — regenerate it")
     else:
-        lock = parse_manifest(REPO_ROOT / "release" / "requirements.lock.txt")
-        for name, spec in sorted(lock.items()):
-            if name in canonical and bounds_conflict(canonical[name], spec):
-                warnings.append(
-                    f"release/requirements.lock.txt: '{name}{spec}' is outside canonical "
-                    f"bound '{name}{canonical[name]}' — regenerate the lock"
+        # A lock is validated against requirements.txt, not the other way round:
+        # every declared dependency must be pinned exactly once, and the pin must
+        # satisfy the declared bound. Transitive pins are not checked.
+        lock = parse_manifest(LOCK)
+        for name, spec in sorted(combined.items()):
+            if name not in lock:
+                errors.append(
+                    f"release/requirements.lock.txt: '{name}' is declared in "
+                    "requirements.txt but absent from the lock — regenerate it"
+                )
+                continue
+            if not spec:
+                continue
+            if not lock[name].startswith("=="):
+                errors.append(
+                    f"release/requirements.lock.txt: '{name}{lock[name]}' is not an exact "
+                    "pin — a lock must pin every entry"
+                )
+                continue
+            pinned = lock[name][2:].rstrip("\\ ").strip()
+            if not _satisfies(pinned, spec):
+                errors.append(
+                    f"release/requirements.lock.txt: '{name}=={pinned}' violates canonical "
+                    f"bound '{name}{spec}' — regenerate the lock"
                 )
 
     return errors, warnings

@@ -26,6 +26,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _as_frame(data: Any) -> pd.DataFrame:
+    """
+    Coerce ``data`` to a DataFrame.
+
+    The engine signature says ``pd.DataFrame``, but the C4 adapter — and every
+    JSON caller — hands over a list of row dicts. ``pd.merge`` refuses anything
+    that is not a Series or DataFrame, so the failure surfaced only when the
+    control seam ran the engine end to end: a list payload reached a merge and
+    the whole analysis failed closed with a confidence of zero.
+
+    Normalising here is cheaper than changing six callers, and it keeps the
+    engine's numeric code untouched.
+    """
+    if isinstance(data, pd.DataFrame):
+        return data
+    if isinstance(data, pd.Series):
+        return data.to_frame()
+    return pd.DataFrame(data)
+
+
 class RTACalculationResult:
     """Result of RTA calculation."""
 
@@ -64,6 +84,8 @@ class RTACalculator:
             Dictionary with adherence metrics
         """
         # Merge schedule and actual data (hour is a merge key — both describe the same time slot)
+        schedule_data = _as_frame(schedule_data)
+        actual_data = _as_frame(actual_data)
         merged_data = pd.merge(
             schedule_data, actual_data, on=["agent_id", "date", "hour"], how="inner"
         )
@@ -229,6 +251,8 @@ class RTACalculator:
         """
         if schedule_data is not None:
             # Merge to bring scheduled_hours alongside actual_hours
+            schedule_data = _as_frame(schedule_data)
+            actual_data = _as_frame(actual_data)
             merged = pd.merge(
                 actual_data,
                 schedule_data[["agent_id", "date", "scheduled_hours"]],
@@ -283,6 +307,8 @@ class RTACalculator:
             Dictionary with variance analysis
         """
         # Merge schedule and actual data
+        schedule_data = _as_frame(schedule_data)
+        actual_data = _as_frame(actual_data)
         merged_data = pd.merge(
             schedule_data, actual_data, on=["agent_id", "date", "hour"], how="inner"
         )

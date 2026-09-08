@@ -1,0 +1,26 @@
+{% if pending %}
+<table>
+  <thead>
+    <tr><th>Workflow</th><th>Capability</th><th>Correlation</th><th>Action</th></tr>
+  </thead>
+  <tbody>
+  {% for w in pending %}
+    <tr>
+      <td><code>{{ w.workflow_id[:12] }}</code></td>
+      <td>{{ w.capability }}</td>
+      <td><code>{{ w.correlation_id[:8] }}</code></td>
+      <td>
+        <button hx-post="/api/approvals/{{ w.workflow_id }}"
+                hx-vals='{"approver_actor":"andy","approver_role_id":"compliance_quality_gm","decision":"approved","reason":"approved in console"}'
+                hx-swap="none">Approve</button>
+        <button hx-post="/api/approvals/{{ w.workflow_id }}"
+                hx-vals='{"approver_actor":"andy","approver_role_id":"compliance_quality_gm","decision":"denied","reason":"denied in console"}'
+                hx-swap="none">Deny</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Nothing is waiting on a human.</p>
+{% endif %}

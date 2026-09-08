@@ -245,6 +245,19 @@ class AuditTrail:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit(timestamp)")
         self.conn.commit()
 
+    def last_hash(self) -> Optional[str]:
+        """
+        Return the current tip of the hash chain, or None for an empty trail.
+
+        One indexed read. Callers that used to fetch the whole chain to find
+        this must use it instead: audit cost is otherwise linear in chain length,
+        which quietly becomes the dominant cost of every workflow submission.
+        """
+        cur = self.conn.cursor()
+        cur.execute("SELECT current_hash FROM audit ORDER BY timestamp DESC, audit_id DESC LIMIT 1")
+        row = cur.fetchone()
+        return row[0] if row else None
+
     def append(self, record: AuditRecord) -> AuditRecord:
         # Verify previous_hash matches last record's current_hash (unless genesis)
         cur = self.conn.cursor()

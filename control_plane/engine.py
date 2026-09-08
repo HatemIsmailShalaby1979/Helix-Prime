@@ -84,6 +84,11 @@ class Engine:
         self.catalog = load_role_catalog("organization/role-catalog.yaml")
         self.audit_db_path = audit_db_path or "security/audit.db"
         self.log_path = log_path or "observability/logs.jsonl"
+        # W3: the audit chain tip is cached instead of re-read on every append.
+        # The previous implementation loaded up to 10,000 records per call just
+        # to find the last hash, which turned audit cost into O(chain length).
+        self._audit_prev_hash: Optional[str] = None
+        self._audit_prev_hash_loaded = False
 
     def register_handler(self, capability: str, handler: Handler) -> None:
         if not isinstance(capability, str) or not capability.strip():
@@ -113,18 +118,27 @@ class Engine:
         self.store.append_event(ev)
         return ev
 
+    def _chain_tip(self, trail) -> Optional[str]:
+        """
+        Return the current tip of the audit hash chain, reading it at most once.
+
+        Steady state issues **no** query: the tip is remembered from the last
+        record this engine appended. The first call, and any call after a
+        foreign writer invalidates the cache, costs one indexed ``LIMIT 1``
+        lookup rather than a full table scan.
+        """
+        if not self._audit_prev_hash_loaded:
+            self._audit_prev_hash = trail.last_hash()
+            self._audit_prev_hash_loaded = True
+        return self._audit_prev_hash
+
     def _audit(self, event_type: str, workflow: Workflow, actor: str, actor_type: str = "agent", decision: str = "allowed", input_ref: str | None = None, output_ref: str | None = None, approval_decision: str | None = None) -> None:
         """Helper: append tamper-evident audit record (best-effort, no cloud)."""
         if AuditTrail is None or AuditRecord is None:
             return
         try:
-            # Determine previous hash
             trail = AuditTrail(db_path=self.audit_db_path)
-            # Get last record's hash for chaining
-            last = trail.list_records(limit=1)
-            # Actually list_records returns oldest first; we need last
-            all_recs = trail.list_records(limit=10000)
-            prev_hash = all_recs[-1].current_hash if all_recs else None
+            prev_hash = self._chain_tip(trail)
             rec = AuditRecord.new(
                 event_type=event_type,
                 actor=actor,
@@ -141,7 +155,30 @@ class Engine:
                 approval_decision=approval_decision,
                 previous_hash=prev_hash,
             )
-            trail.append(rec)
+            try:
+                trail.append(rec)
+            except ValueError:
+                # The cached tip is stale (another writer appended first). Re-read
+                # it once and retry, rather than losing the audit record.
+                prev_hash = trail.last_hash()
+                rec = AuditRecord.new(
+                    event_type=event_type,
+                    actor=actor,
+                    actor_type=actor_type,
+                    decision=decision,
+                    correlation_id=workflow.correlation.correlation_id,
+                    tenant_id=workflow.tenant_id,
+                    client_id=workflow.client_id,
+                    role_id=workflow.owning_role_id,
+                    workflow_id=workflow.workflow_id,
+                    task_id=workflow.task_id,
+                    input_ref=input_ref or workflow.workflow_id,
+                    output_ref=output_ref,
+                    approval_decision=approval_decision,
+                    previous_hash=prev_hash,
+                )
+                trail.append(rec)
+            self._audit_prev_hash = rec.current_hash
             trail.close()
         except Exception:
             # Audit failures must not silently disappear but should not crash workflow; log and continue

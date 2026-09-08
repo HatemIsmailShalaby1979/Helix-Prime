@@ -16,11 +16,3 @@ repos:
       - id: check-merge-conflict
       - id: detect-private-key
 
-  - repo: local
-    hooks:
-      - id: gofmt
-        name: gofmt
-        entry: gofmt -l -w
-        language: system
-        files: \.go$
-        pass_filenames: true

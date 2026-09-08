@@ -1,0 +1,19 @@
+{% if workflows %}
+<table>
+  <thead>
+    <tr><th>Workflow</th><th>Capability</th><th>State</th><th>Correlation</th></tr>
+  </thead>
+  <tbody>
+  {% for w in workflows %}
+    <tr>
+      <td><code>{{ w.workflow_id[:12] }}</code></td>
+      <td>{{ w.capability }}</td>
+      <td>{{ w.state }}</td>
+      <td><code>{{ w.correlation_id[:8] }}</code></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No runs yet.</p>
+{% endif %}

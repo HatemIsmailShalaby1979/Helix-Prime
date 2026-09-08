@@ -16,14 +16,17 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY requirements.txt requirements-dev.txt ./
+COPY requirements.txt requirements-dev.txt pyproject.toml ./
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r requirements.txt
+    && /opt/venv/bin/pip install -r requirements.txt \
+    && /opt/venv/bin/pip install hatchling
 
-# Compile bytecode in the builder so startup does not write source-tree .pyc.
+# Phase 1 W4 service spine: fastapi, uvicorn, jinja2, sse-starlette, pydantic-settings, httpx.
+# Installing via the pyproject extra ensures the declared bounds are respected.
 COPY . .
-RUN /opt/venv/bin/python -m compileall -q -f . || true
+RUN /opt/venv/bin/pip install '.[web]' \
+    && /opt/venv/bin/python -m compileall -q -f . || true
 
 FROM python:3.12-slim AS runtime
 
@@ -52,7 +55,7 @@ RUN chmod 0555 /usr/local/bin/helix-entrypoint
 
 USER helix
 VOLUME ["/data"]
-EXPOSE 8501
+EXPOSE 8501 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python scripts/health_check.py --db-path "$HELIX_DB_PATH" || exit 1

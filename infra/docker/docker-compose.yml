@@ -1,5 +1,32 @@
 # Helix Codex OS — local deployment profile (C8)
 services:
+  helix-api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    command: >
+      uvicorn server.app:create_app --factory --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      HELIX_ENV: local
+      HELIX_DB_PATH: /data/workflow.db
+      HELIX_AUDIT_DB_PATH: /data/audit.db
+      HELIX_SAMPLE_DATA_MODE: "false"
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+    volumes:
+      - helix_data:/data
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
   helix:
     build:
       context: ../..

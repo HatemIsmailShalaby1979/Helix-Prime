@@ -46,7 +46,7 @@ from typing import Any, Dict, List, Optional
 from contracts.task import CorrelationContext, TaskRequest
 from control_plane.governance import evaluate_gate
 from control_plane.workflow import WorkflowState
-from engines.base_adapter import EngineAdapter
+from control_plane.ports import EnginePort
 from security.classification import DataClassification
 
 SEAM_ID = "contact_centre_control_seam"
@@ -166,16 +166,16 @@ class ControlSeam:
     """
     Executes the RTA breach -> OPS_GM -> compliance -> WFM arc.
 
-    Adapters are injected so the seam can be exercised with any conforming
-    :class:`~engines.base_adapter.EngineAdapter` — including a stub in tests —
+    Engines are injected as :class:`~control_plane.ports.EnginePort`
+    implementations, so the seam can be exercised with a stub in tests
     without touching global registries.
     """
 
     def __init__(
         self,
         *,
-        rta_adapter: EngineAdapter,
-        wfm_adapter: EngineAdapter,
+        rta_adapter: EnginePort,
+        wfm_adapter: EnginePort,
         ops_actor: str = "suby",
         compliance_actor: str = "andy",
         ops_role_id: str = "ops_gm",
@@ -602,10 +602,10 @@ class ControlSeam:
 
 
 def build_default_seam() -> ControlSeam:
-    """Construct the seam with the registered RTA and WFM adapters."""
-    from engines.adapters import RTA_ADAPTER, WFM_ADAPTER
+    """Construct the seam with the registered RTA and WFM engines."""
+    from engines.registry import build_port
 
-    return ControlSeam(rta_adapter=RTA_ADAPTER, wfm_adapter=WFM_ADAPTER)
+    return ControlSeam(rta_adapter=build_port("rta"), wfm_adapter=build_port("wfm"))
 
 
 __all__ = [

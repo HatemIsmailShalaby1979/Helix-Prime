@@ -4,9 +4,11 @@ We start without any claim to perfection.
 
 ## What we believe
 
-Truth is the standard. If a test fails, we fix it or document why it cannot pass — we do not hide it. If a claim cannot be verified, we say so.
+Identity must precede implementation. Every system, agent, and interface must have its role, boundaries, and authority defined before any code is written.
 
-Architecture is the expression of those standards. Quality is truth done correctly.
+Truth is paramount. Truth is the standard. If a test fails, we fix it or document why it cannot pass — we do not hide it. If a claim cannot be verified, we say so.
+
+Architecture serves as the expression of truth. Architecture is the expression of those standards. Quality is truth done correctly.
 
 ## Rules
 

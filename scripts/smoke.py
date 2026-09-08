@@ -19,7 +19,8 @@ evidence_dir.mkdir(parents=True, exist_ok=True)
 log_path = evidence_dir / "smoke.log"
 
 def log(msg: str):
-    print(msg)
+    safe_msg = msg.encode("ascii", errors="replace").decode("ascii")
+    print(safe_msg)
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(msg + "\n")
 

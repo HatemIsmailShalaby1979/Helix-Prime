@@ -22,6 +22,9 @@ from capabilities.sports_academy.adapters.attendance_adapter import (  # noqa: E
     rta_attendance_adherence,
 )
 from capabilities.sports_academy import kpis as academy_kpis  # noqa: E402
+from capabilities.sports_academy.adapters.athlete_profile_adapter import (  # noqa: E402
+    athlete_profile, churn_risk_scores, record_churn_flags,
+)
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 
@@ -226,3 +229,75 @@ def test_coach_kpis_four_per_coach():
     # parent_satisfaction has no manual survey data yet → value None, met False
     assert all(m["parent_satisfaction"]["value"] is None for m in all_coaches.values())
     assert all(m["parent_satisfaction"]["met"] is False for m in all_coaches.values())
+
+
+# 6. athlete profiles (priority #3 — "no actual CRM" pain) ----------------------
+def test_athlete_profile_full_picture():
+    conns, _fx = _connectors()
+    ctx = _ctx()
+    p = athlete_profile(ctx, conns, "ath-03")
+    assert p is not None
+    assert p["athlete_id"] == "ath-03"
+    assert p["enrollment_status"] == "active"
+    assert p["program_id"] == "prog-u12"
+    assert p["program_name"] == "U12 Football"
+    assert p["family"]["family_id"] == "fam-02"
+    assert p["attendance"]["expected"] == 7
+    assert len(p["attendance"]["history"]) == 7
+    assert all({"session_id", "date", "attended"} == set(h) for h in p["attendance"]["history"])
+
+
+def test_athlete_profile_unknown_returns_none():
+    conns, _fx = _connectors()
+    assert athlete_profile(_ctx(), conns, "ath-999") is None
+
+
+def test_athlete_profile_cross_tenant_blocked():
+    conns, _fx = _connectors("a1", "ac1")
+    ctx_other = _ctx("a2", "ac2")
+    # connector returns nothing for another tenant → profile cannot be built
+    assert athlete_profile(ctx_other, conns, "ath-03") is None
+
+
+def test_enrollment_pipeline_stages():
+    conns, _fx = _connectors()
+    ctx = _ctx()
+    from capabilities.sports_academy.adapters.athlete_profile_adapter import (
+        enrollment_pipeline as _ep,
+    )
+    pipe = _ep(ctx, conns)
+    assert pipe["stage_counts"] == {"inquiry": 1, "trial": 1, "enrolled": 0,
+                                    "renewed": 0, "churned": 0}
+    # 38 active athletes are the enrolled population in v1 terms
+    assert sum(1 for a in conns["academy_ops"].list_athletes(ctx)
+               if a.enrollment_status == "active") == 38
+    assert len(pipe["records"]) == 2  # enr-001 inquiry, enr-002 trial
+
+
+def test_churn_flags_fire_for_seeded_declining_athletes():
+    conns, _fx = _connectors()
+    ctx = _ctx("a1", "ac1", "corr-churn-test")
+    scores = churn_risk_scores(ctx, conns)
+    ids = {r["athlete_id"] for r in scores["at_risk"]}
+    assert {"ath-01", "ath-02"} <= ids
+    assert all(r["attendance_rate"] < 0.6 for r in scores["at_risk"])
+    # engine scored the at-risk population (csat = attendance rate)
+    assert scores["engine_metrics"] is not None
+    assert "engine_error" not in scores["engine_metrics"]
+
+
+def test_churn_flags_recorded_in_governed_memory():
+    conns, _fx = _connectors()
+    ctx = _ctx("a1", "ac1", "corr-churn-rec")
+    scores = churn_risk_scores(ctx, conns)
+    mem = GovernedMemory()
+    rids = record_churn_flags(mem, ctx, scores, TS)
+    assert len(rids) == len(scores["at_risk"])
+    recs = mem.retrieve(tenant_id="a1", kinds=["recommendation"], include_deleted=False)
+    assert len(recs) == len(scores["at_risk"])
+    for r in recs:
+        assert r.nature == "model_inference"
+        assert r.data_mode == DATA_MODE
+        assert r.provenance["basis"] == "attendance_decline_churn_flag"
+        assert r.evidence_refs
+        assert r.classification == "client_confidential"

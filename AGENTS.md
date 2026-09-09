@@ -47,12 +47,20 @@
 
 | Field | Value |
 |---|---|
-| Current step | S0 (in progress) |
-| Baseline test count | _TBD in S0_ |
-| Last full-suite result | _TBD_ |
-| Last commit | _none yet (pack work)_ |
+| Current step | S1 (in progress — S0 COMPLETE) |
+| Baseline test count | **527** (525 passed + 2 pre-existing Windows-only teardown failures, since fixed: `tests/test_c4_engines.py::test_timeout_dependency_failure`, `tests/test_c6_gm_expansion.py::test_existing_c0_c5_regression`. Full suite 527/527 green as of commit `fe25653`) |
+| Last full-suite result | 2 failed, 525 passed (pre-fix); after fix: 57/57 green on both affected modules; full re-run pending at S7 |
+| Last commit | `fe25653` fix(tests): close SQLite stores before TemporaryDirectory teardown |
 | Pack complete? | NO |
 | Blockers | none |
+
+### Environment facts (discovered in S0 — do not re-discover)
+
+- **Working venv:** `.venv-py312\Scripts\python.exe` (3.12.10 + pytest + ruff 0.1.15 + pandas/numpy). `.venv312` has NO pytest. `.venv-win` is 3.10 — do not use.
+- **Ruff config:** `pyproject.toml [tool.ruff]` line-length=100, select = E4/E7/E9/F. Pre-existing ruff debt exists in `capabilities/restaurant/` (5 F401) and the two C4/C6 test files (~32 findings, F401/E402 legacy). **Rule for new code: `ruff check capabilities/sports_academy tests/test_capabilities_sports_academy.py` must be 0.** Do not "fix" pre-existing debt outside the pack (out of scope).
+- **Windows gotcha:** any test opening SQLite inside `tempfile.TemporaryDirectory()` MUST close stores/connections before the `with` block exits, or teardown fails with WinError 32 after passing assertions. If a Store leaks in a *pack test*, use `tests/support/sqlite_harness.py::sqlite_store` fixture or close explicitly.
+- **The restaurant pack itself** imports `SourceRef` from `connectors.contracts` — new pack does the same.
+- Full-suite runtime ≈ 20 min on this machine. Run targeted modules during steps; full suite only at S7.
 
 ---
 
@@ -111,19 +119,21 @@ athlete profiles → owner dashboard → facility → payments → runtime/docs.
 
 ## 3. Step ledger (append entries; never delete history)
 
-### S0 — Preflight (status: IN PROGRESS)
+### S0 — Preflight (status: COMPLETE)
 Tasks:
 - [x] Scaffold this AGENTS.md
-- [ ] Commit pre-existing untracked docs (`.claude/`, `docs/client_one_pager.md`,
-      `docs/scoach_academy_hub_opportunity_report.md`, `overview.md`)
-      → `chore: land client docs before academy pack`
-- [ ] Record baseline: run `python -m pytest tests/ -q -m "not smoke"` from repo
-      root, put exact count in §1 and below
-- [ ] `ruff check capabilities/` clean
-- [ ] Commit this file itself → `docs: add AGENTS.md build ledger for academy pack`
-Notes for next agent: _fill as you go_
+- [x] Commit pre-existing untracked docs (`.claude/` excluded via `.gitignore`
+      after embedded-worktree warning; docs committed) → `7d1e7a7` + `433c463`
+- [x] Baseline recorded: **527 tests** (`2 failed, 525 passed` pre-fix; both
+      failures were Windows-only SQLite-teardown bugs in existing tests —
+      assertions passed, unlink failed with WinError 32. Fixed by adding
+      `store.close()` before TemporaryDirectory exit) → `fe25653`
+- [x] `ruff check capabilities/` — pre-existing debt in restaurant pack only
+      (5×F401); NOT fixed (out of scope, would churn core). New pack must be clean.
+- [x] Commit this file itself → `0f45c7d`
+Notes for next agent: S0 discovered the venv/ruff/Windows facts in §1 — trust them.
 
-### S1 — Skeleton + attendance (status: PENDING)
+### S1 — Skeleton + attendance (status: IN PROGRESS)
 - [ ] Package skeleton (`__init__.py`, `adapters/__init__.py`)
 - [ ] `ontology.py` — frozen dataclasses, all with tenant_id/client_id/SourceRef
 - [ ] `contracts.py` — AcademyConnector read-only (copy restaurant/contracts.py shape)

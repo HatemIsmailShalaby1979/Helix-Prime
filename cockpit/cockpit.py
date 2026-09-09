@@ -664,6 +664,7 @@ def main():
                 "Dashboard",
                 "Control Plane",
                 "Codex Command Center",
+                "Sports Academy",
                 "Agents",
                 "Engines",
                 "Memory",
@@ -1158,6 +1159,46 @@ def main():
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
     # CLIENT SIMULATION MODE أ¢â‚¬â€‌ NEW
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
+    # ── SPORTS ACADEMY CAPABILITY PACK ─────────────────────────────────────────
+    elif page == "Sports Academy":
+        from datetime import datetime as _dt
+
+        from connectors.contracts import ConnectorContext as _Ctx
+        from capabilities.sports_academy import build_synthetic_academy as _bld
+        from capabilities.sports_academy.contracts import build_academy_connectors as _bc
+        from capabilities.sports_academy.cockpit_views.coach_dashboard import (
+            render_coach_dashboard as _render_coach,
+        )
+        from capabilities.sports_academy.cockpit_views.owner_dashboard import (
+            render_owner_dashboard as _render_owner,
+        )
+        from capabilities.sports_academy.cockpit_views.parent_portal import (
+            render_parent_view as _render_parent,
+        )
+
+        _as_of = _dt.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        _fx = _bld("academy-1", "scoach", _as_of)
+        _ctx = _Ctx("academy-1", "org-1", "scoach", actor="academy-operator",
+                    correlation_id="cockpit-academy", data_mode="simulated_realistic")
+        _conns = _bc(_ctx, _fx)
+
+        st.markdown(
+            "<div class='section-hdr'>Sports Academy (Capability Pack v1)</div>",
+            unsafe_allow_html=True,
+        )
+        ac_tab1, ac_tab2, ac_tab3 = st.tabs(["Owner", "Coach", "Parent"])
+        with ac_tab1:
+            _render_owner(_ctx, _conns, _as_of)
+        with ac_tab2:
+            _coach_ids = [c.coach_id for c in _fx["coaches"]]
+            _sel = st.selectbox("Coach", _coach_ids, format_func=lambda cid: next(
+                c.name for c in _fx["coaches"] if c.coach_id == cid))
+            _render_coach(_ctx, _conns, _as_of, _sel)
+        with ac_tab3:
+            _fam_ids = [f.family_id for f in _fx["families"]]
+            _fam = st.selectbox("Family", _fam_ids)
+            _render_parent(_ctx, _conns, _as_of, _fam)
+
     elif page == "Client Simulation":
         st.markdown(
             "<div class='section-hdr'>Client Simulation Mode</div>",

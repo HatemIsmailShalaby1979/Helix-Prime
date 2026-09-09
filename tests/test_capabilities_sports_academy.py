@@ -407,3 +407,55 @@ def test_renewal_flow_flags_outstanding_fee():
     assert any("ath-03" in d and "unpaid" in d for d in details)
     assert any("retention conversation" in a for a in diag.recommended_actions)
     assert any("renewal reminder" in a for a in diag.recommended_actions)
+
+
+# 9. cockpit views (priority #4 — owner dashboard single screen) ------------------
+def test_owner_dashboard_five_numbers():
+    conns, _fx = _connectors()
+    ctx = _ctx()
+    from capabilities.sports_academy.cockpit_views.owner_dashboard import (
+        compute_owner_dashboard,
+    )
+    board = compute_owner_dashboard(ctx, conns, TS)
+    assert set(board["kpis"]) == {"attendance_rate", "churn_rate",
+                                 "facility_utilization", "mrr", "active_athletes"}
+    assert board["attendance_7d"] == 0.812
+    assert board["data_mode"] == DATA_MODE
+    assert board["enrollment_pipeline"] == {"inquiry": 1, "trial": 1}
+    assert len(board["at_risk_athletes"]) == 7  # from seeded RNG (S3 notes)
+
+
+def test_coach_dashboard_today_and_kpis():
+    conns, fx = _connectors()
+    ctx = _ctx()
+    from capabilities.sports_academy.cockpit_views.coach_dashboard import (
+        compute_coach_dashboard,
+    )
+    board = compute_coach_dashboard(ctx, conns, TS, "coach-1", date="2026-09-07")
+    assert board["coach"]["name"] == "Coach Ahmed"
+    assert board["data_mode"] == DATA_MODE
+    assert len(board["today_sessions"]) == 1
+    assert set(board["kpis"]) >= {"session_adherence", "athlete_attendance_rate",
+                                 "session_delivery_ontime", "parent_satisfaction"}
+    unknown = compute_coach_dashboard(ctx, conns, TS, "coach-999")
+    assert unknown == {"error": "unknown_coach", "coach_id": "coach-999"}
+
+
+def test_parent_view_scoped_to_own_family():
+    conns, fx = _connectors()
+    ctx = _ctx()
+    from capabilities.sports_academy.cockpit_views.parent_portal import (
+        compute_parent_view,
+    )
+    view = compute_parent_view(ctx, conns, TS, "fam-01")
+    assert view["family"]["family_id"] == "fam-01"
+    # fam-01 has ath-01 and ath-02 (the two seeded risk athletes)
+    athlete_ids = {a["athlete_id"] for a in view["athletes"]}
+    assert athlete_ids == {"ath-01", "ath-02"}
+    assert all(a["athlete_id"] in athlete_ids for a in view["athletes"])
+    # fees visible: pay-001 and pay-002 belong to fam-01
+    assert {f["payment_id"] for f in view["fees"]} == {"pay-001", "pay-002"}
+    assert view["data_mode"] == DATA_MODE
+    # parent holds no approval authority (roles invariant)
+    assert "parent" not in {b["approver_role"] for b in
+                            academy_roles.AUTHORITY_BOUNDARIES.values()}

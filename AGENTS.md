@@ -47,11 +47,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | S4 (in progress — S0–S3 COMPLETE) |
+| Current step | S5 (in progress — S0–S4 COMPLETE) |
 | Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
-| Last full-suite result | pack module 20/20 green; full re-run deferred to S7 |
-| Last commit | `98cab59` feat(academy): athlete profiles, enrollment pipeline, CX-scored churn flags |
-| Pack complete? | NO (S3 of S7 done) |
+| Last full-suite result | pack module 28/28 green; full re-run deferred to S7 |
+| Last commit | `696a8da` feat(academy): pack-local roles, flow declarations, 3 core workflows |
+| Pack complete? | NO (S4 of S7 done) |
 | Blockers | none |
 
 ### Environment facts (discovered in S0 — do not re-discover)
@@ -212,21 +212,34 @@ ath-27 (0.4286) + ath-05, ath-38 (0.5714). CX engine returns
 overall_risk_score ≈ 0.34 for that population. Profile age bands computed
 from birth year (U12/U15/U18+).
 
-### S4 — Roles + workflows (status: IN PROGRESS)
-- [ ] `roles.py` — 5 roles pack-local; AUTHORITY_BOUNDARIES:
-      enrollment{admin→owner}, attendance_ops{coach→head_coach},
-      renewal{admin→owner}, facility_booking{admin→head_coach},
-      fee_record{admin→owner}; parent read-only, no approval authority;
-      maps_to_agent metadata only (academy_owner→sami, head_coach→ops_gm)
-- [ ] `declarations/academy_roles.yaml` + 3 flow YAMLs (steps, owner/approver
-      roles, risk tier, requires_approval)
-- [ ] `workflows.py` — enrollment/attendance/renewal as pure functions →
-      AcademyDiagnosis
-- [ ] Tests: read-only period blocks approvals; SOD self-approve denied;
-      wrong approver role refused
-- [ ] ruff + tests + §1 + commit → `feat(academy): roles + workflow declarations`
+### S4 — Roles + workflows (status: COMPLETE)
+- [x] `roles.py` — 5 pack-local roles (academy_owner, head_coach, coach,
+      academy_admin, parent), RESPONSIBILITIES, AUTHORITY_BOUNDARIES (5
+      categories: enrollment admin→owner, attendance_ops coach→head_coach,
+      renewal admin→owner, facility_booking admin→head_coach, fee_record
+      admin→owner), MAPS_TO_AGENT metadata (NOT enforced in v1),
+      required_approver_role()
+- [x] `declarations/academy_roles.yaml` — canonical roles + boundaries,
+      drift-tested against roles.py (test_roles_match_yaml_declaration)
+- [x] `declarations/{enrollment,attendance,renewal}_flow.yaml` — steps with
+      owner_role, committal, requires_approval, approver_role, risk_tier
+      (enrollment=2, attendance=1, renewal=2)
+- [x] `workflows.py` — AcademyDiagnosis/RiskFinding dataclasses; enrollment_flow
+      (flags stalled inquiry/trial), attendance_flow (sessions < 0.6 →
+      escalate; healthy fixtures → "ok"), renewal_flow (outstanding fees +
+      renewal-risk retention actions; ath-03/pay-003 seeds "critical");
+      load_flow_declaration()
+- [x] Tests 8 added (28 total): roles↔YAML drift, parent has no authority,
+      pack roles NOT in core catalog, flow declarations well-formed (committal
+      ⇒ requires_approval + approver = required_approver_role), enrollment
+      at_risk, attendance ok/escalation paths, renewal critical
+- [x] ruff clean + tests 28/28 + commit `696a8da`
+Notes: attendance_flow "ok" on healthy fixtures is CORRECT (lowest per-session
+rate 0.667 > 0.6 threshold); the escalation test synthesizes a bad day by
+stripping ses-013 check-ins. Approval-gating runtime tests land in S7
+(read_only_period + SOD) where the runtime exists to enforce them.
 
-### S5 — Cockpit views (status: PENDING)
+### S5 — Cockpit views (status: IN PROGRESS)
 - [ ] `cockpit_views/owner_dashboard.py` — compute_owner_dashboard() → 5
       numbers: active athletes, MRR, 7-day attendance, at-risk athletes,
       facility utilization (+ awaiting-approval count); render_owner() with

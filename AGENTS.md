@@ -47,11 +47,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | S2 (in progress — S0, S1 COMPLETE) |
+| Current step | S3 (in progress — S0–S2 COMPLETE) |
 | Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
-| Last full-suite result | pack module 11/11 green; full re-run deferred to S7 |
-| Last commit | `d5dcb45` feat(academy): attendance adapter with RTA engine reuse + tests |
-| Pack complete? | NO (S1 of S7 done) |
+| Last full-suite result | pack module 14/14 green; full re-run deferred to S7 |
+| Last commit | `848e1d7` test(academy): correct facility utilization expectation |
+| Pack complete? | NO (S2 of S7 done) |
 | Blockers | none |
 
 ### Environment facts (discovered in S0 — do not re-discover)
@@ -168,19 +168,28 @@ PYTHONHASHSEED affects str hash. **If attendance numbers ever drift across
 runs, replace hash() with a seeded random.Random(42).)**
 VERIFIED STABLE across two separate processes in S1 (216/266 both runs).
 
-### S2 — KPIs (status: IN PROGRESS)
-- [ ] `declarations/coach_kpis.yaml` — session_adherence(>0.90),
-      athlete_attendance_rate(>0.85), session_delivery_ontime(>0.90),
-      parent_satisfaction(>0.80)
-- [ ] `declarations/academy_kpis.yaml` — attendance_rate, churn_rate,
-      facility_utilization, mrr, active_athletes
-- [ ] `kpis.py` — compute_coach_metrics, compute_academy_metrics (from
-      governed memory only; pattern = restaurant/metrics.py)
-- [ ] Drift tests: every YAML id has an implemented compute fn + target;
-      no orphan compute fns
-- [ ] ruff + tests + §1 + commit → `feat(academy): kpi definitions + compute`
+### S2 — KPIs (status: COMPLETE)
+- [x] `declarations/academy_kpis.yaml` — 5 KPIs w/ targets: attendance_rate
+      0.85, churn_rate 0.05 (lower better), facility_utilization 0.70, mrr
+      8360, active_athletes 38
+- [x] `declarations/coach_kpis.yaml` — 4 KPIs: session_adherence 0.90,
+      athlete_attendance_rate 0.85, session_delivery_ontime 0.90,
+      parent_satisfaction 0.80 (progression deliberately absent — v1 non-goal)
+- [x] `kpis.py` — load_kpi_definitions (YAML canonical),
+      compute_academy_metrics (5 numbers w/ value+target+direction+met),
+      compute_all_coach_metrics (4 KPIs/coach; parent_satisfaction = None
+      until manual survey records exist; ontime uses pilot proxy = delivered)
+- [x] Drift tests: YAML ids exactly match implemented metrics; every KPI has
+      target + direction
+- [x] ruff clean + tests 14/14 + commits `5b4b430`, `848e1d7`
+Notes: **fixtures now use `random.Random(42)` for attendance** (S1's hash()
+was randomized across processes — PYTHONHASHSEED). Attendance = 216/266 =
+0.812 exactly. MRR = 20 U12×200 + 18 U15×220 = 7960 (ath-39=inquiry,
+ath-40=trial are NOT active). Facility = 14 booked/21 total = 0.6667.
+Targets are aspirational goals (not current values) — dashboards show
+value vs target vs met.
 
-### S3 — Athlete profiles (status: PENDING)
+### S3 — Athlete profiles (status: IN PROGRESS)
 - [ ] `adapters/athlete_profile_adapter.py` — athlete_profile(athlete_id) →
       identity, program, enrollment_status, attendance history, family, fees;
       enrollment_pipeline() → stage counts; churn-risk flags for seeded

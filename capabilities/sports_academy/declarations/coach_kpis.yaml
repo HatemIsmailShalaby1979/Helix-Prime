@@ -1,0 +1,37 @@
+# Sports-academy pack — coach-level KPI definitions (v1)
+# Canonical declaration; mirrored by capabilities/sports_academy/kpis.py.
+# Drift is enforced by tests/test_capabilities_sports_academy.py.
+# Athlete progression is deliberately NOT here: it requires curriculum
+# definition first (explicit v1 non-goal).
+schema_version: "1.0"
+pack: sports_academy
+scope: coach
+kpis:
+  - id: session_adherence
+    name: Session adherence
+    description: Sessions actually run by the coach divided by sessions scheduled.
+    unit: ratio
+    target: 0.90
+    direction: higher_is_better
+    source: attendance_adapter.compute_attendance
+  - id: athlete_attendance_rate
+    name: Athlete attendance rate
+    description: Attendance rate across all sessions the coach delivered.
+    unit: ratio
+    target: 0.85
+    direction: higher_is_better
+    source: attendance_adapter.compute_attendance
+  - id: session_delivery_ontime
+    name: Session delivery on time
+    description: Sessions with a coach-present check-in pattern starting on schedule.
+    unit: ratio
+    target: 0.90
+    direction: higher_is_better
+    source: attendance_adapter.compute_attendance
+  - id: parent_satisfaction
+    name: Parent satisfaction
+    description: Manual survey entries recorded for the coach's sessions.
+    unit: ratio
+    target: 0.80
+    direction: higher_is_better
+    source: manual_survey_records

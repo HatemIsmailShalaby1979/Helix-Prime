@@ -21,6 +21,7 @@ from capabilities.sports_academy import (  # noqa: E402
 from capabilities.sports_academy.adapters.attendance_adapter import (  # noqa: E402
     rta_attendance_adherence,
 )
+from capabilities.sports_academy import kpis as academy_kpis  # noqa: E402
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 
@@ -160,3 +161,68 @@ def test_no_live_data_mode_anywhere():
     record_attendance_outcome(mem, ctx, rep, TS)
     assert all(r.data_mode != "live_customer" for r in mem._records)
     assert all(r.data_mode == DATA_MODE for r in mem._records)
+
+
+# 5. academy KPIs (priority #2 — "no KPIs" pain) --------------------------------
+def test_academy_kpi_yaml_drift():
+    """Every YAML kpi id must have an implemented compute path + target; and
+    no implemented metric may be missing from the YAML."""
+    academy = academy_kpis.load_kpi_definitions("academy")
+    coach = academy_kpis.load_kpi_definitions("coach")
+    assert set(academy) == {"attendance_rate", "churn_rate",
+                            "facility_utilization", "mrr", "active_athletes"}
+    assert set(coach) == {"session_adherence", "athlete_attendance_rate",
+                          "session_delivery_ontime", "parent_satisfaction"}
+    for kpi in list(academy.values()) + list(coach.values()):
+        assert "target" in kpi and kpi["target"] is not None
+        assert kpi["direction"] in ("higher_is_better", "lower_is_better")
+
+
+def test_academy_metrics_five_owner_numbers():
+    conns, fx = _connectors()
+    ctx = _ctx()
+    metrics = academy_kpis.compute_academy_metrics(
+        athletes=conns["academy_ops"].list_athletes(ctx),
+        sessions=conns["academy_ops"].list_sessions(ctx),
+        checkins=conns["academy_ops"].list_checkins(ctx),
+        facility_slots=conns["academy_ops"].list_facility_slots(ctx),
+        programs=conns["academy_ops"].list_programs(ctx),
+    )
+    assert set(metrics) == {"attendance_rate", "churn_rate",
+                            "facility_utilization", "mrr", "active_athletes"}
+    assert metrics["active_athletes"]["value"] == 38
+    assert metrics["active_athletes"]["met"] is True
+    # attendance ~0.812 meets nothing below the 0.85 target
+    assert metrics["attendance_rate"]["value"] == 0.812
+    assert metrics["attendance_rate"]["met"] is False
+    # MRR: 20 active U12 (200) + 18 active U15 (220) = 7960
+    assert metrics["mrr"]["value"] == 7960.0
+    assert metrics["mrr"]["target"] == 8360.0
+    # facility: 13 booked of 20 slots
+    assert metrics["facility_utilization"]["value"] == 0.65
+    # churn proxy: 1 inquiry (ath-39) of 40 athletes
+    assert metrics["churn_rate"]["value"] == 0.025
+
+
+def test_coach_kpis_four_per_coach():
+    conns, _fx = _connectors()
+    ctx = _ctx()
+    coaches = conns["academy_ops"].list_coaches(ctx)
+    sessions = conns["academy_ops"].list_sessions(ctx)
+    checkins = conns["academy_ops"].list_checkins(ctx)
+    all_coaches = academy_kpis.compute_all_coach_metrics(coaches, sessions, checkins)
+    assert len(all_coaches) == 6
+    for cid, m in all_coaches.items():
+        assert m["coach_id"] == cid
+        for k in ("session_adherence", "athlete_attendance_rate",
+                  "session_delivery_ontime", "parent_satisfaction"):
+            assert k in m, k
+            assert m[k]["target"] is not None
+            assert m[k]["direction"] == "higher_is_better"
+        # sessions are round-robin across 6 coaches: 14 sessions / 6 coaches
+        assert m["sessions_scheduled"] in (2, 3)
+    # every scheduled session has at least one check-in → adherence 1.0
+    assert all(m["session_adherence"]["value"] == 1.0 for m in all_coaches.values())
+    # parent_satisfaction has no manual survey data yet → value None, met False
+    assert all(m["parent_satisfaction"]["value"] is None for m in all_coaches.values())
+    assert all(m["parent_satisfaction"]["met"] is False for m in all_coaches.values())

@@ -4,7 +4,7 @@ Clearly synthetic, deterministic data for one location. Used only for
 demonstration; no live customer data and no network access.
 
 Seeded patterns (deterministic, used by tests downstream):
-- ~40 athletes across 2 programs, ~85% overall attendance.
+- ~40 athletes across 2 programs, ~85% overall attendance (seeded RNG 42).
 - Athletes ath-risk-1 and ath-risk-2 have deliberately declining attendance
   (miss the last 4 scheduled sessions) — they must surface as churn-risk flags
   in the athlete-profile adapter tests (S3).
@@ -12,6 +12,8 @@ Seeded patterns (deterministic, used by tests downstream):
 - 3 manual fee records (2 paid, 1 outstanding).
 """
 from __future__ import annotations
+
+import random
 
 from connectors.contracts import SourceRef
 
@@ -26,6 +28,8 @@ _SESSION_DATES = (
     "2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04",
     "2026-09-05", "2026-09-06", "2026-09-07",
 )
+
+_ATTENDANCE_SEED = 42
 
 
 def _src(provider: str, record_id: str, as_of: str) -> SourceRef:
@@ -75,6 +79,7 @@ def build_synthetic_academy(tenant_id: str, client_id: str, as_of: str) -> dict:
     checkins = []
     facility_slots = []
     session_seq = 0
+    rng = random.Random(_ATTENDANCE_SEED)
     for day_idx, date in enumerate(_SESSION_DATES):
         for prog_idx, program_id in enumerate(("prog-u12", "prog-u15")):
             coach = coaches[(day_idx + prog_idx) % len(coaches)]
@@ -95,8 +100,10 @@ def build_synthetic_academy(tenant_id: str, client_id: str, as_of: str) -> dict:
                 _src("Scheduling", session_id, as_of),
             ))
             for athlete_id in roster:
-                # ~85% attendance; ath-risk-1/ath-risk-2 miss the last 4 days
-                attends = ((hash((athlete_id, date)) % 100) < 85) if athlete_id not in ("ath-01", "ath-02") else (day_idx < 3)
+                # ~85% attendance via a seeded RNG (hash() is randomized
+                # across processes and cannot be used); ath-risk-1/ath-risk-2
+                # miss the last 4 days to seed churn-risk detection
+                attends = (rng.random() < 0.85) if athlete_id not in ("ath-01", "ath-02") else (day_idx < 3)
                 if not attends:
                     continue
                 checkin_seq = len(checkins) + 1

@@ -1,0 +1,42 @@
+# Sports-academy pack — academy-level KPI definitions (v1)
+# Canonical declaration; mirrored by capabilities/sports_academy/kpis.py.
+# Drift is enforced by tests/test_capabilities_sports_academy.py.
+schema_version: "1.0"
+pack: sports_academy
+scope: academy
+kpis:
+  - id: attendance_rate
+    name: Attendance rate
+    description: Share of expected athlete-session slots attended over the window.
+    unit: ratio
+    target: 0.85
+    direction: higher_is_better
+    source: attendance_adapter.compute_attendance
+  - id: churn_rate
+    name: Churn rate
+    description: Share of previously active athletes now churned or inactive.
+    unit: ratio
+    target: 0.05
+    direction: lower_is_better
+    source: athlete_profile_adapter.enrollment_pipeline
+  - id: facility_utilization
+    name: Facility utilization
+    description: Booked facility slots divided by available slots.
+    unit: ratio
+    target: 0.70
+    direction: higher_is_better
+    source: facility_adapter.facility_utilization
+  - id: mrr
+    name: Monthly recurring revenue
+    description: Sum of monthly program fees for active enrolled athletes (manual payments recorded).
+    unit: currency
+    target: 8360.0
+    direction: higher_is_better
+    source: payment_adapter.monthly_recurring_revenue
+  - id: active_athletes
+    name: Active athletes
+    description: Athletes with enrollment_status active in the academy.
+    unit: count
+    target: 38
+    direction: higher_is_better
+    source: athlete_profile_adapter

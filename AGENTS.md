@@ -47,12 +47,23 @@
 
 | Field | Value |
 |---|---|
-| Current step | S7 (in progress — S0–S6 COMPLETE) |
-| Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
-| Last full-suite result | pack module 36/36 green; full re-run deferred to S7 |
-| Last commit | `286ee26` feat(academy): facility conflict detection + manual fee records |
-| Pack complete? | NO (S6 of S7 done) |
+| Current step | **ALL STEPS COMPLETE (S0–S7)** |
+| Baseline test count | 527 (pre-pack; 2 Windows teardown failures fixed in `fe25653`) |
+| Last full-suite result | **571 passed, 0 failed** (2026-09-10, commit `f269135`) |
+| Last commit | `f269135` feat(academy): runtime with approval gating + SOD, full pack docs — 44 tests |
+| Pack complete? | **YES — sports-academy pack v1.0.0 COMPLETE** |
 | Blockers | none |
+
+### Definition of done — verified
+
+- [x] Attendance adapter with RTA engine reuse (check-in/check-out → adherence)
+- [x] Coach KPIs defined (4) + academy KPIs (5), YAML-declared, drift-tested
+- [x] Athlete profiles (CRM) + CX-scored churn flags for seeded risk athletes
+- [x] Owner dashboard — 5 numbers, one screen (cockpit "Sports Academy" page)
+- [x] Facility conflict detection + manual fee records (no instruments)
+- [x] Runtime: approval queue behind SOD, read-only phase, evidence pack,
+      hash-chained memory, all simulated_realistic
+- [x] Full suite 571/571 ≥ baseline 527; ruff clean on all pack paths
 
 ### Environment facts (discovered in S0 — do not re-discover)
 
@@ -279,17 +290,34 @@ Notes: record_manual_payment is the post-approval write shape; the runtime
 (academy_admin → academy_owner). Conflict test uses hand-built FacilitySlot
 tuples via SourceRef — construction pattern for future tests.
 
-### S7 — Runtime + finalize (status: IN PROGRESS)
-- [ ] `runtime.py::AcademyCapabilityPack` — mirror RestaurantCapabilityPack:
-      dry_run, approve/deny/rollback (SOD + required approver role),
-      build_evidence_pack (chain intact, data_mode breakdown, KPIs),
-      final_status → production_readiness NOT_ESTABLISHED
-- [ ] Complete `tests/test_capabilities_sports_academy.py` to restaurant-suite
-      parity (~20 tests)
-- [ ] Full suite ≥ baseline, 0 failures; ruff clean on all new paths
-- [ ] `docs/sports_academy_pack.md` — scope, reuse map, NOT-built list;
-      register.py metadata lists reused_core
-- [ ] Final §1 update + commit → `feat(academy): complete sports-academy pack v1`
+### S7 — Runtime + finalize (status: COMPLETE)
+- [x] `runtime.py::AcademyCapabilityPack` — mirrors RestaurantCapabilityPack:
+      dry_run (diagnoses + attendance outcome + churn flags + approval
+      drafts per action), approve_action (SOD via evaluate_approval_decision
+      + required_approver_role check), deny_action, rollback_action (with
+      incident record), enter/exit_read_only_period, prepare_first_real_pilot,
+      record_fee (read-only-gated manual fee write), tenant_isolation_ok,
+      generate_metacognitive_proposal (never applies), build_evidence_pack
+      (chain intact, data_mode breakdown, approval summary, incidents,
+      reused_core), final_status → NOT_ESTABLISHED
+- [x] `register.py` + `classifications.py` — metadata v1.0.0 auto-registered
+      as "sports_academy_operations"; 9-entity ontology; 5 roles; 9 metrics;
+      reads-only connector contract; reused_core lists engines.rta + engines.cx
+- [x] `__init__.py` expanded to full pack exports
+- [x] `docs/sports_academy_pack.md` — scope, reuse map, governance
+      invariants, NOT-built list, verification path
+- [x] Tests to 44 total (12 new): registration metadata, 2-academy
+      walkthrough (11 recommendations: 7 churn + 4 workflow), evidence pack
+      (chain intact, 0 live records), read-only blocks approval then
+      exit→approve succeeds, SOD self-approval denied, wrong role denied,
+      deny + rollback distinct drafts (NOTE: deny+rollback on SAME draft
+      collapses to rolled_back — transition supersedes), metacognitive
+      proposal applied=False
+- [x] **FULL SUITE: 571 passed, 0 failed** (baseline 527 + 44 pack tests;
+      restaurant/registry/c1a modules re-verified green during S7)
+- [x] ruff clean + commit `f269135`
+Notes: `transition_approval` APPENDS a superseding record (does not mutate);
+evidence-pack "latest per recommendation_id" therefore reflects final state.
 
 ---
 
@@ -314,11 +342,25 @@ tuples via SourceRef — construction pattern for future tests.
 
 ## 5. Done/Definition of done
 
-Owner demo runs end-to-end on synthetic data: check-ins → adherence report →
-coach KPIs → owner dashboard (5 numbers) → recommendations in approval queue
-behind SOD → all hash-chained in governed memory with simulated_realistic
-provenance. Full non-smoke suite ≥ baseline. ruff clean. This file's §1 says
-COMPLETE with final commit hash.
+**COMPLETE (2026-09-10, commit `f269135`).** Owner demo runs end-to-end on
+synthetic data: check-ins → adherence report → coach KPIs → owner dashboard
+(5 numbers) → recommendations in approval queue behind SOD → all
+hash-chained in governed memory with simulated_realistic provenance. Full
+non-smoke suite **571/571** (baseline 527 + 44 pack tests). ruff clean.
+Restaurant pack, capability-registry drift, and C1a discovery suites all
+re-verified green — zero core breakage.
+
+### Suggested next work (NOT started — for a future session)
+
+1. Pilot deployment with Scoach Academy Hub per the 90-day onboarding
+   playbook (docs/scoach_academy_hub_opportunity_report.md §8): install,
+   import real roster, configure roles, set KPI targets.
+2. CSV roster import script (report §8 Phase 2 day 10 — "import roster data").
+3. HTMX console surfaces reusing the pack's pure `compute_*` functions when
+   Phase 2 server features replace the Streamlit cockpit.
+4. Athlete progression KPI once a curriculum is defined with the client.
+5. capability.yaml manifest + loader integration (blueprint §2.3) when the
+   Phase 2 loader lands — the pack's declarations/ are already loader-shaped.
 
 ## 6. Handoff checklist (any agent resuming)
 

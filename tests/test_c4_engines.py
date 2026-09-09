@@ -443,6 +443,9 @@ def test_timeout_dependency_failure():
         assert result.state == "dead_letter"
         assert result.error is not None
         assert result.error.code == "timeout"
+        # C0 (Windows): close SQLite handles before the TemporaryDirectory is
+        # removed, otherwise unlink fails with WinError 32 after a passing test.
+        store.close()
 
 
 def test_dependency_unavailable():

@@ -420,6 +420,9 @@ def test_existing_c0_c5_regression():
         ev = ctrl.run(req)
         assert ev.final_state == "closed"
         assert len(ev.steps) == 9
+        # C0 (Windows): close SQLite handles before the TemporaryDirectory is
+        # removed, otherwise unlink fails with WinError 32 after a passing test.
+        engine.store.close()
 
 
 def test_ollama_unavailable_behavior():

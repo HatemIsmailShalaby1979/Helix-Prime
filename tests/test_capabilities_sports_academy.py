@@ -459,3 +459,107 @@ def test_parent_view_scoped_to_own_family():
     # parent holds no approval authority (roles invariant)
     assert "parent" not in {b["approver_role"] for b in
                             academy_roles.AUTHORITY_BOUNDARIES.values()}
+
+
+# 10. facility + manual payments (S6) ---------------------------------------------
+def test_facility_overview_no_conflicts():
+    conns, _fx = _connectors()
+    from capabilities.sports_academy.adapters.facility_adapter import (
+        facility_overview,
+    )
+    ov = facility_overview(_ctx(), conns)
+    assert ov["total_slots"] == 21
+    assert ov["booked_slots"] == 14
+    assert ov["utilization"] == round(14 / 21, 4)
+    assert ov["conflicts"] == []  # fixtures are conflict-free
+    assert all("slot_id" in s for s in ov["slots"])
+
+
+def test_facility_conflict_detection_pure_fn():
+    from capabilities.sports_academy.adapters.facility_adapter import (
+        detect_booking_conflicts,
+    )
+    from capabilities.sports_academy.ontology import FacilitySlot
+    from connectors.contracts import SourceRef
+
+    src = SourceRef("Facility", "t", TS, "v1-synthetic", DATA_MODE)
+    base = dict(tenant_id="a1", client_id="ac1", source=src)
+    slots = [
+        # two overlapping booked slots on court-1, same date
+        FacilitySlot("s1", "2026-09-08", "16:00", "17:30", "court-1", "ses-x", **base),
+        FacilitySlot("s2", "2026-09-08", "17:00", "18:30", "court-1", "ses-y", **base),
+        # same surface different date → no conflict
+        FacilitySlot("s3", "2026-09-09", "16:00", "17:30", "court-1", "ses-z", **base),
+        # same time different surface → no conflict
+        FacilitySlot("s4", "2026-09-08", "16:00", "17:30", "field-a", "ses-w", **base),
+    ]
+    conflicts = detect_booking_conflicts(slots)
+    assert len(conflicts) == 1
+    assert {conflicts[0]["slot_a"], conflicts[0]["slot_b"]} == {"s1", "s2"}
+    assert conflicts[0]["surface"] == "court-1"
+    assert set(conflicts[0]["sessions"]) == {"ses-x", "ses-y"}
+
+
+def test_payment_overview_and_outstanding():
+    conns, _fx = _connectors()
+    ctx = _ctx()
+    from capabilities.sports_academy.adapters.payment_adapter import (
+        fee_status_overview,
+    )
+    ov = fee_status_overview(
+        ctx, conns,
+        conns["academy_ops"].list_athletes(ctx),
+        conns["academy_ops"].list_programs(ctx),
+    )
+    assert ov["mrr"] == 7960.0
+    assert ov["total_records"] == 3
+    assert ov["paid_count"] == 2
+    assert len(ov["outstanding"]) == 1
+    assert ov["outstanding"][0]["payment_id"] == "pay-003"
+    assert ov["data_mode"] == DATA_MODE
+
+
+def test_record_manual_payment_governed_memory():
+    conns, _fx = _connectors()
+    ctx = _ctx("a1", "ac1", "corr-fee-1")
+    mem = GovernedMemory()
+    from capabilities.sports_academy.adapters.payment_adapter import (
+        record_manual_payment,
+    )
+    rid = record_manual_payment(
+        mem, ctx,
+        athlete_id="ath-40", family_id="fam-20", program_id="prog-u15",
+        amount=220.0, currency="USD", due_date="2026-09-10",
+        paid_at="2026-09-10T09:00:00Z", method_note="cash at front desk",
+        as_of=TS,
+    )
+    recs = mem.retrieve(tenant_id="a1", kinds=["customer_context"], include_deleted=False)
+    assert len(recs) == 1
+    rec = recs[0]
+    assert rec.record_id == rid
+    assert rec.nature == "simulated_event"
+    assert rec.data_mode == DATA_MODE
+    assert rec.provenance["basis"] == "manual_fee_record"
+    assert rec.body["amount"] == 220.0
+    assert rec.body["method_note"] == "cash at front desk"
+    assert rec.classification == "client_confidential"
+    # no instrument fields exist anywhere in the record body
+    assert not any(k in rec.body for k in ("card", "iban", "token", "gateway"))
+
+
+def test_record_manual_payment_rejects_negative():
+    conns, _fx = _connectors()
+    ctx = _ctx("a1", "ac1", "corr-fee-2")
+    mem = GovernedMemory()
+    from capabilities.sports_academy.adapters.payment_adapter import (
+        record_manual_payment,
+    )
+    try:
+        record_manual_payment(
+            mem, ctx, athlete_id="ath-40", family_id="fam-20",
+            program_id="prog-u15", amount=-5.0, currency="USD",
+            due_date="2026-09-10", paid_at=None, method_note="x", as_of=TS,
+        )
+        raise AssertionError("negative amount must raise")
+    except ValueError:
+        pass

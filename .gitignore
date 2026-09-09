@@ -75,3 +75,4 @@ marketing/assets/*.mp4
 # IDE / assistant tooling — project-local data, not source (Phase 1 W0)
 .workbuddy-ai/
 .tmp/
+.claude/worktrees/

@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from capabilities.sports_academy import (  # noqa: E402
-    build_academy_connectors, build_synthetic_academy,
+    AcademyCapabilityPack, build_academy_connectors, build_synthetic_academy,
     compute_attendance, daily_adherence_report, record_attendance_outcome,
-    DATA_MODE,
+    get_capability, DATA_MODE,
 )
 from capabilities.sports_academy.adapters.attendance_adapter import (  # noqa: E402
     rta_attendance_adherence,
@@ -32,6 +32,7 @@ from capabilities.sports_academy.workflows import (  # noqa: E402
 from capabilities.sports_academy import roles as academy_roles  # noqa: E402
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
+from pilot.consent import ConsentRecord  # noqa: E402
 
 TS = "2026-09-07T20:00:00Z"
 
@@ -563,3 +564,150 @@ def test_record_manual_payment_rejects_negative():
         raise AssertionError("negative amount must raise")
     except ValueError:
         pass
+
+
+# 11. pack runtime — registration, walkthrough, approvals, SOD (S7) --------------
+def _valid_consent(tenant_id="a1", client_id="ac1"):
+    return ConsentRecord(
+        consent_id="ac-consent-1", tenant_id=tenant_id, client_id=client_id,
+        customer_id="cust-a1", status="granted",
+        granted_at="2026-01-01T00:00:00Z", expires_at="2027-01-01T00:00:00Z",
+        data_modes_permitted=("historical_consented", "simulated_realistic"),
+        recorded_by="csm", signature="sig",
+    )
+
+
+def _runtime():
+    return AcademyCapabilityPack(GovernedMemory())
+
+
+def _fixtures():
+    return {("a1", "ac1"): build_synthetic_academy("a1", "ac1", TS),
+            ("a2", "ac2"): build_synthetic_academy("a2", "ac2", TS)}
+
+
+def test_pack_registration_metadata():
+    meta = get_capability("sports_academy_operations")
+    assert meta is not None
+    for key in ("ontology", "roles", "workflows", "metrics",
+                "connector_contracts", "data_classifications", "approval_requirements",
+                "failure_modes", "fixtures", "reused_core"):
+        assert key in meta, key
+    assert meta["read_only_start"] is True
+    assert meta["production_readiness"] == "NOT_ESTABLISHED"
+    assert meta["version"] == "1.0.0"
+    assert meta["connector_contracts"]["writes"] == []
+    assert "engines.rta.adapter" in meta["reused_core"]
+    assert "engines.cx.adapter" in meta["reused_core"]
+
+
+def test_runtime_walkthrough_two_academies():
+    rt = _runtime()
+    rt.dry_run([("a1", "ac1"), ("a2", "ac2")], _fixtures())
+    assert rt.tenant_isolation_ok("a1", "a2") is True
+    t1 = rt.mem.retrieve(tenant_id="a1", include_deleted=False)
+    assert all(r.tenant_id == "a1" for r in t1)
+    # diagnoses recorded for all 3 workflow categories per tenant
+    diags = rt.mem.retrieve(tenant_id="a1", kinds=["customer_context"], include_deleted=False)
+    cats = {d.body["workflow_category"] for d in diags}
+    assert {"enrollment", "attendance_ops", "renewal"} <= cats
+    # attendance outcome + churn flags + workflow-action recommendations recorded
+    outcomes = rt.mem.retrieve(tenant_id="a1", kinds=["outcome"], include_deleted=False)
+    assert len(outcomes) == 1
+    recs = rt.mem.retrieve(tenant_id="a1", kinds=["recommendation"], include_deleted=False)
+    # 7 churn flags + 4 workflow actions (2 enrollment follow-ups + 2 renewal) = 11
+    assert len(recs) == 11
+    # approval drafts created for recommended actions
+    apps = rt.mem.retrieve(tenant_id="a1", kinds=["approval"], include_deleted=False)
+    assert apps
+    assert all(r.data_mode == DATA_MODE for r in rt.mem._records)
+
+
+def test_runtime_evidence_pack():
+    rt = _runtime()
+    rt.dry_run([("a1", "ac1")], _fixtures(), consent=_valid_consent())
+    pack = rt.build_evidence_pack(TS)
+    assert pack["audit_chain_intact"] is True
+    assert pack["audit_status"] in ("verified", "in_memory_not_persisted")
+    assert pack["live_customer_records"] == 0
+    assert pack["approval_summary"]["draft"] > 0
+    assert pack["consent"]["consent_id"] == "ac-consent-1"
+    assert pack["final_status"]["production_readiness"] == "NOT_ESTABLISHED"
+    assert pack["reused_core"]
+
+
+def test_approval_gating_read_only_period():
+    rt = _runtime()
+    consent = _valid_consent()
+    rt.prepare_first_real_pilot("2026-08-01T00:00:00Z", "2026-09-30T00:00:00Z", consent, TS)
+    rt.dry_run([("a1", "ac1")], _fixtures(), consent=consent)
+    draft = rt.mem.retrieve(tenant_id="a1", kinds=["approval"], include_deleted=False)[0]
+    owner = draft.body["owner"]
+    owner_role = draft.body["owner_role"]
+    blocked = False
+    try:
+        rt.approve_action(draft.record_id, "approver-1", "academy_owner", owner, owner_role, as_of=TS)
+    except Exception:
+        blocked = True
+    assert blocked, "read-only period must block committal approvals"
+    # after exiting the read-only period, approval by the right role succeeds
+    rt.exit_read_only_period(TS, "academy-owner", "academy_owner")
+    approved = rt.approve_action(
+        draft.record_id, "approver-1", "academy_owner", owner, owner_role, as_of=TS)
+    assert approved.body["approval_state"] == "approved"
+
+
+def test_approval_sod_self_approval_denied():
+    rt = _runtime()
+    rt.dry_run([("a1", "ac1")], _fixtures())
+    draft = rt.mem.retrieve(tenant_id="a1", kinds=["approval"], include_deleted=False)[0]
+    owner = draft.body["owner"]
+    owner_role = draft.body["owner_role"]
+    denied = False
+    try:
+        # same actor requesting and approving → SOD violation
+        rt.approve_action(draft.record_id, owner, "academy_owner", owner, owner_role, as_of=TS)
+    except Exception:
+        denied = True
+    assert denied
+
+
+def test_approval_wrong_role_denied():
+    rt = _runtime()
+    rt.dry_run([("a1", "ac1")], _fixtures())
+    draft = rt.mem.retrieve(tenant_id="a1", kinds=["approval"], include_deleted=False)[0]
+    owner = draft.body["owner"]
+    owner_role = draft.body["owner_role"]
+    denied = False
+    try:
+        # coach is not the required approver for any pack category
+        rt.approve_action(draft.record_id, "approver-x", "coach", owner, owner_role, as_of=TS)
+    except Exception:
+        denied = True
+    assert denied
+
+
+def test_runtime_deny_and_rollback():
+    rt = _runtime()
+    rt.dry_run([("a1", "ac1")], _fixtures())
+    drafts = rt.mem.retrieve(tenant_id="a1", kinds=["approval"], include_deleted=False)
+    assert len(drafts) >= 2
+    denied = rt.deny_action(drafts[0].record_id, "head-coach", "not needed", as_of=TS)
+    assert denied.body["approval_state"] == "denied"
+    rolled = rt.rollback_action(drafts[1].record_id, "academy-owner", "academy_owner",
+                                 "clerical error", as_of=TS)
+    assert rolled.body["approval_state"] == "rolled_back"
+    pack = rt.build_evidence_pack(TS)
+    assert pack["approval_summary"]["denied"] >= 1
+    assert pack["approval_summary"]["rolled_back"] >= 1
+
+
+def test_runtime_metacognitive_proposal_never_applies():
+    rt = _runtime()
+    rt.dry_run([("a1", "ac1")], _fixtures())
+    report = rt.generate_metacognitive_proposal(TS, "corr-meta-1")
+    assert report is not None
+    policies = rt.mem.retrieve(tenant_id="a1", kinds=["policy"], include_deleted=False)
+    assert len(policies) == 1
+    assert policies[0].body["applied"] is False
+    assert policies[0].nature == "model_inference"

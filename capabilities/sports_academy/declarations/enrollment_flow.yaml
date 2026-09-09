@@ -1,0 +1,30 @@
+# Sports-academy pack — enrollment flow (v1)
+# Inquiry → trial → enroll → pay. Declared steps, owning/approver roles,
+# risk tier, and approval requirements. Mirrored by
+# capabilities/sports_academy/workflows.py::enrollment_flow.
+schema_version: "1.0"
+pack: sports_academy
+flow: enrollment
+trigger: new_athlete_inquiry
+risk_tier: 2
+steps:
+  - id: record_inquiry
+    action: record inquiry details (athlete, family contact, program interest)
+    owner_role: academy_admin
+    committal: false
+  - id: book_trial
+    action: book a trial session for the inquiring athlete
+    owner_role: academy_admin
+    committal: false
+  - id: enroll
+    action: convert trial to enrollment in a program
+    owner_role: academy_admin
+    approver_role: academy_owner
+    committal: true
+    requires_approval: true
+  - id: record_first_fee
+    action: record the first manual fee payment
+    owner_role: academy_admin
+    approver_role: academy_owner
+    committal: true
+    requires_approval: true

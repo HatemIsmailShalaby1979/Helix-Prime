@@ -1,0 +1,23 @@
+# Sports-academy pack — attendance flow (v1)
+# Daily check-in → adherence report. Mirrored by
+# capabilities/sports_academy/workflows.py::attendance_flow.
+schema_version: "1.0"
+pack: sports_academy
+flow: attendance
+trigger: daily_session_checkin
+risk_tier: 1
+steps:
+  - id: session_checkin
+    action: athletes check in at session start; check-out recorded at session end
+    owner_role: coach
+    committal: false
+  - id: daily_report
+    action: generate the daily attendance + RTA adherence report
+    owner_role: coach
+    committal: false
+  - id: low_attendance_escalation
+    action: escalate sessions below the attendance threshold to head coach
+    owner_role: coach
+    approver_role: head_coach
+    committal: true
+    requires_approval: true

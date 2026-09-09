@@ -25,6 +25,11 @@ from capabilities.sports_academy import kpis as academy_kpis  # noqa: E402
 from capabilities.sports_academy.adapters.athlete_profile_adapter import (  # noqa: E402
     athlete_profile, churn_risk_scores, record_churn_flags,
 )
+from capabilities.sports_academy.workflows import (  # noqa: E402
+    AcademyDiagnosis, attendance_flow, enrollment_flow, load_flow_declaration,
+    renewal_flow,
+)
+from capabilities.sports_academy import roles as academy_roles  # noqa: E402
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 
@@ -301,3 +306,104 @@ def test_churn_flags_recorded_in_governed_memory():
         assert r.provenance["basis"] == "attendance_decline_churn_flag"
         assert r.evidence_refs
         assert r.classification == "client_confidential"
+
+
+# 7. roles + authority boundaries (pack-local) -----------------------------------
+def test_roles_match_yaml_declaration():
+    import yaml as _yaml
+    decl = _yaml.safe_load(
+        (ROOT / "capabilities/sports_academy/declarations/academy_roles.yaml")
+        .read_text(encoding="utf-8"))
+    yaml_ids = [r["id"] for r in decl["roles"]]
+    assert tuple(yaml_ids) == academy_roles.ROLES
+    yaml_bounds = {b["category"]: (b["owner_role"], b["approver_role"])
+                   for b in decl["authority_boundaries"]}
+    for cat, (owner, approver) in yaml_bounds.items():
+        assert academy_roles.AUTHORITY_BOUNDARIES[cat] == {
+            "owner_role": owner, "approver_role": approver}
+    # parent holds no approval authority in any boundary
+    assert "parent" not in {b["approver_role"] for b in decl["authority_boundaries"]}
+    assert "parent" not in {b["owner_role"] for b in decl["authority_boundaries"]}
+
+
+def test_required_approver_role_defaults():
+    assert academy_roles.required_approver_role("enrollment") == "academy_owner"
+    assert academy_roles.required_approver_role("attendance_ops") == "head_coach"
+    assert academy_roles.required_approver_role("unknown_category") == "academy_owner"
+
+
+def test_roles_not_merged_into_core_catalog():
+    """Pack roles must not leak into the core role catalog (v1 constraint)."""
+    core_ids = set()
+    catalog_path = ROOT / "organization" / "role-catalog.yaml"
+    import yaml as _yaml
+    catalog = _yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
+    for section in catalog.values():
+        if isinstance(section, list):
+            for item in section:
+                if isinstance(item, dict) and "id" in item:
+                    core_ids.add(item["id"])
+    for role in academy_roles.ROLES:
+        assert role not in core_ids, role
+
+
+# 8. workflows (declared in YAML, mirrored in Python) ---------------------------
+def test_flow_declarations_load():
+    for flow in ("enrollment", "attendance", "renewal"):
+        decl = load_flow_declaration(flow)
+        assert decl["flow"] == flow
+        assert decl["risk_tier"] in (1, 2)
+        assert decl["steps"], flow
+        for step in decl["steps"]:
+            assert step["owner_role"] in academy_roles.ROLES
+            if step.get("committal"):
+                assert step.get("requires_approval") is True
+                assert step["approver_role"] == academy_roles.required_approver_role(
+                    decl["flow"] if decl["flow"] != "attendance" else "attendance_ops")
+
+
+def test_enrollment_flow_flags_stalled_pipeline():
+    conns, _fx = _connectors()
+    from capabilities.sports_academy.adapters.athlete_profile_adapter import (
+        enrollment_pipeline as _ep,
+    )
+    diag = enrollment_flow(_ep(_ctx(), conns))
+    assert isinstance(diag, AcademyDiagnosis)
+    assert diag.category == "enrollment"
+    assert diag.health_state == "at_risk"
+    assert len(diag.findings) == 2  # 1 inquiry + 1 trial
+    assert len(diag.recommended_actions) == 2
+    assert all(f.evidence_ref for f in diag.findings)
+
+
+def test_attendance_flow_ok_when_healthy():
+    conns, _fx = _connectors()
+    ctx = _ctx()
+    diag = attendance_flow(conns["academy_ops"].list_sessions(ctx),
+                           conns["academy_ops"].list_checkins(ctx), TS)
+    assert diag.health_state == "ok"
+    assert diag.findings == ()
+    assert diag.recommended_actions == ()
+
+
+def test_attendance_flow_escalates_low_session():
+    conns, fx = _connectors()
+    # synthesize a low-attendance day: drop most check-ins from ses-013
+    kept = [c for c in fx["checkins"]
+            if not (c.session_id == "ses-013" and c.athlete_id != "ath-03")]
+    diag = attendance_flow(fx["sessions"], kept, TS)
+    assert diag.health_state in ("at_risk", "critical")
+    assert any(f.evidence_ref == "attendance:ses-013" for f in diag.findings)
+    assert any("ses-013" in a for a in diag.recommended_actions)
+    # category is attendance_ops → escalation approver is head_coach
+    assert academy_roles.required_approver_role("attendance_ops") == "head_coach"
+
+
+def test_renewal_flow_flags_outstanding_fee():
+    conns, fx = _connectors()
+    diag = renewal_flow(fx["athletes"], fx["fee_payments"], TS)
+    assert diag.health_state == "critical"
+    details = [f.detail for f in diag.findings]
+    assert any("ath-03" in d and "unpaid" in d for d in details)
+    assert any("retention conversation" in a for a in diag.recommended_actions)
+    assert any("renewal reminder" in a for a in diag.recommended_actions)

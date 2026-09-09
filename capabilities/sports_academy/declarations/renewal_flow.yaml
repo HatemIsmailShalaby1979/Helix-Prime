@@ -1,0 +1,29 @@
+# Sports-academy pack — renewal flow (v1)
+# Term-end → reminder → renew/churn. Mirrored by
+# capabilities/sports_academy/workflows.py::renewal_flow.
+schema_version: "1.0"
+pack: sports_academy
+flow: renewal
+trigger: term_end_approaching
+risk_tier: 2
+steps:
+  - id: identify_term_end
+    action: identify athletes whose program term ends within the reminder window
+    owner_role: academy_admin
+    committal: false
+  - id: send_reminder
+    action: propose renewal reminders to families
+    owner_role: academy_admin
+    committal: false
+  - id: record_renewal
+    action: record athlete renewal for the next term
+    owner_role: academy_admin
+    approver_role: academy_owner
+    committal: true
+    requires_approval: true
+  - id: record_churn
+    action: record athlete churn (not renewing) and free the roster slot
+    owner_role: academy_admin
+    approver_role: academy_owner
+    committal: true
+    requires_approval: true

@@ -1,0 +1,43 @@
+# Sports-academy pack — role declarations (v1)
+# Canonical declaration; mirrored by capabilities/sports_academy/roles.py.
+# Drift is enforced by tests/test_capabilities_sports_academy.py.
+# Pack-local only: NOT merged into the core role catalog in v1.
+schema_version: "1.0"
+pack: sports_academy
+roles:
+  - id: academy_owner
+    name: Academy owner
+    maps_to_agent: sami
+    approval_authority: true
+  - id: head_coach
+    name: Head coach
+    maps_to_agent: ops_gm
+    approval_authority: true
+  - id: coach
+    name: Coach
+    maps_to_agent: ops_gm
+    approval_authority: false
+  - id: academy_admin
+    name: Academy admin
+    maps_to_agent: hr_personnel_gm
+    approval_authority: false
+  - id: parent
+    name: Parent
+    maps_to_agent: null
+    approval_authority: false
+authority_boundaries:
+  - category: enrollment
+    owner_role: academy_admin
+    approver_role: academy_owner
+  - category: attendance_ops
+    owner_role: coach
+    approver_role: head_coach
+  - category: renewal
+    owner_role: academy_admin
+    approver_role: academy_owner
+  - category: facility_booking
+    owner_role: academy_admin
+    approver_role: head_coach
+  - category: fee_record
+    owner_role: academy_admin
+    approver_role: academy_owner

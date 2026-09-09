@@ -198,8 +198,8 @@ def test_academy_metrics_five_owner_numbers():
     # MRR: 20 active U12 (200) + 18 active U15 (220) = 7960
     assert metrics["mrr"]["value"] == 7960.0
     assert metrics["mrr"]["target"] == 8360.0
-    # facility: 13 booked of 20 slots
-    assert metrics["facility_utilization"]["value"] == 0.65
+    # facility: 14 booked of 21 slots
+    assert metrics["facility_utilization"]["value"] == round(14 / 21, 4)
     # churn proxy: 1 inquiry (ath-39) of 40 athletes
     assert metrics["churn_rate"]["value"] == 0.025
 

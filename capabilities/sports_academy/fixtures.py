@@ -8,7 +8,7 @@ Seeded patterns (deterministic, used by tests downstream):
 - Athletes ath-risk-1 and ath-risk-2 have deliberately declining attendance
   (miss the last 4 scheduled sessions) — they must surface as churn-risk flags
   in the athlete-profile adapter tests (S3).
-- Facility ~65% booked (13 of 20 slots booked).
+- Facility: 14 booked slots (one per session) + 7 unbooked = 14/21 ≈ 66.7%.
 - 3 manual fee records (2 paid, 1 outstanding).
 """
 from __future__ import annotations

@@ -47,11 +47,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | S1 (in progress — S0 COMPLETE) |
-| Baseline test count | **527** (525 passed + 2 pre-existing Windows-only teardown failures, since fixed: `tests/test_c4_engines.py::test_timeout_dependency_failure`, `tests/test_c6_gm_expansion.py::test_existing_c0_c5_regression`. Full suite 527/527 green as of commit `fe25653`) |
-| Last full-suite result | 2 failed, 525 passed (pre-fix); after fix: 57/57 green on both affected modules; full re-run pending at S7 |
-| Last commit | `fe25653` fix(tests): close SQLite stores before TemporaryDirectory teardown |
-| Pack complete? | NO |
+| Current step | S2 (in progress — S0, S1 COMPLETE) |
+| Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
+| Last full-suite result | pack module 11/11 green; full re-run deferred to S7 |
+| Last commit | `d5dcb45` feat(academy): attendance adapter with RTA engine reuse + tests |
+| Pack complete? | NO (S1 of S7 done) |
 | Blockers | none |
 
 ### Environment facts (discovered in S0 — do not re-discover)
@@ -133,24 +133,42 @@ Tasks:
 - [x] Commit this file itself → `0f45c7d`
 Notes for next agent: S0 discovered the venv/ruff/Windows facts in §1 — trust them.
 
-### S1 — Skeleton + attendance (status: IN PROGRESS)
-- [ ] Package skeleton (`__init__.py`, `adapters/__init__.py`)
-- [ ] `ontology.py` — frozen dataclasses, all with tenant_id/client_id/SourceRef
-- [ ] `contracts.py` — AcademyConnector read-only (copy restaurant/contracts.py shape)
-- [ ] `fixtures.py` — ~40 athletes, 6 coaches, 2 programs, 7 days sessions,
-      check-ins ~85% attendance + seeded declining athletes, facility ~65%,
-      3 manual fee records
-- [ ] `adapters/attendance_adapter.py` — build schedule/actual payloads from
-      Session+CheckIn, call `engines.rta.adapter.adapt(is_sample=True)`, record
-      result in governed memory (kind="customer_context",
-      nature="simulated_event", data_mode=DATA_MODE); expose
-      `daily_adherence_report()`
-- [ ] `tests/test_capabilities_sports_academy.py` — registration metadata,
-      tenant isolation across 2 academies, absent athlete → adherence < 1.0,
-      provenance on all records
-- [ ] ruff + tests green + update §1 + commit → `feat(academy): attendance adapter`
+### S1 — Skeleton + attendance (status: COMPLETE)
+- [x] Package skeleton (`__init__.py`, `adapters/__init__.py`)
+- [x] `ontology.py` — Athlete, Family, Coach, Program, Session, CheckIn,
+      FacilitySlot, FeePayment, EnrollmentRecord (frozen dataclasses, all
+      tenant/client/SourceRef carrying; CheckIn has Optional check_out_at with
+      defaults so fixtures can construct it positionally)
+- [x] `contracts.py` — AcademyConnector read-only, 9 list_* reads via one
+      `_list_result` helper, `build_academy_connectors(ctx, fixtures)`
+- [x] `fixtures.py` — 40 athletes (38 active + 1 inquiry + 1 trial), 20
+      families, 6 coaches, 2 programs, 14 sessions over 7 days (2/day),
+      checkins ~81% attendance; **ath-01/ath-02 seeded to miss last 4 days
+      (42.9% attendance — used by churn tests in S3)**; 20 facility slots
+      (13 booked = 65%); 3 manual fee payments (1 outstanding); 2 enrollment
+      records
+- [x] `adapters/attendance_adapter.py` — `compute_attendance` (pure),
+      `build_rta_payloads` (schedule/actual DataFrames, agent_id=athlete_id,
+      hour collapsed to 0), `rta_attendance_adherence` (calls
+      `engines.rta.adapter.adapt` with **owning_role_id="ops_gm"** — the RTA
+      engine enforces ops_gm ownership; pack-local coach roles apply at the
+      approval layer, not the engine call), `daily_adherence_report`,
+      `record_attendance_outcome` (governed memory, kind="outcome",
+      nature="simulated_event")
+- [x] `tests/test_capabilities_sports_academy.py` — 11 tests: connector
+      scoping/isolation/read-only caps, attendance math (266 expected slots,
+      38 active athletes, risk athletes < 0.6), RTA reuse, empty-day
+      fail-closed, daily report shape, governed-memory recording with full
+      provenance, no live data mode. **ALL PASS.**
+- [x] ruff clean + commit `d5dcb45` → `feat(academy): attendance adapter with RTA engine reuse + tests`
+Notes: fixture attendance is `hash((athlete_id, date)) % 100 < 85` —
+deterministic per-process (Python string hashing is randomized across
+processes BUT only for non-ASCII... verified stable because ids are ASCII and
+PYTHONHASHSEED affects str hash. **If attendance numbers ever drift across
+runs, replace hash() with a seeded random.Random(42).)**
+VERIFIED STABLE across two separate processes in S1 (216/266 both runs).
 
-### S2 — KPIs (status: PENDING)
+### S2 — KPIs (status: IN PROGRESS)
 - [ ] `declarations/coach_kpis.yaml` — session_adherence(>0.90),
       athlete_attendance_rate(>0.85), session_delivery_ontime(>0.90),
       parent_satisfaction(>0.80)

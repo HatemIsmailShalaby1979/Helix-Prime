@@ -47,11 +47,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | S5 (in progress — S0–S4 COMPLETE) |
+| Current step | S6 (in progress — S0–S5 COMPLETE) |
 | Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
-| Last full-suite result | pack module 28/28 green; full re-run deferred to S7 |
-| Last commit | `696a8da` feat(academy): pack-local roles, flow declarations, 3 core workflows |
-| Pack complete? | NO (S4 of S7 done) |
+| Last full-suite result | pack module 31/31 green; full re-run deferred to S7 |
+| Last commit | `13ae6ba` feat(academy): cockpit views (owner/coach/parent) + Streamlit wiring |
+| Pack complete? | NO (S5 of S7 done) |
 | Blockers | none |
 
 ### Environment facts (discovered in S0 — do not re-discover)
@@ -239,19 +239,29 @@ rate 0.667 > 0.6 threshold); the escalation test synthesizes a bad day by
 stripping ses-013 check-ins. Approval-gating runtime tests land in S7
 (read_only_period + SOD) where the runtime exists to enforce them.
 
-### S5 — Cockpit views (status: IN PROGRESS)
-- [ ] `cockpit_views/owner_dashboard.py` — compute_owner_dashboard() → 5
-      numbers: active athletes, MRR, 7-day attendance, at-risk athletes,
-      facility utilization (+ awaiting-approval count); render_owner() with
-      permanent DATA_MODE banner
-- [ ] `coach_dashboard.py` — today's sessions, roster attendance, 4 KPIs vs
-      targets
-- [ ] `parent_portal.py` — read-only child schedule/attendance/fees (web only)
-- [ ] Wire one "Sports Academy" entry into `cockpit/cockpit.py` page radio with
-      Owner/Coach/Parent tabs — THIN wiring only
-- [ ] ruff + tests + §1 + commit → `feat(academy): cockpit views + wiring`
+### S5 — Cockpit views (status: COMPLETE)
+- [x] `cockpit_views/{__init__,owner_dashboard,coach_dashboard,parent_portal}.py`
+      — each view = pure `compute_*` (no streamlit import; reusable by the
+      future HTMX console) + thin `render_*` with permanent DATA_MODE banner
+- [x] Owner: 5 numbers (active 38, MRR 7960, attendance 0.812, at-risk 7,
+      utilization 0.6667) + target deltas + at-risk table + pipeline caption
+- [x] Coach: today's sessions (selectable date), per-session attendance
+      progress bars, 4 KPIs vs targets (met ✓ / not ○)
+- [x] Parent: read-only own-family athletes/attendance/schedule/fees
+      (fam-01 → ath-01+ath-02, pay-001+pay-002); parent holds no approval
+      authority (roles invariant tested)
+- [x] Wired "Sports Academy" into `cockpit/cockpit.py` page radio (position 4)
+      with Owner/Coach/Parent tabs — thin wiring, imports inside the page
+      branch; cockpit.py AST + full module import verified (streamlit 1.63)
+- [x] Tests 3 added (31 total): owner 5 numbers + data_mode banner fields,
+      coach today+unknown, parent family scoping
+- [x] ruff clean + tests 31/31 + commit `13ae6ba`
+Notes: cockpit page builds fixtures fresh per render (tenant "academy-1",
+client "scoach"); when a live adapter replaces it, the connector call stays —
+only fixture source changes. Unknown coach/family return {"error": ...} dicts
+and renderers show st.error — fail visible, not silent.
 
-### S6 — Facility + payments (status: PENDING)
+### S6 — Facility + payments (status: IN PROGRESS)
 - [ ] `adapters/facility_adapter.py` — bookings reads, overlap-conflict pure fn,
       utilization = booked/available
 - [ ] `adapters/payment_adapter.py` — record_manual_payment() → governed memory

@@ -1,0 +1,246 @@
+# AGENTS.md — Sports-Academy Capability Pack Build Ledger
+
+> **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
+> Read this file top-to-bottom before doing anything. Then work ONLY on the next
+> incomplete step. Update this file immediately after completing each step.
+
+---
+
+## 0. Project context (read first)
+
+- **Repo:** `E:\Helix-Prime` (Helix Prime → being commercialized as "Helix Codex OS")
+- **Mission:** Build `capabilities/sports_academy/` — the first vertical capability
+  pack for Helix Codex OS, for the first client (Scoach Academy Hub, a private
+  sports academy). Full plan + business context: `docs/scoach_academy_hub_opportunity_report.md`.
+- **Blueprint:** `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (governs architecture).
+- **Constitution:** `00_CONSTITUTION.md` wins over any doc on conflict.
+- **Python:** 3.12 canonical. Venvs exist (`.venv312`, `.venv-py312`, etc.).
+- **Test command:** `python -m pytest tests/ -q -m "not smoke"` (run from repo root `E:\Helix-Prime`).
+- **Lint:** `ruff check <paths>`.
+
+### Non-negotiable rules (violating these breaks the governed core)
+
+1. **Reference pack:** `capabilities/restaurant/` is THE pattern. Copy its shape,
+   never invent a new one.
+2. **Never edit** `organization/role-catalog.yaml`, `control_plane/governance.py`
+   (ORGANIZATION_CATALOG), or `organization/capability-registry.yaml` + mirrors for
+   this pack. Roles stay pack-local. Engines are reused via existing capability ids.
+3. **Data discipline:** pack runs `DATA_MODE = "simulated_realistic"`, read-only
+   connectors, no live writes, `production_readiness = "NOT_ESTABLISHED"`.
+4. **Every governed-memory record** carries: tenant_id, client_id, provenance
+   (correlation_id, data_mode, basis, sources), evidence_refs, classification.
+5. **No comments in code** unless they mirror the restaurant pack's docstrings
+   (module docstrings ARE kept).
+6. **Each step must end with:** tests passing at ≥ baseline + ruff clean on new
+   files + this file updated + commit made (see git protocol below).
+
+### Git protocol
+
+- User has authorized commits for this work. Commit after EVERY completed step.
+- Style: `feat(academy): <what>` / `test(academy): <what>` / `docs: <what>`.
+- NEVER `git add -A` blindly; stage only files you touched. NEVER commit
+  `.db` files, `__pycache__`, or `.venv*`.
+
+---
+
+## 1. Status snapshot (update after every step)
+
+| Field | Value |
+|---|---|
+| Current step | S0 (in progress) |
+| Baseline test count | _TBD in S0_ |
+| Last full-suite result | _TBD_ |
+| Last commit | _none yet (pack work)_ |
+| Pack complete? | NO |
+| Blockers | none |
+
+---
+
+## 2. Build plan (source of truth for steps S0–S7)
+
+Final layout:
+
+```
+capabilities/sports_academy/
+├── __init__.py
+├── ontology.py            # Athlete, Family, Coach, Program, Session, CheckIn,
+│                          #   FacilitySlot, FeePayment, EnrollmentRecord
+├── fixtures.py            # build_synthetic_academy(tenant, client, as_of)
+├── contracts.py           # AcademyConnector(BaseConnector) — read-only
+├── adapters/
+│   ├── __init__.py
+│   ├── attendance_adapter.py      # → reuses engines/rta (schedule vs actual)
+│   ├── athlete_profile_adapter.py # profiles + churn via engines/cx features
+│   ├── facility_adapter.py        # slots, conflicts, utilization
+│   └── payment_adapter.py         # manual FeePayment records only
+├── roles.py               # academy_owner, head_coach, coach, academy_admin, parent
+├── workflows.py           # 3 flows → AcademyDiagnosis
+├── kpis.py                # compute_academy_metrics / compute_coach_metrics
+├── runtime.py             # AcademyCapabilityPack
+├── register.py            # metadata + auto-register
+├── declarations/          # canonical YAML mirrored by Python, drift-tested
+│   ├── academy_kpis.yaml
+│   ├── coach_kpis.yaml
+│   ├── academy_roles.yaml
+│   ├── enrollment_flow.yaml
+│   ├── attendance_flow.yaml
+│   └── renewal_flow.yaml
+└── cockpit_views/
+    ├── owner_dashboard.py
+    ├── coach_dashboard.py
+    └── parent_portal.py
+```
+
+Plus:
+- `tests/test_capabilities_sports_academy.py` (~20 tests)
+- `docs/sports_academy_pack.md`
+- Thin wiring in `cockpit/cockpit.py` (one "Sports Academy" nav entry)
+
+Engine reuse map (do NOT register new capabilities):
+- Attendance/adherence → `engines.rta.adapter.adapt`
+- Churn risk → `engines.cx` (`churn_risk_scoring`)
+- Enrollment pipeline stages → `engines.crm` semantics via pack-local code
+
+Explicitly NOT in v1: parent mobile app, payment processing/integration,
+athlete progression tracking, multi-location support.
+
+Priority order (client-visible value): attendance adapter → coach KPIs →
+athlete profiles → owner dashboard → facility → payments → runtime/docs.
+
+---
+
+## 3. Step ledger (append entries; never delete history)
+
+### S0 — Preflight (status: IN PROGRESS)
+Tasks:
+- [x] Scaffold this AGENTS.md
+- [ ] Commit pre-existing untracked docs (`.claude/`, `docs/client_one_pager.md`,
+      `docs/scoach_academy_hub_opportunity_report.md`, `overview.md`)
+      → `chore: land client docs before academy pack`
+- [ ] Record baseline: run `python -m pytest tests/ -q -m "not smoke"` from repo
+      root, put exact count in §1 and below
+- [ ] `ruff check capabilities/` clean
+- [ ] Commit this file itself → `docs: add AGENTS.md build ledger for academy pack`
+Notes for next agent: _fill as you go_
+
+### S1 — Skeleton + attendance (status: PENDING)
+- [ ] Package skeleton (`__init__.py`, `adapters/__init__.py`)
+- [ ] `ontology.py` — frozen dataclasses, all with tenant_id/client_id/SourceRef
+- [ ] `contracts.py` — AcademyConnector read-only (copy restaurant/contracts.py shape)
+- [ ] `fixtures.py` — ~40 athletes, 6 coaches, 2 programs, 7 days sessions,
+      check-ins ~85% attendance + seeded declining athletes, facility ~65%,
+      3 manual fee records
+- [ ] `adapters/attendance_adapter.py` — build schedule/actual payloads from
+      Session+CheckIn, call `engines.rta.adapter.adapt(is_sample=True)`, record
+      result in governed memory (kind="customer_context",
+      nature="simulated_event", data_mode=DATA_MODE); expose
+      `daily_adherence_report()`
+- [ ] `tests/test_capabilities_sports_academy.py` — registration metadata,
+      tenant isolation across 2 academies, absent athlete → adherence < 1.0,
+      provenance on all records
+- [ ] ruff + tests green + update §1 + commit → `feat(academy): attendance adapter`
+
+### S2 — KPIs (status: PENDING)
+- [ ] `declarations/coach_kpis.yaml` — session_adherence(>0.90),
+      athlete_attendance_rate(>0.85), session_delivery_ontime(>0.90),
+      parent_satisfaction(>0.80)
+- [ ] `declarations/academy_kpis.yaml` — attendance_rate, churn_rate,
+      facility_utilization, mrr, active_athletes
+- [ ] `kpis.py` — compute_coach_metrics, compute_academy_metrics (from
+      governed memory only; pattern = restaurant/metrics.py)
+- [ ] Drift tests: every YAML id has an implemented compute fn + target;
+      no orphan compute fns
+- [ ] ruff + tests + §1 + commit → `feat(academy): kpi definitions + compute`
+
+### S3 — Athlete profiles (status: PENDING)
+- [ ] `adapters/athlete_profile_adapter.py` — athlete_profile(athlete_id) →
+      identity, program, enrollment_status, attendance history, family, fees;
+      enrollment_pipeline() → stage counts; churn-risk flags for seeded
+      declining athletes
+- [ ] Profiles recorded as governed memory, tenant-scoped
+- [ ] Tests: cross-tenant read blocked; churn flag fires for seeded athlete
+- [ ] ruff + tests + §1 + commit → `feat(academy): athlete profiles + churn flags`
+
+### S4 — Roles + workflows (status: PENDING)
+- [ ] `roles.py` — 5 roles pack-local; AUTHORITY_BOUNDARIES:
+      enrollment{admin→owner}, attendance_ops{coach→head_coach},
+      renewal{admin→owner}, facility_booking{admin→head_coach},
+      fee_record{admin→owner}; parent read-only, no approval authority;
+      maps_to_agent metadata only (academy_owner→sami, head_coach→ops_gm)
+- [ ] `declarations/academy_roles.yaml` + 3 flow YAMLs (steps, owner/approver
+      roles, risk tier, requires_approval)
+- [ ] `workflows.py` — enrollment/attendance/renewal as pure functions →
+      AcademyDiagnosis
+- [ ] Tests: read-only period blocks approvals; SOD self-approve denied;
+      wrong approver role refused
+- [ ] ruff + tests + §1 + commit → `feat(academy): roles + workflow declarations`
+
+### S5 — Cockpit views (status: PENDING)
+- [ ] `cockpit_views/owner_dashboard.py` — compute_owner_dashboard() → 5
+      numbers: active athletes, MRR, 7-day attendance, at-risk athletes,
+      facility utilization (+ awaiting-approval count); render_owner() with
+      permanent DATA_MODE banner
+- [ ] `coach_dashboard.py` — today's sessions, roster attendance, 4 KPIs vs
+      targets
+- [ ] `parent_portal.py` — read-only child schedule/attendance/fees (web only)
+- [ ] Wire one "Sports Academy" entry into `cockpit/cockpit.py` page radio with
+      Owner/Coach/Parent tabs — THIN wiring only
+- [ ] ruff + tests + §1 + commit → `feat(academy): cockpit views + wiring`
+
+### S6 — Facility + payments (status: PENDING)
+- [ ] `adapters/facility_adapter.py` — bookings reads, overlap-conflict pure fn,
+      utilization = booked/available
+- [ ] `adapters/payment_adapter.py` — record_manual_payment() → governed memory
+      (client_confidential, amount/date/note only, no instruments/gateway);
+      unpaid fees feed MRR + renewal reminders
+- [ ] Tests: overlap conflict detection; fee round-trip w/ provenance; no
+      executed=True anywhere
+- [ ] ruff + tests + §1 + commit → `feat(academy): facility + manual payments`
+
+### S7 — Runtime + finalize (status: PENDING)
+- [ ] `runtime.py::AcademyCapabilityPack` — mirror RestaurantCapabilityPack:
+      dry_run, approve/deny/rollback (SOD + required approver role),
+      build_evidence_pack (chain intact, data_mode breakdown, KPIs),
+      final_status → production_readiness NOT_ESTABLISHED
+- [ ] Complete `tests/test_capabilities_sports_academy.py` to restaurant-suite
+      parity (~20 tests)
+- [ ] Full suite ≥ baseline, 0 failures; ruff clean on all new paths
+- [ ] `docs/sports_academy_pack.md` — scope, reuse map, NOT-built list;
+      register.py metadata lists reused_core
+- [ ] Final §1 update + commit → `feat(academy): complete sports-academy pack v1`
+
+---
+
+## 4. Reference map (where to copy patterns from)
+
+| Need | Copy from |
+|---|---|
+| Frozen dataclasses + SourceRef | `capabilities/restaurant/ontology.py` |
+| Read-only scoped connector | `capabilities/restaurant/contracts.py` |
+| Synthetic fixtures | `capabilities/restaurant/fixtures.py` |
+| Roles + authority boundaries | `capabilities/restaurant/roles.py` |
+| Diagnoses as pure functions | `capabilities/restaurant/workflows.py` |
+| Memory-derived metrics | `capabilities/restaurant/metrics.py` |
+| Pack runtime + approvals | `capabilities/restaurant/runtime.py` |
+| Registration metadata | `capabilities/restaurant/register.py` |
+| Package exports | `capabilities/restaurant/__init__.py` |
+| Test suite shape | `tests/test_capabilities_restaurant.py` |
+| YAML-mirror drift test | `tests/test_capability_registry_drift.py` |
+| RTA invocation | `engines/rta/adapter.py::adapt` |
+| Governance approvals | `pilot/approval.py` |
+| Read-only phase gating | `pilot/phases.py` |
+
+## 5. Done/Definition of done
+
+Owner demo runs end-to-end on synthetic data: check-ins → adherence report →
+coach KPIs → owner dashboard (5 numbers) → recommendations in approval queue
+behind SOD → all hash-chained in governed memory with simulated_realistic
+provenance. Full non-smoke suite ≥ baseline. ruff clean. This file's §1 says
+COMPLETE with final commit hash.
+
+## 6. Handoff checklist (any agent resuming)
+
+1. Read §0 + §1. If "Current step" is not COMPLETE:
+2. `cd E:\Helix-Prime` (or set workdir), run git log --oneline -5 to confirm last commit.
+3. Continue at the first unchecked task in the current step's ledger.
+4. Obey non-negotiable rules. Do not skip ruff/tests/commit/ledger-update.

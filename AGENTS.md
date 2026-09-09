@@ -47,11 +47,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | S3 (in progress — S0–S2 COMPLETE) |
+| Current step | S4 (in progress — S0–S3 COMPLETE) |
 | Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
-| Last full-suite result | pack module 14/14 green; full re-run deferred to S7 |
-| Last commit | `848e1d7` test(academy): correct facility utilization expectation |
-| Pack complete? | NO (S2 of S7 done) |
+| Last full-suite result | pack module 20/20 green; full re-run deferred to S7 |
+| Last commit | `98cab59` feat(academy): athlete profiles, enrollment pipeline, CX-scored churn flags |
+| Pack complete? | NO (S3 of S7 done) |
 | Blockers | none |
 
 ### Environment facts (discovered in S0 — do not re-discover)
@@ -189,16 +189,30 @@ ath-40=trial are NOT active). Facility = 14 booked/21 total = 0.6667.
 Targets are aspirational goals (not current values) — dashboards show
 value vs target vs met.
 
-### S3 — Athlete profiles (status: IN PROGRESS)
-- [ ] `adapters/athlete_profile_adapter.py` — athlete_profile(athlete_id) →
-      identity, program, enrollment_status, attendance history, family, fees;
-      enrollment_pipeline() → stage counts; churn-risk flags for seeded
-      declining athletes
-- [ ] Profiles recorded as governed memory, tenant-scoped
-- [ ] Tests: cross-tenant read blocked; churn flag fires for seeded athlete
-- [ ] ruff + tests + §1 + commit → `feat(academy): athlete profiles + churn flags`
+### S3 — Athlete profiles (status: COMPLETE)
+- [x] `adapters/athlete_profile_adapter.py` — `athlete_profile(ctx, conns,
+      athlete_id)` (identity, age band, program, enrollment status, family
+      contact, 7-session attendance history w/ per-session attended bool, fee
+      records; returns None if unknown or cross-tenant), `enrollment_pipeline`
+      (stage counts + notes; v1 stage semantics: active=enrolled population,
+      inquiry/trial tracked, renewed/churned reserved for S4 flows),
+      `churn_risk_signals` (pure: attendance < 0.6 after ≥3 sessions),
+      `churn_risk_scores` (CX engine `churn_risk_scoring`, owning_role_id
+      ops_gm, customers=[{customer_id, csat=attendance_rate}], sample mode),
+      `record_churn_flags` (governed memory, kind=recommendation,
+      nature=model_inference, basis=attendance_decline_churn_flag)
+- [x] Tests 6 added (20 total): full profile, unknown→None, cross-tenant
+      blocked, pipeline stages (1 inquiry/1 trial/38 active/2 records),
+      churn flags fire for seeded ath-01/ath-02 (+5 others below 0.6 —
+      fixture RNG produces 7 at-risk athletes total), governed-memory recording
+      with provenance
+- [x] ruff clean + tests 20/20 + commit `98cab59`
+Notes: at-risk population from seeded RNG: ath-01, ath-02, ath-09, ath-23,
+ath-27 (0.4286) + ath-05, ath-38 (0.5714). CX engine returns
+overall_risk_score ≈ 0.34 for that population. Profile age bands computed
+from birth year (U12/U15/U18+).
 
-### S4 — Roles + workflows (status: PENDING)
+### S4 — Roles + workflows (status: IN PROGRESS)
 - [ ] `roles.py` — 5 roles pack-local; AUTHORITY_BOUNDARIES:
       enrollment{admin→owner}, attendance_ops{coach→head_coach},
       renewal{admin→owner}, facility_booking{admin→head_coach},

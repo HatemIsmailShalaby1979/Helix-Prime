@@ -47,11 +47,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | S6 (in progress — S0–S5 COMPLETE) |
+| Current step | S7 (in progress — S0–S6 COMPLETE) |
 | Baseline test count | **527** (525 passed + 2 Windows teardown failures, fixed in `fe25653`) |
-| Last full-suite result | pack module 31/31 green; full re-run deferred to S7 |
-| Last commit | `13ae6ba` feat(academy): cockpit views (owner/coach/parent) + Streamlit wiring |
-| Pack complete? | NO (S5 of S7 done) |
+| Last full-suite result | pack module 36/36 green; full re-run deferred to S7 |
+| Last commit | `286ee26` feat(academy): facility conflict detection + manual fee records |
+| Pack complete? | NO (S6 of S7 done) |
 | Blockers | none |
 
 ### Environment facts (discovered in S0 — do not re-discover)
@@ -261,17 +261,25 @@ client "scoach"); when a live adapter replaces it, the connector call stays —
 only fixture source changes. Unknown coach/family return {"error": ...} dicts
 and renderers show st.error — fail visible, not silent.
 
-### S6 — Facility + payments (status: IN PROGRESS)
-- [ ] `adapters/facility_adapter.py` — bookings reads, overlap-conflict pure fn,
-      utilization = booked/available
-- [ ] `adapters/payment_adapter.py` — record_manual_payment() → governed memory
-      (client_confidential, amount/date/note only, no instruments/gateway);
-      unpaid fees feed MRR + renewal reminders
-- [ ] Tests: overlap conflict detection; fee round-trip w/ provenance; no
-      executed=True anywhere
-- [ ] ruff + tests + §1 + commit → `feat(academy): facility + manual payments`
+### S6 — Facility + payments (status: COMPLETE)
+- [x] `adapters/facility_adapter.py` — `detect_booking_conflicts` (pure:
+      date+surface+time overlap on booked slots), `facility_utilization`,
+      `facility_overview` (21 slots, 14 booked, 0 conflicts in fixtures)
+- [x] `adapters/payment_adapter.py` — `monthly_recurring_revenue` (7960),
+      `outstanding_fees` (pay-003), `record_manual_payment` (governed memory,
+      kind=customer_context, nature=simulated_event, basis=manual_fee_record,
+      NO instrument fields — only amount/due/paid_at/method_note; negative
+      amount raises), `fee_status_overview`
+- [x] Tests 5 added (36 total): overview math, pure conflict detection with
+      4 crafted slots (1 conflict), fee overview, governed round-trip +
+      no-instrument invariant, negative-amount rejection
+- [x] ruff clean + tests 36/36 + commit `286ee26`
+Notes: record_manual_payment is the post-approval write shape; the runtime
+(S7) routes it through the approval layer under fee_record authority
+(academy_admin → academy_owner). Conflict test uses hand-built FacilitySlot
+tuples via SourceRef — construction pattern for future tests.
 
-### S7 — Runtime + finalize (status: PENDING)
+### S7 — Runtime + finalize (status: IN PROGRESS)
 - [ ] `runtime.py::AcademyCapabilityPack` — mirror RestaurantCapabilityPack:
       dry_run, approve/deny/rollback (SOD + required approver role),
       build_evidence_pack (chain intact, data_mode breakdown, KPIs),

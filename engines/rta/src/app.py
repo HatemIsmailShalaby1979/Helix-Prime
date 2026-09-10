@@ -13,6 +13,7 @@ Key Features:
 - Historical analysis
 """
 
+import os
 import json
 import logging
 from datetime import datetime
@@ -29,7 +30,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-CORS(app)
+
+# Deny-by-default CORS: empty list means no cross-origin requests unless
+# RTA_CORS_ORIGINS is set (comma-separated). Mirrors server/config.py convention.
+_cors_origins = os.environ.get("RTA_CORS_ORIGINS", "").strip()
+if _cors_origins:
+    CORS(app, origins=_cors_origins.split(","))
 
 # Initialize RTA calculator
 rta_calculator = create_rta_calculator()
@@ -266,4 +272,4 @@ if __name__ == "__main__":
     print(f"Confidence score: {rta_result.confidence_score:.2f}")
 
     # Run the application
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000)

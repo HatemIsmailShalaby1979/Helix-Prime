@@ -48,8 +48,9 @@ class Settings(BaseSettings):
     #: and fail the recommendation path closed, never fabricate output.
     ollama_host: str = "http://localhost:11434"
 
-    #: Bind address for uvicorn.
-    host: str = "0.0.0.0"  # noqa: S104 - container default, overridable
+    #: Bind address for uvicorn. Defaults to loopback; 0.0.0.0 must be an
+    #: explicit opt-in (e.g. HELIX_HOST=0.0.0.0) for container deployment.
+    host: str = "127.0.0.1"
     port: int = 8000
 
     #: CORS origins. Empty by default: this is a self-hosted box, not a SaaS.

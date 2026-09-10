@@ -12,6 +12,7 @@ services:
       HELIX_ENV: local
       HELIX_DB_PATH: /data/workflow.db
       HELIX_AUDIT_DB_PATH: /data/audit.db
+      HELIX_HOST: "0.0.0.0"
       HELIX_SAMPLE_DATA_MODE: "false"
       OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
     volumes:

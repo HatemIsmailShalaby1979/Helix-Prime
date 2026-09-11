@@ -36,7 +36,7 @@
 | Subsystem | LOC | Reality | Verdict |
 | --- | --- | --- | --- |
 | `engines/` (6 engines) | 13,041 | Deterministic **and real**: Erlang-C, RTA adherence, CX risk scoring, CRM pipeline, personnel, B2B onboarding. Zero `NotImplementedError`. | **Keep.** Genuine asset. |
-| `control_plane/` | 6,611 | `Engine` (orchestrator, 47 KB) + `governance.py` bounded-autonomy gate + hash-chained `audit_events` + `TenantScopedStore`. | **Keep, refactor.** |
+| `control_plane/` | 6,611 | `Engine` (orchestrator, 47 KB) + `governance.py` bounded-autonomy gate + hash-chained `audit_events`. (`TenantScopedStore` was listed here but never existed as wired code — removed 2026-09-11; isolation lives in `security/policy.py`.) | **Keep, refactor.** |
 | `memory/governed_memory.py` | 471 | JSONL append-only, SHA-256 hash chain, 6 natures × 9 kinds, tenant-scoped, retention. | **Keep, fix 1 defect.** |
 | `metacognition/improvement.py` | 419 | Proposal → isolated evaluation → SOD-enforced approval → rollback. Never self-applies. | **Keep.** Constitutionally correct. |
 | `connectors/` | ~1,000 | Excellent **contract layer**, but fakes only (`KNOWN_PROVIDERS = salesforce, zendesk, clay`; `SUPPORTED_MODES = ("fake",)`; `request_write` always returns `executed=False`). | **Extend.** No write path. |
@@ -370,12 +370,18 @@ services:
 
 **Already real (do not rebuild):**
 
-- `TenantScopedStore` — binds `tenant_id`/`client_id` in SQL, **refuses queries without them**
-- `TenantViolation(PermissionError)` on cross-tenant correlation
+- `security/policy.py::authorize` — **the single enforcement point** for tenant/client
+  isolation; cross-tenant requests are denied before reaching storage
+- ~~`TenantScopedStore` / `TenantViolation`~~ — **removed 2026-09-11.** Listed here as if
+  real, but never referenced by any code path. Driver-level (SQL) partition filters are
+  NOT implemented and are deliberately deferred; if required, implement inside `Store`.
 - `connectors/base.py::_assert_scope` — cross-tenant enrich denied
 - `security/secrets.py` redaction (`api_key`, `bearer`, `password`, `secret` → `[REDACTED]`)
 - Hash-chained `audit_events` with no-update/no-delete triggers
-- `verify_isolation()` + `ensure_tenant_indexes()`
+- ~~`verify_isolation()` + `ensure_tenant_indexes()`~~ — removed with `tenancy.py`
+  (2026-09-11); never invoked. Isolation is verified by
+  `release/harness.py::_check_tenant_isolation`, which exercises
+  `security/policy.py::authorize` and is wired into the `data_isolation` release gate.
 
 **Missing → Phase 2/4:**
 

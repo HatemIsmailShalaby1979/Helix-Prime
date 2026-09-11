@@ -107,7 +107,21 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 - [x] **H1.1** Silent-degradation → fail-closed (G11–G13) — `GovernanceControlUnavailable` raised at import/validation time; audit, secret scan, classification, injection checks now raise instead of silently skip
 - [x] **H1.2** SOD integrity (G14, G15) — hardcoded `sami`/`compliance_quality_gm` literals replaced with catalog-driven `universal_approvers`; `KeyError` now raises `GovernanceControlUnavailable` instead of silently allowing; tests verify deny-on-unknown-role and authority-from-catalog behavior
 - [ ] **H1.3** Drift must be able to fail (G16)
-- [ ] **H1.4** Tenant isolation (G17) — BLOCKED on user decision
+- [ ] **H1.4** Tenant isolation (G17) — **DECIDED 2026-09-11: DELETE (Decision B).**
+      `control_plane/tenancy.py` is 100% dead (zero refs, zero tests). Verified before
+      deciding: (a) zero code references anywhere incl. tests/gates/exports;
+      (b) `release/gate.py:146 _gate_data_isolation` → `release/harness.py:327
+      _check_tenant_isolation` uses `security.policy.authorize`, **not** tenancy ⇒ deleting
+      breaks no gate; (c) `GOVERNANCE/IMPLEMENTATION_MATRIX.md:96` already credits
+      `security/policy.py` + `identity.py` ⇒ no matrix change. **Rationale:** a control
+      that exists only in a file and is never invoked is not defense-in-depth — it misleads
+      auditors and delays real implementation. Isolation stays at the single policy seam
+      `security/policy.py::authorize`; if driver-level guarantees are ever required, build
+      them **inside `Store`**, not as a disconnected wrapper. **Deletion also requires
+      correcting 4 docs that claim it is real:** `docs/C4-C8_IMPLEMENTATION.md:81`,
+      `docs/HELIX_CODEX_EXECUTION_STATUS.md:23,55`,
+      `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md:39,373,374,378`. Note in the
+      `security/policy.py` docstring that driver-level enforcement is deliberately deferred.
 - [ ] **H1.5** Kill switch (G18)
 - [ ] **H1.6** Evidence + readiness enforcement (G19, G20)
 

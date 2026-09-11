@@ -20,7 +20,7 @@ external sibling-service deployment.
 | C6 | GM activation manifest | `organization/gm_activation.py` validates seven remaining GMs against runtime RoleSpec + YAML catalog; all seven are active |
 | C7 | Sibling-service boundary | `control_plane/schemas/sibling_events/boundary.py` prohibits imports/vendoring/direct stores |
 | C7 | Versioned event contracts | `control_plane/schemas/sibling_events/` defines four v1 events + sealed envelope + published JSON Schema |
-| C8 | Tenant-scoped storage | `control_plane/tenancy.py` binds partition filters into SQL and rejects cross-tenant reads/writes |
+| C8 | Tenant-scoped storage | **Not implemented at the driver level.** Isolation is enforced by `security/policy.py::authorize` (policy seam), which denies cross-tenant requests. `control_plane/tenancy.py` claimed SQL-level scoping but was never invoked; removed 2026-09-11. |
 | C8 | Local-first deployment profile | `infra/docker/Dockerfile`, `infra/docker/entrypoint.sh`, `infra/docker/docker-compose.yml` |
 | C8 | Accelerator configuration | `config-files/acceleration.yaml` describes CUDA, DirectML and CPU fallback for Ollama |
 | C8 | Governance evidence pack | `scripts/export_evidence_pack.py` exports uptime, communication history and hash validation trails |
@@ -52,8 +52,9 @@ fact.
   a non-zero exit code when the chain is invalid.
 - Sibling projects are external services. They exchange JSON events; they do not
   import, vendor, or directly query one another.
-- Tenant filters are bound in SQL through `TenantScopedStore`, not applied to a
-  result set after retrieval.
+- Tenant isolation is enforced at the policy seam (`security/policy.py::authorize`)
+  before a request reaches storage — not applied to a result set after retrieval.
+  SQL-level (driver-level) partition filters are **not** implemented.
 - GPU acceleration affects only optional Ollama model execution; deterministic
   engines and their evidence do not depend on it.
 

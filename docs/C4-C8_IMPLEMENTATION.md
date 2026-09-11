@@ -78,9 +78,13 @@ launching Streamlit. `config-files/acceleration.yaml` supports `auto`, `cuda`,
 `directml` and `cpu` Ollama profiles. Acceleration is optional and never changes
 deterministic engine evidence.
 
-`control_plane/tenancy.py` provides `TenantContext` and `TenantScopedStore`.
-The latter binds `tenant_id` and `client_id` in SQL for task reads/writes and
-resolves audit access through tenant-owned correlation IDs.
+**Driver-level (SQL) tenant scoping is NOT implemented.** A `control_plane/tenancy.py`
+module previously claimed to provide `TenantContext` and `TenantScopedStore` binding
+`tenant_id`/`client_id` into SQL, but it was never referenced by any code path and was
+removed on 2026-09-11. Tenant and client isolation is enforced at the policy seam in
+`security/policy.py::authorize`, which denies cross-tenant requests before they reach
+storage. Driver-level enforcement is deliberately deferred; if it is ever required it
+belongs inside `Store` itself, not in a wrapper module.
 
 `scripts/export_evidence_pack.py` reads the ledger without changing it and
 returns exit code 2 if hash validation fails.

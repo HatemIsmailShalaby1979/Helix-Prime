@@ -1,6 +1,13 @@
 """
 Authorization policy seam for Helix Prime Codex C3 — deny-by-default, local-first.
 
+This module is the single enforcement point for tenant and client isolation. Requests
+are denied here, before they reach storage. Driver-level (SQL) partition filters are
+deliberately NOT implemented and are deferred; a `control_plane/tenancy.py` wrapper that
+claimed to provide them was removed on 2026-09-11 because no code path ever invoked it.
+If driver-level guarantees are required in future, implement them inside `Store` itself
+rather than as a wrapper module, so the control cannot silently go unwired again.
+
 Enforces:
 - tenant/client isolation
 - role ownership
@@ -15,10 +22,10 @@ No external IdP; deterministic.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from organization.role_catalog import load_role_catalog
-from organization.capability_registry import get_agent_for_capability, is_tool_allowed, get_default_registry
+from organization.capability_registry import get_agent_for_capability, is_tool_allowed
 from security.identity import Identity
 
 

@@ -272,6 +272,32 @@ def validate_role_catalog(data: Dict[str, Any], source_path: str = "role-catalog
             if reviewer not in all_ids:
                 raise ValueError(f"{role_path}.segregation_of_duties.can_review: {reviewer!r} not in role ids")
 
+    # Universal approvers must reference real roles.
+    _universal_approvers = data.get("universal_approvers", [])
+    if not isinstance(_universal_approvers, list):
+        raise ValueError(f"{source_path}.universal_approvers: must be list, got {type(_universal_approvers).__name__}")
+    for _ua_id in _universal_approvers:
+        if not isinstance(_ua_id, str) or not _ua_id.strip():
+            raise ValueError(f"{source_path}.universal_approvers: item must be non-empty string, got {_ua_id!r}")
+        if _ua_id.strip() not in all_ids:
+            raise ValueError(
+                f"{source_path}.universal_approvers: {_ua_id!r} not in role ids "
+                f"{sorted(all_ids)}"
+            )
+
+    # Universal approvers must reference real roles.
+    _universal_approvers = data.get("universal_approvers", [])
+    if not isinstance(_universal_approvers, list):
+        raise ValueError(f"{source_path}.universal_approvers: must be list, got {type(_universal_approvers).__name__}")
+    for _ua_id in _universal_approvers:
+        if not isinstance(_ua_id, str) or not _ua_id.strip():
+            raise ValueError(f"{source_path}.universal_approvers: item must be non-empty string, got {_ua_id!r}")
+        if _ua_id.strip() not in all_ids:
+            raise ValueError(
+                f"{source_path}.universal_approvers: {_ua_id!r} not in role ids "
+                f"{sorted(all_ids)}"
+            )
+
     # SOD specific: compliance must be able to review ops, sales, hr, fraud
     compliance = roles_by_id.get("compliance_quality_gm")
     if compliance:

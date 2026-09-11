@@ -6,14 +6,13 @@ Local-first, deterministic, fail-closed. No cloud, no network.
 from __future__ import annotations
 
 import datetime
-import time
 from typing import Any, Callable, Dict, Optional
 
-from contracts.task import TaskRequest, TaskResult, CorrelationContext, EvidenceRef, AgentError, Approval
-from control_plane.workflow import Workflow, WorkflowState, is_valid_transition
+from contracts.task import TaskRequest, TaskResult, AgentError, Approval
+from control_plane.workflow import Workflow, WorkflowState
 from control_plane.events import Event
 from control_plane.store import Store
-from organization.capability_registry import get_agent_for_capability, is_tool_allowed, get_default_registry
+from organization.capability_registry import get_agent_for_capability, is_tool_allowed
 from organization.role_catalog import load_role_catalog
 
 
@@ -686,16 +685,17 @@ class Engine:
             workflow_role_data = catalog["roles_by_id"].get(workflow.owning_role_id, {})
             must_review = workflow_role_data.get("segregation_of_duties", {}).get("must_be_reviewed_by", [])
             can_review = self.catalog["roles_by_id"].get(approval.approver_role_id, {}).get("segregation_of_duties", {}).get("can_review", [])
-            # Allow if approver is in must_review or approver can_review includes owning role or is sami
-            allowed_approvers = set(must_review) | {"sami", "compliance_quality_gm"}
+            # Allow if approver is in must_review, can_review includes owning role, or is a universal approver
+            universal_approvers = set(catalog.get("universal_approvers", []))
+            allowed_approvers = set(must_review) | universal_approvers
             if approval.approver_role_id not in allowed_approvers and workflow.owning_role_id not in can_review:
-                # Still allow sami/compliance explicitly
-                if approval.approver_role_id not in ("sami", "compliance_quality_gm"):
-                    raise ValueError(
-                        f"approve: role {approval.approver_role_id!r} not authorized to approve {workflow.owning_role_id!r} (must be in {must_review} or can_review {workflow.owning_role_id!r})"
-                    )
-        except KeyError:
-            pass  # if catalog lookup fails, allow but log
+                raise ValueError(
+                    f"approve: role {approval.approver_role_id!r} not authorized to approve {workflow.owning_role_id!r} (must be in {must_review} or can_review {workflow.owning_role_id!r})"
+                )
+        except (KeyError, GovernanceControlUnavailable):
+            raise GovernanceControlUnavailable(
+                f"approve: cannot verify SOD authority for approver {approval.approver_role_id!r} on workflow {workflow.workflow_id!r}"
+            )
 
         workflow.approval = approval
         if approval.decision == "approved":

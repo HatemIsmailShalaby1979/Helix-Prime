@@ -105,7 +105,7 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 #### H1 — P1: Make the governance claims true (target: 2 weeks)
 
 - [x] **H1.1** Silent-degradation → fail-closed (G11–G13) — `GovernanceControlUnavailable` raised at import/validation time; audit, secret scan, classification, injection checks now raise instead of silently skip
-- [ ] **H1.2** SOD integrity (G14, G15)
+- [x] **H1.2** SOD integrity (G14, G15) — hardcoded `sami`/`compliance_quality_gm` literals replaced with catalog-driven `universal_approvers`; `KeyError` now raises `GovernanceControlUnavailable` instead of silently allowing; tests verify deny-on-unknown-role and authority-from-catalog behavior
 - [ ] **H1.3** Drift must be able to fail (G16)
 - [ ] **H1.4** Tenant isolation (G17) — BLOCKED on user decision
 - [ ] **H1.5** Kill switch (G18)

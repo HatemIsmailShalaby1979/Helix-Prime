@@ -7,6 +7,12 @@
 schema_version: "1.0"
 generated: "2026-08-28"
 classification: "C1_CANONICAL"
+# Universal approvers: roles authorized to approve any workflow regardless of
+# must_be_reviewed_by / can_review entries. Engine enforces deny-on-unknown;
+# removing a role id here removes its approval authority.
+universal_approvers:
+  - sami
+  - compliance_quality_gm
 
 roles:
   - id: sami

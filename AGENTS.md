@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H0.2 — Server bind hardening** |
+| Current step | **H0.4 — CI repair** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
 | Last full-suite result | **571 passed, 0 failed** (2026-09-10, commit `f269135`) |
 | Last commit | `17a9b74` fix(sec): default API server bind to loopback, require explicit opt-in |
-| Completed H-steps | H0.1 ✅, H0.2 ✅ |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅ |
 
 ### 1.2 Step ledger
 
@@ -97,7 +97,7 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 - [x] **H0.1** RTA Flask hardening (G01, G03) — `engines/rta/src/app.py:269` remove
       `debug=True`, bind `127.0.0.1`; `:32` replace bare `CORS(app)` with explicit origins
 - [x] **H0.2** Server bind default (G08) — `server/config.py:52` `host` → `127.0.0.1`
-- [ ] **H0.3** Auth + RBAC (G02) — all 8 routers in `server/app.py:102-109`
+- [x] **H0.3** Auth + RBAC (G02) — `server/auth.py::current_identity`, applied at router level; `/healthz` excepted
 - [ ] **H0.4** CI repair (G04, G05, G07) — `ci.yml:24` → `release/requirements.lock.txt`
 - [ ] **H0.5** Scanning (G06) — `pip-audit` + `bandit` in CI; add `.github/dependabot.yml`
 - [ ] **H0.6** Release manifest + worktree cleanup (G09, G10)

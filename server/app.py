@@ -16,10 +16,11 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from server.auth import current_identity
 from server import deps
 from server.config import Settings, get_settings
 from server.errors import AppError
@@ -100,13 +101,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     app.include_router(health_router)
-    app.include_router(workflows_router)
-    app.include_router(approvals_router)
-    app.include_router(stream_router)
-    app.include_router(console_router)
-    app.include_router(chat_router)
-    app.include_router(tasks_router)
-    app.include_router(docs_router)
+    app.include_router(workflows_router, dependencies=[Depends(current_identity)])
+    app.include_router(approvals_router, dependencies=[Depends(current_identity)])
+    app.include_router(stream_router, dependencies=[Depends(current_identity)])
+    app.include_router(console_router, dependencies=[Depends(current_identity)])
+    app.include_router(chat_router, dependencies=[Depends(current_identity)])
+    app.include_router(tasks_router, dependencies=[Depends(current_identity)])
+    app.include_router(docs_router, dependencies=[Depends(current_identity)])
 
     app.mount("/static", StaticFiles(directory="server/static"), name="static")
     return app

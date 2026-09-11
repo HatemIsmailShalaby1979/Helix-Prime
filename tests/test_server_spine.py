@@ -22,6 +22,16 @@ import pytest
 fastapi_testclient = pytest.importorskip("fastapi.testclient")
 TestClient = fastapi_testclient.TestClient
 
+# H0.3: auth middleware is required on all /api routes; set a fixed test token
+# so spine tests continue to exercise business logic rather than auth.
+_TEST_TOKEN = "spine-test-token-h03"
+
+
+@pytest.fixture(autouse=True)
+def _token_env(monkeypatch):
+    monkeypatch.setenv("HELIX_API_TOKEN", _TEST_TOKEN)
+    monkeypatch.setenv("HELIX_API_TOKEN_ROLE", "sami")
+
 
 @pytest.fixture()
 def client(tmp_path, monkeypatch):
@@ -36,6 +46,9 @@ def client(tmp_path, monkeypatch):
     )
     with TestClient(create_app(settings)) as test_client:
         yield test_client
+
+
+_AUTH_HEADERS = {"Authorization": f"Bearer {_TEST_TOKEN}"}
 
 
 def _submit(client, **overrides):
@@ -55,7 +68,7 @@ def _submit(client, **overrides):
         "requires_approval": True,
     }
     payload.update(overrides)
-    return client.post("/api/workflows", json=payload)
+    return client.post("/api/workflows", json=payload, headers=_AUTH_HEADERS)
 
 
 def test_healthz_reports_ok(client) -> None:
@@ -90,15 +103,16 @@ def test_approve_then_execute_closes_the_run(client) -> None:
             "decision": "approved",
             "reason": "spine integration test",
         },
+        headers=_AUTH_HEADERS,
     )
     assert approved.status_code == 200
     assert approved.json()["state"] != "awaiting_approval"
 
-    executed = client.post(f"/api/workflows/{workflow_id}/execute")
+    executed = client.post(f"/api/workflows/{workflow_id}/execute", headers=_AUTH_HEADERS)
     assert executed.status_code == 200
     assert executed.json()["state"] in {"succeeded", "closed", "failed"}
 
-    stored = client.get(f"/api/workflows/{workflow_id}")
+    stored = client.get(f"/api/workflows/{workflow_id}", headers=_AUTH_HEADERS)
     assert stored.status_code == 200
 
 
@@ -114,20 +128,21 @@ def test_denied_approval_prevents_execution(client) -> None:
             "decision": "denied",
             "reason": "spine integration test — denial",
         },
+        headers=_AUTH_HEADERS,
     )
     assert denied.status_code == 200
-    after = client.get(f"/api/workflows/{workflow_id}").json()
+    after = client.get(f"/api/workflows/{workflow_id}", headers=_AUTH_HEADERS).json()
     assert after["state"] != "awaiting_approval"
 
 
 def test_pending_approvals_appear_in_the_queue(client) -> None:
     _submit(client)
-    queue = client.get("/api/approvals").json()
+    queue = client.get("/api/approvals", headers=_AUTH_HEADERS).json()
     assert any(item["state"] == "awaiting_approval" for item in queue)
 
 
 def test_unknown_workflow_is_404(client) -> None:
-    assert client.get("/api/workflows/does-not-exist").status_code == 404
+    assert client.get("/api/workflows/does-not-exist", headers=_AUTH_HEADERS).status_code == 404
 
 
 def test_every_response_carries_a_correlation_id(client) -> None:
@@ -141,7 +156,7 @@ def test_every_response_carries_a_correlation_id(client) -> None:
 
 def test_run_timeline_is_retrievable(client) -> None:
     workflow_id = _submit(client).json()["workflow_id"]
-    events = client.get(f"/api/workflows/{workflow_id}/events").json()
+    events = client.get(f"/api/workflows/{workflow_id}/events", headers=_AUTH_HEADERS).json()
     assert isinstance(events, list)
     assert any("workflow" in json.dumps(e) for e in events)
 

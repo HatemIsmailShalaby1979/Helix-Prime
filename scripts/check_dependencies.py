@@ -61,6 +61,7 @@ SKIP_DIRS = {
     "__pycache__",
     "node_modules",
     ".workbuddy-ai",
+    ".claude",
     "src-tauri",
 }
 

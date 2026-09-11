@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H1 complete except H1.3 (drift) and H1.5 (kill switch); next: H2.1 (migrations)** |
+| Current step | **H2.1 complete; next: H2.2 (monitoring/alerting) — H1.3 (drift AST) and H1.5 (kill switch) still open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **588 passed, 0 failed** (2026-09-12, H1.6 full-suite verification run; baseline 571 + 4 readiness tests + 13 from uncommitted prior-session work also present in tree) |
-| Last commit | H1.6: fix(gov): wire audit-integrity into release gate, enforce production_readiness at registry level |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.6 ✅ |
+| Last full-suite result | **595 passed, 0 failed** (2026-09-12, H2.1 full-suite verification run; baseline 571 + 7 migration-drift tests + 17 prior-session tests in tree) |
+| Last commit | H2.1: feat(infra): add alembic migrations and CI drift check |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.6 ✅, H2.1 ✅ |
 
 ### 1.2 Step ledger
 
@@ -149,7 +149,25 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 
 #### H2 — P2: Make it operable (target: 1.5 weeks)
 
-- [ ] **H2.1** Alembic migrations (G21) + CI drift check
+- [x] **H2.1** Alembic migrations (G21) + CI drift check — **Completed 2026-09-12.**
+      Alembic 1.20.0 added (`alembic>=1.13,<2.0.0` in requirements.txt, mirrored in
+      pyproject deps + sdist include `/migrations` + `/alembic.ini`; lock regenerated
+      via `uv pip compile` — only alembic/sqlalchemy/mako/greenlet added, zero
+      version churn). Initial migration `0001_baseline` reproduces the Store schema
+      (same DDL statements/order from `control_plane/store.py::_init_schema` +
+      `_init_governance_schema`: 4 tables, 7 indexes, 2 append-only triggers) —
+      verified a no-op on a copy of the live `control_plane/workflow.db`
+      (stamp head → upgrade head → sqlite_master identical, 19 objects, zero
+      rows touched) and byte-fresh on a new DB. DB path resolves per-invocation:
+      `alembic -x db=<path>` > `HELIX_DB_PATH` env > `control_plane/workflow.db`
+      (matches server/config.py convention; no URL baked into the repo).
+      Drift control: `scripts/check_migration_drift.py` builds one DB via Store
+      and one via `alembic upgrade head`, compares sqlite_master at token level
+      (whitespace/indent-insensitive — SQLite stores DDL text verbatim), fails
+      CI on any divergence in either direction; alembic's own
+      `alembic_version` bookkeeping excluded. Wired into `.github/workflows/ci.yml`
+      after check_dependencies. Tests: `tests/test_migration_drift.py` (7, fast,
+      no live migration required) incl. can-fail proof (G16 lesson).
 - [ ] **H2.2** Monitoring/alerting (G22)
 - [ ] **H2.3** One deployable artifact (G23, G24, G25)
 - [ ] **H2.4** CI quality (G27, G28)

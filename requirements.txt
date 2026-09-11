@@ -23,6 +23,12 @@ pydantic>=2.5,<3
 #   sqlite3 — CPython stdlib, no wheel. Requires Python >= 3.10 for the
 #   strict typing and RETURNING clauses used by control_plane/store.py.
 
+# Schema migrations. The control-plane schema is implicit in
+# control_plane/store.py; migrations/versions/ is its authoritative history.
+# CI fails when the Store-created schema and the migration head disagree
+# (scripts/check_migration_drift.py).
+alembic>=1.13,<2.0.0
+
 # Configuration / schema loading for organization/ and contracts/.
 PyYAML>=6.0,<7.0
 

@@ -27,6 +27,7 @@ license = { text = "MIT" }
 dependencies = [
     "pydantic>=2.5,<3",
     "PyYAML>=6.0,<7.0",
+    "alembic>=1.13,<2.0.0",
     "pandas>=2.0.0,<3.0.0",
     "numpy>=1.24.0,<2.0.0",
     "scipy>=1.12.0,<2.0.0",
@@ -97,6 +98,7 @@ packages = [
 
 [tool.hatch.build.targets.sdist]
 include = [
+    "/alembic.ini",
     "/app",
     "/capabilities",
     "/cloud",
@@ -107,6 +109,7 @@ include = [
     "/engines",
     "/infra",
     "/memory",
+    "/migrations",
     "/metacognition",
     "/observability",
     "/orchestration",

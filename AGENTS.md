@@ -75,6 +75,59 @@
 
 ---
 
+## 1. Production Hardening Task (H0–H3) ← NEW
+
+**Recorded:** 2026-09-11 · **Based on:** `docs/audits/2026-09-10_full_audit_production_plan.md`
+
+### 1.1 Status
+
+| Field | Value |
+|---|---|
+| Current step | **H0.2 — Server bind hardening** |
+| Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
+| Last full-suite result | **571 passed, 0 failed** (2026-09-10, commit `f269135`) |
+| Last commit | `17a9b74` fix(sec): default API server bind to loopback, require explicit opt-in |
+| Completed H-steps | H0.1 ✅, H0.2 ✅ |
+
+### 1.2 Step ledger
+
+#### H0 — P0: Make it safe to run (target: 1 week)
+Exit gate: CI green in a clean container; no unauthenticated route; no high bandit/pip-audit finding.
+
+- [x] **H0.1** RTA Flask hardening (G01, G03) — `engines/rta/src/app.py:269` remove
+      `debug=True`, bind `127.0.0.1`; `:32` replace bare `CORS(app)` with explicit origins
+- [x] **H0.2** Server bind default (G08) — `server/config.py:52` `host` → `127.0.0.1`
+- [ ] **H0.3** Auth + RBAC (G02) — all 8 routers in `server/app.py:102-109`
+- [ ] **H0.4** CI repair (G04, G05, G07) — `ci.yml:24` → `release/requirements.lock.txt`
+- [ ] **H0.5** Scanning (G06) — `pip-audit` + `bandit` in CI; add `.github/dependabot.yml`
+- [ ] **H0.6** Release manifest + worktree cleanup (G09, G10)
+
+#### H1 — P1: Make the governance claims true (target: 2 weeks)
+
+- [ ] **H1.1** Silent-degradation → fail-closed (G11–G13)
+- [ ] **H1.2** SOD integrity (G14, G15)
+- [ ] **H1.3** Drift must be able to fail (G16)
+- [ ] **H1.4** Tenant isolation (G17) — BLOCKED on user decision
+- [ ] **H1.5** Kill switch (G18)
+- [ ] **H1.6** Evidence + readiness enforcement (G19, G20)
+
+#### H2 — P2: Make it operable (target: 1.5 weeks)
+
+- [ ] **H2.1** Alembic migrations (G21) + CI drift check
+- [ ] **H2.2** Monitoring/alerting (G22)
+- [ ] **H2.3** One deployable artifact (G23, G24, G25)
+- [ ] **H2.4** CI quality (G27, G28)
+- [ ] **H2.5** Data-retention policy (G26)
+
+#### H3 — P3: Make it sellable (target: 1 week)
+
+- [ ] **H3.1** Single authority chain (G31, G39)
+- [ ] **H3.2** Stale facts (G32–G35)
+- [ ] **H3.3** Security docs (G36, G37)
+- [ ] **H3.4** CHANGELOG + hygiene (G38, G40, G41)
+
+---
+
 ## 2. Build plan (source of truth for steps S0–S7)
 
 Final layout:

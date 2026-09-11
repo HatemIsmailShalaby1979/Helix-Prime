@@ -104,7 +104,7 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 
 #### H1 — P1: Make the governance claims true (target: 2 weeks)
 
-- [ ] **H1.1** Silent-degradation → fail-closed (G11–G13)
+- [x] **H1.1** Silent-degradation → fail-closed (G11–G13) — `GovernanceControlUnavailable` raised at import/validation time; audit, secret scan, classification, injection checks now raise instead of silently skip
 - [ ] **H1.2** SOD integrity (G14, G15)
 - [ ] **H1.3** Drift must be able to fail (G16)
 - [ ] **H1.4** Tenant isolation (G17) — BLOCKED on user decision

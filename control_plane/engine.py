@@ -16,6 +16,11 @@ from control_plane.store import Store
 from organization.capability_registry import get_agent_for_capability, is_tool_allowed, get_default_registry
 from organization.role_catalog import load_role_catalog
 
+
+class GovernanceControlUnavailable(RuntimeError):
+    """Governance control unavailable — must fail-closed, not silently skip."""
+
+
 # C3 integrations (local-first, fail-closed)
 try:
     from security.classification import validate_payload_classification, DataClassification
@@ -25,22 +30,35 @@ try:
     from security.audit import AuditTrail, AuditRecord
     from security.injection import is_suspicious_prompt, scan_for_injection
     from observability.logging import log_structured
-except ImportError:
-    # Fallback if security/observability not available (should not happen in C3)
-    validate_payload_classification = None  # type: ignore
-    DataClassification = None  # type: ignore
-    Identity = None  # type: ignore
-    ActorType = None  # type: ignore
-    AuthorizationRequest = None  # type: ignore
-    authorize = None  # type: ignore
-    validate_no_secrets = None  # type: ignore
-    redact_dict = None  # type: ignore
-    is_secret_present = None  # type: ignore
-    AuditTrail = None  # type: ignore
-    AuditRecord = None  # type: ignore
-    is_suspicious_prompt = None  # type: ignore
-    scan_for_injection = None  # type: ignore
-    log_structured = None  # type: ignore
+except ImportError as _import_err:
+    raise GovernanceControlUnavailable(
+        f"C3 security stack unavailable on startup: {_import_err}"
+    ) from _import_err
+
+# Verify every required symbol resolved to a real object.
+# Any None here means a partial import happened (e.g. shadow module).
+_gov_names = (
+    "validate_payload_classification",
+    "DataClassification",
+    "Identity",
+    "ActorType",
+    "AuthorizationRequest",
+    "authorize",
+    "validate_no_secrets",
+    "redact_dict",
+    "is_secret_present",
+    "AuditTrail",
+    "AuditRecord",
+    "is_suspicious_prompt",
+    "scan_for_injection",
+    "log_structured",
+)
+_gov_symbols = tuple(globals()[n] for n in _gov_names)
+if any(s is None for s in _gov_symbols):
+    _missing = tuple(n for n, s in zip(_gov_names, _gov_symbols) if s is None)
+    raise GovernanceControlUnavailable(
+        f"required governance controls not loaded: {', '.join(_missing)}"
+    )
 
 Handler = Callable[[Workflow], Dict[str, Any]]
 
@@ -134,8 +152,6 @@ class Engine:
 
     def _audit(self, event_type: str, workflow: Workflow, actor: str, actor_type: str = "agent", decision: str = "allowed", input_ref: str | None = None, output_ref: str | None = None, approval_decision: str | None = None) -> None:
         """Helper: append tamper-evident audit record (best-effort, no cloud)."""
-        if AuditTrail is None or AuditRecord is None:
-            return
         try:
             trail = AuditTrail(db_path=self.audit_db_path)
             prev_hash = self._chain_tip(trail)
@@ -232,9 +248,37 @@ class Engine:
             return existing
 
         # C3: Validate no secrets in payload before any storage (fail-closed)
-        if validate_no_secrets:
+        try:
+            validate_no_secrets(request.input_payload, field_path="TaskRequest.input_payload")
+        except ValueError as e:
+            workflow = Workflow.new(
+                correlation=request.correlation,
+                requesting_actor=request.requesting_actor,
+                owning_role_id=request.owning_role_id,
+                capability=request.capability,
+                input_payload=request.input_payload,
+                requires_approval=request.requires_approval,
+            )
+            workflow.state = WorkflowState.DEAD_LETTER
+            workflow.error = AgentError(
+                error_id=f"err_{workflow.workflow_id}",
+                correlation_id=request.correlation.correlation_id,
+                code="policy_denied",
+                message=f"secret detected: {e}",
+                timestamp=_now_iso(),
+            )
+            self.store.create_workflow(workflow)
+            self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
+            self._audit("secret_redaction", workflow, request.requesting_actor, decision="denied", input_ref=request.request_id)
+            self._log("secret_redaction", workflow, request.requesting_actor, result_status="denied", error_code="secret_detected", payload={"reason": str(e)})
+            return workflow
+
+        # C3: Validate data classification (unknown -> fail-closed)
+        # Determine classification to validate: if payload has explicit data_classification, use it, else infer or default to client_confidential
+        payload_class = request.input_payload.get("data_classification")
+        if payload_class is not None:
             try:
-                validate_no_secrets(request.input_payload, field_path="TaskRequest.input_payload")
+                validate_payload_classification(request.input_payload, payload_class)
             except ValueError as e:
                 workflow = Workflow.new(
                     correlation=request.correlation,
@@ -249,44 +293,14 @@ class Engine:
                     error_id=f"err_{workflow.workflow_id}",
                     correlation_id=request.correlation.correlation_id,
                     code="policy_denied",
-                    message=f"secret detected: {e}",
+                    message=str(e),
                     timestamp=_now_iso(),
                 )
                 self.store.create_workflow(workflow)
                 self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
-                self._audit("secret_redaction", workflow, request.requesting_actor, decision="denied", input_ref=request.request_id)
-                self._log("secret_redaction", workflow, request.requesting_actor, result_status="denied", error_code="secret_detected", payload={"reason": str(e)})
+                self._audit("policy_denied", workflow, request.requesting_actor, decision="denied")
+                self._log("policy_denied", workflow, request.requesting_actor, result_status="denied", error_code="invalid_classification", payload={"reason": str(e)})
                 return workflow
-
-        # C3: Validate data classification (unknown -> fail-closed)
-        if validate_payload_classification:
-            # Determine classification to validate: if payload has explicit data_classification, use it, else infer or default to client_confidential
-            payload_class = request.input_payload.get("data_classification")
-            if payload_class is not None:
-                try:
-                    validate_payload_classification(request.input_payload, payload_class)
-                except ValueError as e:
-                    workflow = Workflow.new(
-                        correlation=request.correlation,
-                        requesting_actor=request.requesting_actor,
-                        owning_role_id=request.owning_role_id,
-                        capability=request.capability,
-                        input_payload=request.input_payload,
-                        requires_approval=request.requires_approval,
-                    )
-                    workflow.state = WorkflowState.DEAD_LETTER
-                    workflow.error = AgentError(
-                        error_id=f"err_{workflow.workflow_id}",
-                        correlation_id=request.correlation.correlation_id,
-                        code="policy_denied",
-                        message=str(e),
-                        timestamp=_now_iso(),
-                    )
-                    self.store.create_workflow(workflow)
-                    self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
-                    self._audit("policy_denied", workflow, request.requesting_actor, decision="denied")
-                    self._log("policy_denied", workflow, request.requesting_actor, result_status="denied", error_code="invalid_classification", payload={"reason": str(e)})
-                    return workflow
 
         # C3: Policy authorize (tenant/client isolation, role/capability/tool, deny-by-default)
         if authorize and Identity and ActorType:
@@ -317,34 +331,30 @@ class Engine:
                     client_id=request.correlation.client_id or request.client_id,
                     role_id=role_for_identity,
                 )
-                # Check for suspicious prompt/tool injection before authorize
                 if is_suspicious_prompt and scan_for_injection:
-                    try:
-                        suspicious, _ = is_suspicious_prompt(str(request.input_payload))
-                        if suspicious:
-                            workflow = Workflow.new(
-                                correlation=request.correlation,
-                                requesting_actor=request.requesting_actor,
-                                owning_role_id=request.owning_role_id,
-                                capability=request.capability,
-                                input_payload=request.input_payload,
-                                requires_approval=request.requires_approval,
-                            )
-                            workflow.state = WorkflowState.DEAD_LETTER
-                            workflow.error = AgentError(
-                                error_id=f"err_{workflow.workflow_id}",
-                                correlation_id=request.correlation.correlation_id,
-                                code="policy_denied",
-                                message="suspicious prompt/tool request detected",
-                                timestamp=_now_iso(),
-                            )
-                            self.store.create_workflow(workflow)
-                            self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": "suspicious prompt"})
-                            self._audit("suspicious_prompt", workflow, request.requesting_actor, decision="denied")
-                            self._log("suspicious_prompt", workflow, request.requesting_actor, result_status="denied", error_code="injection", payload={"capability": request.capability})
-                            return workflow
-                    except Exception:
-                        pass
+                    suspicious, _ = is_suspicious_prompt(str(request.input_payload))
+                    if suspicious:
+                        workflow = Workflow.new(
+                            correlation=request.correlation,
+                            requesting_actor=request.requesting_actor,
+                            owning_role_id=request.owning_role_id,
+                            capability=request.capability,
+                            input_payload=request.input_payload,
+                            requires_approval=request.requires_approval,
+                        )
+                        workflow.state = WorkflowState.DEAD_LETTER
+                        workflow.error = AgentError(
+                            error_id=f"err_{workflow.workflow_id}",
+                            correlation_id=request.correlation.correlation_id,
+                            code="policy_denied",
+                            message="suspicious prompt/tool request detected",
+                            timestamp=_now_iso(),
+                        )
+                        self.store.create_workflow(workflow)
+                        self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": "suspicious prompt"})
+                        self._audit("suspicious_prompt", workflow, request.requesting_actor, decision="denied")
+                        self._log("suspicious_prompt", workflow, request.requesting_actor, result_status="denied", error_code="injection", payload={"capability": request.capability})
+                        return workflow
 
                 auth_req = AuthorizationRequest(
                     identity=ident,

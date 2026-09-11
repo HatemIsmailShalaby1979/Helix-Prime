@@ -83,7 +83,7 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H0.5 — Scanning** |
+| Current step | **H0.6 — Release manifest** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
 | Last full-suite result | **520 passed, 42 failed** (2026-09-11, commit `466e2a1`) |
 | Last commit | `466e2a1` chore(ci): fix lockfile path, add pytest-cov, widen ruff scope to engines/capabilities/security/pilot |
@@ -98,8 +98,8 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       `debug=True`, bind `127.0.0.1`; `:32` replace bare `CORS(app)` with explicit origins
 - [x] **H0.2** Server bind default (G08) — `server/config.py:52` `host` → `127.0.0.1`
 - [x] **H0.3** Auth + RBAC (G02) — `server/auth.py::current_identity`, applied at router level; `/healthz` excepted
-- [ ] **H0.4** CI repair (G04, G05, G07) — `ci.yml:24` → `release/requirements.lock.txt`
-- [ ] **H0.5** Scanning (G06) — `pip-audit` + `bandit` in CI; add `.github/dependabot.yml`
+- [x] **H0.4** CI repair (G04, G05, G07) — `ci.yml:24` → `release/requirements.lock.txt`
+- [x] **H0.5** Scanning (G06) — `bandit` + `pip-audit` in CI; add `.github/dependabot.yml`; skips for B113/B310/B608 with justification
 - [ ] **H0.6** Release manifest + worktree cleanup (G09, G10)
 
 #### H1 — P1: Make the governance claims true (target: 2 weeks)

@@ -1,0 +1,31 @@
+# Helix Codex OS — Dependabot configuration
+#
+# Weekly update checks for:
+# - pip (application dependencies)
+# - github-actions (CI tooling)
+version: 2
+
+updates:
+  # Python package dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(actions)"
+    labels:
+      - "dependencies"
+      - "ci"

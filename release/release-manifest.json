@@ -1,18 +1,18 @@
 {
   "manifest_schema_version": "1.0",
   "product": "Helix-Prime-Codex",
-  "release_profile": "production",
-  "classification": "NOT_READY",
-  "release_approved": true,
+  "release_profile": "production_candidate",
+  "classification": "PENDING",
+  "release_approved": false,
   "version": "0.9.0-c8",
-  "git_commit": "6fc5ec58e2c8025ce14c6ff319d0ce6cae4e16e4",
-  "git_branch": "main",
-  "build_timestamp": "2026-09-08T18:04:48.536006Z",
+  "git_commit": "6c26ea5d3db1536c20661a0b6d46db0918a9d6f2",
+  "git_branch": "h02-server-bind",
+  "build_timestamp": "2026-09-11T13:24:50.654045Z",
   "python_version": "3.12.10",
   "platform": "win32",
   "supported_python": ">=3.12,<3.13",
   "dependency_lock_ref": "release/requirements.lock.txt",
-  "dependency_lock_count": 2213,
+  "dependency_lock_count": 322,
   "enabled_capabilities": [
     "control_plane",
     "six_engines",
@@ -44,7 +44,5 @@
     "Pilot data must be limited to synthetic or explicitly consented data.",
     "Production label not claimed without every production gate passing."
   ],
-  "evidence_refs": [
-    "evidence\\releases\\20260908T180448Z"
-  ]
+  "evidence_refs": []
 }

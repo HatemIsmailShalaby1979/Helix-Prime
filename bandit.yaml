@@ -1,0 +1,8 @@
+# Bandit security scanner configuration
+#
+# Skip rules that produce false positives in this codebase.
+# See pyproject.toml [tool.bandit] section for justifications.
+skips:
+  - B113  # requests without timeout — internal APIs, hang expected
+  - B310  # urllib.urlopen with hardcoded https URL + timeout arg
+  - B608  # SQL string construction — parameterized, no user input

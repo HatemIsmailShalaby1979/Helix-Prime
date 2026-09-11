@@ -39,6 +39,11 @@ jobs:
         run: |
           python -m pytest tests/ -q -m "not smoke" --cov=server --cov=connectors --cov-fail-under=80
 
+      - name: Run security scans
+        run: |
+          bandit -r server/ connectors/ control_plane/ engines/ capabilities/ security/ -ll
+          pip-audit -r release/requirements.lock.txt
+
       - name: Check dependencies
         run: |
           python scripts/check_dependencies.py

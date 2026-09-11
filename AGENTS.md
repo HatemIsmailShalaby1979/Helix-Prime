@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H0.4 — CI repair** |
+| Current step | **H0.5 — Scanning** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **571 passed, 0 failed** (2026-09-10, commit `f269135`) |
-| Last commit | `17a9b74` fix(sec): default API server bind to loopback, require explicit opt-in |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅ |
+| Last full-suite result | **520 passed, 42 failed** (2026-09-11, commit `466e2a1`) |
+| Last commit | `466e2a1` chore(ci): fix lockfile path, add pytest-cov, widen ruff scope to engines/capabilities/security/pilot |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅ |
 
 ### 1.2 Step ledger
 

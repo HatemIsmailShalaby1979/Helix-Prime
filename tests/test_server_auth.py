@@ -6,14 +6,17 @@ remains publicly reachable — a design boundary that must not regress.
 """
 from __future__ import annotations
 
-import os
+import secrets
 
 import pytest
 
 fastapi_testclient = pytest.importorskip("fastapi.testclient")
 TestClient = fastapi_testclient.TestClient
 
-TOKEN = "super-secret-token-h03"
+# Generated at import, never a literal: the release gate runs a secret scan over the
+# whole tree and a hardcoded token here would (correctly) fail security_checks.
+TOKEN = secrets.token_urlsafe(24)
+WRONG_TOKEN = secrets.token_urlsafe(24)
 ROLE = "sami"
 
 
@@ -56,7 +59,7 @@ def test_api_no_token(client):
 
 def test_api_wrong_token(client):
     """Invalid token on /api routes must return 401."""
-    resp = client.get("/api/approvals", headers={"Authorization": "Bearer wrong"})
+    resp = client.get("/api/approvals", headers={"Authorization": f"Bearer {WRONG_TOKEN}"})
     assert resp.status_code == 401
 
 

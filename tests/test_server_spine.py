@@ -16,15 +16,18 @@ They also pin two behaviours that are easy to regress:
 from __future__ import annotations
 
 import json
+import secrets
 
 import pytest
 
 fastapi_testclient = pytest.importorskip("fastapi.testclient")
 TestClient = fastapi_testclient.TestClient
 
-# H0.3: auth middleware is required on all /api routes; set a fixed test token
-# so spine tests continue to exercise business logic rather than auth.
-_TEST_TOKEN = "spine-test-token-h03"
+# H0.3: auth middleware is required on all /api routes, so these tests must present a
+# token to keep exercising business logic rather than auth. Generated at import, never a
+# literal: the release gate secret-scans the whole tree and a hardcoded token here would
+# (correctly) fail security_checks.
+_TEST_TOKEN = secrets.token_urlsafe(24)
 
 
 @pytest.fixture(autouse=True)

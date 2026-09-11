@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H0.6 — Release manifest** |
+| Current step | **H1 complete except H1.3 (drift) and H1.5 (kill switch); next: H2.1 (migrations)** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **520 passed, 42 failed** (2026-09-11, commit `466e2a1`) |
-| Last commit | `466e2a1` chore(ci): fix lockfile path, add pytest-cov, widen ruff scope to engines/capabilities/security/pilot |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅ |
+| Last full-suite result | **588 passed, 0 failed** (2026-09-12, H1.6 full-suite verification run; baseline 571 + 4 readiness tests + 13 from uncommitted prior-session work also present in tree) |
+| Last commit | H1.6: fix(gov): wire audit-integrity into release gate, enforce production_readiness at registry level |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.6 ✅ |
 
 ### 1.2 Step ledger
 
@@ -100,14 +100,14 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 - [x] **H0.3** Auth + RBAC (G02) — `server/auth.py::current_identity`, applied at router level; `/healthz` excepted
 - [x] **H0.4** CI repair (G04, G05, G07) — `ci.yml:24` → `release/requirements.lock.txt`
 - [x] **H0.5** Scanning (G06) — `bandit` + `pip-audit` in CI; add `.github/dependabot.yml`; skips for B113/B310/B608 with justification
-- [ ] **H0.6** Release manifest + worktree cleanup (G09, G10)
+- [x] **H0.6** Release manifest + worktree cleanup (G09, G10) — manifest regenerated at HEAD; 5 integrated worktrees closed; license claim fixed. Commit `536de74`
 
 #### H1 — P1: Make the governance claims true (target: 2 weeks)
 
 - [x] **H1.1** Silent-degradation → fail-closed (G11–G13) — `GovernanceControlUnavailable` raised at import/validation time; audit, secret scan, classification, injection checks now raise instead of silently skip
 - [x] **H1.2** SOD integrity (G14, G15) — hardcoded `sami`/`compliance_quality_gm` literals replaced with catalog-driven `universal_approvers`; `KeyError` now raises `GovernanceControlUnavailable` instead of silently allowing; tests verify deny-on-unknown-role and authority-from-catalog behavior
 - [ ] **H1.3** Drift must be able to fail (G16)
-- [ ] **H1.4** Tenant isolation (G17) — **DECIDED 2026-09-11: DELETE (Decision B).**
+- [x] **H1.4** Tenant isolation (G17) — **DECIDED 2026-09-11: DELETE (Decision B).**
       `control_plane/tenancy.py` is 100% dead (zero refs, zero tests). Verified before
       deciding: (a) zero code references anywhere incl. tests/gates/exports;
       (b) `release/gate.py:146 _gate_data_isolation` → `release/harness.py:327
@@ -122,8 +122,30 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       `docs/HELIX_CODEX_EXECUTION_STATUS.md:23,55`,
       `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md:39,373,374,378`. Note in the
       `security/policy.py` docstring that driver-level enforcement is deliberately deferred.
+      **Completed 2026-09-11** — deleted `control_plane/tenancy.py`, corrected 4 docs,
+      added policy-seam note. Commit `cfbfa8d`.
 - [ ] **H1.5** Kill switch (G18)
-- [ ] **H1.6** Evidence + readiness enforcement (G19, G20)
+- [x] **H1.6** Evidence + readiness enforcement (G19, G20) — **Completed 2026-09-12.**
+      (a) `release/gate.py::_gate_audit_integrity` now routes through
+      `security_gate.check_audit_integrity` (was a duplicate harness probe that
+      bypassed it). It probes the real chain implementation, then — when
+      `HELIX_AUDIT_DB_PATH` is declared — verifies the shipped audit chain and
+      FAILS the gate when that chain is broken/missing (fail-closed, no silent
+      skip). Undeclared ⇒ probe-only + explanatory detail. Note: the local dev
+      `security/audit.db` (16,545 records, gitignored, never shipped) is
+      genuinely forked from a 2026-08-29 concurrent-append race predating the
+      chain-tip cache fix — it is NOT evidence of a regression; shipped chains
+      are verified via the declared path. (b) Registry-level readiness
+      contract: `tests/test_pack_readiness_contract.py` enumerates packs via
+      `pkgutil` over `capabilities/` (not a hardcoded list) and asserts every
+      registered pack declares `production_readiness` with an allowed value
+      (`NOT_ESTABLISHED`). Exporter verified read-only and unmodified:
+      `scripts/export_evidence_pack.py --help` exit 0; real-ledger export
+      `integrity.verified=true` (empty ledger trivially valid). Evidence packs
+      should be REGENERATED at release time (they embed timestamps/commits;
+      committing them freezes stale claims) — reproducibility tracked
+      separately with .gitignore unchanged. Gate run at HEAD:
+      `production_candidate` → all gates green, exit 0.
 
 #### H2 — P2: Make it operable (target: 1.5 weeks)
 

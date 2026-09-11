@@ -153,9 +153,22 @@ def _gate_data_isolation() -> tuple[bool, str]:
 
 
 def _gate_audit_integrity() -> tuple[bool, str]:
-    from release import harness as h
-    res = h._check("audit_integrity", h._check_audit_integrity)
-    return bool(res["ok"]), res["detail"]
+    probe = security_gate.check_audit_integrity()
+    if not probe["ok"]:
+        return False, probe["detail"]
+    declared = os.environ.get("HELIX_AUDIT_DB_PATH", "").strip()
+    if not declared:
+        return True, (
+            f"{probe['detail']}; runtime chain not declared "
+            "(set HELIX_AUDIT_DB_PATH=<path> to verify the shipped audit chain)"
+        )
+    db_path = pathlib.Path(declared)
+    if not db_path.exists():
+        return False, f"audit_integrity: declared audit db {declared!r} not found"
+    declared_result = security_gate.check_audit_integrity(audit_db=str(db_path))
+    if not declared_result["ok"]:
+        return False, declared_result["detail"]
+    return True, f"{probe['detail']}; declared chain verified ({declared})"
 
 
 def _gate_security_checks() -> tuple[bool, str]:

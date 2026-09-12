@@ -252,6 +252,44 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         allowed_data_classifications=_ALL_CLASSIFICATIONS,
         financial_approval_limit_usd=None,  # unlimited, human-escalated only
         kpis=("system_health", "operational_margin"),
+        owned_capabilities=(
+            "strategic_oversight",
+            "executive_coordination",
+            "cross_gm_escalation",
+            "resource_allocation",
+            "enterprise_summary",
+        ),
+        allowed_tools=(
+            "ollama",
+            "cognitive_log",
+            "orchestrator_routing",
+            "crm_engine_read",
+            "wfm_engine_read",
+            "cx_engine_read",
+        ),
+        allowed_peer_calls=(
+            "hr_personnel_gm",
+            "marketing_gm",
+            "sales_gm",
+            "compliance_quality_gm",
+            "ict_gm",
+            "fraud_gm",
+            "ld_gm",
+            "ops_gm",
+        ),
+        segregation_of_duties=(
+            (),  # must_review
+            (
+                "hr_personnel_gm",
+                "marketing_gm",
+                "sales_gm",
+                "compliance_quality_gm",
+                "ict_gm",
+                "fraud_gm",
+                "ld_gm",
+                "ops_gm",
+            ),  # can_review
+        ),
     ),
     "ops_gm": RoleSpec(
         role_id="ops_gm",
@@ -264,6 +302,27 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=500.00,
         kpis=("sla", "service_level", "occupancy", "adherence", "aht"),
+        owned_capabilities=(
+            "ops_execution",
+            "service_performance",
+            "wfm_forecast",
+            "rta_adherence",
+            "cx_monitoring",
+            "staffing_optimization",
+            "schedule_adherence",
+        ),
+        allowed_tools=("wfm_engine", "rta_engine", "cx_engine", "ollama", "cognitive_log"),
+        allowed_peer_calls=(
+            "hr_personnel_gm",
+            "ld_gm",
+            "sami",
+            "compliance_quality_gm",
+            "fraud_gm",
+        ),
+        segregation_of_duties=(
+            ("compliance_quality_gm",),  # must_review
+            (),  # can_review
+        ),
     ),
     "compliance_quality_gm": RoleSpec(
         role_id="compliance_quality_gm",
@@ -277,6 +336,45 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         financial_approval_limit_usd=0.00,
         kpis=("quality_score", "compliance_drift"),
         oversight_only=True,
+        owned_capabilities=(
+            "policy_enforcement",
+            "qa_sampling",
+            "risk_controls",
+            "evidence_pack",
+            "escalation_review",
+            "calibration",
+            "corrective_actions",
+        ),
+        allowed_tools=(
+            "policy_engine",
+            "audit_log",
+            "evidence_store",
+            "ollama",
+            "cognitive_log",
+            "all_engines_read",
+        ),
+        allowed_peer_calls=(
+            "ops_gm",
+            "hr_personnel_gm",
+            "sales_gm",
+            "fraud_gm",
+            "ld_gm",
+            "marketing_gm",
+            "ict_gm",
+            "sami",
+        ),
+        segregation_of_duties=(
+            (),  # must_review
+            (
+                "ops_gm",
+                "hr_personnel_gm",
+                "sales_gm",
+                "fraud_gm",
+                "marketing_gm",
+                "ld_gm",
+                "ict_gm",
+            ),  # can_review
+        ),
     ),
     "fraud_revenue_gm": RoleSpec(
         role_id="fraud_revenue_gm",
@@ -290,6 +388,26 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=0.00,
         kpis=("leakage", "anomaly_delta"),
+        owned_capabilities=(
+            "anomaly_detection",
+            "leakage_analysis",
+            "fraud_investigation",
+            "revenue_assurance",
+            "abuse_detection",
+        ),
+        allowed_tools=(
+            "crm_engine_read",
+            "b2b_engine_read",
+            "cx_engine_read",
+            "anomaly_engine",
+            "ollama",
+            "cognitive_log",
+        ),
+        allowed_peer_calls=("compliance_quality_gm", "sales_gm", "ops_gm", "sami"),
+        segregation_of_duties=(
+            ("compliance_quality_gm",),  # must_review
+            (),  # can_review
+        ),
     ),
     "hr_personnel_gm": RoleSpec(
         role_id="hr_personnel_gm",
@@ -302,6 +420,20 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=1_000.00,
         kpis=("turnover_rate", "time_to_hire"),
+        owned_capabilities=(
+            "talent_acquisition",
+            "hiring_pipeline",
+            "workforce_planning",
+            "attrition_analysis",
+            "retention_strategy",
+            "personnel_policy",
+        ),
+        allowed_tools=("personnel_engine", "wfm_engine_read", "ollama", "cognitive_log"),
+        allowed_peer_calls=("ops_gm", "ld_gm", "sami", "compliance_quality_gm"),
+        segregation_of_duties=(
+            ("compliance_quality_gm",),  # must_review
+            (),  # can_review
+        ),
     ),
     "ld_gm": RoleSpec(
         role_id="ld_gm",
@@ -314,6 +446,28 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=200.00,
         kpis=("competency_score", "time_to_competency"),
+        owned_capabilities=(
+            "competency_analysis",
+            "training_design",
+            "curriculum_development",
+            "assessment",
+            "certification",
+            "knowledge_transfer",
+        ),
+        allowed_tools=(
+            "wili_engine",
+            "personnel_engine_read",
+            "ollama",
+            "cognitive_log",
+            "education_service_read",
+            "studio_service_read",
+            "ldcc_service_read",
+        ),
+        allowed_peer_calls=("hr_personnel_gm", "ops_gm", "sami", "compliance_quality_gm"),
+        segregation_of_duties=(
+            ("compliance_quality_gm", "hr_personnel_gm"),  # must_review
+            (),  # can_review
+        ),
     ),
     "sales_gm": RoleSpec(
         role_id="sales_gm",
@@ -326,6 +480,22 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=2_500.00,
         kpis=("pipeline_value", "win_rate"),
+        owned_capabilities=(
+            "pipeline_management",
+            "deal_qualification",
+            "proposal_generation",
+            "revenue_execution",
+            "crm_operations",
+            "b2b_handoff",
+            "sales_pipeline",
+            "customer_support",
+        ),
+        allowed_tools=("crm_engine", "b2b_engine", "ollama", "cognitive_log"),
+        allowed_peer_calls=("marketing_gm", "ops_gm", "sami", "compliance_quality_gm", "fraud_gm"),
+        segregation_of_duties=(
+            ("compliance_quality_gm",),  # must_review
+            (),  # can_review
+        ),
     ),
     "marketing_gm": RoleSpec(
         role_id="marketing_gm",
@@ -338,6 +508,20 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=500.00,
         kpis=("cac", "lead_volume"),
+        owned_capabilities=(
+            "market_intelligence",
+            "campaign_management",
+            "positioning",
+            "demand_generation",
+            "content_review",
+            "attribution",
+        ),
+        allowed_tools=("crm_engine_read", "approved_content", "ollama", "cognitive_log"),
+        allowed_peer_calls=("sales_gm", "sami", "compliance_quality_gm"),
+        segregation_of_duties=(
+            ("compliance_quality_gm",),  # must_review
+            (),  # can_review
+        ),
     ),
     "ict_gm": RoleSpec(
         role_id="ict_gm",
@@ -350,6 +534,27 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         financial_approval_limit_usd=5_000.00,
         kpis=("engine_latency", "model_timeout"),
+        owned_capabilities=(
+            "platform_ops",
+            "integration_management",
+            "security",
+            "reliability",
+            "release_operations",
+            "incident_management",
+        ),
+        allowed_tools=(
+            "platform_runtime",
+            "integration_hub",
+            "deployment_pipeline",
+            "observability",
+            "ollama",
+            "cognitive_log",
+        ),
+        allowed_peer_calls=("compliance_quality_gm", "sami", "ops_gm"),
+        segregation_of_duties=(
+            ("compliance_quality_gm",),  # must_review
+            (),  # can_review
+        ),
     ),
 }
 
@@ -442,9 +647,32 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
     Report divergence between this runtime catalog and organization/role-catalog.yaml.
 
     The YAML remains the source of truth for capabilities, tools, peer calls and
-    segregation-of-duties. This function exists so financial-limit drift between the
-    two is visible in CI instead of being discovered during an audit.
+    segregation-of-duties. This function compares all five fields (capabilities,
+    tools, peer calls, segregation-of-duties, and the financial approval limit) so
+    drift between the two is visible in CI instead of being discovered during an
+    audit.
     """
+    # The runtime catalog renamed fraud_revenue_gm after the YAML was authored; the
+    # alias is documented in organization/gm_activation.py. Resolve it here so the
+    # role's structural fields are compared against the correct YAML entry.
+    yaml_role_aliases = {"fraud_revenue_gm": "fraud_gm"}
+
+    def _field(y: Dict[str, Any], r: Any, key: str, normalize: bool = False) -> None:
+        y_val = y.get(key)
+        r_val = r
+        if normalize:
+            y_val = tuple(y_val or ())
+        if y_val != r_val:
+            drift.append(
+                {
+                    "role_id": role_id,
+                    "field": key,
+                    "runtime": list(r_val) if isinstance(r_val, tuple) else r_val,
+                    "yaml": list(y_val) if isinstance(y_val, tuple) else y_val,
+                    "detail": f"{key} differs between runtime catalog and role-catalog.yaml",
+                }
+            )
+
     drift: List[Dict[str, Any]] = []
     try:
         from organization.role_catalog import load_role_catalog
@@ -463,7 +691,7 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
 
     yaml_roles = yaml_catalog.get("roles_by_id", {})
     for role_id, spec in ORGANIZATION_CATALOG.items():
-        y = yaml_roles.get(role_id)
+        y = yaml_roles.get(role_id) or yaml_roles.get(yaml_role_aliases.get(role_id, ""))
         if y is None:
             drift.append(
                 {
@@ -475,6 +703,25 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
                 }
             )
             continue
+        y_sod = y.get("segregation_of_duties") or {}
+        _field(y, spec.owned_capabilities, "owned_capabilities", normalize=True)
+        _field(y, spec.allowed_tools, "allowed_tools", normalize=True)
+        _field(y, spec.allowed_peer_calls, "allowed_peer_calls", normalize=True)
+        r_sod = spec.segregation_of_duties or ((), ())
+        y_sod_val = (
+            tuple(y_sod.get("must_be_reviewed_by") or ()),
+            tuple(y_sod.get("can_review") or ()),
+        )
+        if y_sod_val != r_sod:
+            drift.append(
+                {
+                    "role_id": role_id,
+                    "field": "segregation_of_duties",
+                    "runtime": [list(r_sod[0]), list(r_sod[1])],
+                    "yaml": [list(y_sod_val[0]), list(y_sod_val[1])],
+                    "detail": "segregation_of_duties differs between runtime catalog and role-catalog.yaml",
+                }
+            )
         y_limit = (y.get("approval_limits") or {}).get("max_financial_amount")
         r_limit = spec.financial_approval_limit_usd
         if y_limit != r_limit:

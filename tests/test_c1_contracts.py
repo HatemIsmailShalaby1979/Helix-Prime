@@ -1141,6 +1141,32 @@ def test_catalog_drift_detector_reports_without_raising():
         assert {"role_id", "field", "runtime", "yaml", "detail"} <= set(entry)
 
 
+def test_catalog_drift_detector_can_fail_on_structural_divergence():
+    """A structural-field divergence must be detected, proving the check can fail."""
+    from dataclasses import replace
+
+    import control_plane.governance as governance_module
+
+    divergent = governance_module.ORGANIZATION_CATALOG.copy()
+    probe_role = "ops_gm"
+    probe_spec = governance_module.get_role(probe_role)
+    divergent[probe_role] = replace(
+        probe_spec,
+        owned_capabilities=("drift_probe_capability",) + probe_spec.owned_capabilities,
+    )
+    original = governance_module.ORGANIZATION_CATALOG
+    try:
+        governance_module.ORGANIZATION_CATALOG = governance_module._OrganizationCatalog(divergent)
+        drift = detect_catalog_drift()
+        matching = [
+            e for e in drift if e["role_id"] == probe_role and e["field"] == "owned_capabilities"
+        ]
+        assert matching, f"structural divergence not reported: {drift}"
+        assert "drift_probe_capability" in matching[0]["runtime"]
+    finally:
+        governance_module.ORGANIZATION_CATALOG = original
+
+
 # ── contract layer validation ─────────────────────────────────────────────
 
 

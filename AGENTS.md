@@ -1,8 +1,10 @@
-# AGENTS.md — Sports-Academy Capability Pack Build Ledger
+# AGENTS.md — Helix Codex OS Build Ledger
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
-> Read this file top-to-bottom before doing anything. Then work ONLY on the next
-> incomplete step. Update this file immediately after completing each step.
+> **ACTIVE WORK: §1 — Production Hardening Task (H0–H3).** The sports-academy pack
+> (S0–S7) is COMPLETE — §2–§5 are completed history / reference material. Do not
+> restart them. Read this file top-to-bottom, then work ONLY on the next incomplete
+> step in §1. Update this file immediately after completing each step.
 
 ---
 
@@ -49,39 +51,7 @@
 
 ---
 
-## 1. Status snapshot (update after every step)
-
-| Field | Value |
-|---|---|
-| Current step | **H3.3 + H3.4 COMPLETE (G36–G38, G40, G41) — H1.3 (drift AST) is the only remaining open item** |
-| Baseline test count | 527 (pre-pack; 2 Windows teardown failures fixed in `fe25653`) |
-| Last full-suite result | **620 passed, 0 failed** (2026-09-12, re-verified after H3.3/H3.4) |
-| Last commit | `271870a` docs: rename overview.md to scoach summary (G41) |
-| Pack complete? | **YES — sports-academy pack v1.0.0 COMPLETE** |
-| Blockers | none |
-
-### Definition of done — verified
-
-- [x] Attendance adapter with RTA engine reuse (check-in/check-out → adherence)
-- [x] Coach KPIs defined (4) + academy KPIs (5), YAML-declared, drift-tested
-- [x] Athlete profiles (CRM) + CX-scored churn flags for seeded risk athletes
-- [x] Owner dashboard — 5 numbers, one screen (cockpit "Sports Academy" page)
-- [x] Facility conflict detection + manual fee records (no instruments)
-- [x] Runtime: approval queue behind SOD, read-only phase, evidence pack,
-      hash-chained memory, all simulated_realistic
-- [x] Full suite 571/571 ≥ baseline 527; ruff clean on all pack paths
-
-### Environment facts (discovered in S0 — do not re-discover)
-
-- **Working venv:** `.venv-py312\Scripts\python.exe` (3.12.10 + pytest + ruff 0.1.15 + pandas/numpy). `.venv312` has NO pytest. `.venv-win` is 3.10 — do not use.
-- **Ruff config:** `pyproject.toml [tool.ruff]` line-length=100, **select = E4/E7/E9/F/I/B/S** (widened in G28, commit `4ad6bdb`). The whole repo is ruff-clean and `ruff format --check` is clean — CI runs both. Deliberate legacy debt (S110 best-effort wrappers, legacy S113/S310, path-bootstrap E402, test-idiomatic rules) is documented in `[tool.ruff.lint.per-file-ignores]`; the rules stay ON for all new code. **Rule for new code: `ruff check` on your changed paths must be 0 and format-clean.**
-- **Windows gotcha:** any test opening SQLite inside `tempfile.TemporaryDirectory()` MUST close stores/connections before the `with` block exits, or teardown fails with WinError 32 after passing assertions. If a Store leaks in a *pack test*, use `tests/support/sqlite_harness.py::sqlite_store` fixture or close explicitly.
-- **The restaurant pack itself** imports `SourceRef` from `connectors.contracts` — new pack does the same.
-- Full-suite runtime ≈ 20 min on this machine. Run targeted modules during steps; full suite only at S7.
-
----
-
-## 1. Production Hardening Task (H0–H3) ← NEW
+## 1. Production Hardening Task (H0–H3) ← ACTIVE
 
 **Recorded:** 2026-09-11 · **Based on:** `docs/audits/2026-09-10_full_audit_production_plan.md`
 
@@ -399,9 +369,17 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       **Link crawler: 0 broken relative links across all tracked .md. Full suite 620
       passed/0 failed. Git status clean of stray binaries.** ruff N/A (docs-only).
 
+### 1.3 Environment facts (do not re-discover)
+
+- **Working venv:** `.venv-py312\Scripts\python.exe` (3.12.10 + pytest + ruff 0.1.15 + pandas/numpy). `.venv312` has NO pytest. `.venv-win` is 3.10 — do not use.
+- **Ruff config:** `pyproject.toml [tool.ruff]` line-length=100, **select = E4/E7/E9/F/I/B/S** (widened in G28, commit `4ad6bdb`). The whole repo is ruff-clean and `ruff format --check` is clean — CI runs both. Deliberate legacy debt (S110 best-effort wrappers, legacy S113/S310, path-bootstrap E402, test-idiomatic rules) is documented in `[tool.ruff.lint.per-file-ignores]`; the rules stay ON for all new code. **Rule for new code: `ruff check` on your changed paths must be 0 and format-clean.**
+- **Windows gotcha:** any test opening SQLite inside `tempfile.TemporaryDirectory()` MUST close stores/connections before the `with` block exits, or teardown fails with WinError 32 after passing assertions. If a Store leaks in a *pack test*, use `tests/support/sqlite_harness.py::sqlite_store` fixture or close explicitly.
+- **The restaurant pack itself** imports `SourceRef` from `connectors.contracts` — new pack does the same.
+- Full-suite runtime ≈ 20 min on this machine. Run targeted modules during steps; full suite only at gate time (H-steps) or S7.
+
 ---
 
-## 2. Build plan (source of truth for steps S0–S7)
+## 2. Build plan (source of truth for steps S0–S7) — COMPLETE, historical record
 
 Final layout:
 
@@ -454,7 +432,7 @@ athlete profiles → owner dashboard → facility → payments → runtime/docs.
 
 ---
 
-## 3. Step ledger (append entries; never delete history)
+## 3. Step ledger — sports-academy pack (S0–S7) — COMPLETE, historical record
 
 ### S0 — Preflight (status: COMPLETE)
 Tasks:

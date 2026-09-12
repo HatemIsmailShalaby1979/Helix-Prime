@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H1.5 complete; next: H2.3 (deployable artifact) — H1.3 (drift AST) still open** |
+| Current step | **H2.3 complete; next: H2.4 (CI quality) — H1.3 (drift AST) still open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
 | Last full-suite result | **620 passed, 0 failed** (2026-09-12, H1.5 full-suite verification run; baseline 571 + 12 kill-switch tests + 37 prior-session tests in tree) |
-| Last commit | H1.5: feat(gov): add fail-closed kill switch honoured before committal actions |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅ |
+| Last commit | H2.3: chore(pkg): declare console scripts, align sdist/wheel includes |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅ |
 
 ### 1.2 Step ledger
 
@@ -225,7 +225,28 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       order: all three queries now use `rowid`. Suite-affecting residue in
       security/audit.py (unused-import removal from a prior session) rides in
       this commit.
-- [ ] **H2.3** One deployable artifact (G23, G24, G25)
+- [x] **H2.3** One deployable artifact (G23, G24, G25) — **Completed 2026-09-12.**
+      `pyproject.toml [project.scripts]`: **`helix-api` is the ONE canonical
+      entry point** — the governed FastAPI spine (`server/cli.py`, uvicorn on
+      the `server.app:create_app` factory, host/port from `HELIX_*` with
+      loopback defaults). `helix-cockpit` (`cockpit/cli.py`) launches the
+      Streamlit dashboard, explicitly secondary. sdist `include` now mirrors
+      the wheel package list exactly (added `cockpit`, `customer_success`,
+      `integrations`, `pilot`, `security`, `server` — the sdist previously
+      could not rebuild the wheel). README declares the canonical artifact and
+      labels `launch.py`/`launch.bat`, `desktop.py`, and the compose profile
+      secondary/legacy (nothing deleted). **Wheel CWD-quirks fixed en route**
+      (required for `helix-api` to boot from the installed wheel in any
+      directory): `server/app.py` static mount was `StaticFiles(directory=
+      "server/static")` (CWD-relative) → now package-relative; `organization/
+      role_catalog.py::load_role_catalog` fell back to a CWD-relative
+      `"organization/role-catalog.yaml"` that broke from any other working
+      directory → now resolves against the package dir when the relative path
+      is absent. VERIFIED: `python -m build` produces sdist+wheel; wheel
+      installed into a fresh temp venv; `helix-api` serves `/healthz` 200 and
+      `helix-cockpit` serves `/ _stcore/health` 200 in an arbitrary CWD;
+      sdist↔wheel delta = zero missing packages. Targeted re-runs of the
+      role-catalog/contracts/server suites: 144 passed.
 - [ ] **H2.4** CI quality (G27, G28)
 - [ ] **H2.5** Data-retention policy (G26)
 

@@ -87,13 +87,20 @@ def _validate_iso_timestamp(value: Any, field_path: str) -> str:
     return s
 
 
-def load_role_catalog(path: str | pathlib.Path = "organization/role-catalog.yaml") -> Dict[str, Any]:
+_CATALOG_PATH = pathlib.Path(__file__).resolve().parent / "role-catalog.yaml"
+
+
+def load_role_catalog(path: str | pathlib.Path = _CATALOG_PATH) -> Dict[str, Any]:
     """
     Load and validate the canonical role catalog.
     Returns dict with keys: schema_version, kpi_vocabulary, roles (by id), roles_list
     Raises ValueError with clear message on failure.
     """
     p = pathlib.Path(path)
+    if not p.is_absolute():
+        resolved = _CATALOG_PATH.parent / p.name
+        if resolved.exists():
+            p = resolved
     if not p.exists():
         raise ValueError(f"role catalog not found at {p} (expected organization/role-catalog.yaml)")
 

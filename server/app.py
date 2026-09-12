@@ -21,6 +21,7 @@ import logging
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncIterator
 
 from fastapi import Depends, FastAPI, Request, status
@@ -167,5 +168,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(docs_router, dependencies=[Depends(current_identity)])
     app.include_router(metrics_router, dependencies=[Depends(current_identity)])
 
-    app.mount("/static", StaticFiles(directory="server/static"), name="static")
+    static_dir = Path(__file__).resolve().parent / "static"
+    app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
     return app

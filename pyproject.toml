@@ -67,6 +67,14 @@ web = [
 [project.urls]
 Homepage = "https://github.com/HatemIsmailShalaby1979/Helix-Prime"
 
+# Canonical entry points (S-1/G23/G24). `helix-api` is the ONE deployable
+# artifact: the governed FastAPI service spine. `helix-cockpit` is the
+# Streamlit dashboard — a read-only secondary surface, kept for parity with
+# launch.py. desktop.py and the compose cockpit remain undocumented legacy.
+[project.scripts]
+helix-api = "server.cli:main"
+helix-cockpit = "cockpit.cli:main"
+
 # ---------------------------------------------------------------------------
 # Build — explicit package list, NOT auto-discovery.
 # Auto-discovery would swallow demo/, release/, scripts/ and tests/ into the wheel.
@@ -97,25 +105,33 @@ packages = [
 ]
 
 [tool.hatch.build.targets.sdist]
+# Must mirror the wheel package list exactly (G25): a package listed in the
+# wheel but absent here makes the sdist unbuildable into that wheel.
 include = [
     "/alembic.ini",
     "/app",
     "/capabilities",
     "/cloud",
+    "/cockpit",
     "/connectors",
     "/contracts",
     "/control_plane",
+    "/customer_success",
     "/docs",
     "/engines",
     "/infra",
+    "/integrations",
     "/memory",
-    "/migrations",
     "/metacognition",
+    "/migrations",
     "/observability",
     "/orchestration",
     "/organization",
+    "/pilot",
     "/requirements.txt",
     "/requirements-dev.txt",
+    "/security",
+    "/server",
 ]
 
 # ---------------------------------------------------------------------------

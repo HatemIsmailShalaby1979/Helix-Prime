@@ -49,15 +49,51 @@ The current demo uses synthetic and consented-historical data only. This is not 
 
 ## Run it
 
-### Windows
+### Canonical: the API spine (`helix-api`)
+
+The **one** deployable artifact is the governed FastAPI service spine. It is
+where identity, RBAC, approvals, kill switch, metrics and the audit chain are
+enforced — everything the platform claims to be happens behind this surface.
+It runs with bare `uvicorn` semantics and no UI dependency:
+
+```bash
+pip install 'helix-codex-os[web]'        # or `pip install -r requirements.txt`
+helix-api                                # binds 127.0.0.1:8000 by default
+```
+
+Settings come from `HELIX_*` environment variables (see `server/config.py`);
+`HELIX_HOST=127.0.0.1` / `HELIX_PORT=8000` are the defaults, and the API
+refuses to boot in `HELIX_PROFILE=production` without the external gate
+inputs. `helix-api` is the same entry point the Docker profile runs.
+
+### Secondary: the cockpit dashboard (`helix-cockpit`)
+
+The Streamlit dashboard is a **read-only, secondary diagnostic surface**, not
+the deployable artifact. It is equivalent to `python launch.py`:
+
+```bash
+helix-cockpit                            # binds 127.0.0.1:8501
+```
+
+### Legacy / do not build on these
+
+- `python launch.py` / `launch.bat` — the Streamlit launcher; superseded by
+  `helix-cockpit`.
+- `python desktop.py` — pywebview desktop shell; the packaged wheel does not
+  ship a desktop UI and no console script exposes it.
+- `infra/docker/docker-compose.yml` — containerized profile running the same
+  `helix-api` plus the cockpit and an Ollama sidecar; it is a deployment
+  profile, not a separate application surface.
+
+### Windows (source checkout)
 
 1. Install Python 3.12+ from [python.org](https://www.python.org/downloads/windows/).
 2. Download the source ZIP and extract it.
 3. Open Command Prompt in the extracted folder.
 4. Run `setup.bat`.
-5. Run `launch.bat`.
+5. Run `helix-api` (or `python -m server.cli`).
 
-### Linux
+### Linux (source checkout)
 
 ```bash
 sudo apt-get update
@@ -65,7 +101,7 @@ sudo apt-get install -y python3 python3-venv
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
-python launch.py
+helix-api   # or: python -m server.cli
 ```
 
 Ollama is optional. Without it, the system runs in deterministic offline mode and reports the limitation clearly.

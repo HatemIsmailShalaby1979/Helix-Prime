@@ -20,7 +20,7 @@ If you discover a security vulnerability in our code, please report it responsib
 
 ### Contact Information
 
-Report security issues by opening a private advisory on the GitHub repository: `github.com/HatemShelby/Helix-Prime`. There is no security@helixprime.io mailbox — that address and the phone/postal details in earlier drafts were fabricated and are void.
+Report security issues by opening a private advisory on the GitHub repository: `github.com/HatemIsmailShalaby1979/Helix-Prime`. If private advisory reporting is unavailable, email the repository maintainer (contact details on the GitHub profile under the same URL).
 
 Please include "SECURITY VULNERABILITY" in the subject line.
 
@@ -37,8 +37,8 @@ Please include "SECURITY VULNERABILITY" in the subject line.
 ### Dependencies
 
 - **Regular updates**: Keep dependencies updated to the latest security patches
-- **Vulnerability scanning**: Run regular security scans (bandit, safety)
-- **Dependency tracking**: Use Dependabot for automated dependency updates
+- **Vulnerability scanning**: CI runs bandit (static analysis) and pip-audit (dependency audit) on every push
+- **Dependency tracking**: Dependabot is configured to open automated dependency-update PRs
 - **License compliance**: Ensure all dependencies comply with project licenses
 
 ### Configuration Management
@@ -69,9 +69,9 @@ Please include "SECURITY VULNERABILITY" in the subject line.
 
 ### Automated Testing
 
-- **Static analysis**: Run bandit, safety, and other static analysis tools
+- **Static analysis**: CI runs bandit (SAST) and pip-audit (dependency CVE audit)
 - **Code scanning**: Use GitHub's built-in code scanning features
-- **Dependency scanning**: Monitor for known vulnerabilities
+- **Dependency scanning**: Dependabot PRs receive CI checks including bandit and pip-audit
 - **Container scanning**: Scan Docker images for vulnerabilities
 
 ### Manual Testing
@@ -154,4 +154,4 @@ Generate and submit compliance reports as required by:
 
 Security is everyone's responsibility in the Helix Prime project. By following these guidelines, we can ensure that our systems and applications are secure, compliant, and ready to protect our users' data and privacy.
 
-To learn more about our security practices, contact the maintainer via the GitHub profile: `github.com/HatemShelby/HatemShelby`. The heliport emails listed in earlier drafts (security@, it@, ceo@helixprime.io) were fabricated and are void.
+To learn more about our security practices, contact the maintainer via the GitHub profile: `github.com/HatemIsmailShalaby1979`.

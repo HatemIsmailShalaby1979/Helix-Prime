@@ -14,11 +14,24 @@ import json
 import pathlib
 import subprocess
 import sys
+import tomllib
 from typing import Any, Dict, List, Optional
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 MANIFEST_SCHEMA_VERSION = "1.0"
+CEREMONY_SUFFIX = "-c8"
+
+
+def _read_project_version() -> str:
+    """Read the canonical version from [project].version in pyproject.toml."""
+    pyproject = ROOT / "pyproject.toml"
+    if not pyproject.exists():
+        return "unknown"
+    with pyproject.open("rb") as f:
+        data = tomllib.load(f)
+    return str(data.get("project", {}).get("version", "unknown"))
+
 
 # Capabilities that are intentionally NOT enabled in C8 (non-goals).
 DISABLED_CAPABILITIES = [
@@ -112,7 +125,7 @@ def build_manifest(
         "release_profile": profile,
         "classification": classification,
         "release_approved": bool(release_approved),
-        "version": "0.9.0-c8",
+        "version": f"{_read_project_version()}{CEREMONY_SUFFIX}",
         "git_commit": _git_head() or "unknown",
         "git_branch": _git_branch() or "unknown",
         "build_timestamp": datetime.datetime.now(datetime.timezone.utc)

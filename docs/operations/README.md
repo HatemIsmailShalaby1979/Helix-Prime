@@ -12,6 +12,7 @@ This directory contains operational runbooks and deployment guides for Helix Pri
 | Document | Path | Purpose |
 |----------|------|---------|
 | Agent runbook | `app/command_center/` | Local operations for core agent system (SAMI/WILI/PHILI/SUBY) |
+| Data retention | `docs/operations/data-retention.md` | Governed-memory expiry policy (flag-based, never deletes) |
 | Deployment scaffolding | `marketing/` | Marketing site deployment (Render, Azure, Docker) |
 
 ## Deployment Configs

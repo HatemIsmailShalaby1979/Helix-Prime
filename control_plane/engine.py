@@ -9,6 +9,7 @@ import datetime
 from typing import Any, Callable, Dict, Optional
 
 from contracts.task import TaskRequest, TaskResult, AgentError, Approval
+from control_plane.kill_switch import KillSwitch, KillSwitchEngaged
 from control_plane.workflow import Workflow, WorkflowState
 from control_plane.events import Event
 from control_plane.store import Store
@@ -103,6 +104,7 @@ class Engine:
         self.catalog = load_role_catalog("organization/role-catalog.yaml")
         self.audit_db_path = audit_db_path or "security/audit.db"
         self.log_path = log_path or "observability/logs.jsonl"
+        self.kill_switch = KillSwitch(store=self.store, audit_db_path=self.audit_db_path)
         # W3: the audit chain tip is cached instead of re-read on every append.
         # The previous implementation loaded up to 10,000 records per call just
         # to find the last hash, which turned audit cost into O(chain length).
@@ -236,6 +238,82 @@ class Engine:
         except Exception:
             pass
 
+    def _enforce_not_halted(
+        self,
+        *,
+        action: str,
+        actor: str,
+        tenant_id: Optional[str],
+        correlation_id: Optional[str],
+    ) -> None:
+        try:
+            halt = self.kill_switch.active_halt(tenant_id=tenant_id)
+        except Exception as exc:
+            halt = {
+                "scope": "unreadable",
+                "reason": f"halt state unreadable, failing closed: {exc}",
+            }
+        if halt is None:
+            return
+        _metrics_registry.record_governance_decision("denied")
+        self._audit_halt(
+            action=action,
+            actor=actor,
+            tenant_id=tenant_id,
+            correlation_id=correlation_id,
+            reason=str(halt.get("reason") or "kill switch engaged"),
+        )
+        raise KillSwitchEngaged(
+            f"kill switch engaged (scope {halt.get('scope')!r}): {halt.get('reason')}"
+        )
+
+    def _audit_halt(
+        self,
+        *,
+        action: str,
+        actor: str,
+        tenant_id: Optional[str],
+        correlation_id: Optional[str],
+        reason: str,
+    ) -> None:
+        if "agent" in actor.lower() or actor in ("sami", "suby", "phili", "wili", "system"):
+            actor_type = "agent"
+        else:
+            actor_type = "human"
+        trail = AuditTrail(db_path=self.audit_db_path)
+        try:
+            prev_hash = self._chain_tip(trail)
+            record = AuditRecord.new(
+                event_type="kill_switch_denied",
+                actor=actor,
+                actor_type=actor_type,
+                decision="denied",
+                correlation_id=correlation_id,
+                tenant_id=tenant_id,
+                input_ref=f"committal:{action}",
+                output_ref=reason,
+                previous_hash=prev_hash,
+            )
+            try:
+                trail.append(record)
+            except ValueError:
+                prev_hash = trail.last_hash()
+                record = AuditRecord.new(
+                    event_type="kill_switch_denied",
+                    actor=actor,
+                    actor_type=actor_type,
+                    decision="denied",
+                    correlation_id=correlation_id,
+                    tenant_id=tenant_id,
+                    input_ref=f"committal:{action}",
+                    output_ref=reason,
+                    previous_hash=prev_hash,
+                )
+                trail.append(record)
+            self._audit_prev_hash = record.current_hash
+        finally:
+            trail.close()
+
     def submit(self, request: TaskRequest) -> Workflow:
         """
         Submit a TaskRequest as a new workflow. Idempotent by idempotency_key.
@@ -244,6 +322,12 @@ class Engine:
         Fail-closed for unknown capability, unauthorized tool, tenant isolation, secrets, classification, etc. (goes to dead_letter).
         Also emits audit and structured logs with workflow/task/correlation identifiers.
         """
+        self._enforce_not_halted(
+            action="submit",
+            actor=request.requesting_actor,
+            tenant_id=request.correlation.tenant_id or request.tenant_id,
+            correlation_id=request.correlation.correlation_id,
+        )
         # Idempotency: if workflow with same idempotency_key exists, return it (no duplicate execution)
         existing = self.store.get_workflow_by_idempotency(request.idempotency_key or request.correlation.idempotency_key)
         if existing is not None:
@@ -665,6 +749,12 @@ class Engine:
         workflow = self.store.get_workflow(workflow_id)
         if workflow is None:
             raise ValueError(f"approve: workflow {workflow_id!r} not found")
+        self._enforce_not_halted(
+            action="approve",
+            actor=approval.approver_actor,
+            tenant_id=workflow.tenant_id,
+            correlation_id=workflow.correlation.correlation_id,
+        )
         if workflow.state != WorkflowState.AWAITING_APPROVAL:
             raise ValueError(f"approve: workflow {workflow_id!r} not in awaiting_approval (current {workflow.state!r})")
 
@@ -743,6 +833,12 @@ class Engine:
         workflow = self.store.get_workflow(workflow_id)
         if workflow is None:
             raise ValueError(f"execute: workflow {workflow_id!r} not found")
+        self._enforce_not_halted(
+            action="execute",
+            actor=workflow.requesting_actor,
+            tenant_id=workflow.tenant_id,
+            correlation_id=workflow.correlation.correlation_id,
+        )
         if workflow.state != WorkflowState.EXECUTING:
             raise ValueError(f"execute: workflow {workflow_id!r} not in executing (current {workflow.state!r})")
 

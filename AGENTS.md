@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H2.2 complete; next: H2.3 (deployable artifact) — H1.3 (drift AST) and H1.5 (kill switch) still open** |
+| Current step | **H1.5 complete; next: H2.3 (deployable artifact) — H1.3 (drift AST) still open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **608 passed, 0 failed** (2026-09-12, H2.2 full-suite verification run; baseline 571 + 13 metrics tests + 24 prior-session tests in tree) |
-| Last commit | H2.2: feat(obs): add /metrics, correlation-id logging, and alert rules |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅ |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12, H1.5 full-suite verification run; baseline 571 + 12 kill-switch tests + 37 prior-session tests in tree) |
+| Last commit | H1.5: feat(gov): add fail-closed kill switch honoured before committal actions |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅ |
 
 ### 1.2 Step ledger
 
@@ -124,7 +124,24 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       `security/policy.py` docstring that driver-level enforcement is deliberately deferred.
       **Completed 2026-09-11** — deleted `control_plane/tenancy.py`, corrected 4 docs,
       added policy-seam note. Commit `cfbfa8d`.
-- [ ] **H1.5** Kill switch (G18)
+- [x] **H1.5** Kill switch (G18) — **Completed 2026-09-12.**
+      `control_plane/kill_switch.py`: persisted `halt_state` table in the
+      workflow store (same file, no new dependency) — global (`*`) + optional
+      tenant scopes; `engage(reason, actor)` / `release(actor)` /
+      `is_engaged()`; engagement/release write `kill_switch_engaged`/
+      `kill_switch_released` audit records; unreadable flag ⇒ engaged
+      (fail-closed). `Engine` checks the flag at the top of `submit`/`approve`/
+      `execute` (the approval/committal seam): while engaged, the action is
+      denied with a `kill_switch_denied` audit record and `KillSwitchEngaged`
+      is raised; the audit write is never gated by the halt, and a metrics
+      `denied` decision is recorded alongside. `cancel` stays ungated (safe
+      direction). HTTP: `POST /api/halt/engage`, `/release` (universal
+      approvers only, catalog-driven, fail-closed 403/503), `GET
+      /api/halt/status` (any authenticated identity); `KillSwitchEngaged`
+      maps to a typed 503 `halt_engaged` at the app boundary. CLI:
+      `scripts/kill_switch.py` (engage/release/status, tmp-path flags).
+      Tests: `tests/test_kill_switch.py` (12) covering all five required
+      cases plus unreadable-flag fail-closed and the full HTTP surface.
 - [x] **H1.6** Evidence + readiness enforcement (G19, G20) — **Completed 2026-09-12.**
       (a) `release/gate.py::_gate_audit_integrity` now routes through
       `security_gate.check_audit_integrity` (was a duplicate harness probe that

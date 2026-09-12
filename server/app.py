@@ -30,6 +30,7 @@ from fastapi.staticfiles import StaticFiles
 from observability.logging import log_structured
 from observability.metrics import REGISTRY as metrics_registry
 from security.secrets import redact_dict
+from control_plane.kill_switch import KillSwitchEngaged
 from server.auth import current_identity
 from server import deps
 from server.config import Settings, get_settings
@@ -38,6 +39,7 @@ from server.features.approvals.router import router as approvals_router
 from server.features.chat.router import router as chat_router
 from server.features.console.router import router as console_router
 from server.features.docs.router import router as docs_router
+from server.features.halt.router import router as halt_router
 from server.features.health.router import router as health_router
 from server.features.metrics.router import router as metrics_router
 from server.features.stream.router import router as stream_router
@@ -123,9 +125,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             headers={CORRELATION_HEADER: getattr(request.state, "correlation_id", "")},
         )
 
+    @app.exception_handler(KillSwitchEngaged)
+    async def halt_engaged_handler(request: Request, exc: KillSwitchEngaged) -> JSONResponse:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "error": {
+                    "code": "halt_engaged",
+                    "message": str(exc),
+                    "retryable": True,
+                    "payload": {},
+                }
+            },
+            headers={CORRELATION_HEADER: getattr(request.state, "correlation_id", "")},
+        )
+
     @app.exception_handler(Exception)
-    async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
-        # Never leak internals; always leave a handle for the operator.
+    async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:        # Never leak internals; always leave a handle for the operator.
         logger.exception("unhandled error", exc_info=exc)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -141,6 +157,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     app.include_router(health_router)
+    app.include_router(halt_router, dependencies=[Depends(current_identity)])
     app.include_router(workflows_router, dependencies=[Depends(current_identity)])
     app.include_router(approvals_router, dependencies=[Depends(current_identity)])
     app.include_router(stream_router, dependencies=[Depends(current_identity)])

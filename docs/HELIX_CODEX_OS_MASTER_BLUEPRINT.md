@@ -1,7 +1,7 @@
 # Helix Codex OS — Master Execution & Commercial Blueprint
 
 **Subject:** Refactor + commercialize **Helix Prime** into **Helix Codex OS**
-**Baseline audited:** 2026-09-07 · 174 `.py` files · 47,244 LOC · 26 test modules · ~445 tests
+**Baseline audited:** 2026-09-07 · 174 `.py` files · 47,244 LOC · 26 test modules · ~620 tests
 **Status of baseline:** `CONTROLLED_PILOT_READY` (production profile fails closed on 9 external gates — by design)
 **Authority:** Sections 1–6 are the architectural + commercial record. Section 7 is the executable Phase 1 plan.
 
@@ -654,7 +654,7 @@ server/templates/  server/static/
 - **Config:** reuse env names the Dockerfile already sets (`HELIX_ENV`, `HELIX_DB_PATH`, `HELIX_AUDIT_DB_PATH`, `HELIX_SAMPLE_DATA_MODE`, `OLLAMA_HOST`). `profile ∈ {local,pilot,production}`; **`production` refuses to start** unless external gates are satisfiable. No default for any secret.
 - **Errors:** `AppError(code, http_status, retryable)` → `ValidationAppError(422)`, `NotFound(404)`, `AuthorizationRefused(403)`, `GateAwaitingApproval(409, payload=decision.to_dict())`, `UpstreamUnavailable(503)`. Substring matching banned at this boundary.
 - **Request-ID middleware:** read/generate `X-Request-ID` → bind to `CorrelationContext.correlation_id` → emit in every log line and response header. Enforces "context survives every boundary" in one place.
-- **SSE:** `asyncio.Queue` per `correlation_id`, fed by sync workers via `anyio.to_thread.run_sync(engine.submit, ...)`. **Do not async-ify `Engine`** (445 sync tests).
+- **SSE:** `asyncio.Queue` per `correlation_id`, fed by sync workers via `anyio.to_thread.run_sync(engine.submit, ...)`. **Do not async-ify `Engine`** (620 sync tests).
 - **Endpoints:** `GET /healthz`, `GET /readyz`, `POST /api/workflows`, `GET /api/workflows/{id}`, `POST /api/workflows/{id}/approve`, `GET /api/stream/{id}`, `GET /`.
 - **Compose:** `EXPOSE 8000`; `CMD uvicorn server.app:create_app --factory`. Keep the Streamlit cockpit as a second service for one release.
 
@@ -700,7 +700,7 @@ Today `request_write` returns a constant `executed=False` ("read_only_first_vers
 ### W7 — Testing & CI baseline (the Phase 2 gate)
 
 - **One** `.github/workflows/ci.yml`, Python **3.12 only**: ruff (real exit code) → `mypy server connectors control_plane` → `pytest -m "not smoke" --cov=server --cov=connectors --cov-fail-under=80` → `check_dependencies.py` → `python -m build`
-- **No repo-wide coverage target** — 47 K LOC against 445 tests makes a global percentage a gaming target. Gate **new** code (`server/`, `connectors/`) at 80%; `control_plane/` advisory.
+- **No repo-wide coverage target** — 47 K LOC against 620 tests makes a global percentage a gaming target. Gate **new** code (`server/`, `connectors/`) at 80%; `control_plane/` advisory.
 - `pytest.ini` → `[tool.pytest.ini_options]`: add `timeout = 120`, `--durations=20`; CI runs `-m "not smoke"`, a nightly job runs smoke against Compose + Ollama.
 
 **Phase 2 gate:** 0 failures on the full non-smoke suite (count ≥ W0 baseline) · ruff clean · mypy clean on `server/`+`connectors/` · `python -m build` green · `docker compose up` → `/readyz` 200.
@@ -712,7 +712,7 @@ Today `request_write` returns a constant `executed=False` ("read_only_first_vers
 | Deferred | Why |
 | --- | --- |
 | `src/` layout migration | Invalidates `pythonpath`, 26 test modules, 3 Dockerfiles — zero functional gain |
-| Async-ifying `Engine` | 445 sync tests are the only safety net; async confined to `server/sse.py` |
+| Async-ifying `Engine` | 620 sync tests are the only safety net; async confined to `server/sse.py` |
 | Resolving the role authority conflict by picking a number | ops_gm 20 000 vs 500 is a **policy** decision needing a signed record. Phase 1 does: YAML as single source → `sync_role_metadata.py` generates `ORGANIZATION_CATALOG` → drift test fails on divergence. **Numbers unchanged.** |
 | Encryption at rest | Not constitutionally required; fights keyless self-hosted start. Logged in `docs/SECURITY-DEBT.md` |
 | "Fixing" the production gate | It **must** fail closed. Add a test asserting the service refuses writes on `production` so nobody "fixes" it later |

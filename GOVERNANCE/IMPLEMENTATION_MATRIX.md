@@ -195,7 +195,7 @@
 | `test_cloud_readiness.py` | 9 | pass | `pytest tests/test_cloud_readiness.py -q` | Cloud-ready local-first boundary (Prompt 9) |
 | `test_pilot.py` | 17 | pass | `pytest tests/test_pilot.py -q` | Controlled design-partner pilot (Prompt 10) |
 | `test_capabilities_restaurant.py` | 14 | pass | `pytest tests/test_capabilities_restaurant.py -q` | Restaurant capability pack (Prompt 11) |
-| **TOTAL** | **445** | **all pass** | `pytest tests/ -q` | — |
+| **TOTAL** | **620** | **all pass** | `pytest tests/ -q` | Recounted 2026-09-12 |
 
 **Evidence Packs Generated:**
 - `evidence/releases/<timestamp>/release-gate-summary.json` — controlled_pilot & production_candidate
@@ -232,7 +232,7 @@
 - Contracts: TaskRequest/Result, CorrelationContext, Approval tiers, EngineResult, Role catalog, Capability registry
 - Sibling integration: contracts, transports (in-memory, file), adapters (fake siblings)
 - Release gates: 14/14 pass for controlled_pilot/production_candidate; production fails closed correctly
-- Test suite: 445 tests pass
+- Test suite: 620 tests pass (recounted 2026-09-12)
 - Governance checker: passes
 - Evidence packs: generated for gates and pilot dry-run
 
@@ -615,7 +615,7 @@ code/tests only. Documents: `00_INDEX` (positioning + completed/unfinished split
 (unfinished items separated), `12_roadmap`, `13_five_minute_demo_script`, `14_technical_decision_log`,
 `15_verified_test_results`. Synthetic demo: `demo/synthetic_demo.py` (clean setup, exit 0).
 
-**Reconciliation with repository reality:** TOTAL **445** tests pass; `governance=PASS`;
+**Reconciliation with repository reality:** TOTAL **620** tests pass; `governance=PASS`;
 security `all_ok=True`; `controlled_pilot` → CONTROLLED_PILOT_READY, `production` → NOT_READY;
 demo runs read-only/synthetic with `live_customer_records=0` and intact audit chain. These
 figures in `15_verified_test_results.md` and `00_INDEX.md` match the matrix totals.

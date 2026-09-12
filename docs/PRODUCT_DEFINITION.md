@@ -7,7 +7,7 @@
 
 ## What Helix Prime is
 
-Helix Prime is a **public alpha** operations system: six business engines (WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, CRM) and four AI agents (SAMI, SUBY, PHILI, WILI) connected to a local Ollama model, with content-based request routing and a Streamlit Operations Cockpit.
+Helix Prime is a **public alpha** operations system: six business engines (WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, CRM) and nine AI agents (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY) connected to a local Ollama model, with content-based request routing and a Streamlit Operations Cockpit.
 
 It is built by one person, Hatem Shalaby, after 28 years working on the operations floor — contact-centre forecasting, scheduling, onboarding, and floor management. It is the direct result of that experience: the system models the workflows he ran.
 

@@ -1,5 +1,10 @@
 # 15. Verified Test Results
 
+> **[SUPERSEDED — HISTORICAL SNAPSHOT]** All numbers below come from a clean
+> run on **2026-08-29** and record that day's state. The current suite is
+> **620 collected / 620 passed / 0 failed** (recounted 2026-09-12). Keep this
+> file for the audit trail; do not compare current runs against it.
+
 All numbers below are from a clean run on 2026-08-29. Reproduce with the commands shown.
 
 ## Command

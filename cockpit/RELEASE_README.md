@@ -24,7 +24,7 @@ This is a personal-use local tool. It runs on localhost only, is not hardened fo
 
 ## Honest status
 
-Helix Prime remains alpha. This release does not claim client deployments, production enterprise usage, or full agent inter-communication proven through the live UI. Test coverage is at 445 passing tests; CI polish is ongoing.
+Helix Prime remains alpha. This release does not claim client deployments, production enterprise usage, or full agent inter-communication proven through the live UI. Test coverage is at 620 passing tests (recounted 2026-09-12); CI polish is ongoing.
 
 ## Included project areas
 

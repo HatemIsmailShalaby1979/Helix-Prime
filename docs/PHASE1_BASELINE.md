@@ -1,5 +1,11 @@
 # Phase 1 Baseline — recorded 2026-09-07 (W0)
 
+> **[SUPERSEDED — HISTORICAL RECORD]** This baseline was measured on Python
+> **3.10.11** (`.venv-win`) and **no longer applies**. Python **3.12** is
+> canonical (`pyproject.toml` `requires-python = ">=3.12,<3.13"`). The current
+> suite on 3.12 is **620 collected / 620 passed / 0 failed** (2026-09-12). Keep
+> this file for the audit trail; do not compare future gates against it.
+
 **Purpose:** the reference every later Phase 1 gate compares against.
 **Rule:** *"count >= baseline passed, and 0 new failures."*
 

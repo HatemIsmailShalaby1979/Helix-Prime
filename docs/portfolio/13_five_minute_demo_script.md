@@ -49,5 +49,5 @@ live writes, not universal. Then [`12_roadmap.md`](12_roadmap.md).
 ## 4:30 — Close (30s)
 Re-state positioning. Offer the test suite as proof:
 ```bash
-python3 -m pytest tests/ -q -p no:cacheprovider   # expect: 445 passed
+python3 -m pytest tests/ -q -p no:cacheprovider   # expect: 620 passed
 ```

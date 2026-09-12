@@ -89,11 +89,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H3.1 (single authority chain, G31/G39) IN PROGRESS — chain declared + 8 docs archived/merged; H1.3 + H3.2–H3.4 open** |
+| Current step | **H3.2 (stale facts, G32–G35) COMPLETE — test count + agent count + Python baseline + LICENSE corrected repo-wide; H1.3 + H3.3/H3.4 open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified after the H3.1 docs cleanup) |
-| Last commit | H3.1: docs: establish single authority chain, archive superseded status docs |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, **H3.1 ✅ (G31 + G39)** |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified after the H3.2 stale-fact cleanup) |
+| Last commit | H3.2: docs: correct stale test count, agent count, python baseline, license claim |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)** |
 
 ### 1.2 Step ledger
 
@@ -325,11 +325,39 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       re-based to `wayfinder/tickets/...`). Updated stale pointer rows in
       `docs/architecture/README.md`, `docs/operations/README.md`, `ROADMAP.md`.
       **Link crawler: 0 broken relative links across 108 tracked .md files.**
-      Stale-fact ("no 445-tests claim") test SKIPPED — all remaining
-      `445 tests` claims are owned by the next step H3.2 (G32–G35) which has
-      their fixes; a red-light assertion now would fail the suite on files not
-      touched this step. Full suite 620 passed/0 failed; ruff N/A (docs-only).
-- [ ] **H3.2** Stale facts (G32–G35)
+      Stale-fact ("no 445-tests claim") test SKIPPED at H3.1 — all remaining
+      `445 tests` claims were owned by H3.2 (G32–G35); a red-light assertion then
+      would have failed the suite on files not touched this step. Full suite 620
+      passed/0 failed; ruff N/A (docs-only). Fixed in H3.2 — see below.
+- [x] **H3.2** Stale facts (G32–G35) — **Completed 2026-09-12.**
+      (a) G32 test count: `GOVERNANCE/IMPLEMENTATION_MATRIX.md` TOTAL row + the
+      "Test suite:" bullet + the "Reconciliation with repository reality" line all
+      moved **445 → 620** with a "Recounted 2026-09-12" note (620 is the verified
+      current collection at `8af6bc6`, not the 2026-09-10 audit-time 571 — recording
+      571 would have re-created a stale fact). Same fix applied to the other live
+      count claims: `DEVELOPMENT.md` tree, `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md`
+      (baseline header + 47 K LOC note + sync-test safety-net + SSE deferral),
+      `docs/portfolio/00_INDEX.md`, `02_governance_model.md`, `11_known_limitations.md`,
+      `13_five_minute_demo_script.md`, `16_market_research_strategy_roadmap.md` (2),
+      `cockpit/RELEASE_README.md`. (b) G33 agent count:
+      `docs/PRODUCT_DEFINITION.md` + `docs/COMMERCIAL_STORY.md` (2 sites) "four AI
+      agents (SAMI, SUBY, PHILI, WILI)" → **nine** — verified against the agent
+      registry first: `organization/role-catalog.yaml` has 9 `functional_agent`s
+      (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY), matching
+      `ENGINEERING_SPECIFICATION.md` "The nine agents". (c) G34 Python baseline:
+      `docs/PHASE1_BASELINE.md` marked **[SUPERSEDED — HISTORICAL RECORD]** — its
+      Python 3.10.11 / 13-failing snapshot no longer applies (pyproject requires
+      `>=3.12,<3.13`); the 3.12 suite is 620/620/0. `docs/portfolio/
+      15_verified_test_results.md` (a dated 2026-08-29 snapshot) got the same banner
+      rather than a silent rewrite. (d) G35 LICENSE: already correct at
+      `pyproject.toml` (`license = { text = "MIT" }`, matches root `LICENSE.md`) —
+      fixed in H0.6; verified no live doc still claims the placeholder. **Historical
+      records preserved (not falsified):** `docs/audits/*` (the audit trail that
+      documented the finding), `MASTER_STORY.md` dated 2026-08-29 entries, the
+      portfolio/15 snapshot, AGENTS.md ledger. The one remaining `445` match
+      (`IMPLEMENTATION_MATRIX.md:23` `base_agent.py:406-445`) is a file
+      **line-number range**, not a test count. Full suite 620 passed/0 failed; ruff
+      N/A (docs-only).
 - [ ] **H3.3** Security docs (G36, G37)
 - [ ] **H3.4** CHANGELOG + hygiene (G38, G40, G41)
 

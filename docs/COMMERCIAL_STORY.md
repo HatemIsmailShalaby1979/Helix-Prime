@@ -7,7 +7,7 @@
 
 ## The honest story
 
-Helix Prime exists because its builder, Hatem Shalaby, spent 28 years inside the operational problems the system models — contact-centre forecasting, scheduling, adherence, onboarding, and floor management. It is a solo-built, public alpha: six business engines, four AI agents, content-based routing, and a Streamlit cockpit, documented honestly in the repository README.
+Helix Prime exists because its builder, Hatem Shalaby, spent 28 years inside the operational problems the system models — contact-centre forecasting, scheduling, adherence, onboarding, and floor management. It is a solo-built, public alpha: six business engines, nine AI agents, content-based routing, and a Streamlit cockpit, documented honestly in the repository README.
 
 **What this project is not yet:**
 - Not a product with customers. There are no deployments, no "accounts exercised," no client names.
@@ -19,7 +19,7 @@ Helix Prime exists because its builder, Hatem Shalaby, spent 28 years inside the
 ## What is real and verifiable today
 
 - A public alpha repository: `github.com/HatemShelby/Helix-Prime`.
-- Six business engines and four AI agents connected to a local Ollama model.
+- Six business engines and nine AI agents connected to a local Ollama model.
 - An orchestrator with real content-based routing.
 - A Streamlit Operations Cockpit.
 - A CI pipeline with pre-commit linting.

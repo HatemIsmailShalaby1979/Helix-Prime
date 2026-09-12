@@ -10,7 +10,7 @@ implementation baseline must be backed by a passing test.
 - `MASTER_STORY.md` — chronological, factual log of what was built and verified; references
   the Constitution as authority.
 - `GOVERNANCE/IMPLEMENTATION_MATRIX.md` — the authoritative Phase-1 baseline. Each delivered
-  item lists the module + the test that verifies it. Total: **445 tests pass**.
+  item lists the module + the test that verifies it. Total: **620 tests pass** (recounted 2026-09-12).
 
 ## Automated governance check
 `python3 -m GOVERNANCE.governance_check check` verifies:

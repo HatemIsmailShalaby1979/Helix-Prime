@@ -30,7 +30,7 @@ Helix-Prime/
 ├── cockpit/                # Streamlit dashboard
 ├── engines/                # Business engines (wfm, rta, cx, b2b, personnel, crm)
 ├── control_plane/          # Orchestration and routing
-├── tests/                  # 445 tests across contracts, security, engines
+├── tests/                  # 620 tests across contracts, security, engines
 ├── GOVERNANCE/             # Decisions, gates, evidence rules
 ├── docs/                   # Architecture and product documentation
 └── launch.py               # Starts the cockpit

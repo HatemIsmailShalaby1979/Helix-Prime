@@ -3,6 +3,29 @@
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+> **Version-note (renumbering 2.1.0 → 0.9.0-c8):** the 2.1.0 entry predates the
+> canonical version policy. Since H0.6 the core version is single-sourced from
+> `pyproject.toml` (`version = "0.9.0"`) and the manifest appends the ceremony
+> suffix (`CEREMONY_SUFFIX = "-c8"` in `release/manifest.py`) at build time. The
+> apparent regression 2.1.0 → 0.9.0-c8 is therefore NOT a downgrade: it is the
+> honest, semver-conformant core version that the build actually reproduces.
+> Capability packs carry their own SemVer (e.g. sports-academy pack v1.0.0).
+
+## [Unreleased]
+
+### Added
+
+- **sports-academy capability pack v1.0.0** (2026-09-10; commits `d5dcb45..c3c4abf`, 44 tests) — first vertical capability pack for Helix Codex OS, built for Scoach Academy Hub:
+  - Attendance adapter reusing the RTA engine (check-in/check-out → adherence)
+  - Coach KPIs (4) + academy KPIs (5), YAML-declared and drift-tested
+  - Athlete profiles (CRM) + CX-scored churn flags for seeded risk athletes
+  - Owner dashboard — 5 numbers, one screen (cockpit "Sports Academy" page)
+  - Facility conflict detection + manual fee records (no payment instruments)
+  - Runtime: approval queue behind SOD, read-only phase, evidence pack, hash-chained governed memory, all `simulated_realistic`
+  - Full suite 571/571 ≥ baseline 527; ruff clean on all pack paths
+
+---
+
 ## [0.9.0-c8] — 2026-08-29
 
 ### Added

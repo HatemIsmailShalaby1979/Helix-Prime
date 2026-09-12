@@ -47,10 +47,10 @@
 
 | Field | Value |
 |---|---|
-| Current step | **ALL STEPS COMPLETE (S0–S7)** |
+| Current step | **H2.4 (CI quality) + H2.5 (data retention) COMPLETE — all G26–G30 done; only H1.3 (drift AST) remains open** |
 | Baseline test count | 527 (pre-pack; 2 Windows teardown failures fixed in `fe25653`) |
-| Last full-suite result | **571 passed, 0 failed** (2026-09-10, commit `f269135`) |
-| Last commit | `f269135` feat(academy): runtime with approval gating + SOD, full pack docs — 44 tests |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12, re-verified after G26–G30) |
+| Last commit | `cbac59a` fix(release): source manifest version from pyproject.toml |
 | Pack complete? | **YES — sports-academy pack v1.0.0 COMPLETE** |
 | Blockers | none |
 
@@ -68,7 +68,7 @@
 ### Environment facts (discovered in S0 — do not re-discover)
 
 - **Working venv:** `.venv-py312\Scripts\python.exe` (3.12.10 + pytest + ruff 0.1.15 + pandas/numpy). `.venv312` has NO pytest. `.venv-win` is 3.10 — do not use.
-- **Ruff config:** `pyproject.toml [tool.ruff]` line-length=100, select = E4/E7/E9/F. Pre-existing ruff debt exists in `capabilities/restaurant/` (5 F401) and the two C4/C6 test files (~32 findings, F401/E402 legacy). **Rule for new code: `ruff check capabilities/sports_academy tests/test_capabilities_sports_academy.py` must be 0.** Do not "fix" pre-existing debt outside the pack (out of scope).
+- **Ruff config:** `pyproject.toml [tool.ruff]` line-length=100, **select = E4/E7/E9/F/I/B/S** (widened in G28, commit `4ad6bdb`). The whole repo is ruff-clean and `ruff format --check` is clean — CI runs both. Deliberate legacy debt (S110 best-effort wrappers, legacy S113/S310, path-bootstrap E402, test-idiomatic rules) is documented in `[tool.ruff.lint.per-file-ignores]`; the rules stay ON for all new code. **Rule for new code: `ruff check` on your changed paths must be 0 and format-clean.**
 - **Windows gotcha:** any test opening SQLite inside `tempfile.TemporaryDirectory()` MUST close stores/connections before the `with` block exits, or teardown fails with WinError 32 after passing assertions. If a Store leaks in a *pack test*, use `tests/support/sqlite_harness.py::sqlite_store` fixture or close explicitly.
 - **The restaurant pack itself** imports `SourceRef` from `connectors.contracts` — new pack does the same.
 - Full-suite runtime ≈ 20 min on this machine. Run targeted modules during steps; full suite only at S7.
@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H2.3 complete; next: H2.4 (CI quality) — H1.3 (drift AST) still open** |
+| Current step | **H2.4 (CI quality) + H2.5 (data retention) COMPLETE — all of G26–G30 done; only H1.3 (drift AST) remains open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **620 passed, 0 failed** (2026-09-12, H1.5 full-suite verification run; baseline 571 + 12 kill-switch tests + 37 prior-session tests in tree) |
-| Last commit | H2.3: chore(pkg): declare console scripts, align sdist/wheel includes |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅ |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified AFTER the G26–G30 lint/version work) |
+| Last commit | G30: fix(release): source manifest version from pyproject.toml |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, **H2.4 ✅, H2.5 ✅** |
 
 ### 1.2 Step ledger
 
@@ -247,8 +247,57 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       `helix-cockpit` serves `/ _stcore/health` 200 in an arbitrary CWD;
       sdist↔wheel delta = zero missing packages. Targeted re-runs of the
       role-catalog/contracts/server suites: 144 passed.
-- [ ] **H2.4** CI quality (G27, G28)
-- [ ] **H2.5** Data-retention policy (G26)
+- [x] **H2.4** CI quality (G27, G28) — **Completed 2026-09-12.**
+      (a) G27: deleted duplicate `.github/workflows/python-app.yml` (ci.yml is a
+      strict superset) — commit `c9db739`. (b) G28: widened
+      `[tool.ruff] select` from `E4/E7/E9/F` to `E4/E7/E9/F/I/B/S`, added
+      `extend-immutable-calls=["fastapi.Depends"]` (canonical FastAPI B008), and
+      added `ruff format --check .` to ci.yml. **Repo now ruff-clean under the
+      widened ruleset (0 errors, format-check clean)**. Big win: fixed two
+      REAL latent bugs surfaced by the widened ruleset — F821
+      `server/features/console/router.py:103` `_repo()` called but never defined
+      (now `WorkflowRepository(deps.get_engine())`), and `pilot/run.py:101`
+      used `Optional[...]` without importing it (now `X | None`). Also removed
+      ~90 dead F401/F841/F811 imports and B007 unused loop vars repo-wide, and
+      `engines/registry.py` duplicate `customer_support` dict key (F601).
+      Remaining B/S/E402 debt that is *deliberate* (best-effort S110 wrappers,
+      legacy Notion/webhook S113/S310, path-bootstrap E402) is documented
+      per-file in `pyproject.toml [tool.ruff.lint.per-file-ignores]`, and
+      test-idiomatic patterns (assert S101, subprocess-under-test S603/S607,
+      seeded creds S105, teardown S110, B017, E402, F841) scoped under
+      `"tests/*"` — the rules stay ON for all new code while CI + pre-commit
+      stay green. **Full suite 620 passed/0 failed plus `ruff check .` exit 0.**
+      Per-file-ignore SEMANTIC leftovers to revisit someday: legacy non-CI files
+      — `cloud/interfaces.py` B027, `cockpit/*` S603/S310/S311/S608,
+      `launch.py`/`desktop.py` S603/S310/S110, `marketing/assets/build_demo.py`
+      S603, `integrations/transport.py` S110, `release/` S603/S607/S110/S105/S112,
+      `scripts/*` S603/S110, `observability/health.py` S101/S110/S310,
+      `memory/governed_memory.py` S101 (precondition assert),
+      `demo/synthetic_demo.py` S101.
+- [x] **H2.5** Data-retention policy (G26) — **Completed 2026-09-12.**
+      `docs/operations/data-retention.md`: governed memory is append-only +
+      hash-chained; `apply_retention(as_of)` FLAGS records past `retention_until`
+      as `expired` and NEVER deletes (soft tombstones only); no scheduler exists
+      in the repo → retention is an operator-initiated daily manual step run
+      AFTER audit-chain verification; documented the 6 lifecycle states
+      (active/corrected/superseded/deleted/expired/retained), per-record-kind
+      default horizons (outcomes 36 mo, inferences 12 mo, fee records 7 yr,
+      simulated 30 d), and evidence-pack interplay (`retained` = legal hold
+      exempt from expiry). Linked from `docs/operations/README.md`.
+      **G29 (mypy) REPORT — record in session notes, no commit:** the audit doc
+      says "8 disabled error codes" but `pyproject.toml` disables **9**
+      (`var-annotated, call-overload, attr-defined, assignment, arg-type,
+      operator, call-arg, type-var, dict-item`). Per-code error counts when
+      enabling each alone (CI scope: `mypy server/ connectors/ control_plane/`):
+      var-annotated 33 (9 files), attr-defined 33 (12 files), arg-type 32
+      (11 files), call-overload 25 (8 files), assignment 25 (9 files),
+      call-arg 22 (7 files), operator 21 (6 files), type-var 20 (5 files),
+      dict-item 20 (5 files); baseline (all disabled) = 20 errors. attr-defined
+      touches the most files — best first candidate to tighten.
+      **G30 (version single-sourcing):** `release/manifest.py:115` hardcoded
+      `"0.9.0-c8"` → now reads `[project].version` from `pyproject.toml` via
+      stdlib `tomllib` and appends `CEREMONY_SUFFIX="-c8"` at build time.
+      Output identical (`0.9.0-c8`), core version single-sourced — commit `cbac59a`.
 
 #### H3 — P3: Make it sellable (target: 1 week)
 

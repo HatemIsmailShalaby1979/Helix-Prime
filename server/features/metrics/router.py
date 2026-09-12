@@ -41,4 +41,6 @@ def _refresh_approval_queue_depth() -> None:
 def metrics(response: Response) -> PlainTextResponse:
     _refresh_approval_queue_depth()
     response.headers["Cache-Control"] = "no-store"
-    return PlainTextResponse(REGISTRY.render(), media_type="text/plain; version=0.0.4; charset=utf-8")
+    return PlainTextResponse(
+        REGISTRY.render(), media_type="text/plain; version=0.0.4; charset=utf-8"
+    )

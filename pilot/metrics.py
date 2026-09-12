@@ -27,7 +27,9 @@ def _latest_approvals(mem: GovernedMemory, tenant_ids: Iterable[str]) -> dict:
     return latest
 
 
-def compute_pilot_metrics(mem: GovernedMemory, tenant_ids: Iterable[str], baseline: Optional[dict] = None) -> dict:
+def compute_pilot_metrics(
+    mem: GovernedMemory, tenant_ids: Iterable[str], baseline: Optional[dict] = None
+) -> dict:
     tenant_ids = list(tenant_ids)
     recs = []
     for t in tenant_ids:

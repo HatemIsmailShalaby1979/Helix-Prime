@@ -65,18 +65,12 @@ class DashboardFeed:
             "generated_at": datetime.now().isoformat(),
             "status": "active",
             "summary": {
-                "total_customers": len(
-                    getattr(risk_result, "customer_risks", []) or []
-                ),
+                "total_customers": len(getattr(risk_result, "customer_risks", []) or []),
                 "overall_risk_score": round(
                     float(getattr(risk_result, "overall_risk_score", 0.0)), 3
                 ),
-                "high_risk_customers": len(
-                    getattr(risk_result, "high_risk_customers", []) or []
-                ),
-                "risk_coverage": 1.0
-                if getattr(risk_result, "customer_risks", None)
-                else 0.0,
+                "high_risk_customers": len(getattr(risk_result, "high_risk_customers", []) or []),
+                "risk_coverage": 1.0 if getattr(risk_result, "customer_risks", None) else 0.0,
             },
             "risk_distribution": {
                 level: {
@@ -94,11 +88,7 @@ class DashboardFeed:
         if kpi_report:
             payload["kpi_quality"] = {
                 "overall_quality_score": round(
-                    float(
-                        kpi_report.get("quality_report", {}).get(
-                            "overall_quality_score", 0.0
-                        )
-                    ),
+                    float(kpi_report.get("quality_report", {}).get("overall_quality_score", 0.0)),
                     3,
                 ),
                 "quality_pass": bool(
@@ -123,9 +113,7 @@ class DashboardFeed:
         indent: int = 2,
     ) -> str:
         """Return the payload as a JSON string."""
-        return json.dumps(
-            self.build(risk_result, kpi_report), indent=indent, default=str
-        )
+        return json.dumps(self.build(risk_result, kpi_report), indent=indent, default=str)
 
     def to_dict(self) -> dict[str, Any] | None:
         """Return the most recently built payload (or ``None``)."""
@@ -154,12 +142,8 @@ class DashboardFeed:
         return {
             "engine": "cx_churn_sentinel",
             "status": "active",
-            "overall_risk_score": round(
-                float(getattr(risk_result, "overall_risk_score", 0.0)), 3
-            ),
-            "high_risk_count": len(
-                getattr(risk_result, "high_risk_customers", []) or []
-            ),
+            "overall_risk_score": round(float(getattr(risk_result, "overall_risk_score", 0.0)), 3),
+            "high_risk_count": len(getattr(risk_result, "high_risk_customers", []) or []),
             "generated_at": datetime.now().isoformat(),
         }
 

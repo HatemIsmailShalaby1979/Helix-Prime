@@ -21,13 +21,18 @@ if _ROOT not in sys.path:
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 from pilot.approval import (  # noqa: E402
-    create_recommendation, create_approval_draft, transition_approval,
+    create_recommendation,
+    create_approval_draft,
+    transition_approval,
     evaluate_approval_decision,
 )
 from pilot.consent import ConsentRecord, validate_consent  # noqa: E402
 from pilot.config import PilotConfig  # noqa: E402
 from pilot.phases import (  # noqa: E402
-    READ_ONLY, SUPERVISED, ReadOnlyPeriod, ConnectorPermissions,
+    READ_ONLY,
+    SUPERVISED,
+    ReadOnlyPeriod,
+    ConnectorPermissions,
 )
 from pilot.exceptions import PilotError  # noqa: E402
 from security.identity import Identity  # noqa: E402
@@ -46,19 +51,25 @@ DEFAULT_AS_OF = "2026-08-29T12:00:00Z"
 
 
 class RestaurantCapabilityPack:
-    def __init__(self, memory: GovernedMemory, *, phase: str = SUPERVISED,
-                 read_only_period: Optional[ReadOnlyPeriod] = None,
-                 connector_permissions: Optional[ConnectorPermissions] = None,
-                 identity: Optional[Identity] = None,
-                 config: Optional[PilotConfig] = None) -> None:
+    def __init__(
+        self,
+        memory: GovernedMemory,
+        *,
+        phase: str = SUPERVISED,
+        read_only_period: Optional[ReadOnlyPeriod] = None,
+        connector_permissions: Optional[ConnectorPermissions] = None,
+        identity: Optional[Identity] = None,
+        config: Optional[PilotConfig] = None,
+    ) -> None:
         self.mem = memory
         self.phase = phase
         self.read_only_period = read_only_period
         self.connector_permissions = connector_permissions or ConnectorPermissions()
         self.connector_permissions.validate()
         self.config = config or PilotConfig.from_dict({})
-        self.identity = identity or Identity(actor="restaurant-operator", actor_type="human",
-                                             role_id="restaurant_gm")
+        self.identity = identity or Identity(
+            actor="restaurant-operator", actor_type="human", role_id="restaurant_gm"
+        )
         self.tenant_ids: list = []
         self.client_ids: list = []
         self.diagnoses: list = []
@@ -69,6 +80,7 @@ class RestaurantCapabilityPack:
     # ----------------------------------------------------------- registration
     def register(self) -> dict:
         from .register import register_capability
+
         return register_capability("restaurant_operations", get_restaurant_metadata())
 
     # ----------------------------------------------------------- consent
@@ -76,13 +88,25 @@ class RestaurantCapabilityPack:
         validate_consent(consent, as_of, self.config.permitted_data_modes)
         self.consent = consent
         self.mem.add(
-            kind="workflow_history", nature="verified_outcome", tenant_id=consent.tenant_id,
-            client_id=consent.client_id, actor="restaurant-pack", role_id="restaurant_gm",
-            source="restaurant_consent", classification="client_confidential", timestamp=as_of,
-            correlation_id=consent.consent_id, confidence=1.0, evidence_refs=[consent.consent_id],
+            kind="workflow_history",
+            nature="verified_outcome",
+            tenant_id=consent.tenant_id,
+            client_id=consent.client_id,
+            actor="restaurant-pack",
+            role_id="restaurant_gm",
+            source="restaurant_consent",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=consent.consent_id,
+            confidence=1.0,
+            evidence_refs=[consent.consent_id],
             data_mode=DATA_MODE,
-            provenance={"correlation_id": consent.consent_id, "data_mode": DATA_MODE,
-                        "basis": "consent_validation", "sources": [consent.consent_id]},
+            provenance={
+                "correlation_id": consent.consent_id,
+                "data_mode": DATA_MODE,
+                "basis": "consent_validation",
+                "sources": [consent.consent_id],
+            },
             body={"action": "consent_validated", "consent_id": consent.consent_id},
         )
         return True
@@ -93,24 +117,40 @@ class RestaurantCapabilityPack:
         self.phase = READ_ONLY
         return self.read_only_period
 
-    def exit_read_only_period(self, as_of: str, actor: str, role: str,
-                             correlation_id: str = "restaurant-exit") -> str:
+    def exit_read_only_period(
+        self, as_of: str, actor: str, role: str, correlation_id: str = "restaurant-exit"
+    ) -> str:
         if self.read_only_period is None:
             raise PilotError("no read-only period configured")
         self.read_only_period = ReadOnlyPeriod(self.read_only_period.starts_at, as_of)
         self.mem.add(
-            kind="workflow_history", nature="verified_outcome", tenant_id="*pilot*",
-            client_id="*pilot*", actor=actor, role_id=role, source="restaurant_phase",
-            classification="internal", timestamp=as_of, correlation_id=correlation_id,
-            confidence=1.0, evidence_refs=[], data_mode=DATA_MODE,
-            provenance={"correlation_id": correlation_id, "data_mode": DATA_MODE,
-                        "basis": "phase_exit", "sources": []},
+            kind="workflow_history",
+            nature="verified_outcome",
+            tenant_id="*pilot*",
+            client_id="*pilot*",
+            actor=actor,
+            role_id=role,
+            source="restaurant_phase",
+            classification="internal",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=1.0,
+            evidence_refs=[],
+            data_mode=DATA_MODE,
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": DATA_MODE,
+                "basis": "phase_exit",
+                "sources": [],
+            },
             body={"action": "read_only_exited", "ends_at": as_of},
         )
         self.phase = SUPERVISED
         return self.phase
 
-    def prepare_first_real_pilot(self, starts_at: str, ends_at: str, consent: ConsentRecord, as_of: str):
+    def prepare_first_real_pilot(
+        self, starts_at: str, ends_at: str, consent: ConsentRecord, as_of: str
+    ):
         self.validate_consent(consent, as_of)
         if not self.config.minimum_data:
             raise PilotError("first real pilot requires the minimum-data policy")
@@ -132,70 +172,144 @@ class RestaurantCapabilityPack:
             failures.append((label, str(exc)))
             return ()
 
-    def diagnose_account(self, tenant_id, client_id, as_of, operator_actor, operator_role,
-                         correlation_id, fixtures):
-        ctx = ConnectorContext(tenant_id, "org-1", client_id, actor=operator_actor,
-                               correlation_id=correlation_id, data_mode=DATA_MODE)
+    def diagnose_account(
+        self, tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id, fixtures
+    ):
+        ctx = ConnectorContext(
+            tenant_id,
+            "org-1",
+            client_id,
+            actor=operator_actor,
+            correlation_id=correlation_id,
+            data_mode=DATA_MODE,
+        )
         connectors = self._build_connectors(ctx, fixtures)
         self._connectors = connectors
         failures = []
         shifts = self._safe(connectors["restaurant_ops"].list_shifts, ctx, failures, "shifts")
-        inventory = self._safe(connectors["restaurant_ops"].list_inventory, ctx, failures, "inventory")
-        suppliers = self._safe(connectors["restaurant_ops"].list_suppliers, ctx, failures, "suppliers")
-        complaints = self._safe(connectors["restaurant_ops"].list_complaints, ctx, failures, "complaints")
-        summary = self._safe(connectors["restaurant_ops"].list_daily_summary, ctx, failures, "daily_summary")
+        inventory = self._safe(
+            connectors["restaurant_ops"].list_inventory, ctx, failures, "inventory"
+        )
+        suppliers = self._safe(
+            connectors["restaurant_ops"].list_suppliers, ctx, failures, "suppliers"
+        )
+        complaints = self._safe(
+            connectors["restaurant_ops"].list_complaints, ctx, failures, "complaints"
+        )
+        summary = self._safe(
+            connectors["restaurant_ops"].list_daily_summary, ctx, failures, "daily_summary"
+        )
 
         diags = run_all_workflows(shifts, inventory, suppliers, complaints, summary, ctx, as_of)
         for label, err in failures:
             self.mem.add(
-                kind="workflow_history", nature="historical_event", tenant_id=tenant_id,
-                client_id=client_id, actor="restaurant-pack", role_id=operator_role,
-                source="restaurant_connector", classification="client_confidential", timestamp=as_of,
-                correlation_id=correlation_id, confidence=1.0, evidence_refs=[],
+                kind="workflow_history",
+                nature="historical_event",
+                tenant_id=tenant_id,
+                client_id=client_id,
+                actor="restaurant-pack",
+                role_id=operator_role,
+                source="restaurant_connector",
+                classification="client_confidential",
+                timestamp=as_of,
+                correlation_id=correlation_id,
+                confidence=1.0,
+                evidence_refs=[],
                 data_mode=DATA_MODE,
-                provenance={"correlation_id": correlation_id, "data_mode": DATA_MODE,
-                            "basis": "connector_failure", "sources": []},
+                provenance={
+                    "correlation_id": correlation_id,
+                    "data_mode": DATA_MODE,
+                    "basis": "connector_failure",
+                    "sources": [],
+                },
                 body={"action": "connector_failure", "provider": "RestaurantOps", "error": err},
             )
         return diags, connectors, failures
 
-    def _record_diagnosis_and_recommendations(self, tenant_id, client_id, as_of, operator_actor,
-                                              operator_role, correlation_id, diags, data_mode):
+    def _record_diagnosis_and_recommendations(
+        self,
+        tenant_id,
+        client_id,
+        as_of,
+        operator_actor,
+        operator_role,
+        correlation_id,
+        diags,
+        data_mode,
+    ):
         for d in diags:
             ev = list(d.evidence_refs)
             diag_rec = self.mem.add(
-                kind="customer_context", nature="simulated_event", tenant_id=tenant_id, client_id=client_id,
-                actor="restaurant-pack", role_id=operator_role, source="restaurant_diagnosis",
-                classification="client_confidential", timestamp=as_of, correlation_id=correlation_id,
-                confidence=d.confidence, evidence_refs=ev, data_mode=data_mode,
-                provenance={"correlation_id": correlation_id, "data_mode": data_mode,
-                            "basis": "restaurant_diagnosis", "sources": ev},
-                body={"workflow_category": d.category, "health_state": d.health_state,
-                      "open_risk_count": len(d.findings),
-                      "recommended_actions": list(d.recommended_actions)},
+                kind="customer_context",
+                nature="simulated_event",
+                tenant_id=tenant_id,
+                client_id=client_id,
+                actor="restaurant-pack",
+                role_id=operator_role,
+                source="restaurant_diagnosis",
+                classification="client_confidential",
+                timestamp=as_of,
+                correlation_id=correlation_id,
+                confidence=d.confidence,
+                evidence_refs=ev,
+                data_mode=data_mode,
+                provenance={
+                    "correlation_id": correlation_id,
+                    "data_mode": data_mode,
+                    "basis": "restaurant_diagnosis",
+                    "sources": ev,
+                },
+                body={
+                    "workflow_category": d.category,
+                    "health_state": d.health_state,
+                    "open_risk_count": len(d.findings),
+                    "recommended_actions": list(d.recommended_actions),
+                },
             )
             # The recommendation is owned by the workflow's owning role (for SOD),
             # acted on here by the operator running the pack.
             owner_role = authority_for(d.category)["owner_role"]
             for action in d.recommended_actions:
-                correct = (d.category == "complaint_escalation")
+                correct = d.category == "complaint_escalation"
                 rec = create_recommendation(
-                    self.mem, tenant_id=tenant_id, client_id=client_id, actor=operator_actor,
-                    role_id=owner_role, correlation_id=correlation_id, timestamp=as_of,
-                    action=action, evidence=ev, diagnosis_ref=diag_rec.record_id,
-                    correct=correct, data_mode=data_mode,
+                    self.mem,
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    actor=operator_actor,
+                    role_id=owner_role,
+                    correlation_id=correlation_id,
+                    timestamp=as_of,
+                    action=action,
+                    evidence=ev,
+                    diagnosis_ref=diag_rec.record_id,
+                    correct=correct,
+                    data_mode=data_mode,
                 )
                 create_approval_draft(
-                    self.mem, tenant_id=tenant_id, client_id=client_id, owner=operator_actor,
-                    role_id=owner_role, correlation_id=correlation_id, timestamp=as_of,
-                    action=action, recommendation_id=rec.record_id, evidence=[rec.record_id],
+                    self.mem,
+                    tenant_id=tenant_id,
+                    client_id=client_id,
+                    owner=operator_actor,
+                    role_id=owner_role,
+                    correlation_id=correlation_id,
+                    timestamp=as_of,
+                    action=action,
+                    recommendation_id=rec.record_id,
+                    evidence=[rec.record_id],
                     data_mode=data_mode,
                 )
 
     # ----------------------------------------------------------- dry run
-    def dry_run(self, tenant_client_pairs, fixtures_map, as_of=DEFAULT_AS_OF,
-                operator_actor="restaurant-operator", operator_role="restaurant_gm",
-                correlation_id="restaurant-dryrun", consent: Optional[ConsentRecord] = None):
+    def dry_run(
+        self,
+        tenant_client_pairs,
+        fixtures_map,
+        as_of=DEFAULT_AS_OF,
+        operator_actor="restaurant-operator",
+        operator_role="restaurant_gm",
+        correlation_id="restaurant-dryrun",
+        consent: Optional[ConsentRecord] = None,
+    ):
         if consent is not None:
             self.validate_consent(consent, as_of)
         for tenant_id, client_id in tenant_client_pairs:
@@ -205,18 +319,40 @@ class RestaurantCapabilityPack:
                 self.client_ids.append(client_id)
             fixtures = fixtures_map[(tenant_id, client_id)]
             diags, _connectors, _failures = self.diagnose_account(
-                tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id, fixtures)
+                tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id, fixtures
+            )
             self.diagnoses.append((tenant_id, client_id, diags))
             self._record_diagnosis_and_recommendations(
-                tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id, diags, DATA_MODE)
+                tenant_id,
+                client_id,
+                as_of,
+                operator_actor,
+                operator_role,
+                correlation_id,
+                diags,
+                DATA_MODE,
+            )
         self.baseline_metrics = compute_restaurant_metrics(self.mem, self.tenant_ids)
         self.mem.add(
-            kind="outcome", nature="historical_event", tenant_id="*pilot*", client_id="*pilot*",
-            actor="restaurant-pack", role_id="restaurant_gm", source="restaurant_baseline",
-            classification="internal", timestamp=as_of, correlation_id=correlation_id,
-            confidence=1.0, evidence_refs=[], data_mode=DATA_MODE,
-            provenance={"correlation_id": correlation_id, "data_mode": DATA_MODE,
-                        "basis": "baseline", "sources": []},
+            kind="outcome",
+            nature="historical_event",
+            tenant_id="*pilot*",
+            client_id="*pilot*",
+            actor="restaurant-pack",
+            role_id="restaurant_gm",
+            source="restaurant_baseline",
+            classification="internal",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=1.0,
+            evidence_refs=[],
+            data_mode=DATA_MODE,
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": DATA_MODE,
+                "basis": "baseline",
+                "sources": [],
+            },
             body={"phase": "baseline", "metrics": self.baseline_metrics},
         )
         return self.summary()
@@ -242,8 +378,16 @@ class RestaurantCapabilityPack:
         diag = self.mem._by_id.get(rec.body.get("diagnosis_ref"))
         return diag.body.get("workflow_category") if diag else None
 
-    def approve_action(self, approval_id, approver_actor, approver_role, requester_actor,
-                       requester_role, as_of=DEFAULT_AS_OF, correlation_id="restaurant-approve"):
+    def approve_action(
+        self,
+        approval_id,
+        approver_actor,
+        approver_role,
+        requester_actor,
+        requester_role,
+        as_of=DEFAULT_AS_OF,
+        correlation_id="restaurant-approve",
+    ):
         prev = self._latest_approval(approval_id)
         if prev.kind != "approval":
             raise PilotError("not an approval record")
@@ -252,37 +396,77 @@ class RestaurantCapabilityPack:
         category = self._category_for(prev)
         req_role = required_approver_role(category) if category else "restaurant_gm"
         ok, reason = evaluate_approval_decision(
-            prev, "approved", approver_actor, approver_role, requester_actor, requester_role)
+            prev, "approved", approver_actor, approver_role, requester_actor, requester_role
+        )
         if not ok:
             raise PilotError(reason)
         if approver_role != req_role:
             raise PilotError(
-                f"approver role {approver_role!r} not authorized for {category!r}; requires {req_role!r}")
+                f"approver role {approver_role!r} not authorized for {category!r}; requires {req_role!r}"
+            )
         return transition_approval(
-            self.mem, prev, "approved", approver_actor, approver_role, correlation_id, as_of,
-            reason=f"approved by {approver_actor}")
+            self.mem,
+            prev,
+            "approved",
+            approver_actor,
+            approver_role,
+            correlation_id,
+            as_of,
+            reason=f"approved by {approver_actor}",
+        )
 
-    def deny_action(self, approval_id, reviewer, reason, as_of=DEFAULT_AS_OF, correlation_id="restaurant-deny"):
+    def deny_action(
+        self, approval_id, reviewer, reason, as_of=DEFAULT_AS_OF, correlation_id="restaurant-deny"
+    ):
         prev = self._latest_approval(approval_id)
         if prev.kind != "approval":
             raise PilotError("not an approval record")
         return transition_approval(
-            self.mem, prev, "denied", reviewer, prev.role_id, correlation_id, as_of,
-            reason=f"denied by {reviewer}: {reason}")
+            self.mem,
+            prev,
+            "denied",
+            reviewer,
+            prev.role_id,
+            correlation_id,
+            as_of,
+            reason=f"denied by {reviewer}: {reason}",
+        )
 
-    def rollback_action(self, approval_id, actor, role, reason, as_of=DEFAULT_AS_OF, correlation_id="restaurant-rollback"):
+    def rollback_action(
+        self,
+        approval_id,
+        actor,
+        role,
+        reason,
+        as_of=DEFAULT_AS_OF,
+        correlation_id="restaurant-rollback",
+    ):
         prev = self._latest_approval(approval_id)
         if prev.kind != "approval":
             raise PilotError("not an approval record")
         new = transition_approval(
-            self.mem, prev, "rolled_back", actor, role, correlation_id, as_of, reason=reason)
+            self.mem, prev, "rolled_back", actor, role, correlation_id, as_of, reason=reason
+        )
         self.mem.add(
-            kind="workflow_history", nature="verified_outcome", tenant_id=prev.tenant_id,
-            client_id=prev.client_id, actor=actor, role_id=role, source="restaurant_incident",
-            classification="client_confidential", timestamp=as_of, correlation_id=correlation_id,
-            confidence=1.0, evidence_refs=[prev.record_id], data_mode=prev.data_mode,
-            provenance={"correlation_id": correlation_id, "data_mode": prev.data_mode,
-                        "basis": "rollback_incident", "sources": [prev.record_id]},
+            kind="workflow_history",
+            nature="verified_outcome",
+            tenant_id=prev.tenant_id,
+            client_id=prev.client_id,
+            actor=actor,
+            role_id=role,
+            source="restaurant_incident",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=1.0,
+            evidence_refs=[prev.record_id],
+            data_mode=prev.data_mode,
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": prev.data_mode,
+                "basis": "rollback_incident",
+                "sources": [prev.record_id],
+            },
             body={"action": "rollback", "target": approval_id, "reason": reason},
         )
         return new
@@ -297,8 +481,13 @@ class RestaurantCapabilityPack:
         return self.mem.apply_retention(as_of)
 
     # ----------------------------------------------------------- metacognitive proposals
-    def generate_metacognitive_proposal(self, as_of: str, correlation_id: str,
-                                        actor: str = "restaurant-operator", role: str = "restaurant_gm"):
+    def generate_metacognitive_proposal(
+        self,
+        as_of: str,
+        correlation_id: str,
+        actor: str = "restaurant-operator",
+        role: str = "restaurant_gm",
+    ):
         """Reuse the metacognitive improvement engine to propose (NOT deploy) a process
         improvement from detected restaurant outcomes. The engine never mutates runtime;
         we deliberately do not call apply_proposal, so nothing self-improves."""
@@ -306,37 +495,65 @@ class RestaurantCapabilityPack:
         tenant_id = self.tenant_ids[0] if self.tenant_ids else "t-restaurant"
         client_id = self.client_ids[0] if self.client_ids else "c-restaurant"
         proposal = engine.propose(
-            kind="workflow", target="staffing_risk",
+            kind="workflow",
+            target="staffing_risk",
             baseline="Staffing gaps handled ad hoc by shift manager.",
             proposed="Pre-computed staffing-gap recommendation with required approver role.",
             baseline_policy={"value": {"auto": False}},
-            proposed_policy={"value": {"auto": False, "owner_role": "shift_manager",
-                                       "approver_role": "restaurant_gm"}},
+            proposed_policy={
+                "value": {
+                    "auto": False,
+                    "owner_role": "shift_manager",
+                    "approver_role": "restaurant_gm",
+                }
+            },
             hypothesis="Pre-computing gaps reduces missed shift coverage and response time.",
             evidence=[f"{tenant_id}:{client_id}"],
             risk_assessment="low (read-only recommendation, human-approved before any action)",
             rollback_plan="disable recommendation; revert to ad hoc process",
-            tenant_id=tenant_id, client_id=client_id, created_by=actor, role_id=role,
-            correlation_id=correlation_id, timestamp=as_of, provenance={"data_mode": DATA_MODE},
+            tenant_id=tenant_id,
+            client_id=client_id,
+            created_by=actor,
+            role_id=role,
+            correlation_id=correlation_id,
+            timestamp=as_of,
+            provenance={"data_mode": DATA_MODE},
         )
         # Deterministic synthetic evaluation: proposed policy covers the same cases as baseline.
         engine.evaluate(
-            proposal, historical_cases=[], simulated_cases=[{"gap": True}, {"gap": False}],
+            proposal,
+            historical_cases=[],
+            simulated_cases=[{"gap": True}, {"gap": False}],
             simulate=lambda policy, case: bool(case.get("gap")),
         )
         report = engine.generate_evidence_report(engine.get_proposal(proposal.proposal_id))
         # Record the PROPOSAL as governed evidence (not an applied policy).
         self.mem.add(
-            kind="policy", nature="model_inference", tenant_id=tenant_id, client_id=client_id,
-            actor=actor, role_id=role, source="restaurant_metacognition", classification="client_confidential",
-            timestamp=as_of, correlation_id=correlation_id, confidence=0.6,
+            kind="policy",
+            nature="model_inference",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            actor=actor,
+            role_id=role,
+            source="restaurant_metacognition",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=0.6,
             evidence_refs=[proposal.proposal_id],
             data_mode=DATA_MODE,
-            provenance={"correlation_id": correlation_id, "data_mode": DATA_MODE,
-                        "basis": "metacognitive_proposal", "sources": [proposal.proposal_id]},
-            body={"proposal_id": proposal.proposal_id, "applied": False,
-                  "approval_state": proposal.approval_state,
-                  "summary": report.get("hypothesis")},
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": DATA_MODE,
+                "basis": "metacognitive_proposal",
+                "sources": [proposal.proposal_id],
+            },
+            body={
+                "proposal_id": proposal.proposal_id,
+                "applied": False,
+                "approval_state": proposal.approval_state,
+                "summary": report.get("hypothesis"),
+            },
         )
         return report
 
@@ -357,9 +574,14 @@ class RestaurantCapabilityPack:
                 latest[rid] = a
         states = [a.body.get("approval_state") for a in latest.values()]
         incidents = [
-            {"action": r.body.get("action"), "target": r.body.get("target"), "reason": r.body.get("reason")}
+            {
+                "action": r.body.get("action"),
+                "target": r.body.get("target"),
+                "reason": r.body.get("reason"),
+            }
             for r in all_recs
-            if r.kind == "workflow_history" and r.body.get("action") in ("connector_failure", "rollback", "incident")
+            if r.kind == "workflow_history"
+            and r.body.get("action") in ("connector_failure", "rollback", "incident")
         ]
         ok, _ = self.mem.verify_chain()
         metrics = compute_restaurant_metrics(self.mem, self.tenant_ids, self.baseline_metrics)

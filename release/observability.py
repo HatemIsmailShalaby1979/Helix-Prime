@@ -33,11 +33,7 @@ SLO_THRESHOLDS = {
 
 
 def _now() -> str:
-    return (
-        datetime.datetime.now(datetime.timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def measure_startup() -> Dict[str, Any]:
@@ -48,6 +44,7 @@ def measure_startup() -> Dict[str, Any]:
         from control_plane.store import Store
         import tempfile
         import os
+
         tmp = tempfile.mkdtemp(prefix="hp_startup_")
         db = os.path.join(tmp, "wf.db")
         engine = Engine()
@@ -62,7 +59,8 @@ def measure_startup() -> Dict[str, Any]:
         detail = f"{type(e).__name__}: {e}"
         duration = time.monotonic() - start
         return {
-            "ok": ok, "duration_ms": round(duration * 1000, 1),
+            "ok": ok,
+            "duration_ms": round(duration * 1000, 1),
             "slo_le_ms": SLO_THRESHOLDS["startup_seconds_le"] * 1000.0,
             "detail": detail,
         }
@@ -79,10 +77,10 @@ def measure_startup() -> Dict[str, Any]:
 def health_report(db_path: Optional[str] = None) -> Dict[str, Any]:
     """Aggregate local component readiness from observability.health."""
     import observability.health as health
+
     results = health.check_health()
     all_rows = {
-        name: (st.to_dict() if hasattr(st, "to_dict") else str(st))
-        for name, st in results.items()
+        name: (st.to_dict() if hasattr(st, "to_dict") else str(st)) for name, st in results.items()
     }
     # Ollama is optional for local readiness; all other components must be ok.
     required = {k: v for k, v in results.items() if k != "ollama"}
@@ -104,10 +102,12 @@ def storage_writable() -> Dict[str, Any]:
     """Check control-plane + audit DBs are writable in a throwaway temp location."""
     import tempfile
     import os
+
     results: Dict[str, Any] = {}
     try:
         tmp = tempfile.mkdtemp(prefix="hp_storage_")
         from control_plane.store import Store
+
         s = Store(db_path=os.path.join(tmp, "wf.db"))
         s.close()
         results["control_plane_db"] = True
@@ -116,10 +116,13 @@ def storage_writable() -> Dict[str, Any]:
         results["control_plane_error"] = f"{type(e).__name__}: {e}"
     try:
         from security.audit import AuditTrail, AuditRecord
+
         trail = AuditTrail(db_path=os.path.join(tmp, "audit.db"))
         rec = AuditRecord.new(
-            event_type="release_gate", actor="release_gate",
-            actor_type="service", decision="succeeded",
+            event_type="release_gate",
+            actor="release_gate",
+            actor_type="service",
+            decision="succeeded",
         )
         trail.append(rec)
         trail.close()
@@ -127,9 +130,7 @@ def storage_writable() -> Dict[str, Any]:
     except Exception as e:  # noqa: BLE001
         results["audit_db"] = False
         results["audit_error"] = f"{type(e).__name__}: {e}"
-    results["all_writable"] = bool(
-        results.get("control_plane_db") and results.get("audit_db")
-    )
+    results["all_writable"] = bool(results.get("control_plane_db") and results.get("audit_db"))
     return results
 
 

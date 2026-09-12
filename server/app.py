@@ -142,7 +142,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     @app.exception_handler(Exception)
-    async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:        # Never leak internals; always leave a handle for the operator.
+    async def unhandled_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:  # Never leak internals; always leave a handle for the operator.
         logger.exception("unhandled error", exc_info=exc)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

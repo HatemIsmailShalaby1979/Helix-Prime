@@ -91,9 +91,7 @@ class ErlangCEngine:
         traffic_intensity = (self.params.arrival_rate * aht_hours) / agents
         return traffic_intensity  # Callers handle >= 1 with dedicated guards
 
-    def erlang_c_probability_waiting(
-        self, agents: int, traffic_intensity: float
-    ) -> float:
+    def erlang_c_probability_waiting(self, agents: int, traffic_intensity: float) -> float:
         """
         Calculate probability of waiting using Erlang C formula.
 
@@ -131,9 +129,7 @@ class ErlangCEngine:
         except (OverflowError, ZeroDivisionError):
             return 1.0
 
-    def calculate_average_speed_of_answer(
-        self, agents: int, traffic_intensity: float
-    ) -> float:
+    def calculate_average_speed_of_answer(self, agents: int, traffic_intensity: float) -> float:
         """
         Calculate average speed of answer (ASA).
 
@@ -210,20 +206,14 @@ class ErlangCEngine:
 
         # Calculate final metrics
         traffic_intensity = self.calculate_traffic_intensity(optimal_agents)
-        probability_waiting = self.erlang_c_probability_waiting(
-            optimal_agents, traffic_intensity
-        )
+        probability_waiting = self.erlang_c_probability_waiting(optimal_agents, traffic_intensity)
         average_speed_of_answer = self.calculate_average_speed_of_answer(
             optimal_agents, traffic_intensity
         )
-        service_level_achieved = self.calculate_service_level(
-            optimal_agents, traffic_intensity
-        )
+        service_level_achieved = self.calculate_service_level(optimal_agents, traffic_intensity)
 
         # Calculate confidence interval
-        confidence_interval = self._calculate_confidence_interval(
-            optimal_agents, traffic_intensity
-        )
+        confidence_interval = self._calculate_confidence_interval(optimal_agents, traffic_intensity)
 
         return ErlangCResult(
             optimal_agents=optimal_agents,
@@ -328,9 +318,7 @@ if __name__ == "__main__":
     print("=== WFM Forecasting Calculator ===")
     print(f"Optimal Agents: {report['optimal_agents']}")
     print(f"Probability of Waiting: {report['probability_waiting']:.2%}")
-    print(
-        f"Average Speed of Answer: {report['average_speed_of_answer_minutes']:.1f} minutes"
-    )
+    print(f"Average Speed of Answer: {report['average_speed_of_answer_minutes']:.1f} minutes")
     print(f"Service Level Achieved: {report['service_level_achieved']:.2%}")
     print(f"Utilization: {report['utilization_percentage']:.1f}%")
     print(

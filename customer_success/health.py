@@ -44,7 +44,10 @@ def assess_account_health(
     """Calculate a transparent health score; no model or external write involved."""
     if (account.tenant_id, account.client_id) != (context.tenant_id, context.client_id):
         raise PermissionError("account health scope mismatch")
-    if enrichment and (enrichment.tenant_id, enrichment.client_id) != (context.tenant_id, context.client_id):
+    if enrichment and (enrichment.tenant_id, enrichment.client_id) != (
+        context.tenant_id,
+        context.client_id,
+    ):
         raise PermissionError("enrichment scope mismatch")
 
     score = 100.0
@@ -63,12 +66,26 @@ def assess_account_health(
             score -= 10
             risks.append(f"open_high_priority_ticket:{ticket.ticket_id}")
             actions.append("Review open high-priority ticket in the next operating cycle")
-        evidence.append({"provider": ticket.source.provider, "record_id": ticket.ticket_id, "type": "support_ticket", "source_version": ticket.source.input_version})
+        evidence.append(
+            {
+                "provider": ticket.source.provider,
+                "record_id": ticket.ticket_id,
+                "type": "support_ticket",
+                "source_version": ticket.source.input_version,
+            }
+        )
 
     if account.lifecycle_stage.lower() in {"onboarding", "adoption"}:
         actions.append("Schedule a customer-success adoption review")
     if enrichment and enrichment.fields.get("research_status") == "simulated":
-        evidence.append({"provider": enrichment.source.provider, "record_id": account.account_id, "type": "enrichment", "source_version": enrichment.source.input_version})
+        evidence.append(
+            {
+                "provider": enrichment.source.provider,
+                "record_id": account.account_id,
+                "type": "enrichment",
+                "source_version": enrichment.source.input_version,
+            }
+        )
 
     score = max(0.0, min(100.0, score))
     status = "at_risk" if score < 70 else "watch" if score < 85 else "healthy"

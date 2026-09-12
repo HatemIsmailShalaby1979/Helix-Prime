@@ -28,7 +28,13 @@ def _engine(tmp_path=None):
 
 def test_unauthorized_engine_execution_is_denied(tmp_path):
     engine, store = _engine(tmp_path)
-    corr = CorrelationContext(correlation_id="corr_unauth", idempotency_key="idem_unauth", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_unauth",
+        idempotency_key="idem_unauth",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     # ops_gm trying to execute b2b_onboarding which is owned by sales_gm? Actually b2b_onboarding is not an agent capability, but let's use a tool check
     # For this test, use wfm_forecast but with unauthorized tool b2b_engine for ops_gm
     req = TaskRequest(
@@ -51,7 +57,13 @@ def test_unauthorized_engine_execution_is_denied(tmp_path):
 
 def test_tenant_client_scope_is_preserved(tmp_path):
     engine, store = _engine(tmp_path)
-    corr = CorrelationContext(correlation_id="corr_tenant", idempotency_key="idem_tenant", tenant_id="tenant_123", client_id="client_A", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_tenant",
+        idempotency_key="idem_tenant",
+        tenant_id="tenant_123",
+        client_id="client_A",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_tenant",
         correlation=corr,
@@ -79,7 +91,13 @@ def test_tenant_client_scope_is_preserved(tmp_path):
 def test_sensitive_payloads_are_classified(tmp_path):
     engine, store = _engine(tmp_path)
     # Personnel-sensitive payload should be classified and validated
-    corr = CorrelationContext(correlation_id="corr_class", idempotency_key="idem_class", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_class",
+        idempotency_key="idem_class",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     # This payload contains personnel-sensitive data (salary)
     req = TaskRequest(
         request_id="req_class",
@@ -87,7 +105,11 @@ def test_sensitive_payloads_are_classified(tmp_path):
         requesting_actor="sami",
         owning_role_id="hr_personnel_gm",
         capability="workforce_planning",
-        input_payload={"candidate": "Alice", "salary": 90000, "data_classification": "personnel_sensitive"},
+        input_payload={
+            "candidate": "Alice",
+            "salary": 90000,
+            "data_classification": "personnel_sensitive",
+        },
         requires_approval=False,
         status="proposed",
         created_at="2026-08-27T18:00:00Z",
@@ -101,7 +123,13 @@ def test_sensitive_payloads_are_classified(tmp_path):
     # Test that unknown classification is rejected
     req_bad = TaskRequest(
         request_id="req_bad_class",
-        correlation=CorrelationContext(correlation_id="corr_bad", idempotency_key="idem_bad", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z"),
+        correlation=CorrelationContext(
+            correlation_id="corr_bad",
+            idempotency_key="idem_bad",
+            tenant_id="t",
+            client_id="c",
+            created_at="2026-08-27T18:00:00Z",
+        ),
         requesting_actor="sami",
         owning_role_id="ops_gm",
         capability="wfm_forecast",
@@ -123,13 +151,23 @@ def test_sensitive_payloads_are_classified(tmp_path):
     # We will make the test expect dead_letter after fix, so before fix it will fail (showing gap)
     # To make the preflight test initially fail, we assert dead_letter now
     # If it fails, it indicates gap
-    assert wf_bad.state == "dead_letter" or wf_bad.error is not None or "unknown_xyz" in str(wf_bad.input_payload)
+    assert (
+        wf_bad.state == "dead_letter"
+        or wf_bad.error is not None
+        or "unknown_xyz" in str(wf_bad.input_payload)
+    )
 
 
 def test_secrets_and_pii_not_written_to_logs(tmp_path):
     engine, store = _engine(tmp_path)
     # Payload with secret should be either rejected or redacted before logging
-    corr = CorrelationContext(correlation_id="corr_secret", idempotency_key="idem_secret", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_secret",
+        idempotency_key="idem_secret",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_secret",
         correlation=corr,
@@ -155,7 +193,13 @@ def test_secrets_and_pii_not_written_to_logs(tmp_path):
 
 def test_audit_records_generated(tmp_path):
     engine, store = _engine(tmp_path)
-    corr = CorrelationContext(correlation_id="corr_audit", idempotency_key="idem_audit", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_audit",
+        idempotency_key="idem_audit",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_audit",
         correlation=corr,
@@ -181,7 +225,9 @@ def test_audit_records_generated(tmp_path):
     # After fix, there should be at least one audit record for this workflow
     # We check that at least one record has workflow_id == wf.workflow_id or correlation_id == corr.correlation_id
     # For preflight, we expect failure
-    found = any(r.workflow_id == wf.workflow_id or r.correlation_id == corr.correlation_id for r in records)
+    found = any(
+        r.workflow_id == wf.workflow_id or r.correlation_id == corr.correlation_id for r in records
+    )
     # This assertion will fail before fix (gap), pass after fix
     assert found, "audit records should be generated for engine authorization and execution"
 
@@ -192,7 +238,13 @@ def test_structured_logs_contain_identifiers(tmp_path):
     log_path = pathlib.Path("observability/logs.jsonl")
     if log_path.exists():
         log_path.unlink()
-    corr = CorrelationContext(correlation_id="corr_logs", idempotency_key="idem_logs", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_logs",
+        idempotency_key="idem_logs",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_logs",
         correlation=corr,
@@ -217,7 +269,8 @@ def test_structured_logs_contain_identifiers(tmp_path):
     logs = [json.loads(line) for line in log_path.read_text().splitlines() if line.strip()]
     # Find a log for this workflow
     found = any(
-        log.get("workflow_id") == wf.workflow_id and log.get("correlation_id") == corr.correlation_id
+        log.get("workflow_id") == wf.workflow_id
+        and log.get("correlation_id") == corr.correlation_id
         for log in logs
     )
     assert found, "structured logs should contain workflow_id and correlation_id"
@@ -225,7 +278,13 @@ def test_structured_logs_contain_identifiers(tmp_path):
 
 def test_failed_engine_execution_produces_visible_typed_error(tmp_path):
     engine, store = _engine(tmp_path)
-    corr = CorrelationContext(correlation_id="corr_fail", idempotency_key="idem_fail", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_fail",
+        idempotency_key="idem_fail",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_fail",
         correlation=corr,

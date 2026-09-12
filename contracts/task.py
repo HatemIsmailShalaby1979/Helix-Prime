@@ -26,6 +26,7 @@ SCHEMA_VERSION = "1.0"
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
+
 def _require_non_empty_str(value: Any, field_path: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_path}: must be non-empty string, got {value!r}")
@@ -54,7 +55,9 @@ def _validate_iso_timestamp(value: Any, field_path: str) -> str:
 
 def _validate_confidence(value: Any, field_path: str) -> float:
     if not isinstance(value, (int, float)):
-        raise ValueError(f"{field_path}: confidence must be number 0.0-1.0, got {type(value).__name__}")
+        raise ValueError(
+            f"{field_path}: confidence must be number 0.0-1.0, got {type(value).__name__}"
+        )
     f = float(value)
     if not (0.0 <= f <= 1.0):
         raise ValueError(f"{field_path}: confidence must be 0.0-1.0, got {f}")
@@ -81,6 +84,7 @@ def _validate_schema_version(value: Any, field_path: str) -> str:
 
 # ── EvidenceRef ────────────────────────────────────────────────────────────
 
+
 @dataclass
 class EvidenceRef:
     """
@@ -89,6 +93,7 @@ class EvidenceRef:
     Required for human-supervised autonomy per Codex principle:
     every action is attributable with evidence reference.
     """
+
     evidence_id: str
     type: str  # e.g., log, engine_output, file, metric, approval, audit
     uri: str
@@ -102,7 +107,9 @@ class EvidenceRef:
         self.type = _require_non_empty_str(self.type, "EvidenceRef.type")
         self.uri = _require_non_empty_str(self.uri, "EvidenceRef.uri")
         self.timestamp = _validate_iso_timestamp(self.timestamp, "EvidenceRef.timestamp")
-        self.schema_version = _validate_schema_version(self.schema_version, "EvidenceRef.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "EvidenceRef.schema_version"
+        )
         if self.hash is not None:
             self.hash = _require_non_empty_str(self.hash, "EvidenceRef.hash")
         if self.actor is not None:
@@ -167,7 +174,9 @@ class AgentError:
 
     def __post_init__(self) -> None:
         self.error_id = _require_non_empty_str(self.error_id, "AgentError.error_id")
-        self.correlation_id = _require_non_empty_str(self.correlation_id, "AgentError.correlation_id")
+        self.correlation_id = _require_non_empty_str(
+            self.correlation_id, "AgentError.correlation_id"
+        )
         self.code = _require_non_empty_str(self.code, "AgentError.code").lower()
         if self.code not in ALLOWED_ERROR_CODES:
             raise ValueError(
@@ -175,11 +184,17 @@ class AgentError:
             )
         self.message = _require_non_empty_str(self.message, "AgentError.message")
         self.timestamp = _validate_iso_timestamp(self.timestamp, "AgentError.timestamp")
-        self.schema_version = _validate_schema_version(self.schema_version, "AgentError.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "AgentError.schema_version"
+        )
         if not isinstance(self.retryable, bool):
-            raise ValueError(f"AgentError.retryable: must be bool, got {type(self.retryable).__name__}")
+            raise ValueError(
+                f"AgentError.retryable: must be bool, got {type(self.retryable).__name__}"
+            )
         if self.evidence_ref is not None and not isinstance(self.evidence_ref, EvidenceRef):
-            raise ValueError(f"AgentError.evidence_ref: must be EvidenceRef or null, got {type(self.evidence_ref).__name__}")
+            raise ValueError(
+                f"AgentError.evidence_ref: must be EvidenceRef or null, got {type(self.evidence_ref).__name__}"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -214,6 +229,7 @@ class AgentError:
 
 # ── CorrelationContext ─────────────────────────────────────────────────────
 
+
 @dataclass
 class CorrelationContext:
     """
@@ -221,6 +237,7 @@ class CorrelationContext:
 
     Required per Codex: every action is attributable with correlation ID and idempotency key.
     """
+
     correlation_id: str
     idempotency_key: str
     tenant_id: Optional[str]
@@ -230,19 +247,29 @@ class CorrelationContext:
     trace_parent: Optional[str] = None
 
     def __post_init__(self) -> None:
-        self.correlation_id = _require_non_empty_str(self.correlation_id, "CorrelationContext.correlation_id")
-        self.idempotency_key = _require_non_empty_str(self.idempotency_key, "CorrelationContext.idempotency_key")
+        self.correlation_id = _require_non_empty_str(
+            self.correlation_id, "CorrelationContext.correlation_id"
+        )
+        self.idempotency_key = _require_non_empty_str(
+            self.idempotency_key, "CorrelationContext.idempotency_key"
+        )
         # at least one of tenant_id or client_id should be present per spec; allow both, but require at least one non-empty
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "CorrelationContext.tenant_id")
         if self.client_id is not None:
             self.client_id = _require_non_empty_str(self.client_id, "CorrelationContext.client_id")
         if not self.tenant_id and not self.client_id:
-            raise ValueError("CorrelationContext: at least one of tenant_id or client_id must be non-empty")
+            raise ValueError(
+                "CorrelationContext: at least one of tenant_id or client_id must be non-empty"
+            )
         self.created_at = _validate_iso_timestamp(self.created_at, "CorrelationContext.created_at")
-        self.schema_version = _validate_schema_version(self.schema_version, "CorrelationContext.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "CorrelationContext.schema_version"
+        )
         if self.trace_parent is not None:
-            self.trace_parent = _require_non_empty_str(self.trace_parent, "CorrelationContext.trace_parent")
+            self.trace_parent = _require_non_empty_str(
+                self.trace_parent, "CorrelationContext.trace_parent"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -262,7 +289,9 @@ class CorrelationContext:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CorrelationContext":
         if not isinstance(data, dict):
-            raise ValueError(f"CorrelationContext.from_dict: expected dict, got {type(data).__name__}")
+            raise ValueError(
+                f"CorrelationContext.from_dict: expected dict, got {type(data).__name__}"
+            )
         return cls(
             correlation_id=data.get("correlation_id", ""),
             idempotency_key=data.get("idempotency_key", ""),
@@ -316,7 +345,9 @@ class Approval:
         self.correlation_id = _require_non_empty_str(self.correlation_id, "Approval.correlation_id")
         self.subject_id = _require_non_empty_str(self.subject_id, "Approval.subject_id")
         self.approver_actor = _require_non_empty_str(self.approver_actor, "Approval.approver_actor")
-        self.approver_role_id = _require_non_empty_str(self.approver_role_id, "Approval.approver_role_id")
+        self.approver_role_id = _require_non_empty_str(
+            self.approver_role_id, "Approval.approver_role_id"
+        )
         self.decision = _require_non_empty_str(self.decision, "Approval.decision").lower()
         if self.decision not in ALLOWED_APPROVAL_DECISIONS:
             raise ValueError(
@@ -324,9 +355,13 @@ class Approval:
             )
         self.reason = _require_non_empty_str(self.reason, "Approval.reason")
         self.timestamp = _validate_iso_timestamp(self.timestamp, "Approval.timestamp")
-        self.schema_version = _validate_schema_version(self.schema_version, "Approval.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "Approval.schema_version"
+        )
         if self.evidence_ref is not None and not isinstance(self.evidence_ref, EvidenceRef):
-            raise ValueError(f"Approval.evidence_ref: must be EvidenceRef or null, got {type(self.evidence_ref).__name__}")
+            raise ValueError(
+                f"Approval.evidence_ref: must be EvidenceRef or null, got {type(self.evidence_ref).__name__}"
+            )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -365,7 +400,16 @@ class Approval:
 
 # ── Action ─────────────────────────────────────────────────────────────────
 
-ALLOWED_ACTION_STATUSES = {"proposed", "approved", "denied", "executing", "succeeded", "failed", "compensated", "closed"}
+ALLOWED_ACTION_STATUSES = {
+    "proposed",
+    "approved",
+    "denied",
+    "executing",
+    "succeeded",
+    "failed",
+    "compensated",
+    "closed",
+}
 
 
 @dataclass
@@ -390,35 +434,56 @@ class Action:
     def __post_init__(self) -> None:
         self.action_id = _require_non_empty_str(self.action_id, "Action.action_id")
         if not isinstance(self.correlation, CorrelationContext):
-            raise ValueError(f"Action.correlation: must be CorrelationContext, got {type(self.correlation).__name__}")
+            raise ValueError(
+                f"Action.correlation: must be CorrelationContext, got {type(self.correlation).__name__}"
+            )
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "Action.tenant_id")
         if self.client_id is not None:
             self.client_id = _require_non_empty_str(self.client_id, "Action.client_id")
-        if not self.tenant_id and not self.client_id and not self.correlation.tenant_id and not self.correlation.client_id:
-            raise ValueError("Action: at least one of tenant_id/client_id (or correlation tenant/client) must be present")
+        if (
+            not self.tenant_id
+            and not self.client_id
+            and not self.correlation.tenant_id
+            and not self.correlation.client_id
+        ):
+            raise ValueError(
+                "Action: at least one of tenant_id/client_id (or correlation tenant/client) must be present"
+            )
         self.actor = _require_non_empty_str(self.actor, "Action.actor")
         self.owning_role_id = _require_non_empty_str(self.owning_role_id, "Action.owning_role_id")
         self.capability = _require_non_empty_str(self.capability, "Action.capability")
         self.payload = _require_dict(self.payload, "Action.payload")
         if not isinstance(self.requires_approval, bool):
-            raise ValueError(f"Action.requires_approval: must be bool, got {type(self.requires_approval).__name__}")
+            raise ValueError(
+                f"Action.requires_approval: must be bool, got {type(self.requires_approval).__name__}"
+            )
         self.status = _require_non_empty_str(self.status, "Action.status").lower()
         if self.status not in ALLOWED_ACTION_STATUSES:
-            raise ValueError(f"Action.status: must be one of {sorted(ALLOWED_ACTION_STATUSES)}, got {self.status!r}")
+            raise ValueError(
+                f"Action.status: must be one of {sorted(ALLOWED_ACTION_STATUSES)}, got {self.status!r}"
+            )
         self.created_at = _validate_iso_timestamp(self.created_at, "Action.created_at")
         self.schema_version = _validate_schema_version(self.schema_version, "Action.schema_version")
         if self.approval is not None and not isinstance(self.approval, Approval):
-            raise ValueError(f"Action.approval: must be Approval or null, got {type(self.approval).__name__}")
+            raise ValueError(
+                f"Action.approval: must be Approval or null, got {type(self.approval).__name__}"
+            )
         if self.executed_at is not None:
             self.executed_at = _validate_iso_timestamp(self.executed_at, "Action.executed_at")
         if not isinstance(self.evidence_refs, list):
-            raise ValueError(f"Action.evidence_refs: must be list, got {type(self.evidence_refs).__name__}")
+            raise ValueError(
+                f"Action.evidence_refs: must be list, got {type(self.evidence_refs).__name__}"
+            )
         for i, ev in enumerate(self.evidence_refs):
             if not isinstance(ev, EvidenceRef):
-                raise ValueError(f"Action.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}")
+                raise ValueError(
+                    f"Action.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}"
+                )
         if self.idempotency_key is not None:
-            self.idempotency_key = _require_non_empty_str(self.idempotency_key, "Action.idempotency_key")
+            self.idempotency_key = _require_non_empty_str(
+                self.idempotency_key, "Action.idempotency_key"
+            )
         else:
             # default to correlation's key if not provided
             self.idempotency_key = self.correlation.idempotency_key
@@ -484,14 +549,21 @@ class Action:
             status=data.get("status", ""),
             created_at=data.get("created_at", ""),
             schema_version=data.get("schema_version", SCHEMA_VERSION),
-            approval=Approval.from_dict(data["approval"]) if isinstance(data.get("approval"), dict) else None,
+            approval=Approval.from_dict(data["approval"])
+            if isinstance(data.get("approval"), dict)
+            else None,
             executed_at=data.get("executed_at"),
-            evidence_refs=[EvidenceRef.from_dict(e) for e in data.get("evidence_refs", []) if isinstance(e, dict)],
+            evidence_refs=[
+                EvidenceRef.from_dict(e)
+                for e in data.get("evidence_refs", [])
+                if isinstance(e, dict)
+            ],
             idempotency_key=data.get("idempotency_key"),
         )
 
 
 # ── Recommendation ─────────────────────────────────────────────────────────
+
 
 @dataclass
 class Recommendation:
@@ -510,28 +582,44 @@ class Recommendation:
     evidence_refs: List[EvidenceRef] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        self.recommendation_id = _require_non_empty_str(self.recommendation_id, "Recommendation.recommendation_id")
+        self.recommendation_id = _require_non_empty_str(
+            self.recommendation_id, "Recommendation.recommendation_id"
+        )
         if not isinstance(self.correlation, CorrelationContext):
-            raise ValueError(f"Recommendation.correlation: must be CorrelationContext, got {type(self.correlation).__name__}")
-        self.owning_role_id = _require_non_empty_str(self.owning_role_id, "Recommendation.owning_role_id")
+            raise ValueError(
+                f"Recommendation.correlation: must be CorrelationContext, got {type(self.correlation).__name__}"
+            )
+        self.owning_role_id = _require_non_empty_str(
+            self.owning_role_id, "Recommendation.owning_role_id"
+        )
         self.capability = _require_non_empty_str(self.capability, "Recommendation.capability")
         self.confidence = _validate_confidence(self.confidence, "Recommendation.confidence")
         self.rationale = _require_non_empty_str(self.rationale, "Recommendation.rationale")
         if not isinstance(self.requires_approval, bool):
-            raise ValueError(f"Recommendation.requires_approval: must be bool, got {type(self.requires_approval).__name__}")
+            raise ValueError(
+                f"Recommendation.requires_approval: must be bool, got {type(self.requires_approval).__name__}"
+            )
         self.created_at = _validate_iso_timestamp(self.created_at, "Recommendation.created_at")
-        self.schema_version = _validate_schema_version(self.schema_version, "Recommendation.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "Recommendation.schema_version"
+        )
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "Recommendation.tenant_id")
         if self.client_id is not None:
             self.client_id = _require_non_empty_str(self.client_id, "Recommendation.client_id")
         if self.proposed_action is not None and not isinstance(self.proposed_action, Action):
-            raise ValueError(f"Recommendation.proposed_action: must be Action or null, got {type(self.proposed_action).__name__}")
+            raise ValueError(
+                f"Recommendation.proposed_action: must be Action or null, got {type(self.proposed_action).__name__}"
+            )
         if not isinstance(self.evidence_refs, list):
-            raise ValueError(f"Recommendation.evidence_refs: must be list, got {type(self.evidence_refs).__name__}")
+            raise ValueError(
+                f"Recommendation.evidence_refs: must be list, got {type(self.evidence_refs).__name__}"
+            )
         for i, ev in enumerate(self.evidence_refs):
             if not isinstance(ev, EvidenceRef):
-                raise ValueError(f"Recommendation.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}")
+                raise ValueError(
+                    f"Recommendation.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}"
+                )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -571,8 +659,14 @@ class Recommendation:
             schema_version=data.get("schema_version", SCHEMA_VERSION),
             tenant_id=data.get("tenant_id"),
             client_id=data.get("client_id"),
-            proposed_action=Action.from_dict(data["proposed_action"]) if isinstance(data.get("proposed_action"), dict) else None,
-            evidence_refs=[EvidenceRef.from_dict(e) for e in data.get("evidence_refs", []) if isinstance(e, dict)],
+            proposed_action=Action.from_dict(data["proposed_action"])
+            if isinstance(data.get("proposed_action"), dict)
+            else None,
+            evidence_refs=[
+                EvidenceRef.from_dict(e)
+                for e in data.get("evidence_refs", [])
+                if isinstance(e, dict)
+            ],
         )
 
 
@@ -586,6 +680,7 @@ class TaskRequest:
     """
     Canonical request for agent work. One source of truth per Codex principle.
     """
+
     request_id: str
     correlation: CorrelationContext
     requesting_actor: str
@@ -606,40 +701,67 @@ class TaskRequest:
     def __post_init__(self) -> None:
         self.request_id = _require_non_empty_str(self.request_id, "TaskRequest.request_id")
         if not isinstance(self.correlation, CorrelationContext):
-            raise ValueError(f"TaskRequest.correlation: must be CorrelationContext, got {type(self.correlation).__name__}")
-        self.requesting_actor = _require_non_empty_str(self.requesting_actor, "TaskRequest.requesting_actor")
-        self.owning_role_id = _require_non_empty_str(self.owning_role_id, "TaskRequest.owning_role_id")
+            raise ValueError(
+                f"TaskRequest.correlation: must be CorrelationContext, got {type(self.correlation).__name__}"
+            )
+        self.requesting_actor = _require_non_empty_str(
+            self.requesting_actor, "TaskRequest.requesting_actor"
+        )
+        self.owning_role_id = _require_non_empty_str(
+            self.owning_role_id, "TaskRequest.owning_role_id"
+        )
         self.capability = _require_non_empty_str(self.capability, "TaskRequest.capability")
         self.input_payload = _require_dict(self.input_payload, "TaskRequest.input_payload")
         if not isinstance(self.requires_approval, bool):
-            raise ValueError(f"TaskRequest.requires_approval: must be bool, got {type(self.requires_approval).__name__}")
+            raise ValueError(
+                f"TaskRequest.requires_approval: must be bool, got {type(self.requires_approval).__name__}"
+            )
         self.status = _require_non_empty_str(self.status, "TaskRequest.status").lower()
         if self.status not in ALLOWED_TASK_REQUEST_STATUSES:
             raise ValueError(
                 f"TaskRequest.status: must be one of {sorted(ALLOWED_TASK_REQUEST_STATUSES)}, got {self.status!r}"
             )
         self.created_at = _validate_iso_timestamp(self.created_at, "TaskRequest.created_at")
-        self.schema_version = _validate_schema_version(self.schema_version, "TaskRequest.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "TaskRequest.schema_version"
+        )
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "TaskRequest.tenant_id")
         if self.client_id is not None:
             self.client_id = _require_non_empty_str(self.client_id, "TaskRequest.client_id")
-        if not self.tenant_id and not self.client_id and not self.correlation.tenant_id and not self.correlation.client_id:
-            raise ValueError("TaskRequest: at least one of tenant_id/client_id (or correlation tenant/client) must be present")
+        if (
+            not self.tenant_id
+            and not self.client_id
+            and not self.correlation.tenant_id
+            and not self.correlation.client_id
+        ):
+            raise ValueError(
+                "TaskRequest: at least one of tenant_id/client_id (or correlation tenant/client) must be present"
+            )
         if self.approval_limit_tier is not None:
-            self.approval_limit_tier = _require_non_empty_str(self.approval_limit_tier, "TaskRequest.approval_limit_tier")
+            self.approval_limit_tier = _require_non_empty_str(
+                self.approval_limit_tier, "TaskRequest.approval_limit_tier"
+            )
         if not isinstance(self.evidence_refs, list):
-            raise ValueError(f"TaskRequest.evidence_refs: must be list, got {type(self.evidence_refs).__name__}")
+            raise ValueError(
+                f"TaskRequest.evidence_refs: must be list, got {type(self.evidence_refs).__name__}"
+            )
         for i, ev in enumerate(self.evidence_refs):
             if not isinstance(ev, EvidenceRef):
-                raise ValueError(f"TaskRequest.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}")
+                raise ValueError(
+                    f"TaskRequest.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}"
+                )
         if self.idempotency_key is not None:
-            self.idempotency_key = _require_non_empty_str(self.idempotency_key, "TaskRequest.idempotency_key")
+            self.idempotency_key = _require_non_empty_str(
+                self.idempotency_key, "TaskRequest.idempotency_key"
+            )
         else:
             self.idempotency_key = self.correlation.idempotency_key
         if self.timeout_seconds is not None:
             if not isinstance(self.timeout_seconds, int) or self.timeout_seconds <= 0:
-                raise ValueError(f"TaskRequest.timeout_seconds: must be positive int, got {self.timeout_seconds!r}")
+                raise ValueError(
+                    f"TaskRequest.timeout_seconds: must be positive int, got {self.timeout_seconds!r}"
+                )
         # correlation/idempotency consistency
         if self.idempotency_key != self.correlation.idempotency_key:
             # Allow explicit override but log via validation; for C1 require equality to avoid divergence
@@ -691,7 +813,11 @@ class TaskRequest:
             tenant_id=data.get("tenant_id"),
             client_id=data.get("client_id"),
             approval_limit_tier=data.get("approval_limit_tier"),
-            evidence_refs=[EvidenceRef.from_dict(e) for e in data.get("evidence_refs", []) if isinstance(e, dict)],
+            evidence_refs=[
+                EvidenceRef.from_dict(e)
+                for e in data.get("evidence_refs", [])
+                if isinstance(e, dict)
+            ],
             idempotency_key=data.get("idempotency_key"),
             timeout_seconds=data.get("timeout_seconds"),
         )
@@ -733,8 +859,12 @@ class TaskResult:
         self.result_id = _require_non_empty_str(self.result_id, "TaskResult.result_id")
         self.request_id = _require_non_empty_str(self.request_id, "TaskResult.request_id")
         if not isinstance(self.correlation, CorrelationContext):
-            raise ValueError(f"TaskResult.correlation: must be CorrelationContext, got {type(self.correlation).__name__}")
-        self.owning_role_id = _require_non_empty_str(self.owning_role_id, "TaskResult.owning_role_id")
+            raise ValueError(
+                f"TaskResult.correlation: must be CorrelationContext, got {type(self.correlation).__name__}"
+            )
+        self.owning_role_id = _require_non_empty_str(
+            self.owning_role_id, "TaskResult.owning_role_id"
+        )
         self.capability = _require_non_empty_str(self.capability, "TaskResult.capability")
         self.status = _require_non_empty_str(self.status, "TaskResult.status").lower()
         if self.status not in ALLOWED_TASK_RESULT_STATUSES:
@@ -742,28 +872,44 @@ class TaskResult:
                 f"TaskResult.status: must be one of {sorted(ALLOWED_TASK_RESULT_STATUSES)}, got {self.status!r}"
             )
         self.created_at = _validate_iso_timestamp(self.created_at, "TaskResult.created_at")
-        self.schema_version = _validate_schema_version(self.schema_version, "TaskResult.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "TaskResult.schema_version"
+        )
         if self.output_payload is not None:
             self.output_payload = _require_dict(self.output_payload, "TaskResult.output_payload")
         if self.confidence is not None:
             self.confidence = _validate_confidence(self.confidence, "TaskResult.confidence")
         if not isinstance(self.evidence_refs, list):
-            raise ValueError(f"TaskResult.evidence_refs: must be list, got {type(self.evidence_refs).__name__}")
+            raise ValueError(
+                f"TaskResult.evidence_refs: must be list, got {type(self.evidence_refs).__name__}"
+            )
         for i, ev in enumerate(self.evidence_refs):
             if not isinstance(ev, EvidenceRef):
-                raise ValueError(f"TaskResult.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}")
+                raise ValueError(
+                    f"TaskResult.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}"
+                )
         if self.error is not None and not isinstance(self.error, AgentError):
-            raise ValueError(f"TaskResult.error: must be AgentError or null, got {type(self.error).__name__}")
+            raise ValueError(
+                f"TaskResult.error: must be AgentError or null, got {type(self.error).__name__}"
+            )
         if self.recommendation is not None and not isinstance(self.recommendation, Recommendation):
-            raise ValueError(f"TaskResult.recommendation: must be Recommendation or null, got {type(self.recommendation).__name__}")
+            raise ValueError(
+                f"TaskResult.recommendation: must be Recommendation or null, got {type(self.recommendation).__name__}"
+            )
         if self.action is not None and not isinstance(self.action, Action):
-            raise ValueError(f"TaskResult.action: must be Action or null, got {type(self.action).__name__}")
+            raise ValueError(
+                f"TaskResult.action: must be Action or null, got {type(self.action).__name__}"
+            )
         if self.completed_at is not None:
-            self.completed_at = _validate_iso_timestamp(self.completed_at, "TaskResult.completed_at")
+            self.completed_at = _validate_iso_timestamp(
+                self.completed_at, "TaskResult.completed_at"
+            )
 
         # status consistency
         if self.status == "refused" and self.error is None:
-            raise ValueError("TaskResult: status 'refused' requires error with code 'refused' or 'policy_denied'")
+            raise ValueError(
+                "TaskResult: status 'refused' requires error with code 'refused' or 'policy_denied'"
+            )
         if self.status == "timed_out" and (self.error is None or self.error.code != "timeout"):
             raise ValueError("TaskResult: status 'timed_out' requires error.code == 'timeout'")
         if self.status == "failed" and self.error is None:
@@ -813,9 +959,19 @@ class TaskResult:
             schema_version=data.get("schema_version", SCHEMA_VERSION),
             output_payload=data.get("output_payload"),
             confidence=data.get("confidence"),
-            evidence_refs=[EvidenceRef.from_dict(e) for e in data.get("evidence_refs", []) if isinstance(e, dict)],
-            error=AgentError.from_dict(data["error"]) if isinstance(data.get("error"), dict) else None,
-            recommendation=Recommendation.from_dict(data["recommendation"]) if isinstance(data.get("recommendation"), dict) else None,
-            action=Action.from_dict(data["action"]) if isinstance(data.get("action"), dict) else None,
+            evidence_refs=[
+                EvidenceRef.from_dict(e)
+                for e in data.get("evidence_refs", [])
+                if isinstance(e, dict)
+            ],
+            error=AgentError.from_dict(data["error"])
+            if isinstance(data.get("error"), dict)
+            else None,
+            recommendation=Recommendation.from_dict(data["recommendation"])
+            if isinstance(data.get("recommendation"), dict)
+            else None,
+            action=Action.from_dict(data["action"])
+            if isinstance(data.get("action"), dict)
+            else None,
             completed_at=data.get("completed_at"),
         )

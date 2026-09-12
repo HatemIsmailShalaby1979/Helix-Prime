@@ -150,7 +150,11 @@ def test_idempotency_returns_first_receipt():
         context=context,
     )
 
-    approval = type('Approval', (), {'decision': 'approved', 'approver_actor': 'manager', 'approver_role_id': 'mgr_1'})()
+    approval = type(
+        "Approval",
+        (),
+        {"decision": "approved", "approver_actor": "manager", "approver_role_id": "mgr_1"},
+    )()
 
     receipt1 = gateway.apply_write(
         plan_id=plan1.plan_id,
@@ -198,5 +202,5 @@ def test_read_carries_provenance():
     accounts = connector.list_accounts(context)
 
     # Should return empty tuple for fake connector with no accounts
-    assert isinstance(accounts, tuple) or hasattr(accounts, '__iter__')
+    assert isinstance(accounts, tuple) or hasattr(accounts, "__iter__")
     assert len(accounts) == 0

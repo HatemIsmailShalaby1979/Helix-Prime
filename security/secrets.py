@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 
 # Patterns for redaction (deterministic, no network)
@@ -30,7 +30,18 @@ REDACTION_PATTERNS = [
 ]
 
 # For is_secret_present check: look for high-entropy or known secret keys in string
-SECRET_KEYWORDS = ["api_key", "apikey", "password", "passwd", "secret", "bearer", "token", "cookie", "aws_access", "aws_secret"]
+SECRET_KEYWORDS = [
+    "api_key",
+    "apikey",
+    "password",
+    "passwd",
+    "secret",
+    "bearer",
+    "token",
+    "cookie",
+    "aws_access",
+    "aws_secret",
+]
 
 
 def redact(text: str) -> str:
@@ -56,7 +67,14 @@ def redact_dict(data: Dict[str, Any]) -> Dict[str, Any]:
         elif isinstance(v, dict):
             out[k] = redact_dict(v)
         elif isinstance(v, list):
-            out[k] = [redact_dict(item) if isinstance(item, dict) else redact(str(item)) if isinstance(item, str) else item for item in v]
+            out[k] = [
+                redact_dict(item)
+                if isinstance(item, dict)
+                else redact(str(item))
+                if isinstance(item, str)
+                else item
+                for item in v
+            ]
         elif isinstance(v, str):
             out[k] = redact(v)
         else:
@@ -81,7 +99,9 @@ def is_secret_present(text: str) -> bool:
     # Check for high-entropy token-like strings (e.g., 32+ hex chars)
     if re.search(r"\b[A-Za-z0-9]{32,}\b", text) and "[redacted]" not in lower:
         # But ignore UUIDs which are hex with dashes
-        if not re.match(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", text.strip().lower()):
+        if not re.match(
+            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", text.strip().lower()
+        ):
             # If it looks like a token and not already redacted, flag
             pass
     return False
@@ -102,13 +122,19 @@ def validate_no_secrets(payload: Dict[str, Any], field_path: str = "payload") ->
     except Exception:
         text = str(payload)
     if is_secret_present(text):
-        raise ValueError(f"{field_path}: appears to contain secret — fail closed (keys: {SECRET_KEYWORDS})")
+        raise ValueError(
+            f"{field_path}: appears to contain secret — fail closed (keys: {SECRET_KEYWORDS})"
+        )
     # Also check for redacted placeholder already? If payload already redacted, it's okay
     # Check each string value for secret patterns
     for k, v in payload.items():
         if isinstance(v, str) and is_secret_present(v):
             raise ValueError(f"{field_path}.{k}: contains potential secret — fail closed")
-        if isinstance(v, str) and re.search(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-.]+", v) and "example.com" not in v.lower():
+        if (
+            isinstance(v, str)
+            and re.search(r"[A-Za-z0-9_.+-]+@[A-Za-z0-9-]+\.[A-Za-z0-9-.]+", v)
+            and "example.com" not in v.lower()
+        ):
             # PII email not from example.com should be flagged for C3
             # For C3 we allow but redaction is expected; we don't fail here, just warn via redact
             pass
@@ -130,7 +156,9 @@ def get_secret(name: str) -> str:
     name = name.strip()
     value = os.environ.get(name)
     if value is None or not value.strip():
-        raise ValueError(f"get_secret: required secret {name!r} is not set in environment/OS store — fail closed")
+        raise ValueError(
+            f"get_secret: required secret {name!r} is not set in environment/OS store — fail closed"
+        )
     return value.strip()
 
 

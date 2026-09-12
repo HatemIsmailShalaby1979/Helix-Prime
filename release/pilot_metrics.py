@@ -43,17 +43,17 @@ METRIC_NAMES = [
 # might monitor. They are NOT validated targets and are explicitly not asserted
 # as requirements anywhere. The pilot must gather its own evidence first.
 PROPOSED_PILOT_THRESHOLDS: Dict[str, Optional[float]] = {
-    "workflow_completion_rate_ge": None,   # not set: requires real-pilot evidence
-    "approval_denial_rate_le": None,       # not set
-    "timeout_rate_le": None,               # not set
-    "retry_rate_le": None,                 # not set
-    "dead_letter_rate_le": None,           # not set
-    "audit_verification_rate_ge": 1.0,     # every audit chain must verify
+    "workflow_completion_rate_ge": None,  # not set: requires real-pilot evidence
+    "approval_denial_rate_le": None,  # not set
+    "timeout_rate_le": None,  # not set
+    "retry_rate_le": None,  # not set
+    "dead_letter_rate_le": None,  # not set
+    "audit_verification_rate_ge": 1.0,  # every audit chain must verify
     "data_classification_violations_le": 0.0,  # zero violations expected
-    "tenant_isolation_violations_le": 0.0,     # zero violations expected
-    "model_unavailable_count_le": None,    # not set
-    "sibling_transport_failures_le": None, # not set
-    "exec_time_p95_ms_le": None,           # not set
+    "tenant_isolation_violations_le": 0.0,  # zero violations expected
+    "model_unavailable_count_le": None,  # not set
+    "sibling_transport_failures_le": None,  # not set
+    "exec_time_p95_ms_le": None,  # not set
 }
 
 # Production SLOs are NOT validated; a pilot cannot claim them.
@@ -121,15 +121,11 @@ def build_summary(
 
     metrics: Dict[str, Any] = {
         "workflow_completion_rate": round(completed / total, 4),
-        "approval_denial_rate": round(denied_approvals / total, 4)
-        if denied_approvals
-        else 0.0,
+        "approval_denial_rate": round(denied_approvals / total, 4) if denied_approvals else 0.0,
         "timeout_rate": round(timeouts / total, 4),
         "retry_rate": round(retries / total, 4),
         "dead_letter_rate": round(dead_letter / total, 4),
-        "audit_verification_rate": round(audit_verified / audit_total, 4)
-        if audit_total
-        else 0.0,
+        "audit_verification_rate": round(audit_verified / audit_total, 4) if audit_total else 0.0,
         "data_classification_violations": data_classification_violations,
         "tenant_isolation_violations": tenant_isolation_violations,
         "model_unavailable_count": model_unavailable,

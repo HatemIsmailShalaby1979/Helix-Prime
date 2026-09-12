@@ -35,23 +35,24 @@ DEFAULT_C8_CLASSIFICATION = "PRODUCTION_CANDIDATE"
 # Explicit gates required before a profile may be claimed.
 # Each gate maps to a check function name in release.gate.
 GATE_NAMES = [
-    "repository_state",        # clean-ish repo, reproducible commands present
-    "reproducible_install",    # one setup path documented + dependency lock
-    "configuration_validation",# config parses + validates before startup
-    "dependency_locking",      # dependency versions pinned/locked
-    "startup_readiness",       # health/readiness command passes
-    "backup_restore",          # backup + restore proven from synthetic data
-    "rollback",                # rollback to previous manifest proven
-    "data_isolation",          # tenant/client isolation verified
-    "audit_integrity",         # audit chain verifies after backup/restore
-    "security_checks",         # no-secrets scan + policy checks
-    "failure_recovery",        # failure injection + recovery
-    "performance_limits",      # bounded load/soak within explicit limits
-    "operator_readiness",      # runbook + incident guide present
-    "release_approval",        # explicit human go/no-go recorded
+    "repository_state",  # clean-ish repo, reproducible commands present
+    "reproducible_install",  # one setup path documented + dependency lock
+    "configuration_validation",  # config parses + validates before startup
+    "dependency_locking",  # dependency versions pinned/locked
+    "startup_readiness",  # health/readiness command passes
+    "backup_restore",  # backup + restore proven from synthetic data
+    "rollback",  # rollback to previous manifest proven
+    "data_isolation",  # tenant/client isolation verified
+    "audit_integrity",  # audit chain verifies after backup/restore
+    "security_checks",  # no-secrets scan + policy checks
+    "failure_recovery",  # failure injection + recovery
+    "performance_limits",  # bounded load/soak within explicit limits
+    "operator_readiness",  # runbook + incident guide present
+    "release_approval",  # explicit human go/no-go recorded
 ]
 
 _RELEASE_YAML = pathlib.Path(__file__).resolve().parent / "release-profiles.yaml"
+
 
 # Gates required per profile. alpha/internal_pilot are permissive;
 # controlled_pilot and production_candidate require the full C8 gate set.
@@ -65,15 +66,15 @@ def _all_c8_gates() -> List[str]:
 # any local automated run) cannot satisfy. These keep the production profile
 # permanently NOT_READY until genuine external approvals and evidence exist.
 PRODUCTION_ONLY_GATES = [
-    "signed_production_evidence",       # external signed production evidence
-    "certified_data_isolation",         # certified tenant/data isolation
-    "external_observer_audit",          # independent external observer audit
+    "signed_production_evidence",  # external signed production evidence
+    "certified_data_isolation",  # certified tenant/data isolation
+    "external_observer_audit",  # independent external observer audit
     "production_deployment_architecture",  # reviewed prod deployment architecture
-    "disaster_recovery_evidence",       # DR / restore evidence from a real environment
-    "operational_ownership",            # assigned operational owner
-    "incident_oncall_ownership",        # assigned incident/on-call owner
-    "security_review",                  # security review signed off
-    "legal_privacy_review",            # legal/privacy review where applicable
+    "disaster_recovery_evidence",  # DR / restore evidence from a real environment
+    "operational_ownership",  # assigned operational owner
+    "incident_oncall_ownership",  # assigned incident/on-call owner
+    "security_review",  # security review signed off
+    "legal_privacy_review",  # legal/privacy review where applicable
 ]
 
 
@@ -95,10 +96,13 @@ def load_profiles(rel_path: Optional[str] = None) -> Dict[str, Any]:
     """Load release-profiles.yaml if present; else fall back to module defaults."""
     path = pathlib.Path(rel_path) if rel_path else _RELEASE_YAML
     if not path.exists():
-        return {"profiles": PROFILE_ORDER, "gates": GATE_NAMES,
-                "required_gates": PROFILE_REQUIRED_GATES,
-                "allowed_final": sorted(ALLOWED_FINAL_CLASSIFICATIONS),
-                "default_c8": DEFAULT_C8_CLASSIFICATION}
+        return {
+            "profiles": PROFILE_ORDER,
+            "gates": GATE_NAMES,
+            "required_gates": PROFILE_REQUIRED_GATES,
+            "allowed_final": sorted(ALLOWED_FINAL_CLASSIFICATIONS),
+            "default_c8": DEFAULT_C8_CLASSIFICATION,
+        }
     with open(path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
     return data
@@ -143,8 +147,7 @@ def classify_from_gate_results(
         # green before it could be considered.
         base_missing = [g for g in _all_c8_gates() if g not in green_gates]
         extra_missing = [
-            g for g in PRODUCTION_ONLY_GATES
-            if g not in _all_c8_gates() and g not in green_gates
+            g for g in PRODUCTION_ONLY_GATES if g not in _all_c8_gates() and g not in green_gates
         ]
         required_extra = list(PRODUCTION_ONLY_GATES)
         all_prod_gates = all(g in green_gates for g in required_extra)

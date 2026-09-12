@@ -21,15 +21,36 @@ ENGINE_ID = "wfm"
 DISPLAY_NAME = "WFM Forecasting / Erlang C"
 CAPABILITY_IDS = ["wfm_forecast", "erlang_c", "staffing_optimization"]
 OWNING_ROLE = "ops_gm"
-DATA_CLASSIFICATION = DataClassification.INTERNAL  # WFM is internal unless client data includes personnel
+DATA_CLASSIFICATION = (
+    DataClassification.INTERNAL
+)  # WFM is internal unless client data includes personnel
 
 
-def _audit(event_type: str, correlation_id: str, actor: str, workflow_id: str | None = None, decision: str = "succeeded", tenant_id: str | None = None, client_id: str | None = None):
+def _audit(
+    event_type: str,
+    correlation_id: str,
+    actor: str,
+    workflow_id: str | None = None,
+    decision: str = "succeeded",
+    tenant_id: str | None = None,
+    client_id: str | None = None,
+):
     try:
         trail = AuditTrail(db_path="security/audit.db")
         last = trail.list_records(limit=10000)
         prev = last[-1].current_hash if last else None
-        rec = AuditRecord.new(event_type=event_type, actor=actor, actor_type="service", decision=decision, correlation_id=correlation_id, tenant_id=tenant_id, client_id=client_id, role_id=OWNING_ROLE, workflow_id=workflow_id, previous_hash=prev)
+        rec = AuditRecord.new(
+            event_type=event_type,
+            actor=actor,
+            actor_type="service",
+            decision=decision,
+            correlation_id=correlation_id,
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id=OWNING_ROLE,
+            workflow_id=workflow_id,
+            previous_hash=prev,
+        )
         trail.append(rec)
         trail.close()
     except Exception:
@@ -38,7 +59,15 @@ def _audit(event_type: str, correlation_id: str, actor: str, workflow_id: str | 
 
 def _log(event_type: str, correlation_id: str, actor: str, result_status: str, **kwargs):
     try:
-        log_structured(event_type=event_type, correlation_id=correlation_id, actor=actor, capability=CAPABILITY_IDS[0], tool="wfm_engine", result_status=result_status, **kwargs)
+        log_structured(
+            event_type=event_type,
+            correlation_id=correlation_id,
+            actor=actor,
+            capability=CAPABILITY_IDS[0],
+            tool="wfm_engine",
+            result_status=result_status,
+            **kwargs,
+        )
     except Exception:
         pass
 
@@ -60,8 +89,23 @@ def adapt(
     try:
         validate_no_secrets(input_payload)
     except ValueError as e:
-        _audit("wfm_policy_denied", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_policy_denied", correlation_id, actor, "denied", error_code="secret_detected", tenant_id=tenant_id, client_id=client_id)
+        _audit(
+            "wfm_policy_denied",
+            correlation_id,
+            actor,
+            decision="denied",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "wfm_policy_denied",
+            correlation_id,
+            actor,
+            "denied",
+            error_code="secret_detected",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
         return EngineResult.failure(
             engine_id=ENGINE_ID,
             display_name=DISPLAY_NAME,
@@ -112,12 +156,41 @@ def adapt(
         from organization.capability_registry import is_tool_allowed
 
         # Use Identity for tenant isolation check via policy
-        ident = Identity(actor=actor, actor_type=ActorType.SERVICE, tenant_id=tenant_id, client_id=client_id, role_id=owning_role_id)
-        auth_req = AuthorizationRequest(identity=ident, capability="wfm_forecast", tool="wfm_engine", owning_role_id=OWNING_ROLE, target_tenant_id=tenant_id, target_client_id=client_id)
+        ident = Identity(
+            actor=actor,
+            actor_type=ActorType.SERVICE,
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id=owning_role_id,
+        )
+        auth_req = AuthorizationRequest(
+            identity=ident,
+            capability="wfm_forecast",
+            tool="wfm_engine",
+            owning_role_id=OWNING_ROLE,
+            target_tenant_id=tenant_id,
+            target_client_id=client_id,
+        )
         decision = authorize(auth_req)
         if not decision.allowed:
-            _audit("wfm_authorization_denied", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-            _log("wfm_authorization_denied", correlation_id, actor, None, "denied", error_code=decision.code, tenant_id=tenant_id, client_id=client_id)
+            _audit(
+                "wfm_authorization_denied",
+                correlation_id,
+                actor,
+                decision="denied",
+                tenant_id=tenant_id,
+                client_id=client_id,
+            )
+            _log(
+                "wfm_authorization_denied",
+                correlation_id,
+                actor,
+                None,
+                "denied",
+                error_code=decision.code,
+                tenant_id=tenant_id,
+                client_id=client_id,
+            )
             return EngineResult.failure(
                 engine_id=ENGINE_ID,
                 display_name=DISPLAY_NAME,
@@ -191,13 +264,19 @@ def adapt(
         avg_calls = input_payload.get("average_calls_per_period", 17)
 
         # Alternative naming for interval mode
-        if arrival_rate is None and "contacts" in input_payload and "interval_minutes" in input_payload:
+        if (
+            arrival_rate is None
+            and "contacts" in input_payload
+            and "interval_minutes" in input_payload
+        ):
             contacts = float(input_payload["contacts"])
             interval = float(input_payload["interval_minutes"])
             if interval <= 0:
                 raise ValueError("interval_minutes must be >0")
             arrival_rate = contacts / (interval / 60.0)  # per hour
-            warnings.append(f"derived arrival_rate={arrival_rate:.2f} from contacts={contacts} interval={interval}")
+            warnings.append(
+                f"derived arrival_rate={arrival_rate:.2f} from contacts={contacts} interval={interval}"
+            )
 
         if aht is None and "aht_seconds" in input_payload:
             aht = float(input_payload["aht_seconds"]) / 60.0
@@ -205,7 +284,9 @@ def adapt(
             aht = float(input_payload["average_handling_time"])
 
         if arrival_rate is None or aht is None or service_level is None:
-            raise ValueError("missing required WFM inputs: arrival_rate, average_handling_time, service_level_target")
+            raise ValueError(
+                "missing required WFM inputs: arrival_rate, average_handling_time, service_level_target"
+            )
 
         arrival_rate = float(arrival_rate)
         aht = float(aht)
@@ -222,8 +303,24 @@ def adapt(
             raise ValueError("average_calls_per_period must be >0")
 
     except (ValueError, TypeError) as e:
-        _audit("wfm_validation_failed", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_validation_failed", correlation_id, actor, "failed", error_code="invalid_input", tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
+        _audit(
+            "wfm_validation_failed",
+            correlation_id,
+            actor,
+            decision="denied",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "wfm_validation_failed",
+            correlation_id,
+            actor,
+            "failed",
+            error_code="invalid_input",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            payload={"error": str(e)},
+        )
         return EngineResult.failure(
             engine_id=ENGINE_ID,
             display_name=DISPLAY_NAME,
@@ -284,7 +381,14 @@ def adapt(
         # Add calculated vs recommended distinction: metrics are calculated, recommendations are separate
         recommendations = []
         if metrics.get("optimal_agents") is not None:
-            recommendations.append({"type": "staffing", "value": int(metrics.get("optimal_agents", 0) or 0), "rationale": "Erlang C calculated", "source": "calculated"})
+            recommendations.append(
+                {
+                    "type": "staffing",
+                    "value": int(metrics.get("optimal_agents", 0) or 0),
+                    "rationale": "Erlang C calculated",
+                    "source": "calculated",
+                }
+            )
 
         # Handle missing/partial data warnings
         if is_sample:
@@ -294,11 +398,34 @@ def adapt(
 
         duration = int((time.time() - start) * 1000)
         evidence = [
-            {"type": "engine_output", "engine": ENGINE_ID, "capability": CAPABILITY_IDS[0], "input_version": str(input_payload)[:50], "calculation": "erlang_c"}
+            {
+                "type": "engine_output",
+                "engine": ENGINE_ID,
+                "capability": CAPABILITY_IDS[0],
+                "input_version": str(input_payload)[:50],
+                "calculation": "erlang_c",
+            }
         ]
 
-        _audit("wfm_executed", correlation_id, actor, decision="succeeded", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_executed", correlation_id, actor, "succeeded", tenant_id=tenant_id, client_id=client_id, capability=CAPABILITY_IDS[0], tool="wfm_engine", duration_ms=duration)
+        _audit(
+            "wfm_executed",
+            correlation_id,
+            actor,
+            decision="succeeded",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "wfm_executed",
+            correlation_id,
+            actor,
+            "succeeded",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            capability=CAPABILITY_IDS[0],
+            tool="wfm_engine",
+            duration_ms=duration,
+        )
 
         return EngineResult.success(
             engine_id=ENGINE_ID,
@@ -327,8 +454,24 @@ def adapt(
             code = "dependency_unavailable"
         else:
             code = "engine_error"
-        _audit("wfm_failed", correlation_id, actor, decision="failed", tenant_id=tenant_id, client_id=client_id)
-        _log("wfm_failed", correlation_id, actor, "failed", error_code=code, tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
+        _audit(
+            "wfm_failed",
+            correlation_id,
+            actor,
+            decision="failed",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "wfm_failed",
+            correlation_id,
+            actor,
+            "failed",
+            error_code=code,
+            tenant_id=tenant_id,
+            client_id=client_id,
+            payload={"error": str(e)},
+        )
         return EngineResult.failure(
             engine_id=ENGINE_ID,
             display_name=DISPLAY_NAME,

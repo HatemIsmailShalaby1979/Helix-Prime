@@ -16,8 +16,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from pilot import (  # noqa: E402
-    PilotConfig, ConsentRecord, PilotRuntime, PilotError, build_evidence_pack,
-    HISTORICAL_CONSENTED, SIMULATED_REALISTIC,
+    PilotConfig,
+    ConsentRecord,
+    PilotRuntime,
+    PilotError,
+    build_evidence_pack,
+    HISTORICAL_CONSENTED,
+    SIMULATED_REALISTIC,
 )
 from pilot.scope import LIVE_CUSTOMER  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
@@ -27,9 +32,16 @@ TS = "2026-08-29T12:00:00Z"
 
 def _valid_consent(modes=(HISTORICAL_CONSENTED, SIMULATED_REALISTIC)):
     return ConsentRecord(
-        consent_id="consent-1", tenant_id="t1", client_id="c1", customer_id="cust-1",
-        status="granted", granted_at="2026-01-01T00:00:00Z", expires_at="2027-01-01T00:00:00Z",
-        data_modes_permitted=modes, recorded_by="csm", signature="sig",
+        consent_id="consent-1",
+        tenant_id="t1",
+        client_id="c1",
+        customer_id="cust-1",
+        status="granted",
+        granted_at="2026-01-01T00:00:00Z",
+        expires_at="2027-01-01T00:00:00Z",
+        data_modes_permitted=modes,
+        recorded_by="csm",
+        signature="sig",
     )
 
 
@@ -60,7 +72,10 @@ def test_synthetic_pilot_dry_run():
     # connectors are read-only: request_write never executes
     from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
     from connectors.contracts import ConnectorContext
-    ctx = ConnectorContext("t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic")
+
+    ctx = ConnectorContext(
+        "t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic"
+    )
     reg = ConnectorRegistry(mode="fake")
     res = reg.get_connector("zendesk", ctx).request_write(ctx, "send_followup", {}, None)
     assert res.executed is False
@@ -122,15 +137,21 @@ def test_connector_failure_handling():
     rt = _runtime()
     from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
     from connectors.contracts import ConnectorContext
-    ctx = ConnectorContext("t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic")
+
+    ctx = ConnectorContext(
+        "t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic"
+    )
     connectors = {p: ConnectorRegistry(mode="fake").get_connector(p, ctx) for p in KNOWN_PROVIDERS}
+
     # force the Salesforce connector read to fail
     def _boom(_ctx):
         raise RuntimeError("salesforce down")
+
     connectors["salesforce"].list_accounts = _boom
 
     diagnosis, _view, _bundle, failures = rt.diagnose_account(
-        "t1", "c1", TS, "pilot-operator", "customer_success_gm", "corr-x", connectors=connectors)
+        "t1", "c1", TS, "pilot-operator", "customer_success_gm", "corr-x", connectors=connectors
+    )
     # degraded gracefully: unknown diagnosis, failure recorded, no crash/outbound write
     assert diagnosis.health_state == "unknown"
     fails = rt.mem.retrieve(tenant_id="t1", kinds=["workflow_history"], include_deleted=False)
@@ -148,7 +169,11 @@ def test_approval_denial():
     rid = draft.body["recommendation_id"]
     rt.deny_action(draft.record_id, "reviewer-1", "not needed")
     # latest approval for that recommendation is now denied
-    latest = [a for a in rt.mem._records if a.kind == "approval" and a.body.get("recommendation_id") == rid]
+    latest = [
+        a
+        for a in rt.mem._records
+        if a.kind == "approval" and a.body.get("recommendation_id") == rid
+    ]
     latest.sort(key=lambda r: r.record_id)
     assert latest[-1].body["approval_state"] == "denied"
 
@@ -162,14 +187,26 @@ def test_rollback():
     owner = draft.body["owner"]
     owner_role = draft.body["owner_role"]
     rt.approve_action(draft.record_id, "approver-1", "ict_gm", owner, owner_role)
-    latest = [a for a in rt.mem._records if a.kind == "approval" and a.body.get("recommendation_id") == rid]
+    latest = [
+        a
+        for a in rt.mem._records
+        if a.kind == "approval" and a.body.get("recommendation_id") == rid
+    ]
     latest.sort(key=lambda r: r.record_id)
     assert latest[-1].body["approval_state"] == "approved"
     rt.rollback_action(draft.record_id, "approver-1", "ict_gm", "wrong call")
-    latest = [a for a in rt.mem._records if a.kind == "approval" and a.body.get("recommendation_id") == rid]
+    latest = [
+        a
+        for a in rt.mem._records
+        if a.kind == "approval" and a.body.get("recommendation_id") == rid
+    ]
     latest.sort(key=lambda r: r.record_id)
     assert latest[-1].body["approval_state"] == "rolled_back"
-    incidents = [r for r in rt.mem._records if r.kind == "workflow_history" and r.body.get("action") == "rollback"]
+    incidents = [
+        r
+        for r in rt.mem._records
+        if r.kind == "workflow_history" and r.body.get("action") == "rollback"
+    ]
     assert incidents
 
 
@@ -178,11 +215,26 @@ def test_retention_handling():
     rt = _runtime()
     rt.dry_run([("t1", "c1")], consent=_valid_consent())
     rt.mem.add(
-        kind="customer_context", nature="simulated_event", tenant_id="t1", client_id="c1",
-        actor="pilot", role_id="customer_success_gm", source="test", classification="client_confidential",
-        timestamp=TS, correlation_id="corr-r", confidence=1.0, evidence_refs=[], data_mode="simulated_realistic",
+        kind="customer_context",
+        nature="simulated_event",
+        tenant_id="t1",
+        client_id="c1",
+        actor="pilot",
+        role_id="customer_success_gm",
+        source="test",
+        classification="client_confidential",
+        timestamp=TS,
+        correlation_id="corr-r",
+        confidence=1.0,
+        evidence_refs=[],
+        data_mode="simulated_realistic",
         retention_until="2020-01-01T00:00:00Z",
-        provenance={"correlation_id": "corr-r", "data_mode": "simulated_realistic", "basis": "test", "sources": []},
+        provenance={
+            "correlation_id": "corr-r",
+            "data_mode": "simulated_realistic",
+            "basis": "test",
+            "sources": [],
+        },
         body={"health_state": "healthy", "open_risk_count": 0},
     )
     n = rt.apply_retention("2026-08-29T12:00:00Z")
@@ -207,14 +259,19 @@ def test_evidence_pack_generation():
 
 # --- governance checker ------------------------------------------------------
 def test_governance_checker():
-    out = subprocess.run([sys.executable, "-m", "GOVERNANCE.governance_check", "check"],
-                         cwd=str(ROOT), capture_output=True, text=True)
+    out = subprocess.run(
+        [sys.executable, "-m", "GOVERNANCE.governance_check", "check"],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+    )
     assert "governance=PASS" in out.stdout, out.stdout + out.stderr
 
 
 # --- release gates -----------------------------------------------------------
 def test_release_gates():
     from release.gate import run_gate
+
     assert run_gate("controlled_pilot")["classification"] == "CONTROLLED_PILOT_READY"
     assert run_gate("production")["classification"] == "NOT_READY"
 
@@ -266,8 +323,12 @@ def test_read_only_period_blocks_approval():
     rt.exit_read_only_period(TS, "approver-1", "ict_gm")
     assert rt.phase == "supervised"
     rt.approve_action(draft.record_id, "approver-1", "ict_gm", owner, owner_role, as_of=TS)
-    latest = [a for a in rt.mem._records
-              if a.kind == "approval" and a.body.get("recommendation_id") == draft.body["recommendation_id"]]
+    latest = [
+        a
+        for a in rt.mem._records
+        if a.kind == "approval"
+        and a.body.get("recommendation_id") == draft.body["recommendation_id"]
+    ]
     latest.sort(key=lambda r: r.record_id)
     assert latest[-1].body["approval_state"] == "approved"
 
@@ -281,10 +342,15 @@ def test_connector_permissions():
     assert perms.write_allowed is False
     perms.validate()  # must not raise
     # Real (fake) connectors still reject writes regardless.
-    ctx = ConnectorContext("t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic")
+    ctx = ConnectorContext(
+        "t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic"
+    )
     reg = ConnectorRegistry(mode="fake")
     for p in KNOWN_PROVIDERS:
-        assert reg.get_connector(p, ctx).request_write(ctx, "send_followup", {}, None).executed is False
+        assert (
+            reg.get_connector(p, ctx).request_write(ctx, "send_followup", {}, None).executed
+            is False
+        )
 
 
 def test_minimum_data_fields():
@@ -292,7 +358,9 @@ def test_minimum_data_fields():
     rt.dry_run([("t1", "c1")], consent=_valid_consent())
     rec = rt.mem.retrieve(tenant_id="t1", kinds=["customer_context"], include_deleted=False)[0]
     allowed = set(rt.scope.minimum_data.collected_fields) | {
-        "health_state", "open_risk_count", "recommended_actions",
+        "health_state",
+        "open_risk_count",
+        "recommended_actions",
     }
     for key in rec.body:
         assert key in allowed, key

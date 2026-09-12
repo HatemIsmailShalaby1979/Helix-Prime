@@ -82,7 +82,10 @@ def test_metrics_counts_requests_by_route_template(client):
     resp = client.get("/metrics", headers=_auth())
     assert resp.status_code == 200
     assert 'helix_http_requests_total{route="/healthz",status="200",method="GET"} 2.0' in resp.text
-    assert 'helix_http_requests_total{route="/api/approvals",status="200",method="GET"} 1.0' in resp.text
+    assert (
+        'helix_http_requests_total{route="/api/approvals",status="200",method="GET"} 1.0'
+        in resp.text
+    )
 
 
 def test_metrics_401_is_counted(client):
@@ -126,7 +129,7 @@ def test_governance_decisions_counter_records_outcomes(tmp_path):
         assert wf.state == WorkflowState.AWAITING_APPROVAL
         engine.close()
 
-    snap = REGISTRY.snapshot()[ "helix_governance_decisions_total" ]
+    snap = REGISTRY.snapshot()["helix_governance_decisions_total"]
     assert snap.get("allowed", 0.0) >= 2.0
 
 
@@ -145,7 +148,10 @@ def test_audit_verification_failure_is_counted(tmp_path):
     prev = None
     for _ in range(2):
         rec = AuditRecord.new(
-            event_type="t", actor="a", actor_type="agent", decision="succeeded",
+            event_type="t",
+            actor="a",
+            actor_type="agent",
+            decision="succeeded",
             previous_hash=prev,
         )
         trail.append(rec)
@@ -182,7 +188,10 @@ def test_audit_verification_success_is_counted(tmp_path):
     prev = None
     for _ in range(3):
         rec = AuditRecord.new(
-            event_type="t", actor="a", actor_type="agent", decision="succeeded",
+            event_type="t",
+            actor="a",
+            actor_type="agent",
+            decision="succeeded",
             previous_hash=prev,
         )
         trail.append(rec)
@@ -257,12 +266,14 @@ def test_alert_rules_reference_exported_metrics_only():
     rules_path = pathlib.Path("infra/monitoring/alerts.yml")
     assert rules_path.exists(), "infra/monitoring/alerts.yml must exist"
     text = rules_path.read_text(encoding="utf-8")
-    expressions = " ".join(
-        chunk for chunk in re.findall(r"expr: >-?\s*\n((?:.*\n)+?)\s{8,}[a-z_]+:", text)
-    ) + " " + " ".join(
-        line.split("expr:", 1)[1]
-        for line in text.splitlines()
-        if "expr:" in line and "helix_" in line
+    expressions = (
+        " ".join(chunk for chunk in re.findall(r"expr: >-?\s*\n((?:.*\n)+?)\s{8,}[a-z_]+:", text))
+        + " "
+        + " ".join(
+            line.split("expr:", 1)[1]
+            for line in text.splitlines()
+            if "expr:" in line and "helix_" in line
+        )
     )
     used = set(re.findall(r"\bhelix_[a-z_]+\b", expressions))
     assert used, "no helix metrics referenced in alert rule expressions"
@@ -284,9 +295,7 @@ def test_alert_rules_reference_exported_metrics_only():
         and name.rsplit("_sum", 1)[0] not in exported
         and name.rsplit("_count", 1)[0] not in exported
     )
-    assert not missing, (
-        f"alert rules reference metrics that /metrics does not export: {missing}"
-    )
+    assert not missing, f"alert rules reference metrics that /metrics does not export: {missing}"
 
 
 def test_alert_rules_yaml_is_well_formed():

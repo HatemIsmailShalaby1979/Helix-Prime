@@ -16,7 +16,9 @@ INJECTION_PATTERNS = [
     re.compile(r"(?i)system\s*:\s*"),
     re.compile(r"(?i)pretend\s+you\s+are"),
     re.compile(r"(?i)do\s+anything\s+now"),
-    re.compile(r"(?i)call_agent\s*\(\s*[\"']\s*SAMI\s*[\"']\s*,.*\)"),  # direct model trying to call SAMI as if system
+    re.compile(
+        r"(?i)call_agent\s*\(\s*[\"']\s*SAMI\s*[\"']\s*,.*\)"
+    ),  # direct model trying to call SAMI as if system
     re.compile(r"(?i)tool\s*:\s*exec"),
     re.compile(r"(?i)```.*\b(python|bash|sh)\b"),
     re.compile(r"(?i)\b(drop\s+table|delete\s+from|truncate)\b"),
@@ -41,7 +43,9 @@ def is_suspicious_prompt(text: str) -> tuple[bool, str]:
     return False, "clean"
 
 
-def is_suspicious_tool_request(tool: str, capability: str, payload: Dict[str, Any]) -> tuple[bool, str]:
+def is_suspicious_tool_request(
+    tool: str, capability: str, payload: Dict[str, Any]
+) -> tuple[bool, str]:
     """
     Check if tool request looks suspicious.
     - tool name should be alphanumeric + underscore, known from capability registry
@@ -52,7 +56,11 @@ def is_suspicious_tool_request(tool: str, capability: str, payload: Dict[str, An
     # Check payload for injection
     import json
 
-    payload_text = json.dumps(payload, ensure_ascii=False, default=str) if isinstance(payload, dict) else str(payload)
+    payload_text = (
+        json.dumps(payload, ensure_ascii=False, default=str)
+        if isinstance(payload, dict)
+        else str(payload)
+    )
     suspicious, reason = is_suspicious_prompt(payload_text)
     if suspicious:
         return True, f"suspicious payload: {reason}"

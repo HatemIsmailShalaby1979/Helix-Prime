@@ -249,7 +249,9 @@ def validate_activation(
         yaml_role_id = YAML_ROLE_ALIASES.get(role_id, role_id)
         yaml_role = (yaml_catalog.get("roles_by_id") or {}).get(yaml_role_id)
         if yaml_role is None:
-            problems.append(f"role {role_id!r} (YAML id {yaml_role_id!r}) is absent from organization/role-catalog.yaml")
+            problems.append(
+                f"role {role_id!r} (YAML id {yaml_role_id!r}) is absent from organization/role-catalog.yaml"
+            )
         else:
             yaml_status = yaml_role.get("implementation_status")
             yaml_caps = set(yaml_role.get("owned_capabilities") or [])
@@ -259,7 +261,9 @@ def validate_activation(
                         f"capability {capability!r} is not in the YAML catalog for {role_id!r}"
                     )
     else:
-        problems.append("organization/role-catalog.yaml could not be loaded — activation unverified")
+        problems.append(
+            "organization/role-catalog.yaml could not be loaded — activation unverified"
+        )
 
     # Engine ownership. Oversight-only roles own no engines and must claim none.
     if activation.oversight_only and not spec.oversight_only:
@@ -280,7 +284,9 @@ def validate_activation(
     # KPI declarations must match the RoleSpec.
     for kpi in activation.kpis_reported:
         if kpi not in spec.kpis:
-            problems.append(f"KPI {kpi!r} is not declared by RoleSpec {role_id!r} (declared: {list(spec.kpis)})")
+            problems.append(
+                f"KPI {kpi!r} is not declared by RoleSpec {role_id!r} (declared: {list(spec.kpis)})"
+            )
 
     if not activation.validation_properties:
         problems.append("activation declares no validation properties — nothing to enforce")

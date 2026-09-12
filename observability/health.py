@@ -46,7 +46,12 @@ def check_control_plane_store(db_path: str = "control_plane/workflow.db") -> Hea
         store.close()
         return HealthStatus("control_plane_store", True, "store reachable", {"db_path": db_path})
     except Exception as e:
-        return HealthStatus("control_plane_store", False, f"store check failed: {e}", {"db_path": db_path, "error": str(e)})
+        return HealthStatus(
+            "control_plane_store",
+            False,
+            f"store check failed: {e}",
+            {"db_path": db_path, "error": str(e)},
+        )
 
 
 def check_event_replay(db_path: str = "control_plane/workflow.db") -> HealthStatus:
@@ -71,7 +76,9 @@ def check_capability_registry() -> HealthStatus:
         # Check expected capabilities exist
         assert reg.get_agent_for_capability("wfm_forecast") == "ops_gm"
         assert reg.get_engine_for_capability("erlang_c") == "WFM Forecasting"
-        return HealthStatus("capability_registry", True, "registry ok", {"agents": len(reg.role_to_capabilities)})
+        return HealthStatus(
+            "capability_registry", True, "registry ok", {"agents": len(reg.role_to_capabilities)}
+        )
     except Exception as e:
         return HealthStatus("capability_registry", False, f"registry failed: {e}")
 
@@ -87,7 +94,9 @@ def check_role_catalog() -> HealthStatus:
         return HealthStatus("role_catalog", False, f"catalog failed: {e}")
 
 
-def check_ollama(ollama_url: str = "http://localhost:11434/api/tags", timeout: float = 2.0) -> HealthStatus:
+def check_ollama(
+    ollama_url: str = "http://localhost:11434/api/tags", timeout: float = 2.0
+) -> HealthStatus:
     try:
         import urllib.request
         import json
@@ -103,16 +112,27 @@ def check_ollama(ollama_url: str = "http://localhost:11434/api/tags", timeout: f
             if resp.status == 200:
                 return HealthStatus("ollama", True, "ollama reachable", {"url": ollama_url})
             else:
-                return HealthStatus("ollama", False, f"ollama status {resp.status}", {"url": ollama_url})
+                return HealthStatus(
+                    "ollama", False, f"ollama status {resp.status}", {"url": ollama_url}
+                )
     except Exception as e:
         # For C3, Ollama not required to be up for health check to be considered "ok" in fallback mode
         # We return ok=False but with message, and the overall health will reflect it
-        return HealthStatus("ollama", False, f"ollama not reachable: {e}", {"url": ollama_url, "error": str(e)})
+        return HealthStatus(
+            "ollama", False, f"ollama not reachable: {e}", {"url": ollama_url, "error": str(e)}
+        )
 
 
 def check_filesystem_paths(paths: List[str] | None = None) -> HealthStatus:
     if paths is None:
-        paths = ["evidence", "control_plane", "security", "observability", "organization", "contracts"]
+        paths = [
+            "evidence",
+            "control_plane",
+            "security",
+            "observability",
+            "organization",
+            "contracts",
+        ]
     missing = []
     for p in paths:
         if not pathlib.Path(p).exists():

@@ -55,11 +55,7 @@ APPROVAL_STATES = {"pilot_approved", "production_approved"}
 
 
 def _now() -> str:
-    return (
-        datetime.datetime.now(datetime.timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 @dataclass
@@ -69,10 +65,10 @@ class SignOff:
     state: str = "unsigned"
     release_profile: str = "controlled_pilot"
     evidence_pack_id: str = ""
-    reviewer: str = ""               # human identity
-    reviewer_role: str = ""          # e.g. pilot_operator / security_owner
-    decision: str = ""               # approve | reject | conditional
-    decided_at: str = ""             # ISO timestamp of the human decision
+    reviewer: str = ""  # human identity
+    reviewer_role: str = ""  # e.g. pilot_operator / security_owner
+    decision: str = ""  # approve | reject | conditional
+    decided_at: str = ""  # ISO timestamp of the human decision
     scope: str = ""
     conditions: List[str] = field(default_factory=list)
     expires_at: Optional[str] = None
@@ -141,7 +137,6 @@ def validate_signoff(s: SignOff) -> tuple[bool, str]:
     return True, f"{s.state}: valid human {s.decision}"
 
 
-
 def _all_production_gates_satisfied() -> bool:
     """Production-only gates are external and NOT satisfiable locally.
 
@@ -190,6 +185,7 @@ def import_go_no_go(rel_path: str = "release/go-no-go.json") -> SignOff:
     sign-off. This is LOCAL provenance only — it is NOT a human approval and
     can never upgrade to pilot/production approval."""
     from release import manifest as manifest_mod
+
     p = manifest_mod.ROOT / rel_path
     data: Dict[str, Any] = {}
     if p.exists():
@@ -206,9 +202,7 @@ def import_go_no_go(rel_path: str = "release/go-no-go.json") -> SignOff:
         reviewer=data.get("approver", "operator-pilot-consent"),
         reviewer_role="operator",
         decision=(
-            "conditional"
-            if (approved and not scope)
-            else ("approve" if approved else "reject")
+            "conditional" if (approved and not scope) else ("approve" if approved else "reject")
         ),
         decided_at=str(data.get("approved_at", "")),
         scope=scope,

@@ -57,12 +57,8 @@ def _init_sqlite() -> None:
             """
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_agent ON interactions(agent)")
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_timestamp ON interactions(timestamp)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_session ON interactions(session_id)"
-            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON interactions(timestamp)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_session ON interactions(session_id)")
             conn.commit()
         finally:
             conn.close()
@@ -87,9 +83,7 @@ def _write_log_entry(entry: LogEntry) -> None:
                     entry.user_input,
                     entry.agent_output,
                     entry.reasoning_trace,
-                    json.dumps(entry.inter_agent_calls)
-                    if entry.inter_agent_calls
-                    else None,
+                    json.dumps(entry.inter_agent_calls) if entry.inter_agent_calls else None,
                     entry.session_id,
                     entry.client_context,
                 ),
@@ -156,9 +150,7 @@ def query_interactions(
         conditions.append("session_id = ?")
         params.append(session_id)
     if search_text:
-        conditions.append(
-            "(user_input LIKE ? OR agent_output LIKE ? OR reasoning_trace LIKE ?)"
-        )
+        conditions.append("(user_input LIKE ? OR agent_output LIKE ? OR reasoning_trace LIKE ?)")
         params.extend([f"%{search_text}%"] * 3)
 
     where = "WHERE " + " AND ".join(conditions) if conditions else ""

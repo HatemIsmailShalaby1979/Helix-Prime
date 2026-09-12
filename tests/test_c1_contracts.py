@@ -26,7 +26,9 @@ FIXED_TS = "2026-08-27T18:00:00Z"
 FIXED_TS2 = "2026-08-27T18:00:01Z"
 
 
-def _corr(tenant: str | None = "helix-prime", client: str | None = "Account Alpha") -> CorrelationContext:
+def _corr(
+    tenant: str | None = "helix-prime", client: str | None = "Account Alpha"
+) -> CorrelationContext:
     return CorrelationContext(
         correlation_id="corr_test123",
         idempotency_key="idem_test123",
@@ -47,7 +49,9 @@ def _evidence() -> EvidenceRef:
     )
 
 
-def _valid_task_request(corr: CorrelationContext | None = None, requires_approval: bool = False) -> TaskRequest:
+def _valid_task_request(
+    corr: CorrelationContext | None = None, requires_approval: bool = False
+) -> TaskRequest:
     c = corr or _corr()
     return TaskRequest(
         request_id="req_test123",
@@ -67,6 +71,7 @@ def _valid_task_request(corr: CorrelationContext | None = None, requires_approva
 
 # ── canonical schema version ─────────────────────────────────────────────
 
+
 def test_schema_version_canonical_is_1_0():
     """Canonical contract schema version is semantic '1.0' (not 12, not drifted)."""
     assert SCHEMA_VERSION == "1.0"
@@ -79,12 +84,22 @@ def test_all_models_default_schema_version_consistently_1_0():
     ev = _evidence()
     # EvidenceRef
     assert ev.schema_version == "1.0"
-    assert EvidenceRef(evidence_id="ev1", type="log", uri="uri", timestamp=FIXED_TS).schema_version == "1.0"
+    assert (
+        EvidenceRef(evidence_id="ev1", type="log", uri="uri", timestamp=FIXED_TS).schema_version
+        == "1.0"
+    )
     # CorrelationContext
     assert c.schema_version == "1.0"
-    assert CorrelationContext(
-        correlation_id="corr1", idempotency_key="idem1", tenant_id="t", client_id=None, created_at=FIXED_TS
-    ).schema_version == "1.0"
+    assert (
+        CorrelationContext(
+            correlation_id="corr1",
+            idempotency_key="idem1",
+            tenant_id="t",
+            client_id=None,
+            created_at=FIXED_TS,
+        ).schema_version
+        == "1.0"
+    )
     # AgentError
     err = AgentError(
         error_id="err1", correlation_id="corr1", code="timeout", message="m", timestamp=FIXED_TS
@@ -153,9 +168,13 @@ def test_all_models_default_schema_version_consistently_1_0():
 def test_models_reject_invalid_schema_version():
     c = _corr()
     with pytest.raises(ValueError, match="schema_version.*must be semver"):
-        EvidenceRef(evidence_id="ev1", type="log", uri="uri", timestamp=FIXED_TS, schema_version="12")
+        EvidenceRef(
+            evidence_id="ev1", type="log", uri="uri", timestamp=FIXED_TS, schema_version="12"
+        )
     with pytest.raises(ValueError, match="schema_version.*must be semver"):
-        EvidenceRef(evidence_id="ev1", type="log", uri="uri", timestamp=FIXED_TS, schema_version="bad")
+        EvidenceRef(
+            evidence_id="ev1", type="log", uri="uri", timestamp=FIXED_TS, schema_version="bad"
+        )
     with pytest.raises(ValueError, match="schema_version.*must be semver"):
         CorrelationContext(
             correlation_id="corr1",
@@ -173,6 +192,7 @@ def test_role_catalog_schema_version_is_1_0():
 
 
 # ── valid task request ───────────────────────────────────────────────────
+
 
 def test_valid_task_request():
     req = _valid_task_request()
@@ -209,6 +229,7 @@ def test_valid_task_request_with_approval_tier():
 
 # ── valid successful task result ─────────────────────────────────────────
 
+
 def test_valid_successful_task_result():
     c = _corr()
     res = TaskResult(
@@ -236,6 +257,7 @@ def test_valid_successful_task_result():
 
 
 # ── valid recommendation requiring approval ────────────────────────────────
+
 
 def test_valid_recommendation_requiring_approval():
     c = _corr()
@@ -289,6 +311,7 @@ def test_recommendation_with_proposed_action():
 
 # ── valid approved action ─────────────────────────────────────────────────
 
+
 def test_valid_approved_action():
     c = _corr()
     appr = Approval(
@@ -326,6 +349,7 @@ def test_valid_approved_action():
 
 
 # ── refusal result ─────────────────────────────────────────────────────────
+
 
 def test_refusal_result():
     c = _corr()
@@ -367,6 +391,7 @@ def test_refusal_requires_error():
 
 
 # ── timeout / error result ─────────────────────────────────────────────────
+
 
 def test_timeout_error_result():
     c = _corr()
@@ -452,6 +477,7 @@ def test_succeeded_cannot_have_error():
 
 # ── invalid / missing correlation data ───────────────────────────────────
 
+
 def test_missing_correlation_tenant_client():
     with pytest.raises(ValueError, match="at least one of tenant_id or client_id"):
         CorrelationContext(
@@ -523,6 +549,7 @@ def test_invalid_timestamp():
 
 
 # ── invalid status transitions / required fields ───────────────────────────
+
 
 def test_invalid_task_request_status():
     c = _corr()
@@ -621,6 +648,7 @@ def test_invalid_error_code():
 
 # ── invalid approval / action ownership ───────────────────────────────────
 
+
 def test_action_self_approval_forbidden():
     c = _corr()
     appr_same_actor = Approval(
@@ -709,6 +737,7 @@ def test_action_approval_correlation_mismatch():
 
 
 # ── role catalog loading and required-role validation ─────────────────────
+
 
 def test_role_catalog_loads_and_contains_required_roles():
     catalog = load_role_catalog("organization/role-catalog.yaml")
@@ -864,6 +893,7 @@ def test_validate_catalog_missing_required_roles():
 
 # ── adapter compatibility seam ────────────────────────────────────────────
 
+
 def test_adapter_parse_legacy_calls():
     text = 'hello call_agent("PHILI", "headcount?") world call_agent(\'WILI\', "train?")'
     parsed = parse_legacy_calls(text)
@@ -985,7 +1015,7 @@ GOV_TS = "2026-09-07T00:00:00Z"
 
 # Financial approval limits from the canonical organization catalog (USD).
 SPEC_FINANCIAL_LIMITS = {
-    "sami": None,                       # unlimited, human-escalated
+    "sami": None,  # unlimited, human-escalated
     "ops_gm": 500.00,
     "compliance_quality_gm": 0.00,
     "fraud_revenue_gm": 0.00,
@@ -1054,6 +1084,7 @@ def _gov_manager(tmp_path) -> GovernedWorkflowManager:
 
 # ── canonical catalog ─────────────────────────────────────────────────────
 
+
 def test_organization_catalog_has_nine_seats():
     """8 Functional GMs + SAMI, and nothing else."""
     assert len(ORGANIZATION_CATALOG) == 9
@@ -1064,9 +1095,9 @@ def test_organization_catalog_has_nine_seats():
 def test_organization_catalog_matches_spec_financial_limits():
     for role_id, limit in SPEC_FINANCIAL_LIMITS.items():
         spec = get_role(role_id)
-        assert spec.financial_approval_limit_usd == limit, (
-            f"{role_id}: expected limit {limit}, got {spec.financial_approval_limit_usd}"
-        )
+        assert (
+            spec.financial_approval_limit_usd == limit
+        ), f"{role_id}: expected limit {limit}, got {spec.financial_approval_limit_usd}"
 
 
 def test_organization_catalog_matches_spec_engine_ownership():
@@ -1075,7 +1106,9 @@ def test_organization_catalog_matches_spec_engine_ownership():
 
 
 def test_sami_is_the_only_unlimited_seat():
-    unlimited = [r for r, s in ORGANIZATION_CATALOG.items() if s.financial_approval_limit_usd is None]
+    unlimited = [
+        r for r, s in ORGANIZATION_CATALOG.items() if s.financial_approval_limit_usd is None
+    ]
     assert unlimited == ["sami"]
 
 
@@ -1106,6 +1139,7 @@ def test_catalog_drift_detector_reports_without_raising():
 
 
 # ── contract layer validation ─────────────────────────────────────────────
+
 
 def test_correlation_context_requires_uuid4():
     with pytest.raises(ValueError, match="UUID4"):
@@ -1149,6 +1183,7 @@ def test_governance_task_request_is_a_canonical_task_request():
 
 # ── path 1: successful valid request ──────────────────────────────────────
 
+
 def test_valid_request_is_admitted_and_executes(tmp_path):
     mgr = _gov_manager(tmp_path)
     record = mgr.submit(_gov_request(actor="suby", role="ops_gm", engine="wfm", cost=100.0))
@@ -1179,6 +1214,7 @@ def test_valid_request_writes_a_hash_chained_audit_trail(tmp_path):
 
 # ── path 2: boundary breach (wrong engine ownership) ──────────────────────
 
+
 def test_ownership_breach_raises_access_denied_at_contract_level():
     """sales_gm owns crm/b2b only — requesting wfm is an Access Denied."""
     with pytest.raises(AccessDeniedError, match="Access Denied"):
@@ -1201,9 +1237,7 @@ def test_oversight_only_role_cannot_claim_any_engine():
 def test_classification_breach_is_isolated_not_executed(tmp_path):
     """ops_gm may not touch regulated_high_risk data — trapped, not crashed."""
     mgr = _gov_manager(tmp_path)
-    record = mgr.submit(
-        _gov_request(engine="wfm", cost=10.0, classification="regulated_high_risk")
-    )
+    record = mgr.submit(_gov_request(engine="wfm", cost=10.0, classification="regulated_high_risk"))
     assert record.state == WorkflowState.DEAD_LETTER
     assert record.reason_code == "classification_not_permitted"
     assert record.error["code"] == "classification_not_permitted"
@@ -1211,6 +1245,7 @@ def test_classification_breach_is_isolated_not_executed(tmp_path):
 
 
 # ── path 3: over-budget financial trigger ─────────────────────────────────
+
 
 @pytest.mark.parametrize(
     "role,actor,engine,cost,limit",
@@ -1272,6 +1307,7 @@ def test_frozen_task_cannot_skip_the_approval_queue(tmp_path):
 
 # ── human validation token ────────────────────────────────────────────────
 
+
 def test_human_approval_releases_frozen_task(tmp_path):
     mgr = _gov_manager(tmp_path)
     record = mgr.submit(_gov_request(cost=900.0))
@@ -1314,6 +1350,7 @@ def test_approving_a_non_frozen_task_is_refused(tmp_path):
 
 
 # ── durability: the database traps violations safely ──────────────────────
+
 
 def test_audit_ledger_is_append_only(tmp_path):
     mgr = _gov_manager(tmp_path)
@@ -1382,10 +1419,10 @@ def test_manager_survives_a_stream_of_violations(tmp_path):
     """The engine must not crash while the database traps every violation."""
     mgr = _gov_manager(tmp_path)
 
-    mgr.submit(_gov_request(cost=10.0))                                   # ok
-    mgr.submit(_gov_request(cost=9_999.0))                                # frozen
+    mgr.submit(_gov_request(cost=10.0))  # ok
+    mgr.submit(_gov_request(cost=9_999.0))  # frozen
     mgr.submit(_gov_request(cost=10.0, classification="regulated_high_risk"))  # isolated
-    mgr.submit(_gov_request(cost=10.0, confidence=0.1))                   # frozen
+    mgr.submit(_gov_request(cost=10.0, confidence=0.1))  # frozen
 
     states = [t.state for t in mgr.list_tasks()]
     assert WorkflowState.EXECUTING in states
@@ -1395,6 +1432,7 @@ def test_manager_survives_a_stream_of_violations(tmp_path):
 
 
 # ── engine integration ────────────────────────────────────────────────────
+
 
 def test_engine_submit_holds_over_budget_request(tmp_path):
     """The runtime orchestrator freezes an over-budget task before execution."""

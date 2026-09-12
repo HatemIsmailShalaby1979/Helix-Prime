@@ -18,11 +18,13 @@ evidence_dir = ROOT / "evidence" / "baseline"
 evidence_dir.mkdir(parents=True, exist_ok=True)
 log_path = evidence_dir / "smoke.log"
 
+
 def log(msg: str):
     safe_msg = msg.encode("ascii", errors="replace").decode("ascii")
     print(safe_msg)
     with open(log_path, "a", encoding="utf-8") as f:
         f.write(msg + "\n")
+
 
 # fresh log
 if log_path.exists():
@@ -51,7 +53,7 @@ for name, rel in ENGINE_MAP.items():
         mod_dir = str(p.parent)
         if mod_dir not in sys.path:
             sys.path.insert(0, mod_dir)
-        spec = importlib.util.spec_from_file_location(name.replace(" ","_"), str(p))
+        spec = importlib.util.spec_from_file_location(name.replace(" ", "_"), str(p))
         if spec and spec.loader:
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)  # type: ignore
@@ -73,11 +75,14 @@ sys.path.insert(0, str(ROOT / "cockpit" / "memory"))
 agents_ok = 0
 try:
     from base_agent import AgentRegistry
-    for name in ["SAMI","SUBY","PHILI","WILI"]:
+
+    for name in ["SAMI", "SUBY", "PHILI", "WILI"]:
         try:
             ag = AgentRegistry.get_agent(name)
             imported = ag is not None
-            log(f"AGENT {'✓' if imported else '✗'} {name}: {'registered' if imported else 'missing'}")
+            log(
+                f"AGENT {'✓' if imported else '✗'} {name}: {'registered' if imported else 'missing'}"
+            )
             if imported:
                 agents_ok += 1
         except Exception as e:
@@ -88,6 +93,7 @@ except Exception as e:
 # 3) orchestrator
 try:
     from orchestration.orchestrator import Orchestrator
+
     o = Orchestrator()
     st = o.status()
     log(f"ORCHESTRATOR ✓: {json.dumps(st)}")
@@ -98,11 +104,13 @@ try:
         ("churn risk for customers", ["suby"]),
         ("training competency gap", ["wili"]),
         ("strategic market expansion", ["sami"]),
-        ("hello generic", ["sami","suby","phili"]),
+        ("hello generic", ["sami", "suby", "phili"]),
     ]
     for msg, expected in checks:
         got = o._resolve_agents(msg)
-        ok = got == expected or (expected == ["sami","suby","phili"] and set(got)==set(expected))
+        ok = got == expected or (
+            expected == ["sami", "suby", "phili"] and set(got) == set(expected)
+        )
         log(f"  route {'✓' if ok else '✗'} {msg!r} -> {got} expected {expected}")
 except Exception as e:
     log(f"ORCHESTRATOR ✗: {e}")
@@ -119,7 +127,14 @@ for rel in ["cockpit/cockpit.py", "cockpit/memory/cognitive_log.py"]:
 # 5) pytest quick run (capture)
 try:
     import subprocess
-    r = subprocess.run([sys.executable,"-m","pytest","-q"], cwd=str(ROOT), capture_output=True, text=True, timeout=30)
+
+    r = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q"],
+        cwd=str(ROOT),
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
     log("PYTEST STDOUT:\n" + r.stdout[:2000])
     if r.stderr:
         log("PYTEST STDERR:\n" + r.stderr[:2000])

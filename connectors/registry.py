@@ -32,7 +32,9 @@ class ConnectorRegistry:
     def get_connector(self, provider: str, context: ConnectorContext) -> BaseConnector:
         provider = (provider or "").strip().lower()
         if provider not in KNOWN_PROVIDERS:
-            raise ValueError(f"unknown or unsupported provider: {provider!r} (known={KNOWN_PROVIDERS})")
+            raise ValueError(
+                f"unknown or unsupported provider: {provider!r} (known={KNOWN_PROVIDERS})"
+            )
         # build_demo_connectors is credential-neutral and returns all three;
         # we surface only the requested one.
         return build_demo_connectors(context)[provider]

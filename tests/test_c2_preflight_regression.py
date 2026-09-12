@@ -16,13 +16,41 @@ from control_plane.events import Event
 def test_per_aggregate_allows_same_sequence_for_multiple_workflows():
     store = Store(db_path=":memory:")
     # Same sequence 0 for different aggregates should be allowed (per-aggregate, not global)
-    ev_a0 = Event.new(event_type="workflow_created", aggregate_id="wf_A", correlation_id="corr_A", actor="sami", payload={}, sequence=0)
-    ev_b0 = Event.new(event_type="workflow_created", aggregate_id="wf_B", correlation_id="corr_B", actor="sami", payload={}, sequence=0)
+    ev_a0 = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_A",
+        correlation_id="corr_A",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
+    ev_b0 = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_B",
+        correlation_id="corr_B",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
     store.append_event(ev_a0)
     store.append_event(ev_b0)
     # Same sequence 1 for both should also be allowed
-    ev_a1 = Event.new(event_type="workflow_validated", aggregate_id="wf_A", correlation_id="corr_A", actor="sami", payload={}, sequence=1)
-    ev_b1 = Event.new(event_type="workflow_validated", aggregate_id="wf_B", correlation_id="corr_B", actor="sami", payload={}, sequence=1)
+    ev_a1 = Event.new(
+        event_type="workflow_validated",
+        aggregate_id="wf_A",
+        correlation_id="corr_A",
+        actor="sami",
+        payload={},
+        sequence=1,
+    )
+    ev_b1 = Event.new(
+        event_type="workflow_validated",
+        aggregate_id="wf_B",
+        correlation_id="corr_B",
+        actor="sami",
+        payload={},
+        sequence=1,
+    )
     store.append_event(ev_a1)
     store.append_event(ev_b1)
     assert len(store.get_events("wf_A")) == 2
@@ -31,7 +59,14 @@ def test_per_aggregate_allows_same_sequence_for_multiple_workflows():
 
 def test_duplicate_aggregate_sequence_rejected():
     store = Store(db_path=":memory:")
-    ev0 = Event.new(event_type="workflow_created", aggregate_id="wf_X", correlation_id="corr_X", actor="sami", payload={}, sequence=0)
+    ev0 = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_X",
+        correlation_id="corr_X",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
     store.append_event(ev0)
     # Same aggregate, same sequence, different event_id must be rejected (per-aggregate unique)
     dup = Event(
@@ -56,7 +91,13 @@ def test_repeated_submission_does_not_duplicate_workflow(tmp_path):
     db = str(tmp_path / "preflight.db")
     store = Store(db_path=db)
     engine = Engine(store=store)
-    corr = CorrelationContext(correlation_id="corr_pre", idempotency_key="idem_pre", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_pre",
+        idempotency_key="idem_pre",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_pre",
         correlation=corr,
@@ -88,7 +129,14 @@ def test_repeated_submission_does_not_duplicate_workflow(tmp_path):
     assert len(store.list_workflows()) == 1
 
     # Repeated event append with same event_id is idempotent (returns existing, no duplicate)
-    ev = Event.new(event_type="workflow_created", aggregate_id="wf_dup_event", correlation_id="corr_dup", actor="sami", payload={}, sequence=0)
+    ev = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_dup_event",
+        correlation_id="corr_dup",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
     store2 = Store(db_path=":memory:")
     ev_first = store2.append_event(ev)
     ev_second = store2.append_event(ev)  # same event_id again
@@ -101,7 +149,11 @@ def test_default_db_path_is_ignored():
     assert DEFAULT_DB_PATH == "control_plane/workflow.db"
     gitignore = pathlib.Path(".gitignore").read_text(encoding="utf-8")
     # Must have at least one of these patterns
-    assert "*.db" in gitignore or "control_plane/workflow.db" in gitignore or "control_plane/*.db" in gitignore
+    assert (
+        "*.db" in gitignore
+        or "control_plane/workflow.db" in gitignore
+        or "control_plane/*.db" in gitignore
+    )
     # Must not be tracked
     import subprocess
 
@@ -132,6 +184,7 @@ def test_cognitive_log_db_creates_on_import(tmp_path):
 
     # Patch LOG_DIR before import to use tmp_path
     import cognitive_log as cl
+
     original_dir = cl.LOG_DIR
     original_sqlite = cl.SQLITE_DB
     original_json = cl.JSON_LOG
@@ -143,10 +196,12 @@ def test_cognitive_log_db_creates_on_import(tmp_path):
         cl._init_sqlite()
         assert target.exists(), "cognitive_log.sqlite must be recreated on _init_sqlite()"
         import sqlite3
+
         conn = sqlite3.connect(str(target))
-        tables = [r[0] for r in conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()]
+        tables = [
+            r[0]
+            for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        ]
         conn.close()
         assert "interactions" in tables, "interactions table must exist"
     finally:
@@ -175,9 +230,9 @@ def test_runtime_artifacts_not_tracked():
             capture_output=True,
             text=True,
         )
-        assert result.returncode != 0, (
-            f"{pattern} should not be tracked by git (exit {result.returncode})"
-        )
+        assert (
+            result.returncode != 0
+        ), f"{pattern} should not be tracked by git (exit {result.returncode})"
 
     # Verify .venv and __pycache__ are not tracked
     result_venv = subprocess.run(
@@ -194,9 +249,9 @@ def test_runtime_artifacts_not_tracked():
         text=True,
     )
     tracked_evidence = [f for f in result_ev.stdout.strip().split("\n") if f]
-    assert tracked_evidence == ["evidence/README.md"], (
-        f"Only evidence/README.md should be tracked, found: {tracked_evidence}"
-    )
+    assert tracked_evidence == [
+        "evidence/README.md"
+    ], f"Only evidence/README.md should be tracked, found: {tracked_evidence}"
 
 
 def test_store_preserves_across_restart(tmp_path):
@@ -207,8 +262,25 @@ def test_store_preserves_across_restart(tmp_path):
     db_path = str(tmp_path / "restart.db")
     store1 = Store(db_path=db_path)
     engine1 = Engine(store=store1)
-    corr = CorrelationContext(correlation_id="corr_restart", idempotency_key="idem_restart", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
-    req = TaskRequest(request_id="req_restart", correlation=corr, requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={}, requires_approval=False, status="proposed", created_at="2026-08-27T18:00:00Z", client_id="c")
+    corr = CorrelationContext(
+        correlation_id="corr_restart",
+        idempotency_key="idem_restart",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
+    req = TaskRequest(
+        request_id="req_restart",
+        correlation=corr,
+        requesting_actor="sami",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={},
+        requires_approval=False,
+        status="proposed",
+        created_at="2026-08-27T18:00:00Z",
+        client_id="c",
+    )
     wf1 = engine1.submit(req)
     wf_id = wf1.workflow_id
     store1.close()

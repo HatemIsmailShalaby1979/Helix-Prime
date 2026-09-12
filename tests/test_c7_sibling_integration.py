@@ -50,17 +50,65 @@ TEST_CLIENT = "Account Alpha"
 
 # Required payload keys for each typed event (so generic tests stay valid)
 _REQUIRED_PAYLOAD = {
-    "CompetencyGapDetected": {"employee_id": "emp_1", "gap_name": "Leadership", "required_level": "advanced"},
-    "LearningPlanRequested": {"employee_id": "emp_1", "gap_id": "gap_1", "learning_objectives": ["Goal"]},
-    "LearningArtifactReady": {"artifact_id": "a1", "artifact_type": "lesson", "employee_id": "emp_1"},
-    "AssessmentCompleted": {"assessment_id": "as1", "employee_id": "emp_1", "competency_id": "c1", "score": 0.9, "passed": True},
-    "CompetencyUpdated": {"employee_id": "emp_1", "competency_id": "c1", "old_level": "beginner", "new_level": "intermediate"},
-    "ContentGenerationRequested": {"request_id": "r1", "content_type": "lesson", "topic": "T", "language": "en", "level": "intermediate"},
-    "ContentGenerationCompleted": {"request_id": "r1", "content_type": "lesson", "status": "completed"},
-    "MediaArtifactRequested": {"request_id": "r1", "artifact_type": "audio", "source_ref": "s", "format": "mp3"},
-    "MediaArtifactReady": {"request_id": "r1", "artifact_id": "a1", "artifact_type": "audio", "format": "mp3", "status": "completed"},
+    "CompetencyGapDetected": {
+        "employee_id": "emp_1",
+        "gap_name": "Leadership",
+        "required_level": "advanced",
+    },
+    "LearningPlanRequested": {
+        "employee_id": "emp_1",
+        "gap_id": "gap_1",
+        "learning_objectives": ["Goal"],
+    },
+    "LearningArtifactReady": {
+        "artifact_id": "a1",
+        "artifact_type": "lesson",
+        "employee_id": "emp_1",
+    },
+    "AssessmentCompleted": {
+        "assessment_id": "as1",
+        "employee_id": "emp_1",
+        "competency_id": "c1",
+        "score": 0.9,
+        "passed": True,
+    },
+    "CompetencyUpdated": {
+        "employee_id": "emp_1",
+        "competency_id": "c1",
+        "old_level": "beginner",
+        "new_level": "intermediate",
+    },
+    "ContentGenerationRequested": {
+        "request_id": "r1",
+        "content_type": "lesson",
+        "topic": "T",
+        "language": "en",
+        "level": "intermediate",
+    },
+    "ContentGenerationCompleted": {
+        "request_id": "r1",
+        "content_type": "lesson",
+        "status": "completed",
+    },
+    "MediaArtifactRequested": {
+        "request_id": "r1",
+        "artifact_type": "audio",
+        "source_ref": "s",
+        "format": "mp3",
+    },
+    "MediaArtifactReady": {
+        "request_id": "r1",
+        "artifact_id": "a1",
+        "artifact_type": "audio",
+        "format": "mp3",
+        "status": "completed",
+    },
     "CareerLearningSignal": {"signal_type": "skill_gap"},
-    "IntegrationError": {"original_event_id": "evt_x", "error_code": "validation_failed", "error_message": "bad"},
+    "IntegrationError": {
+        "original_event_id": "evt_x",
+        "error_code": "validation_failed",
+        "error_message": "bad",
+    },
 }
 
 
@@ -86,6 +134,7 @@ def _generic_event(event_type: str = "IntegrationError", payload=None, **overrid
 
 # ── C7 Contract Schema Version ─────────────────────────────────────────────
 
+
 class TestC7ContractSchemaVersion:
     """Verify canonical schema version for integration contracts."""
 
@@ -100,6 +149,7 @@ class TestC7ContractSchemaVersion:
 
 
 # ── C7 Contract Validation ─────────────────────────────────────────────────
+
 
 class TestC7ContractValidation:
     """Verify event validation against canonical constants."""
@@ -133,7 +183,14 @@ class TestC7ContractValidation:
         assert expected_types.issubset(VALID_EVENT_TYPES)
 
     def test_valid_classifications(self):
-        expected = {"public", "internal", "client_confidential", "personnel_sensitive", "financial", "regulated"}
+        expected = {
+            "public",
+            "internal",
+            "client_confidential",
+            "personnel_sensitive",
+            "financial",
+            "regulated",
+        }
         assert expected.issubset(VALID_DATA_CLASSIFICATIONS)
 
     def test_valid_statuses(self):
@@ -160,6 +217,7 @@ class TestC7ContractValidation:
 
 # ── C7 Event Creation ──────────────────────────────────────────────────────
 
+
 class TestC7EventCreation:
     """Verify event creation and field defaults."""
 
@@ -183,6 +241,7 @@ class TestC7EventCreation:
 
 # ── C7 Tenant Isolation ────────────────────────────────────────────────────
 
+
 class TestC7TenantIsolation:
     """Verify tenant/client isolation in events."""
 
@@ -197,6 +256,7 @@ class TestC7TenantIsolation:
 
 # ── C7 Classification Enforcement ──────────────────────────────────────────
 
+
 class TestC7ClassificationEnforcement:
     """Verify data classification is enforced on events."""
 
@@ -207,6 +267,7 @@ class TestC7ClassificationEnforcement:
 
 
 # ── C7 Source/Target Validation ────────────────────────────────────────────
+
 
 class TestC7SourceTargetValidation:
     """Verify source/target system validation (fail-closed on unknowns)."""
@@ -222,6 +283,7 @@ class TestC7SourceTargetValidation:
 
 
 # ── C7 Correlation/Causation ───────────────────────────────────────────────
+
 
 class TestC7CorrelationCausation:
     """Verify correlation and causation ID tracking."""
@@ -239,6 +301,7 @@ class TestC7CorrelationCausation:
 
 # ── C7 Idempotency ─────────────────────────────────────────────────────────
 
+
 class TestC7Idempotency:
     """Verify idempotency key generation."""
 
@@ -249,6 +312,7 @@ class TestC7Idempotency:
 
 
 # ── C7 Payload Validation (Malformed) ──────────────────────────────────────
+
 
 class TestC7MalformedPayload:
     """Verify typed events reject missing required payload fields."""
@@ -277,10 +341,13 @@ class TestC7MalformedPayload:
 
     def test_content_type_must_be_valid(self):
         with pytest_raises(ValueError):
-            _generic_event(event_type="ContentGenerationRequested", payload={"content_type": "bogus"})
+            _generic_event(
+                event_type="ContentGenerationRequested", payload={"content_type": "bogus"}
+            )
 
 
 # ── C7 Transport In-Memory ─────────────────────────────────────────────────
+
 
 class TestC7TransportInMemory:
     """Test in-memory transport layer."""
@@ -328,6 +395,7 @@ class TestC7TransportInMemory:
 
 # ── C7 Transport File ──────────────────────────────────────────────────────
 
+
 class TestC7TransportFile:
     """Test file-based transport layer."""
 
@@ -352,6 +420,7 @@ class TestC7TransportFile:
 
 # ── C7 Transport Factory ───────────────────────────────────────────────────
 
+
 class TestC7TransportFactory:
     """Test transport factory function."""
 
@@ -364,6 +433,7 @@ class TestC7TransportFactory:
 
 
 # ── C7 Helix Education Adapter ─────────────────────────────────────────────
+
 
 class TestC7HelixEducationAdapter:
     """Test Helix Education adapter integration."""
@@ -403,6 +473,7 @@ class TestC7HelixEducationAdapter:
 
 
 # ── C7 Study Studio Adapter ────────────────────────────────────────────────
+
 
 class TestC7StudyStudioAdapter:
     """Test Study Studio adapter integration."""
@@ -446,6 +517,7 @@ class TestC7StudyStudioAdapter:
 
 # ── C7 L&D Command Center Adapter ──────────────────────────────────────────
 
+
 class TestC7LDCommandCenterAdapter:
     """Test L&D Command Center adapter integration."""
 
@@ -473,6 +545,7 @@ class TestC7LDCommandCenterAdapter:
 
 
 # ── C7 Fake Adapters (deterministic, no network) ───────────────────────────
+
 
 class TestC7FakeHelixEducation:
     """Test deterministic fake Helix Education."""
@@ -542,6 +615,7 @@ class TestC7FakeLDCommandCenter:
 
 # ── C7 Redaction ───────────────────────────────────────────────────────────
 
+
 class TestC7Redaction:
     """Verify sensitive data can be redacted in event payloads."""
 
@@ -553,6 +627,7 @@ class TestC7Redaction:
 
 
 # ── C7 Audit / Logging Integration ─────────────────────────────────────────
+
 
 class TestC7AuditIntegration:
     """Verify audit trail + structured logging integration points for C7 events."""
@@ -575,6 +650,7 @@ class TestC7AuditIntegration:
 
 # ── C7 Regression (C0-C6) ──────────────────────────────────────────────────
 
+
 class TestC7Regression:
     """Verify C7 changes don't break C0-C6 functionality."""
 
@@ -593,6 +669,7 @@ class TestC7Regression:
 
 
 # ── C7 Schema Serialization ────────────────────────────────────────────────
+
 
 class TestC7SchemaSerialization:
     """Verify events round-trip through dict serialization."""

@@ -233,9 +233,7 @@ class DataPipeline:
         if "timestamp" in df.columns:
             time_diff = df["timestamp"].diff().dt.total_seconds().dropna()
             if len(time_diff) > 0:
-                time_variance = (
-                    time_diff.std() / time_diff.mean() if time_diff.mean() > 0 else 0
-                )
+                time_variance = time_diff.std() / time_diff.mean() if time_diff.mean() > 0 else 0
                 time_score = max(0, 1 - time_variance)
                 scores.append(time_score)
 
@@ -285,23 +283,15 @@ class DataPipeline:
             df["date"] = pd.to_datetime(df["timestamp"]).dt.date
 
             # Aggregate by hour
-            hourly_stats = (
-                df.groupby("hour")["calls"].agg(["mean", "std", "count"]).round(2)
-            )
+            hourly_stats = df.groupby("hour")["calls"].agg(["mean", "std", "count"]).round(2)
             processed_data["hourly_stats"] = hourly_stats.to_dict("index")
 
             # Aggregate by day of week
-            dow_stats = (
-                df.groupby("day_of_week")["calls"]
-                .agg(["mean", "std", "count"])
-                .round(2)
-            )
+            dow_stats = df.groupby("day_of_week")["calls"].agg(["mean", "std", "count"]).round(2)
             processed_data["dow_stats"] = dow_stats.to_dict("index")
 
             # Aggregate by date
-            daily_stats = (
-                df.groupby("date")["calls"].agg(["sum", "mean", "std"]).round(2)
-            )
+            daily_stats = df.groupby("date")["calls"].agg(["sum", "mean", "std"]).round(2)
             processed_data["daily_stats"] = daily_stats.to_dict("index")
 
         # Calculate forecasting parameters
@@ -312,8 +302,7 @@ class DataPipeline:
 
             processed_data["forecasting_parameters"] = {
                 "arrival_rate_per_hour": arrival_rate,
-                "average_calls_per_period": total_calls
-                / (total_hours / 24),  # Daily average
+                "average_calls_per_period": total_calls / (total_hours / 24),  # Daily average
                 "peak_hour_calls": df.groupby("hour")["calls"].max().to_dict(),
                 "off_peak_calls": df.groupby("hour")["calls"].min().to_dict(),
             }
@@ -410,9 +399,7 @@ class DataPipeline:
                 "total_records": len(df),
                 "total_columns": len(df.columns),
                 "column_names": list(df.columns),
-                "data_types": {
-                    col: str(dtype) for col, dtype in df.dtypes.to_dict().items()
-                },
+                "data_types": {col: str(dtype) for col, dtype in df.dtypes.to_dict().items()},
             },
             "quality_summary": quality_metrics,
             "processing_timestamp": datetime.now().isoformat(),

@@ -17,19 +17,30 @@ from ..ontology import Athlete, FeePayment
 DATA_MODE = "simulated_realistic"
 
 
-def monthly_recurring_revenue(athletes: Sequence[Athlete],
-                              programs: Sequence[Any]) -> float:
+def monthly_recurring_revenue(athletes: Sequence[Athlete], programs: Sequence[Any]) -> float:
     """Design-point MRR: active athletes × their program's monthly fee."""
     fee_by_program = {p.program_id: p.monthly_fee for p in programs}
-    return round(sum(fee_by_program.get(a.program_id, 0.0)
-                     for a in athletes if a.enrollment_status == "active"), 2)
+    return round(
+        sum(
+            fee_by_program.get(a.program_id, 0.0)
+            for a in athletes
+            if a.enrollment_status == "active"
+        ),
+        2,
+    )
 
 
 def outstanding_fees(fee_payments: Sequence[FeePayment]) -> Sequence[Dict[str, Any]]:
     return [
-        {"payment_id": p.payment_id, "athlete_id": p.athlete_id,
-         "family_id": p.family_id, "amount": p.amount, "due_date": p.due_date}
-        for p in fee_payments if p.paid_at is None
+        {
+            "payment_id": p.payment_id,
+            "athlete_id": p.athlete_id,
+            "family_id": p.family_id,
+            "amount": p.amount,
+            "due_date": p.due_date,
+        }
+        for p in fee_payments
+        if p.paid_at is None
     ]
 
 
@@ -61,11 +72,17 @@ def record_manual_payment(
         raise ValueError("amount must be non-negative")
     corr = correlation_id or ctx.correlation_id or "academy-fee"
     rec = mem.add(
-        kind="customer_context", nature="simulated_event",
-        tenant_id=ctx.tenant_id, client_id=ctx.client_id,
-        actor=actor, role_id=role_id, source="academy_billing",
-        classification="client_confidential", timestamp=as_of,
-        correlation_id=corr, confidence=1.0,
+        kind="customer_context",
+        nature="simulated_event",
+        tenant_id=ctx.tenant_id,
+        client_id=ctx.client_id,
+        actor=actor,
+        role_id=role_id,
+        source="academy_billing",
+        classification="client_confidential",
+        timestamp=as_of,
+        correlation_id=corr,
+        confidence=1.0,
         evidence_refs=[f"fee:{athlete_id}:{due_date}"],
         data_mode=DATA_MODE,
         provenance={

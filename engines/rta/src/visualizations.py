@@ -47,8 +47,7 @@ def _require_plotly() -> None:
     """Raise a helpful error if Plotly is not installed."""
     if not _PLOTLY_AVAILABLE:
         raise RuntimeError(
-            "Plotly is required for RTA visualizations. "
-            "Install it with: pip install plotly"
+            "Plotly is required for RTA visualizations. " "Install it with: pip install plotly"
         )
 
 
@@ -83,9 +82,7 @@ class RTAVisualizer:
                 line={"color": "#1f77b4", "width": 2},
             )
         )
-        fig.add_hline(
-            y=85, line_dash="dash", line_color="red", annotation_text="Threshold (85%)"
-        )
+        fig.add_hline(y=85, line_dash="dash", line_color="red", annotation_text="Threshold (85%)")
         fig.update_layout(
             title="Adherence Trend by Date",
             xaxis_title="Date",
@@ -257,15 +254,11 @@ class RTAVisualizer:
 
         sections = []
         for title, fig in figures.items():
-            sections.append(
-                f"<h2>{title}</h2>{pio.to_html(fig, include_plotlyjs='cdn')}"
-            )
+            sections.append(f"<h2>{title}</h2>{pio.to_html(fig, include_plotlyjs='cdn')}")
 
         confidence = getattr(result, "confidence_score", 0.0)
         recs = getattr(result, "optimization_recommendations", [])
-        rec_html = (
-            "".join(f"<li>{r}</li>" for r in recs) or "<li>No recommendations.</li>"
-        )
+        rec_html = "".join(f"<li>{r}</li>" for r in recs) or "<li>No recommendations.</li>"
 
         html = (
             "<html><head><meta charset='utf-8'>"
@@ -293,9 +286,7 @@ class RTAVisualizer:
             "performance_metrics": getattr(result, "performance_metrics", {}),
             "variance_analysis": getattr(result, "variance_analysis", {}),
             "confidence_score": float(getattr(result, "confidence_score", 0.0)),
-            "optimization_recommendations": getattr(
-                result, "optimization_recommendations", []
-            ),
+            "optimization_recommendations": getattr(result, "optimization_recommendations", []),
         }
         path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
         logger.info("RTA JSON snapshot written to %s", path)

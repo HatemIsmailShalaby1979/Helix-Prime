@@ -63,9 +63,7 @@ class RTACalculator:
     RTA calculation engine for real-time adherence monitoring.
     """
 
-    def __init__(
-        self, adherence_threshold: float = 0.85, variance_threshold: float = 2.0
-    ):
+    def __init__(self, adherence_threshold: float = 0.85, variance_threshold: float = 2.0):
         self.adherence_threshold = adherence_threshold
         self.variance_threshold = variance_threshold
         self.scaler = StandardScaler()
@@ -99,19 +97,13 @@ class RTACalculator:
         overall_adherence = merged_data["adherence_percentage"].mean()
 
         # Calculate adherence by agent
-        agent_adherence = (
-            merged_data.groupby("agent_id")["adherence_percentage"].mean().to_dict()
-        )
+        agent_adherence = merged_data.groupby("agent_id")["adherence_percentage"].mean().to_dict()
 
         # Calculate adherence by date
-        date_adherence = (
-            merged_data.groupby("date")["adherence_percentage"].mean().to_dict()
-        )
+        date_adherence = merged_data.groupby("date")["adherence_percentage"].mean().to_dict()
 
         # Calculate adherence by hour
-        hour_adherence = (
-            merged_data.groupby("hour")["adherence_percentage"].mean().to_dict()
-        )
+        hour_adherence = merged_data.groupby("hour")["adherence_percentage"].mean().to_dict()
 
         # Calculate adherence statistics
         adherence_stats = {
@@ -157,9 +149,7 @@ class RTACalculator:
         # Calculate schedule balance
         agent_hours = schedule_data.groupby("agent_id")["scheduled_hours"].sum()
         schedule_balance = (
-            1 - (agent_hours.std() / agent_hours.mean())
-            if agent_hours.mean() > 0
-            else 0
+            1 - (agent_hours.std() / agent_hours.mean()) if agent_hours.mean() > 0 else 0
         )
 
         metrics = {
@@ -198,32 +188,24 @@ class RTACalculator:
 
         # Calculate performance by agent
         agent_performance = (
-            actual_data.groupby("agent_id")["actual_hours"]
-            .agg(["sum", "mean", "std"])
-            .round(2)
+            actual_data.groupby("agent_id")["actual_hours"].agg(["sum", "mean", "std"]).round(2)
         )
         agent_performance_dict = agent_performance.to_dict("index")
 
         # Calculate performance by date
         date_performance = (
-            actual_data.groupby("date")["actual_hours"]
-            .agg(["sum", "mean", "std"])
-            .round(2)
+            actual_data.groupby("date")["actual_hours"].agg(["sum", "mean", "std"]).round(2)
         )
         date_performance_dict = date_performance.to_dict("index")
 
         # Calculate performance by hour
         hour_performance = (
-            actual_data.groupby("hour")["actual_hours"]
-            .agg(["sum", "mean", "std"])
-            .round(2)
+            actual_data.groupby("hour")["actual_hours"].agg(["sum", "mean", "std"]).round(2)
         )
         hour_performance_dict = hour_performance.to_dict("index")
 
         # Calculate efficiency metrics
-        efficiency_metrics = self._calculate_efficiency_metrics(
-            actual_data, schedule_data
-        )
+        efficiency_metrics = self._calculate_efficiency_metrics(actual_data, schedule_data)
 
         metrics = {
             "total_actual_hours": total_actual_hours,
@@ -264,9 +246,7 @@ class RTACalculator:
             merged["scheduled_hours"] = merged["actual_hours"]
 
         # Calculate productivity
-        productivity = merged["actual_hours"] / merged["scheduled_hours"].replace(
-            0, np.nan
-        )
+        productivity = merged["actual_hours"] / merged["scheduled_hours"].replace(0, np.nan)
 
         # Calculate efficiency score
         efficiency_score = (productivity * 100).mean()
@@ -314,9 +294,7 @@ class RTACalculator:
         )
 
         # Calculate variance
-        merged_data["variance_hours"] = (
-            merged_data["scheduled_hours"] - merged_data["actual_hours"]
-        )
+        merged_data["variance_hours"] = merged_data["scheduled_hours"] - merged_data["actual_hours"]
         merged_data["variance_percentage"] = (
             merged_data["variance_hours"] / merged_data["scheduled_hours"]
         ) * 100
@@ -338,25 +316,19 @@ class RTACalculator:
 
         # Calculate variance by agent
         agent_variance = (
-            merged_data.groupby("agent_id")["variance_hours"]
-            .agg(["sum", "mean", "std"])
-            .round(2)
+            merged_data.groupby("agent_id")["variance_hours"].agg(["sum", "mean", "std"]).round(2)
         )
         agent_variance_dict = agent_variance.to_dict("index")
 
         # Calculate variance by date
         date_variance = (
-            merged_data.groupby("date")["variance_hours"]
-            .agg(["sum", "mean", "std"])
-            .round(2)
+            merged_data.groupby("date")["variance_hours"].agg(["sum", "mean", "std"]).round(2)
         )
         date_variance_dict = date_variance.to_dict("index")
 
         # Calculate variance by hour
         hour_variance = (
-            merged_data.groupby("hour")["variance_hours"]
-            .agg(["sum", "mean", "std"])
-            .round(2)
+            merged_data.groupby("hour")["variance_hours"].agg(["sum", "mean", "std"]).round(2)
         )
         hour_variance_dict = hour_variance.to_dict("index")
 
@@ -384,9 +356,7 @@ class RTACalculator:
         patterns = []
 
         # Pattern 1: High variance agents
-        agent_variance = data.groupby("agent_id")["variance_hours"].agg(
-            ["sum", "mean", "std"]
-        )
+        agent_variance = data.groupby("agent_id")["variance_hours"].agg(["sum", "mean", "std"])
         high_variance_agents = agent_variance[
             agent_variance["mean"] > agent_variance["mean"].quantile(0.75)
         ].index.tolist()
@@ -402,9 +372,7 @@ class RTACalculator:
             )
 
         # Pattern 2: Temporal variance patterns
-        daily_variance = data.groupby("date")["variance_hours"].agg(
-            ["sum", "mean", "std"]
-        )
+        daily_variance = data.groupby("date")["variance_hours"].agg(["sum", "mean", "std"])
         high_variance_days = daily_variance[
             daily_variance["mean"] > daily_variance["mean"].quantile(0.75)
         ].index.tolist()
@@ -420,9 +388,7 @@ class RTACalculator:
             )
 
         # Pattern 3: Hour-based variance patterns
-        hourly_variance = data.groupby("hour")["variance_hours"].agg(
-            ["sum", "mean", "std"]
-        )
+        hourly_variance = data.groupby("hour")["variance_hours"].agg(["sum", "mean", "std"])
         peak_variance_hours = hourly_variance[
             hourly_variance["mean"] > hourly_variance["mean"].quantile(0.75)
         ].index.tolist()
@@ -439,9 +405,7 @@ class RTACalculator:
 
         return patterns
 
-    def generate_optimization_recommendations(
-        self, variance_analysis: dict[str, Any]
-    ) -> list[str]:
+    def generate_optimization_recommendations(self, variance_analysis: dict[str, Any]) -> list[str]:
         """
         Generate optimization recommendations based on variance analysis.
 
@@ -529,9 +493,7 @@ class RTACalculator:
 
         try:
             # Calculate adherence metrics
-            result.adherence_metrics = self.calculate_adherence(
-                schedule_data, actual_data
-            )
+            result.adherence_metrics = self.calculate_adherence(schedule_data, actual_data)
 
             # Calculate schedule metrics
             result.schedule_metrics = self.calculate_schedule_metrics(schedule_data)
@@ -542,13 +504,11 @@ class RTACalculator:
             )
 
             # Calculate variance analysis
-            result.variance_analysis = self.calculate_variance_analysis(
-                schedule_data, actual_data
-            )
+            result.variance_analysis = self.calculate_variance_analysis(schedule_data, actual_data)
 
             # Generate optimization recommendations
-            result.optimization_recommendations = (
-                self.generate_optimization_recommendations(result.variance_analysis)
+            result.optimization_recommendations = self.generate_optimization_recommendations(
+                result.variance_analysis
             )
 
             # Calculate confidence score
@@ -556,9 +516,7 @@ class RTACalculator:
 
         except (ValueError, KeyError, TypeError, ZeroDivisionError) as e:
             logger.error("Error in RTA analysis: %s", e)
-            result.optimization_recommendations = [
-                f"Analysis completed with warnings: {e!s}"
-            ]
+            result.optimization_recommendations = [f"Analysis completed with warnings: {e!s}"]
             result.confidence_score = 0.0
 
         return result
@@ -656,9 +614,7 @@ if __name__ == "__main__":
     result = calculator.analyze(schedule_df, actual_df)
 
     print("\n=== RTA Analysis Results ===")
-    print(
-        f"Overall Adherence: {result.adherence_metrics.get('overall_adherence', 0):.1f}%"
-    )
+    print(f"Overall Adherence: {result.adherence_metrics.get('overall_adherence', 0):.1f}%")
     print(f"Schedule Balance: {result.schedule_metrics.get('schedule_balance', 0):.2f}")
     print(
         f"Efficiency Score: {result.performance_metrics.get('efficiency_metrics', {}).get('efficiency_score', 0):.1f}%"

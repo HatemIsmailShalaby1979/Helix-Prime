@@ -14,7 +14,7 @@ class ConsentRecord:
     tenant_id: str
     client_id: str
     customer_id: str
-    status: str                       # granted | revoked | pending
+    status: str  # granted | revoked | pending
     granted_at: str
     expires_at: str
     data_modes_permitted: Tuple[str, ...]

@@ -120,6 +120,7 @@ class CommandCenterView:
 
 # --------------------------------------------------------------------------- assembly
 
+
 def _effective_data_mode(requested: str) -> tuple[str, bool]:
     """Never present simulated data as live. If 'live_external' is requested but
     only fake connectors exist, fall back to simulated and raise a warning."""
@@ -128,23 +129,33 @@ def _effective_data_mode(requested: str) -> tuple[str, bool]:
     return requested, False
 
 
-def _synthetic_signals(ctx: ConnectorContext, account, tickets, as_of: str) -> tuple[CustomerSignal, ...]:
+def _synthetic_signals(
+    ctx: ConnectorContext, account, tickets, as_of: str
+) -> tuple[CustomerSignal, ...]:
     if account is None:
         return ()
     open_high = sum(
-        1 for t in tickets
+        1
+        for t in tickets
         if t.status.lower() not in {"closed", "solved"} and t.priority.lower() == "high"
     )
     value = -0.15 * open_high if open_high else 0.05
     sig = CustomerSignal(
-        "sig-op-1", account.account_id, "support_load", float(value), as_of,
+        "sig-op-1",
+        account.account_id,
+        "support_load",
+        float(value),
+        as_of,
         SourceRef("OperationalTelemetry", "sig-op-1", as_of, "ops-v1", ctx.data_mode),
-        ctx.tenant_id, ctx.client_id,
+        ctx.tenant_id,
+        ctx.client_id,
     )
     return (sig,)
 
 
-def _state_flags(connector_status, diagnosis: AccountHealthDiagnosis, live_warning: bool) -> dict[str, Any]:
+def _state_flags(
+    connector_status, diagnosis: AccountHealthDiagnosis, live_warning: bool
+) -> dict[str, Any]:
     unavailable = any(c.status in ("disconnected", "revoked") for c in connector_status)
     stale = any(r.factor == "stale_data" for r in diagnosis.risk_factors)
     contradictory = diagnosis.health_state == "contradictory"
@@ -187,14 +198,23 @@ def assemble_command_center(
 ) -> CommandCenterView:
     effective_data_mode, live_warning = _effective_data_mode(requested_data_mode)
     meta = GovernanceTag(
-        tenant_id=tenant_id, client_id=client_id, actor=actor, role_id=role_id,
-        classification=CLASSIFICATION, correlation_id=correlation_id,
-        requested_data_mode=requested_data_mode, effective_data_mode=effective_data_mode,
+        tenant_id=tenant_id,
+        client_id=client_id,
+        actor=actor,
+        role_id=role_id,
+        classification=CLASSIFICATION,
+        correlation_id=correlation_id,
+        requested_data_mode=requested_data_mode,
+        effective_data_mode=effective_data_mode,
         live_warning=live_warning,
     )
     ctx = ConnectorContext(
-        tenant_id, "org-1", client_id, actor=actor,
-        correlation_id=correlation_id, data_mode=effective_data_mode,
+        tenant_id,
+        "org-1",
+        client_id,
+        actor=actor,
+        correlation_id=correlation_id,
+        data_mode=effective_data_mode,
     )
 
     # --- connectors (Prompt 4) ---------------------------------------------
@@ -206,7 +226,11 @@ def assemble_command_center(
 
     connector_status = tuple(
         ConnectorStatusView(
-            c.provider, c.connector_id, c.status().value, dict(c.health_check()), meta,
+            c.provider,
+            c.connector_id,
+            c.status().value,
+            dict(c.health_check()),
+            meta,
         )
         for c in connectors.values()
     )
@@ -219,9 +243,13 @@ def assemble_command_center(
         enrichment = connectors["clay"].enrich_account(ctx, account) if account else None
         signals = _synthetic_signals(ctx, account, tickets, as_of)
         bundle = AccountContextBundle(
-            context=ctx, account=account, tickets=tickets,
-            enrichment=enrichment, signals=signals,
-            data_mode=effective_data_mode, as_of=as_of,
+            context=ctx,
+            account=account,
+            tickets=tickets,
+            enrichment=enrichment,
+            signals=signals,
+            data_mode=effective_data_mode,
+            as_of=as_of,
         )
 
     diagnosis = diagnose(bundle)
@@ -230,22 +258,42 @@ def assemble_command_center(
     # --- governed organizational memory (scoped to this tenant) ------------
     mem = memory or GovernedMemory(path=memory_path)
     outcomes = mem.retrieve(
-        tenant_id=tenant_id, client_id=client_id, kinds=["outcome"], include_deleted=False,
+        tenant_id=tenant_id,
+        client_id=client_id,
+        kinds=["outcome"],
+        include_deleted=False,
     )
     outcome_timeline = tuple(
         OutcomeTimelineEntry(
-            o.record_id, o.body.get("decision", ""), o.actor, o.role_id, o.correlation_id,
-            o.body.get("rationale", ""), o.timestamp, o.body.get("diagnosis_ref", ""),
-            o.nature, meta,
+            o.record_id,
+            o.body.get("decision", ""),
+            o.actor,
+            o.role_id,
+            o.correlation_id,
+            o.body.get("rationale", ""),
+            o.timestamp,
+            o.body.get("diagnosis_ref", ""),
+            o.nature,
+            meta,
         )
         for o in outcomes
     )
     mem_all = mem.retrieve(tenant_id=tenant_id, client_id=client_id, include_deleted=False)
     memory_timeline = tuple(
         MemoryTimelineEntry(
-            m.record_id, m.kind, m.nature, m.classification, m.actor, m.role_id, m.source,
-            m.correlation_id, m.confidence, m.data_mode, m.timestamp,
-            json.dumps(m.body, default=str)[:200], meta,
+            m.record_id,
+            m.kind,
+            m.nature,
+            m.classification,
+            m.actor,
+            m.role_id,
+            m.source,
+            m.correlation_id,
+            m.confidence,
+            m.data_mode,
+            m.timestamp,
+            json.dumps(m.body, default=str)[:200],
+            meta,
         )
         for m in mem_all
     )
@@ -253,7 +301,13 @@ def assemble_command_center(
     # --- evidence + provenance timeline ------------------------------------
     evidence_timeline = tuple(
         EvidenceTimelineEntry(
-            e.provider, e.record_id, e.observed_at, e.data_mode, e.detail, e.ref, meta,
+            e.provider,
+            e.record_id,
+            e.observed_at,
+            e.data_mode,
+            e.detail,
+            e.ref,
+            meta,
         )
         for e in diagnosis.evidence
     )
@@ -276,6 +330,7 @@ def assemble_command_center(
 
 
 # ------------------------------------------------------------------- approval gate
+
 
 def evaluate_approval(
     view: CommandCenterView,
@@ -309,8 +364,11 @@ def evaluate_approval(
 
 # ------------------------------------------------------------------- reset demo
 
+
 def reset_demo(memory: GovernedMemory) -> GovernedMemory:
     """Explicit, audited synthetic-demo reset. Source systems are never touched
     (the cockpit is read-only over them)."""
-    memory.clear_for_demo(actor="local-operator", role_id="customer_success_gm", timestamp=DEFAULT_AS_OF)
+    memory.clear_for_demo(
+        actor="local-operator", role_id="customer_success_gm", timestamp=DEFAULT_AS_OF
+    )
     return memory

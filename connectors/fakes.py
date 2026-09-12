@@ -43,28 +43,32 @@ class FakeConnector(BaseConnector):
         self._enrichment = dict(enrichment or {})
 
     def capabilities(self) -> Sequence[ConnectorCapability]:
-        return (ConnectorCapability(
-            connector_id=self.connector_id,
-            provider=self.provider,
-            capability_id=f"{self.provider.lower()}_customer_read",
-            reads=("account", "ticket", "customer_signal"),
-            writes=("account_update",),
-            risk_class="client_confidential",
-            writes_require_approval=True,
-            data_classification="client_confidential",
-            approval_required=True,
-        ),)
+        return (
+            ConnectorCapability(
+                connector_id=self.connector_id,
+                provider=self.provider,
+                capability_id=f"{self.provider.lower()}_customer_read",
+                reads=("account", "ticket", "customer_signal"),
+                writes=("account_update",),
+                risk_class="client_confidential",
+                writes_require_approval=True,
+                data_classification="client_confidential",
+                approval_required=True,
+            ),
+        )
 
     # ----- protected fetchers (scope-filtered; never leak cross-tenant data) --
     def _fetch_accounts(self, context: ConnectorContext) -> Sequence[Account]:
         return [
-            a for a in self._accounts
+            a
+            for a in self._accounts
             if a.tenant_id == context.tenant_id and a.client_id == context.client_id
         ]
 
     def _fetch_tickets(self, context: ConnectorContext, account_id: str) -> Sequence[SupportTicket]:
         return [
-            t for t in self._tickets.get(account_id, ())
+            t
+            for t in self._tickets.get(account_id, ())
             if t.tenant_id == context.tenant_id and t.client_id == context.client_id
         ]
 
@@ -79,27 +83,56 @@ class FakeConnector(BaseConnector):
             context.data_mode,
         )
         return EnrichmentResult(
-            account.account_id, fields, 0.85, source, context.tenant_id, context.client_id,
+            account.account_id,
+            fields,
+            0.85,
+            source,
+            context.tenant_id,
+            context.client_id,
         )
 
 
 def build_demo_connectors(context: ConnectorContext) -> dict[str, FakeConnector]:
-    account_source = SourceRef("Salesforce", "acct-001", "2026-08-29T00:00:00Z", "sf-demo-v1", context.data_mode)
-    account = Account(
-        "acct-001", "Demo Account", "adoption", "owner-demo",
-        account_source, context.tenant_id, context.client_id,
+    account_source = SourceRef(
+        "Salesforce", "acct-001", "2026-08-29T00:00:00Z", "sf-demo-v1", context.data_mode
     )
-    ticket_source = SourceRef("Zendesk", "ticket-001", "2026-08-29T00:05:00Z", "zd-demo-v1", context.data_mode)
+    account = Account(
+        "acct-001",
+        "Demo Account",
+        "adoption",
+        "owner-demo",
+        account_source,
+        context.tenant_id,
+        context.client_id,
+    )
+    ticket_source = SourceRef(
+        "Zendesk", "ticket-001", "2026-08-29T00:05:00Z", "zd-demo-v1", context.data_mode
+    )
     ticket = SupportTicket(
-        "ticket-001", "acct-001", "Priority onboarding issue", "open", "high", True,
-        "2026-08-29T00:05:00Z", ticket_source, context.tenant_id, context.client_id,
+        "ticket-001",
+        "acct-001",
+        "Priority onboarding issue",
+        "open",
+        "high",
+        True,
+        "2026-08-29T00:05:00Z",
+        ticket_source,
+        context.tenant_id,
+        context.client_id,
     )
     common = {"acct-001": [ticket]}
     return {
         "salesforce": FakeConnector("salesforce", "Salesforce", accounts=[account]),
         "zendesk": FakeConnector("zendesk", "Zendesk", tickets=common),
         "clay": FakeConnector(
-            "clay", "Clay",
-            enrichment={"acct-001": {"employee_band": "51-200", "industry": "contact-centre", "research_status": "simulated"}},
+            "clay",
+            "Clay",
+            enrichment={
+                "acct-001": {
+                    "employee_band": "51-200",
+                    "industry": "contact-centre",
+                    "research_status": "simulated",
+                }
+            },
         ),
     }

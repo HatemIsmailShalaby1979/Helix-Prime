@@ -25,7 +25,9 @@ from command_center_integration import assemble_command_center  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 
 from .approval import (  # noqa: E402
-    create_recommendation, create_approval_draft, transition_approval,
+    create_recommendation,
+    create_approval_draft,
+    transition_approval,
     evaluate_approval_decision,
 )
 from .config import PilotConfig  # noqa: E402
@@ -33,10 +35,18 @@ from .consent import ConsentRecord, validate_consent  # noqa: E402
 from .exceptions import PilotError  # noqa: E402
 from .metrics import compute_pilot_metrics  # noqa: E402
 from .phases import (  # noqa: E402
-    READ_ONLY, SUPERVISED, CLOSED, ReadOnlyPeriod, ConnectorPermissions,
+    READ_ONLY,
+    SUPERVISED,
+    CLOSED,
+    ReadOnlyPeriod,
+    ConnectorPermissions,
 )
 from .scope import (  # noqa: E402
-    PilotScope, default_scope, HISTORICAL_CONSENTED, SIMULATED_REALISTIC, LIVE_CUSTOMER,
+    PilotScope,
+    default_scope,
+    HISTORICAL_CONSENTED,
+    SIMULATED_REALISTIC,
+    LIVE_CUSTOMER,
 )
 
 DEFAULT_AS_OF = "2026-08-29T12:00:00Z"
@@ -52,28 +62,43 @@ def _synthetic_signals(ctx, account, tickets, as_of):
     if account is None:
         return ()
     open_high = sum(
-        1 for t in tickets
+        1
+        for t in tickets
         if t.status.lower() not in {"closed", "solved"} and t.priority.lower() == "high"
     )
     value = -0.15 * open_high if open_high else 0.05
     sig = CustomerSignal(
-        "sig-op-1", account.account_id, "support_load", float(value), as_of,
+        "sig-op-1",
+        account.account_id,
+        "support_load",
+        float(value),
+        as_of,
         SourceRef("OperationalTelemetry", "sig-op-1", as_of, "ops-v1", ctx.data_mode),
-        ctx.tenant_id, ctx.client_id,
+        ctx.tenant_id,
+        ctx.client_id,
     )
     return (sig,)
 
 
 def _data_mode_to_nature(mode: str) -> str:
-    return {"historical_consented": "historical_event",
-            "simulated_realistic": "simulated_event"}.get(mode, "simulated_event")
+    return {
+        "historical_consented": "historical_event",
+        "simulated_realistic": "simulated_event",
+    }.get(mode, "simulated_event")
 
 
 class PilotRuntime:
-    def __init__(self, config: PilotConfig, memory: GovernedMemory, scope: PilotScope = None,
-                 consent: ConsentRecord = None, *, phase: str = SUPERVISED,
-                 read_only_period: Optional[ReadOnlyPeriod] = None,
-                 connector_permissions: Optional[ConnectorPermissions] = None) -> None:
+    def __init__(
+        self,
+        config: PilotConfig,
+        memory: GovernedMemory,
+        scope: PilotScope = None,
+        consent: ConsentRecord = None,
+        *,
+        phase: str = SUPERVISED,
+        read_only_period: Optional[ReadOnlyPeriod] = None,
+        connector_permissions: Optional[ConnectorPermissions] = None,
+    ) -> None:
         config.validate()
         self.config = config
         self.mem = memory
@@ -93,14 +118,25 @@ class PilotRuntime:
         validate_consent(consent, as_of, self.config.permitted_data_modes)
         self.consent = consent
         self.mem.add(
-            kind="workflow_history", nature="verified_outcome",
-            tenant_id=consent.tenant_id, client_id=consent.client_id,
-            actor="pilot", role_id="customer_success_gm", source="pilot_consent",
-            classification="client_confidential", timestamp=as_of,
-            correlation_id=consent.consent_id, confidence=1.0,
-            evidence_refs=[consent.consent_id], data_mode=HISTORICAL_CONSENTED,
-            provenance={"correlation_id": consent.consent_id, "data_mode": HISTORICAL_CONSENTED,
-                        "basis": "consent_validation", "sources": [consent.consent_id]},
+            kind="workflow_history",
+            nature="verified_outcome",
+            tenant_id=consent.tenant_id,
+            client_id=consent.client_id,
+            actor="pilot",
+            role_id="customer_success_gm",
+            source="pilot_consent",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=consent.consent_id,
+            confidence=1.0,
+            evidence_refs=[consent.consent_id],
+            data_mode=HISTORICAL_CONSENTED,
+            provenance={
+                "correlation_id": consent.consent_id,
+                "data_mode": HISTORICAL_CONSENTED,
+                "basis": "consent_validation",
+                "sources": [consent.consent_id],
+            },
             body={"action": "consent_validated", "consent_id": consent.consent_id},
         )
         return True
@@ -131,75 +167,156 @@ class PilotRuntime:
                 failures.append(("clay", str(exc)))
         signals = _synthetic_signals(ctx, account, tickets, as_of)
         bundle = AccountContextBundle(
-            context=ctx, account=account, tickets=tickets, enrichment=enrichment,
-            signals=signals, data_mode=ctx.data_mode, as_of=as_of,
+            context=ctx,
+            account=account,
+            tickets=tickets,
+            enrichment=enrichment,
+            signals=signals,
+            data_mode=ctx.data_mode,
+            as_of=as_of,
         )
         return bundle, failures
 
     # ----------------------------------------------------------- per-account
-    def diagnose_account(self, tenant_id, client_id, as_of, operator_actor, operator_role,
-                         correlation_id, connectors=None):
+    def diagnose_account(
+        self,
+        tenant_id,
+        client_id,
+        as_of,
+        operator_actor,
+        operator_role,
+        correlation_id,
+        connectors=None,
+    ):
         effective, live_warning = _effective_data_mode("simulated_realistic")
-        ctx = ConnectorContext(tenant_id, "org-1", client_id, actor=operator_actor,
-                               correlation_id=correlation_id, data_mode=effective)
+        ctx = ConnectorContext(
+            tenant_id,
+            "org-1",
+            client_id,
+            actor=operator_actor,
+            correlation_id=correlation_id,
+            data_mode=effective,
+        )
         if connectors is None:
             connectors = self._build_connectors(ctx)
         bundle, failures = self._build_bundle(connectors, ctx, as_of)
         diagnosis = diagnose(bundle)
         view = assemble_command_center(
-            tenant_id, client_id, operator_actor, operator_role, effective, correlation_id,
-            as_of, connectors=connectors, bundle=bundle, memory=self.mem,
+            tenant_id,
+            client_id,
+            operator_actor,
+            operator_role,
+            effective,
+            correlation_id,
+            as_of,
+            connectors=connectors,
+            bundle=bundle,
+            memory=self.mem,
         )
         for prov, err in failures:
             self.mem.add(
-                kind="workflow_history", nature="historical_event",
-                tenant_id=tenant_id, client_id=client_id, actor="pilot",
-                role_id="customer_success_gm", source="pilot_connector",
-                classification="client_confidential", timestamp=as_of,
-                correlation_id=correlation_id, confidence=1.0, evidence_refs=[],
+                kind="workflow_history",
+                nature="historical_event",
+                tenant_id=tenant_id,
+                client_id=client_id,
+                actor="pilot",
+                role_id="customer_success_gm",
+                source="pilot_connector",
+                classification="client_confidential",
+                timestamp=as_of,
+                correlation_id=correlation_id,
+                confidence=1.0,
+                evidence_refs=[],
                 data_mode=effective,
-                provenance={"correlation_id": correlation_id, "data_mode": effective,
-                            "basis": "connector_failure", "sources": []},
+                provenance={
+                    "correlation_id": correlation_id,
+                    "data_mode": effective,
+                    "basis": "connector_failure",
+                    "sources": [],
+                },
                 body={"action": "connector_failure", "provider": prov, "error": err},
             )
         return diagnosis, view, bundle, failures
 
-    def _record_diagnosis_and_recommendations(self, tenant_id, client_id, as_of, operator_actor,
-                                              operator_role, correlation_id, diagnosis, data_mode):
+    def _record_diagnosis_and_recommendations(
+        self,
+        tenant_id,
+        client_id,
+        as_of,
+        operator_actor,
+        operator_role,
+        correlation_id,
+        diagnosis,
+        data_mode,
+    ):
         ev = [e.ref for e in diagnosis.evidence]
         diag_rec = self.mem.add(
-            kind="customer_context", nature=_data_mode_to_nature(data_mode),
-            tenant_id=tenant_id, client_id=client_id, actor="pilot",
-            role_id="customer_success_gm", source="pilot_diagnosis",
-            classification="client_confidential", timestamp=as_of,
-            correlation_id=correlation_id, confidence=diagnosis.confidence,
-            evidence_refs=ev, data_mode=data_mode,
-            provenance={"correlation_id": correlation_id, "data_mode": data_mode,
-                        "basis": "diagnosis", "sources": ev},
-            body={"health_state": diagnosis.health_state,
-                  "open_risk_count": len(diagnosis.risk_factors),
-                  "recommended_actions": list(diagnosis.recommended_actions)},
+            kind="customer_context",
+            nature=_data_mode_to_nature(data_mode),
+            tenant_id=tenant_id,
+            client_id=client_id,
+            actor="pilot",
+            role_id="customer_success_gm",
+            source="pilot_diagnosis",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=diagnosis.confidence,
+            evidence_refs=ev,
+            data_mode=data_mode,
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": data_mode,
+                "basis": "diagnosis",
+                "sources": ev,
+            },
+            body={
+                "health_state": diagnosis.health_state,
+                "open_risk_count": len(diagnosis.risk_factors),
+                "recommended_actions": list(diagnosis.recommended_actions),
+            },
         )
         for action in diagnosis.recommended_actions:
             is_esc = "escalat" in action.lower()
             correct = (diagnosis.health_state in ("at_risk", "critical")) if is_esc else True
             rec = create_recommendation(
-                self.mem, tenant_id=tenant_id, client_id=client_id, actor=operator_actor,
-                role_id=operator_role, correlation_id=correlation_id, timestamp=as_of,
-                action=action, evidence=ev, diagnosis_ref=diag_rec.record_id,
-                correct=correct, data_mode=data_mode,
+                self.mem,
+                tenant_id=tenant_id,
+                client_id=client_id,
+                actor=operator_actor,
+                role_id=operator_role,
+                correlation_id=correlation_id,
+                timestamp=as_of,
+                action=action,
+                evidence=ev,
+                diagnosis_ref=diag_rec.record_id,
+                correct=correct,
+                data_mode=data_mode,
             )
             create_approval_draft(
-                self.mem, tenant_id=tenant_id, client_id=client_id, owner=operator_actor,
-                role_id=operator_role, correlation_id=correlation_id, timestamp=as_of,
-                action=action, recommendation_id=rec.record_id, evidence=[rec.record_id],
+                self.mem,
+                tenant_id=tenant_id,
+                client_id=client_id,
+                owner=operator_actor,
+                role_id=operator_role,
+                correlation_id=correlation_id,
+                timestamp=as_of,
+                action=action,
+                recommendation_id=rec.record_id,
+                evidence=[rec.record_id],
                 data_mode=data_mode,
             )
 
     # ----------------------------------------------------------- dry run
-    def dry_run(self, tenant_client_pairs, as_of=DEFAULT_AS_OF, operator_actor="pilot-operator",
-                operator_role="customer_success_gm", correlation_id="pilot-dryrun",
-                consent: ConsentRecord = None):
+    def dry_run(
+        self,
+        tenant_client_pairs,
+        as_of=DEFAULT_AS_OF,
+        operator_actor="pilot-operator",
+        operator_role="customer_success_gm",
+        correlation_id="pilot-dryrun",
+        consent: ConsentRecord = None,
+    ):
         if consent is not None:
             self.validate_consent(consent, as_of)
         for tenant_id, client_id in tenant_client_pairs:
@@ -208,20 +325,41 @@ class PilotRuntime:
             if client_id not in self.client_ids:
                 self.client_ids.append(client_id)
             diagnosis, _view, _bundle, _failures = self.diagnose_account(
-                tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id)
+                tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id
+            )
             self.diagnoses.append((tenant_id, client_id, diagnosis))
             self._record_diagnosis_and_recommendations(
-                tenant_id, client_id, as_of, operator_actor, operator_role, correlation_id,
-                diagnosis, SIMULATED_REALISTIC)
+                tenant_id,
+                client_id,
+                as_of,
+                operator_actor,
+                operator_role,
+                correlation_id,
+                diagnosis,
+                SIMULATED_REALISTIC,
+            )
         # Baseline measurement (pre-action; dry-run executes no committal writes).
         self.baseline_metrics = compute_pilot_metrics(self.mem, self.tenant_ids, {})
         self.mem.add(
-            kind="outcome", nature="historical_event", tenant_id="*pilot*", client_id="*pilot*",
-            actor="pilot", role_id="customer_success_gm", source="pilot_baseline",
-            classification="internal", timestamp=as_of, correlation_id=correlation_id,
-            confidence=1.0, evidence_refs=[], data_mode="simulated_realistic",
-            provenance={"correlation_id": correlation_id, "data_mode": "simulated_realistic",
-                        "basis": "baseline", "sources": []},
+            kind="outcome",
+            nature="historical_event",
+            tenant_id="*pilot*",
+            client_id="*pilot*",
+            actor="pilot",
+            role_id="customer_success_gm",
+            source="pilot_baseline",
+            classification="internal",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=1.0,
+            evidence_refs=[],
+            data_mode="simulated_realistic",
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": "simulated_realistic",
+                "basis": "baseline",
+                "sources": [],
+            },
             body={"phase": "baseline", "metrics": self.baseline_metrics},
         )
         return self.summary()
@@ -241,25 +379,41 @@ class PilotRuntime:
         self.phase = READ_ONLY
         return self.read_only_period
 
-    def exit_read_only_period(self, as_of: str, actor: str, role: str,
-                             correlation_id: str = "pilot-exit") -> str:
+    def exit_read_only_period(
+        self, as_of: str, actor: str, role: str, correlation_id: str = "pilot-exit"
+    ) -> str:
         if self.read_only_period is None:
             raise PilotError("no read-only period configured")
         # Record the early exit by shortening the planned window to `as_of`.
         self.read_only_period = ReadOnlyPeriod(self.read_only_period.starts_at, as_of)
         self.mem.add(
-            kind="workflow_history", nature="verified_outcome", tenant_id="*pilot*",
-            client_id="*pilot*", actor=actor, role_id=role, source="pilot_phase",
-            classification="internal", timestamp=as_of, correlation_id=correlation_id,
-            confidence=1.0, evidence_refs=[], data_mode="simulated_realistic",
-            provenance={"correlation_id": correlation_id, "data_mode": "simulated_realistic",
-                        "basis": "phase_exit", "sources": []},
+            kind="workflow_history",
+            nature="verified_outcome",
+            tenant_id="*pilot*",
+            client_id="*pilot*",
+            actor=actor,
+            role_id=role,
+            source="pilot_phase",
+            classification="internal",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=1.0,
+            evidence_refs=[],
+            data_mode="simulated_realistic",
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": "simulated_realistic",
+                "basis": "phase_exit",
+                "sources": [],
+            },
             body={"action": "read_only_exited", "ends_at": as_of},
         )
         self.phase = SUPERVISED
         return self.phase
 
-    def prepare_first_real_pilot(self, starts_at: str, ends_at: str, consent: ConsentRecord, as_of: str):
+    def prepare_first_real_pilot(
+        self, starts_at: str, ends_at: str, consent: ConsentRecord, as_of: str
+    ):
         """Configure the FIRST real pilot: validated consent, minimum data, no live
         data, read-only connector permissions, and a mandatory read-only period."""
         self.validate_consent(consent, as_of)
@@ -275,43 +429,83 @@ class PilotRuntime:
     def _latest_approval(self, approval_id):
         return self.mem._by_id[approval_id]
 
-    def approve_action(self, approval_id, approver_actor, approver_role, requester_actor,
-                       requester_role, as_of=DEFAULT_AS_OF, correlation_id="pilot-approve"):
+    def approve_action(
+        self,
+        approval_id,
+        approver_actor,
+        approver_role,
+        requester_actor,
+        requester_role,
+        as_of=DEFAULT_AS_OF,
+        correlation_id="pilot-approve",
+    ):
         prev = self._latest_approval(approval_id)
         if prev.kind != "approval":
             raise PilotError("not an approval record")
         if self.phase == READ_ONLY:
             raise PilotError("read-only period active: committal approvals are not permitted yet")
         ok, reason = evaluate_approval_decision(
-            prev, "approved", approver_actor, approver_role, requester_actor, requester_role)
+            prev, "approved", approver_actor, approver_role, requester_actor, requester_role
+        )
         if not ok:
             raise PilotError(reason)
         return transition_approval(
-            self.mem, prev, "approved", approver_actor, approver_role, correlation_id, as_of,
-            reason=f"approved by {approver_actor}")
+            self.mem,
+            prev,
+            "approved",
+            approver_actor,
+            approver_role,
+            correlation_id,
+            as_of,
+            reason=f"approved by {approver_actor}",
+        )
 
-    def deny_action(self, approval_id, reviewer, reason, as_of=DEFAULT_AS_OF, correlation_id="pilot-deny"):
+    def deny_action(
+        self, approval_id, reviewer, reason, as_of=DEFAULT_AS_OF, correlation_id="pilot-deny"
+    ):
         prev = self._latest_approval(approval_id)
         if prev.kind != "approval":
             raise PilotError("not an approval record")
         return transition_approval(
-            self.mem, prev, "denied", reviewer, prev.role_id, correlation_id, as_of,
-            reason=f"denied by {reviewer}: {reason}")
+            self.mem,
+            prev,
+            "denied",
+            reviewer,
+            prev.role_id,
+            correlation_id,
+            as_of,
+            reason=f"denied by {reviewer}: {reason}",
+        )
 
-    def rollback_action(self, approval_id, actor, role, reason, as_of=DEFAULT_AS_OF, correlation_id="pilot-rollback"):
+    def rollback_action(
+        self, approval_id, actor, role, reason, as_of=DEFAULT_AS_OF, correlation_id="pilot-rollback"
+    ):
         prev = self._latest_approval(approval_id)
         if prev.kind != "approval":
             raise PilotError("not an approval record")
         new = transition_approval(
-            self.mem, prev, "rolled_back", actor, role, correlation_id, as_of, reason=reason)
+            self.mem, prev, "rolled_back", actor, role, correlation_id, as_of, reason=reason
+        )
         self.mem.add(
-            kind="workflow_history", nature="verified_outcome",
-            tenant_id=prev.tenant_id, client_id=prev.client_id, actor=actor, role_id=role,
-            source="pilot_incident", classification="client_confidential", timestamp=as_of,
-            correlation_id=correlation_id, confidence=1.0, evidence_refs=[prev.record_id],
+            kind="workflow_history",
+            nature="verified_outcome",
+            tenant_id=prev.tenant_id,
+            client_id=prev.client_id,
+            actor=actor,
+            role_id=role,
+            source="pilot_incident",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=1.0,
+            evidence_refs=[prev.record_id],
             data_mode=prev.data_mode,
-            provenance={"correlation_id": correlation_id, "data_mode": prev.data_mode,
-                        "basis": "rollback_incident", "sources": [prev.record_id]},
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": prev.data_mode,
+                "basis": "rollback_incident",
+                "sources": [prev.record_id],
+            },
             body={"action": "rollback", "target": approval_id, "reason": reason},
         )
         return new

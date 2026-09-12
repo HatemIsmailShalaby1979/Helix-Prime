@@ -183,6 +183,7 @@ class ConnectorGateway:
 
 def _now() -> str:
     import datetime
+
     return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
@@ -190,6 +191,7 @@ def _idempotency_key(connector_id: str, intent: Mapping[str, Any]) -> str:
     """Generate an idempotency key for a write intent."""
     import hashlib
     import json
+
     # Serialize intent to JSON for deterministic hashing
     raw = f"{connector_id}:{json.dumps(intent, sort_keys=True, default=str)}"
     return hashlib.sha256(raw.encode()).hexdigest()[:16]

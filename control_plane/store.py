@@ -65,7 +65,9 @@ class Store:
             )
             """
         )
-        cur.execute("CREATE INDEX IF NOT EXISTS idx_events_agg_seq ON events(aggregate_id, sequence)")
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_events_agg_seq ON events(aggregate_id, sequence)"
+        )
         cur.execute("CREATE INDEX IF NOT EXISTS idx_workflows_corr ON workflows(correlation_id)")
         self._init_governance_schema(cur)
         self.conn.commit()
@@ -167,7 +169,9 @@ class Store:
         try:
             cur.execute("BEGIN IMMEDIATE")
             # Check idempotency inside transaction
-            cur.execute("SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,))
+            cur.execute(
+                "SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,)
+            )
             row = cur.fetchone()
             if row is not None:
                 self.conn.execute("ROLLBACK")
@@ -192,7 +196,9 @@ class Store:
             except Exception:
                 pass
             # Race: another insert with same idempotency_key succeeded
-            cur.execute("SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,))
+            cur.execute(
+                "SELECT data FROM workflows WHERE idempotency_key = ?", (workflow.idempotency_key,)
+            )
             row = cur.fetchone()
             if row is not None:
                 data = json.loads(row[0])
@@ -229,7 +235,12 @@ class Store:
         cur = self.conn.cursor()
         cur.execute(
             "UPDATE workflows SET data = ?, updated_at = ?, correlation_id = ? WHERE workflow_id = ?",
-            (data_json, workflow.updated_at, workflow.correlation.correlation_id, workflow.workflow_id),
+            (
+                data_json,
+                workflow.updated_at,
+                workflow.correlation.correlation_id,
+                workflow.workflow_id,
+            ),
         )
         if cur.rowcount == 0:
             raise ValueError(f"Store.update_workflow: workflow {workflow.workflow_id!r} not found")
@@ -263,7 +274,9 @@ class Store:
                 return Event.from_dict(data)
 
             # Check sequence: must be next for this aggregate
-            cur.execute("SELECT MAX(sequence) FROM events WHERE aggregate_id = ?", (event.aggregate_id,))
+            cur.execute(
+                "SELECT MAX(sequence) FROM events WHERE aggregate_id = ?", (event.aggregate_id,)
+            )
             row = cur.fetchone()
             max_seq = row[0] if row[0] is not None else -1
             expected = max_seq + 1
@@ -277,7 +290,14 @@ class Store:
             data_json = json.dumps(event.to_dict(), default=str)
             cur.execute(
                 "INSERT INTO events (event_id, aggregate_id, sequence, correlation_id, data, timestamp) VALUES (?, ?, ?, ?, ?, ?)",
-                (event.event_id, event.aggregate_id, event.sequence, event.correlation_id, data_json, event.timestamp),
+                (
+                    event.event_id,
+                    event.aggregate_id,
+                    event.sequence,
+                    event.correlation_id,
+                    data_json,
+                    event.timestamp,
+                ),
             )
             self.conn.commit()
         except sqlite3.IntegrityError as e:
@@ -302,7 +322,9 @@ class Store:
 
     def get_events(self, aggregate_id: str) -> List[Event]:
         cur = self.conn.cursor()
-        cur.execute("SELECT data FROM events WHERE aggregate_id = ? ORDER BY sequence ASC", (aggregate_id,))
+        cur.execute(
+            "SELECT data FROM events WHERE aggregate_id = ? ORDER BY sequence ASC", (aggregate_id,)
+        )
         rows = cur.fetchall()
         return [Event.from_dict(json.loads(r[0])) for r in rows]
 
@@ -385,9 +407,13 @@ class Store:
 
     def insert_workflow_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
         """Insert a governed task row. Duplicate task_id fails deterministically."""
-        self._require_task_columns(task, {"task_id", "correlation_id", "actor_id", "capability", "state"})
+        self._require_task_columns(
+            task, {"task_id", "correlation_id", "actor_id", "capability", "state"}
+        )
         payload_json = json.dumps(task.get("payload") or {}, default=str)
-        error_json = json.dumps(task["error"], default=str) if task.get("error") is not None else None
+        error_json = (
+            json.dumps(task["error"], default=str) if task.get("error") is not None else None
+        )
         cur = self.conn.cursor()
         cur.execute(
             """
@@ -414,7 +440,11 @@ class Store:
                 float(task.get("estimated_financial_cost") or 0.0),
                 task.get("financial_limit_usd"),
                 task.get("data_classification", "internal"),
-                float(task.get("confidence_score") if task.get("confidence_score") is not None else 1.0),
+                float(
+                    task.get("confidence_score")
+                    if task.get("confidence_score") is not None
+                    else 1.0
+                ),
                 task.get("reason_code"),
                 task.get("reason"),
                 payload_json,
@@ -461,7 +491,9 @@ class Store:
         self.conn.commit()
         row = self.get_workflow_task(task_id)
         if row is None:  # pragma: no cover - defensive
-            raise ValueError(f"Store.update_workflow_task_state: task {task_id!r} vanished after update")
+            raise ValueError(
+                f"Store.update_workflow_task_state: task {task_id!r} vanished after update"
+            )
         return row
 
     def get_workflow_task(self, task_id: str) -> Optional[Dict[str, Any]]:
@@ -485,11 +517,13 @@ class Store:
             )
         elif state:
             cur.execute(
-                "SELECT * FROM workflow_tasks WHERE state = ? ORDER BY created_at DESC LIMIT ?", (state, limit)
+                "SELECT * FROM workflow_tasks WHERE state = ? ORDER BY created_at DESC LIMIT ?",
+                (state, limit),
             )
         elif tenant_id:
             cur.execute(
-                "SELECT * FROM workflow_tasks WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?", (tenant_id, limit)
+                "SELECT * FROM workflow_tasks WHERE tenant_id = ? ORDER BY created_at DESC LIMIT ?",
+                (tenant_id, limit),
             )
         else:
             cur.execute("SELECT * FROM workflow_tasks ORDER BY created_at DESC LIMIT ?", (limit,))
@@ -502,7 +536,9 @@ class Store:
         if not event.get("event_id"):
             raise ValueError("Store.append_audit_event: event_id is required")
         if not event.get("record_hash"):
-            raise ValueError("Store.append_audit_event: record_hash is required (unsigned events rejected)")
+            raise ValueError(
+                "Store.append_audit_event: record_hash is required (unsigned events rejected)"
+            )
         cur = self.conn.cursor()
         last_hash = self.get_last_audit_hash()
         if event.get("prev_hash", "") != last_hash:
@@ -556,7 +592,10 @@ class Store:
     ) -> List[Dict[str, Any]]:
         cur = self.conn.cursor()
         if task_id:
-            cur.execute("SELECT * FROM audit_events WHERE task_id = ? ORDER BY rowid ASC LIMIT ?", (task_id, limit))
+            cur.execute(
+                "SELECT * FROM audit_events WHERE task_id = ? ORDER BY rowid ASC LIMIT ?",
+                (task_id, limit),
+            )
         elif correlation_id:
             cur.execute(
                 "SELECT * FROM audit_events WHERE correlation_id = ? ORDER BY rowid ASC LIMIT ?",
@@ -581,12 +620,29 @@ class Store:
         for ev in events:
             if ev.get("prev_hash", "") != prev:
                 return False
-            signing = {k: ev.get(k) for k in (
-                "event_id", "occurred_at", "correlation_id", "actor_id", "actor_role_id",
-                "event_type", "decision", "reason_code", "reason", "task_id", "workflow_id",
-                "from_state", "to_state", "payload", "prev_hash",
-            )}
-            canonical = json.dumps(signing, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+            signing = {
+                k: ev.get(k)
+                for k in (
+                    "event_id",
+                    "occurred_at",
+                    "correlation_id",
+                    "actor_id",
+                    "actor_role_id",
+                    "event_type",
+                    "decision",
+                    "reason_code",
+                    "reason",
+                    "task_id",
+                    "workflow_id",
+                    "from_state",
+                    "to_state",
+                    "payload",
+                    "prev_hash",
+                )
+            }
+            canonical = json.dumps(
+                signing, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+            )
             if _hashlib.sha256(canonical.encode("utf-8")).hexdigest() != ev.get("record_hash"):
                 return False
             prev = ev.get("record_hash", "")

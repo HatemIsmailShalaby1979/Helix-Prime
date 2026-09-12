@@ -104,5 +104,7 @@ def workflows_partial(request: Request) -> HTMLResponse:
     return _TEMPLATES.TemplateResponse(
         request=request,
         name="partials/workflows.html",
-        context={"workflows": [repository.to_response(w) for w in repository.list_recent(limit=25)]},
+        context={
+            "workflows": [repository.to_response(w) for w in repository.list_recent(limit=25)]
+        },
     )

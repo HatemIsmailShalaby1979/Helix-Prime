@@ -38,6 +38,7 @@ class ConnectorStatus(str, Enum):
 class RateLimitPolicy:
     """Deterministic rate-limit behavior. Window is tracked by absolute call
     count on the connector instance (no wall-clock dependency in tests)."""
+
     max_requests_per_window: int = 1000
     window_seconds: int = 60
     on_exceed: str = "fail_closed"  # "fail_closed" | "throttle"
@@ -47,6 +48,7 @@ class RateLimitPolicy:
 class RetryPolicy:
     """Deterministic retry behavior. backoff_seconds is informational; the
     connector never sleeps in tests — retries are countable and immediate."""
+
     max_attempts: int = 3
     backoff_seconds: float = 0.0
     retry_on: tuple[str, ...] = ("transient", "rate_limited")
@@ -82,7 +84,12 @@ class ConnectorContext:
         for name in ("tenant_id", "organization_id", "client_id", "actor"):
             if not getattr(self, name).strip():
                 raise ValueError(f"ConnectorContext.{name}: must be non-empty")
-        if self.data_mode not in {"historical_anonymized", "historical_consented", "simulated_realistic", "live_external"}:
+        if self.data_mode not in {
+            "historical_anonymized",
+            "historical_consented",
+            "simulated_realistic",
+            "live_external",
+        }:
             raise ValueError(f"ConnectorContext.data_mode: unsupported {self.data_mode!r}")
 
 
@@ -151,12 +158,23 @@ class Connector(Protocol):
     connector_id: str
     provider: str
 
-    def status(self) -> ConnectorStatus: ...
-    def capabilities(self) -> Sequence[ConnectorCapability]: ...
-    def health_check(self) -> Mapping[str, Any]: ...
-    def list_accounts(self, context: ConnectorContext) -> Sequence[Account]: ...
-    def list_tickets(self, context: ConnectorContext, account_id: str) -> Sequence[SupportTicket]: ...
-    def enrich_account(self, context: ConnectorContext, account: Account) -> EnrichmentResult: ...
+    def status(self) -> ConnectorStatus:
+        ...
+
+    def capabilities(self) -> Sequence[ConnectorCapability]:
+        ...
+
+    def health_check(self) -> Mapping[str, Any]:
+        ...
+
+    def list_accounts(self, context: ConnectorContext) -> Sequence[Account]:
+        ...
+
+    def list_tickets(self, context: ConnectorContext, account_id: str) -> Sequence[SupportTicket]:
+        ...
+
+    def enrich_account(self, context: ConnectorContext, account: Account) -> EnrichmentResult:
+        ...
 
 
 @dataclass(frozen=True)
@@ -164,6 +182,7 @@ class Provenance:
     """Record-level provenance for every connector result. Captures where the
     data came from, under which tenant/client/correlation scope, and in which
     data mode (so simulated data is never mistaken for live external data)."""
+
     provider: str
     connector_id: str
     fetched_at: str
@@ -177,6 +196,7 @@ class Provenance:
 class FailureDetail:
     """Typed failure envelope. `retryable` tells the retry policy whether the
     failure is safe to retry."""
+
     code: str
     message: str
     retryable: bool = False
@@ -188,6 +208,7 @@ class ConnectorResult:
 
     status: "ok" | "rate_limited" | "error" | "unavailable" | "refused"
     """
+
     status: str
     data: Any = None
     error: FailureDetail | None = None
@@ -210,6 +231,7 @@ class ConnectorWriteResult:
     In the read-only first version, `executed` is always False. Writes require
     an explicit, cross-role approval AND an activated live adapter.
     """
+
     executed: bool
     approval_required: bool
     reason: str

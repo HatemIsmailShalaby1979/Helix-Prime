@@ -33,6 +33,7 @@ from integrations.contracts import (
 @dataclass
 class TransportResult:
     """Result of a transport operation."""
+
     success: bool
     event: Optional[IntegrationEvent] = None
     error: Optional[Dict[str, Any]] = None
@@ -43,6 +44,7 @@ class TransportResult:
 @dataclass
 class TransportConfig:
     """Configuration for transport behavior."""
+
     max_retries: int = 3
     base_retry_delay_ms: int = 100
     max_retry_delay_ms: int = 5000
@@ -97,8 +99,8 @@ class InMemoryTransport(Transport):
     def __init__(self, config: Optional[TransportConfig] = None):
         self.config = config or TransportConfig()
         self._outbound: Dict[str, List[IntegrationEvent]] = {}  # target_system -> events
-        self._inbound: Dict[str, List[IntegrationEvent]] = {}   # target_system -> events
-        self._processing: Dict[str, IntegrationEvent] = {}      # event_id -> event
+        self._inbound: Dict[str, List[IntegrationEvent]] = {}  # target_system -> events
+        self._processing: Dict[str, IntegrationEvent] = {}  # event_id -> event
         self._dead_letter: List[IntegrationEvent] = []
         self._idempotency_keys: Dict[str, float] = {}  # key -> timestamp
         self._retry_counts: Dict[str, int] = {}
@@ -114,7 +116,12 @@ class InMemoryTransport(Transport):
         if event.event_type not in VALID_EVENT_TYPES:
             return "invalid_event_type"
         if event.data_classification not in {
-            "public", "internal", "client_confidential", "personnel_sensitive", "financial", "regulated"
+            "public",
+            "internal",
+            "client_confidential",
+            "personnel_sensitive",
+            "financial",
+            "regulated",
         }:
             return "invalid_data_classification"
         return None
@@ -124,7 +131,8 @@ class InMemoryTransport(Transport):
         now = time.time()
         # Clean old keys
         self._idempotency_keys = {
-            k: v for k, v in self._idempotency_keys.items()
+            k: v
+            for k, v in self._idempotency_keys.items()
             if now - v < self.config.idempotency_ttl_seconds
         }
         if event.idempotency_key in self._idempotency_keys:
@@ -138,14 +146,16 @@ class InMemoryTransport(Transport):
             err = self._validate_event(event)
             if err:
                 return TransportResult(
-                    success=False,
-                    error={"code": err, "message": f"Event validation failed: {err}"}
+                    success=False, error={"code": err, "message": f"Event validation failed: {err}"}
                 )
 
         if self._check_idempotency(event):
             return TransportResult(
                 success=False,
-                error={"code": "idempotency_conflict", "message": f"Duplicate idempotency key: {event.idempotency_key}"}
+                error={
+                    "code": "idempotency_conflict",
+                    "message": f"Duplicate idempotency key: {event.idempotency_key}",
+                },
             )
 
         # Add to target system's inbound queue
@@ -175,7 +185,7 @@ class InMemoryTransport(Transport):
         if event_id not in self._processing:
             return TransportResult(
                 success=False,
-                error={"code": "not_found", "message": f"Event {event_id} not in processing"}
+                error={"code": "not_found", "message": f"Event {event_id} not in processing"},
             )
         event = self._processing.pop(event_id)
         event.status = "completed"
@@ -189,7 +199,7 @@ class InMemoryTransport(Transport):
         if event_id not in self._processing:
             return TransportResult(
                 success=False,
-                error={"code": "not_found", "message": f"Event {event_id} not in processing"}
+                error={"code": "not_found", "message": f"Event {event_id} not in processing"},
             )
         event = self._processing.pop(event_id)
         retry_count = self._retry_counts.get(event_id, 0)
@@ -205,8 +215,7 @@ class InMemoryTransport(Transport):
             # Schedule retry
             self._retry_counts[event_id] = retry_count + 1
             delay = min(
-                self.config.base_retry_delay_ms * (2 ** retry_count),
-                self.config.max_retry_delay_ms
+                self.config.base_retry_delay_ms * (2**retry_count), self.config.max_retry_delay_ms
             )
             event.status = "pending"
             # Re-queue for retry
@@ -214,10 +223,7 @@ class InMemoryTransport(Transport):
                 self._inbound[event.target_system] = []
             self._inbound[event.target_system].append(event)
             return TransportResult(
-                success=True,
-                event=event,
-                acknowledged=False,
-                retry_after_ms=delay
+                success=True, event=event, acknowledged=False, retry_after_ms=delay
             )
 
     def retry(self, event_id: str) -> TransportResult:
@@ -233,7 +239,7 @@ class InMemoryTransport(Transport):
                 return TransportResult(success=True, event=event, acknowledged=False)
         return TransportResult(
             success=False,
-            error={"code": "not_found", "message": f"Event {event_id} not in dead-letter"}
+            error={"code": "not_found", "message": f"Event {event_id} not in dead-letter"},
         )
 
     def get_dead_letter(self) -> List[IntegrationEvent]:
@@ -266,7 +272,12 @@ class FileTransport(Transport):
 
     def send(self, event: IntegrationEvent) -> TransportResult:
         if self.config.validate_on_send:
-            from integrations.contracts import VALID_SOURCE_SYSTEMS, VALID_TARGET_SYSTEMS, VALID_EVENT_TYPES
+            from integrations.contracts import (
+                VALID_SOURCE_SYSTEMS,
+                VALID_TARGET_SYSTEMS,
+                VALID_EVENT_TYPES,
+            )
+
             if event.schema_version != SCHEMA_VERSION:
                 return TransportResult(success=False, error={"code": "invalid_schema_version"})
             if event.source_system not in VALID_SOURCE_SYSTEMS:
@@ -321,7 +332,11 @@ class FileTransport(Transport):
             data["_retry_count"] = retry_count
             if retry_count >= self.config.max_retries and self.config.dead_letter_after_retries:
                 data["status"] = "dead_letter"
-                data["error"] = {"code": error_code, "message": error_message, "retry_count": retry_count}
+                data["error"] = {
+                    "code": error_code,
+                    "message": error_message,
+                    "retry_count": retry_count,
+                }
                 dl_dir = self.base_dir / "helix-prime" / "dead_letter"
                 dl_dir.mkdir(parents=True, exist_ok=True)
                 (dl_dir / f"{event_id}.jsonl").write_text(json.dumps(data, default=str) + "\n")
@@ -334,7 +349,10 @@ class FileTransport(Transport):
                 inbound_dir.mkdir(parents=True, exist_ok=True)
                 (inbound_dir / f"{event_id}.jsonl").write_text(json.dumps(data, default=str) + "\n")
                 path.unlink()
-                delay = min(self.config.base_retry_delay_ms * (2 ** (retry_count - 1)), self.config.max_retry_delay_ms)
+                delay = min(
+                    self.config.base_retry_delay_ms * (2 ** (retry_count - 1)),
+                    self.config.max_retry_delay_ms,
+                )
                 return TransportResult(success=True, retry_after_ms=delay)
         return TransportResult(success=False, error={"code": "not_found"})
 

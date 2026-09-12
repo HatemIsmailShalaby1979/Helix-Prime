@@ -18,16 +18,18 @@ from contracts.toolcall import ToolCall, ToolCallEnvelope, ToolResult
 def test_structured_round_trip():
     """Test 1: Structured round-trip."""
     dispatch = AgentDispatch(max_depth=5)
-    content = json.dumps({
-        "content": "Let me check with PHILI",
-        "tool_calls": [
-            {
-                "call_id": "call_1",
-                "tool": "call_agent",
-                "args": {"agent_name": "PHILI", "message": "What is the headcount?"},
-            }
-        ],
-    })
+    content = json.dumps(
+        {
+            "content": "Let me check with PHILI",
+            "tool_calls": [
+                {
+                    "call_id": "call_1",
+                    "tool": "call_agent",
+                    "args": {"agent_name": "PHILI", "message": "What is the headcount?"},
+                }
+            ],
+        }
+    )
 
     envelope = dispatch.parse_tool_calls(content)
     assert len(envelope.tool_calls) == 1

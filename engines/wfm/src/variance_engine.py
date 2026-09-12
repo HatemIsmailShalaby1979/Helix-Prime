@@ -91,9 +91,7 @@ class VarianceEngine:
         metrics["residual_variance"] = self._calculate_residual_variance(data)
 
         # Volatility clustering
-        metrics["volatility_clustering"] = self._calculate_volatility_clustering(
-            calls_series
-        )
+        metrics["volatility_clustering"] = self._calculate_volatility_clustering(calls_series)
 
         return metrics
 
@@ -281,9 +279,7 @@ class VarianceEngine:
         # Identify high volatility periods
         volatility_threshold = rolling_std.quantile(0.75)
         high_volatility_mask = rolling_std > volatility_threshold
-        high_volatility_periods = high_volatility_mask[
-            high_volatility_mask
-        ].index.tolist()
+        high_volatility_periods = high_volatility_mask[high_volatility_mask].index.tolist()
 
         # Calculate volatility clustering index
         volatility_clustering = (
@@ -329,9 +325,7 @@ class VarianceEngine:
                         "value": calls_series.iloc[idx],
                         "z_score": z_scores[idx],
                         "severity": "high" if z_scores[idx] > 4 else "medium",
-                        "timestamp": data.index[idx]
-                        if hasattr(data.index, "__getitem__")
-                        else idx,
+                        "timestamp": data.index[idx] if hasattr(data.index, "__getitem__") else idx,
                     }
                 )
 
@@ -343,9 +337,7 @@ class VarianceEngine:
         lower_bound = Q1 - 1.5 * IQR
         upper_bound = Q3 + 1.5 * IQR
 
-        iqr_anomalies = calls_series[
-            (calls_series < lower_bound) | (calls_series > upper_bound)
-        ]
+        iqr_anomalies = calls_series[(calls_series < lower_bound) | (calls_series > upper_bound)]
 
         for idx, value in iqr_anomalies.items():
             anomalies.append(
@@ -358,9 +350,7 @@ class VarianceEngine:
                     "severity": "high"
                     if value < lower_bound * 0.5 or value > upper_bound * 1.5
                     else "medium",
-                    "timestamp": data.index[idx]
-                    if hasattr(data.index, "__getitem__")
-                    else idx,
+                    "timestamp": data.index[idx] if hasattr(data.index, "__getitem__") else idx,
                 }
             )
 
@@ -389,9 +379,7 @@ class VarianceEngine:
                         "value": calls_series.loc[idx],
                         "anomaly_score": score,
                         "severity": "high" if score > 4 else "medium",
-                        "timestamp": data.index[idx]
-                        if hasattr(data.index, "__getitem__")
-                        else idx,
+                        "timestamp": data.index[idx] if hasattr(data.index, "__getitem__") else idx,
                     }
                 )
 
@@ -479,9 +467,7 @@ class VarianceEngine:
 
         # Pattern 4: Volatility patterns
         volatility = calls_series.rolling(window=min(5, len(calls_series) // 10)).std()
-        high_volatility_ratio = (volatility > volatility.quantile(0.75)).sum() / len(
-            volatility
-        )
+        high_volatility_ratio = (volatility > volatility.quantile(0.75)).sum() / len(volatility)
 
         if high_volatility_ratio > 0.3:
             patterns.append(
@@ -509,9 +495,7 @@ class VarianceEngine:
             Dictionary with accuracy metrics
         """
         # Align series
-        aligned_data = pd.DataFrame(
-            {"actuals": actuals, "forecasts": forecasts}
-        ).dropna()
+        aligned_data = pd.DataFrame({"actuals": actuals, "forecasts": forecasts}).dropna()
 
         if len(aligned_data) == 0:
             return {"mae": 0, "mape": 0, "rmse": 0, "r_squared": 0, "accuracy_score": 0}
@@ -570,21 +554,14 @@ class VarianceEngine:
 
         # Recommendation based on variance
         if (
-            variance_metrics.get("variance_decomposition", {}).get(
-                "trend_variance_percentage", 0
-            )
+            variance_metrics.get("variance_decomposition", {}).get("trend_variance_percentage", 0)
             > 50
         ):
             recommendations.append(
                 "High trend variance detected. Consider implementing trend-adjusted forecasting methods."
             )
 
-        if (
-            variance_metrics.get("seasonal_variance", {}).get(
-                "overall_seasonal_variance", 0
-            )
-            > 100
-        ):
+        if variance_metrics.get("seasonal_variance", {}).get("overall_seasonal_variance", 0) > 100:
             recommendations.append(
                 "High seasonal variance. Implement seasonal adjustment in forecasting models."
             )
@@ -598,10 +575,7 @@ class VarianceEngine:
 
         # Recommendation based on patterns
         for pattern in patterns:
-            if (
-                pattern["type"] == "daily_seasonality"
-                and pattern["strength"] == "strong"
-            ):
+            if pattern["type"] == "daily_seasonality" and pattern["strength"] == "strong":
                 recommendations.append(
                     "Strong daily seasonality detected. Optimize staffing based on hourly patterns."
                 )
@@ -682,9 +656,7 @@ class VarianceEngine:
         score = 1.0
 
         # Deduct for anomalies
-        high_severity_anomalies = len(
-            [a for a in result.anomalies if a.get("severity") == "high"]
-        )
+        high_severity_anomalies = len([a for a in result.anomalies if a.get("severity") == "high"])
         score -= min(high_severity_anomalies * 0.1, 0.5)
 
         # Deduct for weak patterns

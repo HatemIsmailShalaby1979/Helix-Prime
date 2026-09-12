@@ -88,6 +88,7 @@ VALID_ERROR_CODES = {
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _new_id(prefix: str = "") -> str:
     return f"{prefix}{uuid.uuid4().hex[:12]}" if prefix else uuid.uuid4().hex
 
@@ -95,39 +96,50 @@ def _new_id(prefix: str = "") -> str:
 def _validate_source_system(value: Any, field_path: str) -> str:
     s = _require_non_empty_str(value, field_path)
     if s not in VALID_SOURCE_SYSTEMS:
-        raise ValueError(f"{field_path}: invalid source_system {s!r}, must be one of {sorted(VALID_SOURCE_SYSTEMS)}")
+        raise ValueError(
+            f"{field_path}: invalid source_system {s!r}, must be one of {sorted(VALID_SOURCE_SYSTEMS)}"
+        )
     return s
 
 
 def _validate_target_system(value: Any, field_path: str) -> str:
     s = _require_non_empty_str(value, field_path)
     if s not in VALID_TARGET_SYSTEMS:
-        raise ValueError(f"{field_path}: invalid target_system {s!r}, must be one of {sorted(VALID_TARGET_SYSTEMS)}")
+        raise ValueError(
+            f"{field_path}: invalid target_system {s!r}, must be one of {sorted(VALID_TARGET_SYSTEMS)}"
+        )
     return s
 
 
 def _validate_event_type(value: Any, field_path: str) -> str:
     s = _require_non_empty_str(value, field_path)
     if s not in VALID_EVENT_TYPES:
-        raise ValueError(f"{field_path}: invalid event_type {s!r}, must be one of {sorted(VALID_EVENT_TYPES)}")
+        raise ValueError(
+            f"{field_path}: invalid event_type {s!r}, must be one of {sorted(VALID_EVENT_TYPES)}"
+        )
     return s
 
 
 def _validate_data_classification(value: Any, field_path: str) -> str:
     s = _require_non_empty_str(value, field_path)
     if s not in VALID_DATA_CLASSIFICATIONS:
-        raise ValueError(f"{field_path}: invalid data_classification {s!r}, must be one of {sorted(VALID_DATA_CLASSIFICATIONS)}")
+        raise ValueError(
+            f"{field_path}: invalid data_classification {s!r}, must be one of {sorted(VALID_DATA_CLASSIFICATIONS)}"
+        )
     return s
 
 
 def _validate_integration_status(value: Any, field_path: str) -> str:
     s = _require_non_empty_str(value, field_path)
     if s not in VALID_INTEGRATION_STATUSES:
-        raise ValueError(f"{field_path}: invalid status {s!r}, must be one of {sorted(VALID_INTEGRATION_STATUSES)}")
+        raise ValueError(
+            f"{field_path}: invalid status {s!r}, must be one of {sorted(VALID_INTEGRATION_STATUSES)}"
+        )
     return s
 
 
 # ── Base Integration Event ───────────────────────────────────────────────────
+
 
 @dataclass
 class IntegrationEvent:
@@ -138,6 +150,7 @@ class IntegrationEvent:
     tenant/client isolation, source/target system identity, and evidence references.
     Unknown source/target/classification/schema versions fail closed.
     """
+
     event_id: str
     event_type: str
     schema_version: str
@@ -161,37 +174,63 @@ class IntegrationEvent:
         self.event_id = _require_non_empty_str(self.event_id, "IntegrationEvent.event_id")
         self.event_type = _validate_event_type(self.event_type, "IntegrationEvent.event_type")
         self.schema_version = SCHEMA_VERSION  # Enforce canonical version
-        self.source_system = _validate_source_system(self.source_system, "IntegrationEvent.source_system")
-        self.target_system = _validate_target_system(self.target_system, "IntegrationEvent.target_system")
+        self.source_system = _validate_source_system(
+            self.source_system, "IntegrationEvent.source_system"
+        )
+        self.target_system = _validate_target_system(
+            self.target_system, "IntegrationEvent.target_system"
+        )
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "IntegrationEvent.tenant_id")
         if self.client_id is not None:
             self.client_id = _require_non_empty_str(self.client_id, "IntegrationEvent.client_id")
         if not self.tenant_id and not self.client_id:
-            raise ValueError("IntegrationEvent: at least one of tenant_id or client_id must be non-empty")
+            raise ValueError(
+                "IntegrationEvent: at least one of tenant_id or client_id must be non-empty"
+            )
         self.actor = _require_non_empty_str(self.actor, "IntegrationEvent.actor")
         self.role_id = _require_non_empty_str(self.role_id, "IntegrationEvent.role_id")
-        self.correlation_id = _require_non_empty_str(self.correlation_id, "IntegrationEvent.correlation_id")
+        self.correlation_id = _require_non_empty_str(
+            self.correlation_id, "IntegrationEvent.correlation_id"
+        )
         if self.causation_id is not None:
-            self.causation_id = _require_non_empty_str(self.causation_id, "IntegrationEvent.causation_id")
-        self.idempotency_key = _require_non_empty_str(self.idempotency_key, "IntegrationEvent.idempotency_key")
+            self.causation_id = _require_non_empty_str(
+                self.causation_id, "IntegrationEvent.causation_id"
+            )
+        self.idempotency_key = _require_non_empty_str(
+            self.idempotency_key, "IntegrationEvent.idempotency_key"
+        )
         self.timestamp = _validate_iso_timestamp(self.timestamp, "IntegrationEvent.timestamp")
-        self.data_classification = _validate_data_classification(self.data_classification, "IntegrationEvent.data_classification")
+        self.data_classification = _validate_data_classification(
+            self.data_classification, "IntegrationEvent.data_classification"
+        )
         if not isinstance(self.payload, dict):
-            raise ValueError(f"IntegrationEvent.payload: must be dict, got {type(self.payload).__name__}")
+            raise ValueError(
+                f"IntegrationEvent.payload: must be dict, got {type(self.payload).__name__}"
+            )
         if not isinstance(self.evidence_refs, list):
-            raise ValueError(f"IntegrationEvent.evidence_refs: must be list, got {type(self.evidence_refs).__name__}")
+            raise ValueError(
+                f"IntegrationEvent.evidence_refs: must be list, got {type(self.evidence_refs).__name__}"
+            )
         for i, ev in enumerate(self.evidence_refs):
             if not isinstance(ev, dict):
-                raise ValueError(f"IntegrationEvent.evidence_refs[{i}]: must be dict, got {type(ev).__name__}")
+                raise ValueError(
+                    f"IntegrationEvent.evidence_refs[{i}]: must be dict, got {type(ev).__name__}"
+                )
         self.status = _validate_integration_status(self.status, "IntegrationEvent.status")
         if self.error is not None:
             if not isinstance(self.error, dict):
-                raise ValueError(f"IntegrationEvent.error: must be dict or null, got {type(self.error).__name__}")
+                raise ValueError(
+                    f"IntegrationEvent.error: must be dict or null, got {type(self.error).__name__}"
+                )
             if "code" in self.error:
-                self.error["code"] = _require_non_empty_str(self.error["code"], "IntegrationEvent.error.code")
+                self.error["code"] = _require_non_empty_str(
+                    self.error["code"], "IntegrationEvent.error.code"
+                )
                 if self.error["code"] not in VALID_ERROR_CODES:
-                    raise ValueError(f"IntegrationEvent.error.code: {self.error['code']!r} not in {sorted(VALID_ERROR_CODES)}")
+                    raise ValueError(
+                        f"IntegrationEvent.error.code: {self.error['code']!r} not in {sorted(VALID_ERROR_CODES)}"
+                    )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -223,7 +262,9 @@ class IntegrationEvent:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "IntegrationEvent":
         if not isinstance(data, dict):
-            raise ValueError(f"IntegrationEvent.from_dict: expected dict, got {type(data).__name__}")
+            raise ValueError(
+                f"IntegrationEvent.from_dict: expected dict, got {type(data).__name__}"
+            )
         return cls(
             event_id=data.get("event_id", ""),
             event_type=data.get("event_type", ""),
@@ -247,6 +288,7 @@ class IntegrationEvent:
 
 
 # ── Competency & Learning Events (Helix Education) ───────────────────────────
+
 
 @dataclass
 class CompetencyGapDetected(IntegrationEvent):
@@ -310,6 +352,7 @@ class CompetencyUpdated(IntegrationEvent):
 
 # ── Content Generation Events (Study Studio) ─────────────────────────────────
 
+
 @dataclass
 class ContentGenerationRequested(IntegrationEvent):
     """Helix Prime → Study Studio: Request content generation (lesson, quiz, podcast)."""
@@ -319,9 +362,13 @@ class ContentGenerationRequested(IntegrationEvent):
         p = self.payload
         for key in ["request_id", "content_type", "topic", "language", "level"]:
             if key not in p:
-                raise ValueError(f"ContentGenerationRequested.payload missing required field: {key}")
+                raise ValueError(
+                    f"ContentGenerationRequested.payload missing required field: {key}"
+                )
         if p["content_type"] not in {"lesson", "quiz", "podcast", "glossary", "podcast_script"}:
-            raise ValueError("ContentGenerationRequested.content_type must be one of: lesson, quiz, podcast, glossary, podcast_script")
+            raise ValueError(
+                "ContentGenerationRequested.content_type must be one of: lesson, quiz, podcast, glossary, podcast_script"
+            )
 
 
 @dataclass
@@ -333,12 +380,17 @@ class ContentGenerationCompleted(IntegrationEvent):
         p = self.payload
         for key in ["request_id", "content_type", "status"]:
             if key not in p:
-                raise ValueError(f"ContentGenerationCompleted.payload missing required field: {key}")
+                raise ValueError(
+                    f"ContentGenerationCompleted.payload missing required field: {key}"
+                )
         if p["status"] not in {"completed", "failed", "partial"}:
-            raise ValueError("ContentGenerationCompleted.status must be completed, failed, or partial")
+            raise ValueError(
+                "ContentGenerationCompleted.status must be completed, failed, or partial"
+            )
 
 
 # ── Media & Export Events (L&D Command Center) ───────────────────────────────
+
 
 @dataclass
 class MediaArtifactRequested(IntegrationEvent):
@@ -350,7 +402,16 @@ class MediaArtifactRequested(IntegrationEvent):
         for key in ["request_id", "artifact_type", "source_ref", "format"]:
             if key not in p:
                 raise ValueError(f"MediaArtifactRequested.payload missing required field: {key}")
-        if p["artifact_type"] not in {"audio", "video", "pdf", "docx", "pptx", "xlsx", "tts", "podcast"}:
+        if p["artifact_type"] not in {
+            "audio",
+            "video",
+            "pdf",
+            "docx",
+            "pptx",
+            "xlsx",
+            "tts",
+            "podcast",
+        }:
             raise ValueError("MediaArtifactRequested.artifact_type invalid")
 
 
@@ -370,6 +431,7 @@ class MediaArtifactReady(IntegrationEvent):
 
 # ── Career & Learning Signals (L&D Command Center) ───────────────────────────
 
+
 @dataclass
 class CareerLearningSignal(IntegrationEvent):
     """L&D Command Center → Helix Prime: Career/learning signal (job match, skill gap, etc.)."""
@@ -379,7 +441,13 @@ class CareerLearningSignal(IntegrationEvent):
         p = self.payload
         if "signal_type" not in p:
             raise ValueError("CareerLearningSignal.payload missing required field: signal_type")
-        if p["signal_type"] not in {"job_match", "skill_gap", "career_path", "learning_recommendation", "resume_update"}:
+        if p["signal_type"] not in {
+            "job_match",
+            "skill_gap",
+            "career_path",
+            "learning_recommendation",
+            "resume_update",
+        }:
             raise ValueError("CareerLearningSignal.signal_type invalid")
 
 
@@ -414,6 +482,7 @@ VALID_SIGNAL_TYPES = {
 
 # ── Error Event ──────────────────────────────────────────────────────────────
 
+
 @dataclass
 class IntegrationError(IntegrationEvent):
     """Generic integration error event for dead-letter and retry tracking."""
@@ -425,10 +494,13 @@ class IntegrationError(IntegrationEvent):
             if key not in p:
                 raise ValueError(f"IntegrationError.payload missing required field: {key}")
         if p["error_code"] not in VALID_ERROR_CODES:
-            raise ValueError(f"IntegrationError.error_code must be one of {sorted(VALID_ERROR_CODES)}")
+            raise ValueError(
+                f"IntegrationError.error_code must be one of {sorted(VALID_ERROR_CODES)}"
+            )
 
 
 # ── Event Factory ────────────────────────────────────────────────────────────
+
 
 def create_integration_event(
     event_type: str,

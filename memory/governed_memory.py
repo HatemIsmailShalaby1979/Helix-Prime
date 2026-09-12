@@ -167,17 +167,29 @@ class GovernedMemory:
         for rec in self._records:
             if rec.corrects and rec.corrects in self._by_id:
                 self._by_id[rec.corrects].supersession.append(
-                    {"record_id": rec.record_id, "relation": "corrects", "reason": rec.body.get("reason")}
+                    {
+                        "record_id": rec.record_id,
+                        "relation": "corrects",
+                        "reason": rec.body.get("reason"),
+                    }
                 )
             if rec.supersedes and rec.supersedes in self._by_id:
                 self._by_id[rec.supersedes].supersession.append(
-                    {"record_id": rec.record_id, "relation": "supersedes", "reason": rec.body.get("reason")}
+                    {
+                        "record_id": rec.record_id,
+                        "relation": "supersedes",
+                        "reason": rec.body.get("reason"),
+                    }
                 )
             if rec.deleted and rec.deleted.startswith("superseded_by:"):
                 target = rec.deleted.split(":", 1)[1]
                 if target in self._by_id:
                     self._by_id[target].supersession.append(
-                        {"record_id": rec.record_id, "relation": "superseded_by", "reason": rec.body.get("reason")}
+                        {
+                            "record_id": rec.record_id,
+                            "relation": "superseded_by",
+                            "reason": rec.body.get("reason"),
+                        }
                     )
 
     def _append_envelope(self, env: dict) -> None:
@@ -187,11 +199,19 @@ class GovernedMemory:
         self._by_id[rec.record_id] = rec
         if rec.corrects and rec.corrects in self._by_id:
             self._by_id[rec.corrects].supersession.append(
-                {"record_id": rec.record_id, "relation": "corrects", "reason": rec.body.get("reason")}
+                {
+                    "record_id": rec.record_id,
+                    "relation": "corrects",
+                    "reason": rec.body.get("reason"),
+                }
             )
         if rec.supersedes and rec.supersedes in self._by_id:
             self._by_id[rec.supersedes].supersession.append(
-                {"record_id": rec.record_id, "relation": "supersedes", "reason": rec.body.get("reason")}
+                {
+                    "record_id": rec.record_id,
+                    "relation": "supersedes",
+                    "reason": rec.body.get("reason"),
+                }
             )
         if self.path:
             with open(self.path, "a", encoding="utf-8") as fh:
@@ -289,8 +309,12 @@ class GovernedMemory:
             confidence=confidence,
             evidence_refs=evidence_refs,
             data_mode=data_mode,
-            provenance={"correlation_id": correlation_id or target.correlation_id, "data_mode": data_mode,
-                        "basis": "correction", "sources": [target.record_id]},
+            provenance={
+                "correlation_id": correlation_id or target.correlation_id,
+                "data_mode": data_mode,
+                "basis": "correction",
+                "sources": [target.record_id],
+            },
             body={"reason": reason, "corrects": record_id, **dict(correction_body)},
             corrects=record_id,
         )
@@ -329,16 +353,28 @@ class GovernedMemory:
             confidence=confidence,
             evidence_refs=evidence_refs,
             data_mode=data_mode,
-            provenance={"correlation_id": correlation_id, "data_mode": data_mode,
-                        "basis": "supersession", "sources": [target.record_id]},
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": data_mode,
+                "basis": "supersession",
+                "sources": [target.record_id],
+            },
             body={"reason": reason, "supersedes": record_id, **dict(superseding_body)},
             supersedes=record_id,
         )
         target.retention_status = "superseded"
         return rec
 
-    def delete(self, *, record_id: str, actor: str, role_id: str, reason: str,
-               timestamp: str, correlation_id: str = "") -> MemoryRecord:
+    def delete(
+        self,
+        *,
+        record_id: str,
+        actor: str,
+        role_id: str,
+        reason: str,
+        timestamp: str,
+        correlation_id: str = "",
+    ) -> MemoryRecord:
         """Soft delete. The original record is flagged + audited but NEVER removed
         from the ledger (no silent deletion). Retrieval excludes it by default."""
         target = self._require(record_id)
@@ -360,8 +396,12 @@ class GovernedMemory:
             confidence=1.0,
             evidence_refs=[target.record_id],
             data_mode=target.data_mode,
-            provenance={"correlation_id": correlation_id or target.correlation_id,
-                        "data_mode": target.data_mode, "basis": "delete", "sources": [target.record_id]},
+            provenance={
+                "correlation_id": correlation_id or target.correlation_id,
+                "data_mode": target.data_mode,
+                "basis": "delete",
+                "sources": [target.record_id],
+            },
             body={"action": "delete", "target": record_id, "reason": reason},
         )
         return rec
@@ -387,7 +427,9 @@ class GovernedMemory:
         tenant_id is rejected to prevent accidental cross-tenant exposure."""
         if not tenant_id:
             raise ValueError("tenant_id is required for retrieval (no cross-tenant reads)")
-        max_lvl = _level(max_classification) if max_classification else len(CLASSIFICATION_LEVELS) - 1
+        max_lvl = (
+            _level(max_classification) if max_classification else len(CLASSIFICATION_LEVELS) - 1
+        )
         out = []
         for rec in self._records:
             if rec.tenant_id != tenant_id:
@@ -443,16 +485,22 @@ class GovernedMemory:
         return "verified" if ok else "broken"
 
     # ---------------------------------------------------------- demo utilities
-    def clear_for_demo(self, *, actor: str, role_id: str, timestamp: str,
-                       correlation_id: str = "demo-reset") -> MemoryRecord:
+    def clear_for_demo(
+        self, *, actor: str, role_id: str, timestamp: str, correlation_id: str = "demo-reset"
+    ) -> MemoryRecord:
         """Explicit, audited synthetic-demo reset. Soft-deletes every active record
         (data persists in the ledger) and records a reset marker. Never silently
         destroys data."""
         for rec in list(self._records):
             if not rec.deleted and rec.retention_status not in ("deleted", "expired"):
-                self.delete(record_id=rec.record_id, actor=actor, role_id=role_id,
-                            reason="synthetic demo reset", timestamp=timestamp,
-                            correlation_id=correlation_id)
+                self.delete(
+                    record_id=rec.record_id,
+                    actor=actor,
+                    role_id=role_id,
+                    reason="synthetic demo reset",
+                    timestamp=timestamp,
+                    correlation_id=correlation_id,
+                )
         return self.add(
             kind="workflow_history",
             nature="verified_outcome",

@@ -47,6 +47,7 @@ class Provenance:
 @dataclass(frozen=True)
 class NodeEnvelope:
     """Invariant envelope for every node."""
+
     node_id: str
     tenant_id: str  # never optional
     client_id: str | None
@@ -62,6 +63,7 @@ class NodeEnvelope:
 @dataclass
 class Node:
     """Unified object model for the super-app."""
+
     envelope: NodeEnvelope
     kind: NodeKind
     body: dict[str, Any] = field(default_factory=dict)
@@ -87,8 +89,15 @@ class Node:
         """Deserialize from dictionary."""
         envelope_data = {
             k: data[k]
-            for k in ("node_id", "tenant_id", "client_id", "correlation_id",
-                      "causation_id", "created_by", "created_at")
+            for k in (
+                "node_id",
+                "tenant_id",
+                "client_id",
+                "correlation_id",
+                "causation_id",
+                "created_by",
+                "created_at",
+            )
             if k in data
         }
         envelope_data["classification"] = Classification(data.get("classification", "internal"))
@@ -109,6 +118,7 @@ class Node:
 @dataclass
 class ChatMessage(Node):
     """Chat message node."""
+
     kind: NodeKind = field(default=NodeKind.MESSAGE, init=False)
 
     @property
@@ -123,6 +133,7 @@ class ChatMessage(Node):
 @dataclass
 class TaskNode(Node):
     """Task node."""
+
     kind: NodeKind = field(default=NodeKind.TASK, init=False)
 
     @property
@@ -141,6 +152,7 @@ class TaskNode(Node):
 @dataclass
 class DocumentNode(Node):
     """Document node."""
+
     kind: NodeKind = field(default=NodeKind.DOCUMENT, init=False)
 
     @property

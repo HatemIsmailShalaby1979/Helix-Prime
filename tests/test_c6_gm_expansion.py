@@ -46,14 +46,21 @@ from engines.registry import register_all
 
 # ── Role Catalog Tests ──
 
+
 def test_all_nine_gms_in_catalog():
     """All 9 GMs (4 existing + 5 new) are present in role catalog."""
     catalog = load_role_catalog("organization/role-catalog.yaml")
     role_ids = {r["id"] for r in catalog["roles"]}
     expected = {
-        "sami", "ops_gm", "hr_personnel_gm", "ld_gm",  # existing
-        "compliance_quality_gm", "fraud_gm", "marketing_gm",
-        "sales_gm", "ict_gm"  # new
+        "sami",
+        "ops_gm",
+        "hr_personnel_gm",
+        "ld_gm",  # existing
+        "compliance_quality_gm",
+        "fraud_gm",
+        "marketing_gm",
+        "sales_gm",
+        "ict_gm",  # new
     }
     assert role_ids == expected, f"Missing roles: {expected - role_ids}"
 
@@ -75,8 +82,9 @@ def test_role_catalog_has_agent_name_field():
     for role in catalog["roles"]:
         rid = role["id"]
         assert "agent_name" in role, f"Role {rid} missing agent_name field"
-        assert role["agent_name"] == expected_names[rid], \
-            f"Role {rid} agent_name {role['agent_name']!r} != expected {expected_names[rid]!r}"
+        assert (
+            role["agent_name"] == expected_names[rid]
+        ), f"Role {rid} agent_name {role['agent_name']!r} != expected {expected_names[rid]!r}"
 
 
 def test_canonical_gms_are_functional():
@@ -84,14 +92,16 @@ def test_canonical_gms_are_functional():
     catalog = load_role_catalog("organization/role-catalog.yaml")
     for role in catalog["roles"]:
         # All 9 GMs should be functional_agent
-        assert role["implementation_status"] == "functional_agent", \
-            f"{role['id']} should be functional_agent, got {role['implementation_status']}"
+        assert (
+            role["implementation_status"] == "functional_agent"
+        ), f"{role['id']} should be functional_agent, got {role['implementation_status']}"
         assert role["maps_to_agent"] is not None, f"{role['id']} missing maps_to_agent"
         assert role["agent_class"] is not None, f"{role['id']} missing agent_class"
         # Verify agent_name field exists and matches canonical crew
         assert "agent_name" in role, f"{role['id']} missing agent_name field"
-        assert role["agent_name"] == role["maps_to_agent"], \
-            f"{role['id']} agent_name ({role['agent_name']}) != maps_to_agent ({role['maps_to_agent']})"
+        assert (
+            role["agent_name"] == role["maps_to_agent"]
+        ), f"{role['id']} agent_name ({role['agent_name']}) != maps_to_agent ({role['maps_to_agent']})"
 
 
 def test_new_gm_capabilities_registered():
@@ -99,25 +109,46 @@ def test_new_gm_capabilities_registered():
     registry = get_default_registry()
     expected_caps = {
         "compliance_quality_gm": [
-            "policy_enforcement", "qa_sampling", "risk_controls",
-            "evidence_pack", "escalation_review", "calibration", "corrective_actions"
+            "policy_enforcement",
+            "qa_sampling",
+            "risk_controls",
+            "evidence_pack",
+            "escalation_review",
+            "calibration",
+            "corrective_actions",
         ],
         "fraud_gm": [
-            "anomaly_detection", "leakage_analysis", "fraud_investigation",
-            "revenue_assurance", "abuse_detection"
+            "anomaly_detection",
+            "leakage_analysis",
+            "fraud_investigation",
+            "revenue_assurance",
+            "abuse_detection",
         ],
         "marketing_gm": [
-            "market_intelligence", "campaign_management", "positioning",
-            "demand_generation", "content_review", "attribution"
+            "market_intelligence",
+            "campaign_management",
+            "positioning",
+            "demand_generation",
+            "content_review",
+            "attribution",
         ],
         "sales_gm": [
-            "pipeline_management", "deal_qualification", "proposal_generation",
-            "revenue_execution", "crm_operations", "b2b_handoff",
-            "sales_pipeline", "customer_support"
+            "pipeline_management",
+            "deal_qualification",
+            "proposal_generation",
+            "revenue_execution",
+            "crm_operations",
+            "b2b_handoff",
+            "sales_pipeline",
+            "customer_support",
         ],
         "ict_gm": [
-            "platform_ops", "integration_management", "security",
-            "reliability", "release_operations", "incident_management"
+            "platform_ops",
+            "integration_management",
+            "security",
+            "reliability",
+            "release_operations",
+            "incident_management",
         ],
     }
     for role_id, caps in expected_caps.items():
@@ -133,11 +164,32 @@ def test_new_gm_tools_allowed():
     """New GMs have allowed_tools and tool checks work."""
     registry = get_default_registry()
     expected_tools = {
-        "compliance_quality_gm": ["policy_engine", "audit_log", "evidence_store", "ollama", "cognitive_log", "all_engines_read"],
-        "fraud_gm": ["crm_engine_read", "b2b_engine_read", "cx_engine_read", "anomaly_engine", "ollama", "cognitive_log"],
+        "compliance_quality_gm": [
+            "policy_engine",
+            "audit_log",
+            "evidence_store",
+            "ollama",
+            "cognitive_log",
+            "all_engines_read",
+        ],
+        "fraud_gm": [
+            "crm_engine_read",
+            "b2b_engine_read",
+            "cx_engine_read",
+            "anomaly_engine",
+            "ollama",
+            "cognitive_log",
+        ],
         "marketing_gm": ["crm_engine_read", "approved_content", "ollama", "cognitive_log"],
         "sales_gm": ["crm_engine", "b2b_engine", "ollama", "cognitive_log"],
-        "ict_gm": ["platform_runtime", "integration_hub", "deployment_pipeline", "observability", "ollama", "cognitive_log"],
+        "ict_gm": [
+            "platform_runtime",
+            "integration_hub",
+            "deployment_pipeline",
+            "observability",
+            "ollama",
+            "cognitive_log",
+        ],
     }
     for role_id, tools in expected_tools.items():
         role_tools = registry.role_to_tools[role_id]
@@ -146,7 +198,9 @@ def test_new_gm_tools_allowed():
             assert is_tool_allowed(role_id, tool), f"Tool {tool!r} not allowed for {role_id}"
         # Test denied tool
         denied_tool = "wfm_engine"
-        assert not is_tool_allowed(role_id, denied_tool), f"Tool {denied_tool!r} should be denied for {role_id}"
+        assert not is_tool_allowed(
+            role_id, denied_tool
+        ), f"Tool {denied_tool!r} should be denied for {role_id}"
 
 
 def test_new_gm_peer_calls():
@@ -156,7 +210,16 @@ def test_new_gm_peer_calls():
 
     # Compliance can call all GMs
     compliance_peers = roles_by_id["compliance_quality_gm"]["allowed_peer_calls"]
-    for peer in ["ops_gm", "hr_personnel_gm", "sales_gm", "fraud_gm", "ld_gm", "marketing_gm", "ict_gm", "sami"]:
+    for peer in [
+        "ops_gm",
+        "hr_personnel_gm",
+        "sales_gm",
+        "fraud_gm",
+        "ld_gm",
+        "marketing_gm",
+        "ict_gm",
+        "sami",
+    ]:
         assert peer in compliance_peers, f"Compliance should be able to call {peer}"
 
     # Fraud calls compliance, sales, ops, sami
@@ -193,7 +256,14 @@ def test_approval_limits():
 
     # Compliance can approve all tiers
     compliance_approval = roles_by_id["compliance_quality_gm"]["approval_limits"]["can_approve"]
-    for tier in ["standard", "financial", "personnel", "compliance", "external_communication", "irreversible"]:
+    for tier in [
+        "standard",
+        "financial",
+        "personnel",
+        "compliance",
+        "external_communication",
+        "irreversible",
+    ]:
         assert tier in compliance_approval
 
     # Others cannot approve compliance/irreversible
@@ -211,7 +281,10 @@ def test_sod_rules():
     for role_id in ["compliance_quality_gm", "fraud_gm", "marketing_gm", "sales_gm", "ict_gm"]:
         sod = roles_by_id[role_id]["segregation_of_duties"]
         assert sod["cannot_approve_own_actions"] is True
-        assert "compliance_quality_gm" in sod["must_be_reviewed_by"] or role_id == "compliance_quality_gm"
+        assert (
+            "compliance_quality_gm" in sod["must_be_reviewed_by"]
+            or role_id == "compliance_quality_gm"
+        )
 
     # Compliance cannot approve own actions, must be reviewed by SAMI
     compliance_sod = roles_by_id["compliance_quality_gm"]["segregation_of_duties"]
@@ -231,6 +304,7 @@ CANONICAL_CREW = {"SAMI", "SUBY", "PHILI", "WILI", "ANDY", "NONO", "MAYA", "LIZA
 
 # Backward compatibility aliases (old C6 class-based names)
 LEGACY_ALIASES = {"COMPLIANCE", "FRAUD", "MARKETING", "SALES", "ICT"}
+
 
 def test_all_nine_canonical_agents_registered():
     """All 9 canonical crew agents are registered in AgentRegistry."""
@@ -260,7 +334,9 @@ def test_canonical_crew_names_exact():
         agent = AgentRegistry.get_agent(name)
         assert agent is not None, f"Canonical agent {name} not registered"
         assert agent.name == name, f"Agent name mismatch: {agent.name!r} != {name!r}"
-        assert agent.role == expected_role, f"{name} role mismatch: {agent.role!r} != {expected_role!r}"
+        assert (
+            agent.role == expected_role
+        ), f"{name} role mismatch: {agent.role!r} != {expected_role!r}"
 
 
 def test_legacy_aliases_resolve_to_same_instances():
@@ -295,18 +371,25 @@ def test_new_agents_have_system_prompts():
         assert agent.system_prompt, f"Agent {name} missing system_prompt"
         assert len(agent.system_prompt) > 100, f"Agent {name} system_prompt too short"
         # System prompt should reference the canonical name
-        assert name in agent.system_prompt, f"System prompt for {name} should reference canonical name"
+        assert (
+            name in agent.system_prompt
+        ), f"System prompt for {name} should reference canonical name"
 
 
 # ── Authorization/SOD Regression Tests ──
+
 
 def test_fail_closed_unknown_capability():
     """Unknown capability fails closed in authorization."""
     from security.identity import Identity
     from security.policy import AuthorizationRequest, authorize
 
-    ident = Identity(actor="suby", actor_type="agent", tenant_id="t1", client_id="c1", role_id="ops_gm")
-    req = AuthorizationRequest(identity=ident, capability="unknown_capability_xyz", tool="wfm_engine")
+    ident = Identity(
+        actor="suby", actor_type="agent", tenant_id="t1", client_id="c1", role_id="ops_gm"
+    )
+    req = AuthorizationRequest(
+        identity=ident, capability="unknown_capability_xyz", tool="wfm_engine"
+    )
     decision = authorize(req)
     assert decision.allowed is False
     assert decision.code == "unknown_capability"
@@ -317,8 +400,16 @@ def test_fail_closed_unauthorized_role():
     from security.identity import Identity
     from security.policy import AuthorizationRequest, authorize
 
-    ident = Identity(actor="marketing_user", actor_type="agent", tenant_id="t1", client_id="c1", role_id="marketing_gm")
-    req = AuthorizationRequest(identity=ident, capability="wfm_forecast", tool="wfm_engine", owning_role_id="marketing_gm")
+    ident = Identity(
+        actor="marketing_user",
+        actor_type="agent",
+        tenant_id="t1",
+        client_id="c1",
+        role_id="marketing_gm",
+    )
+    req = AuthorizationRequest(
+        identity=ident, capability="wfm_forecast", tool="wfm_engine", owning_role_id="marketing_gm"
+    )
     decision = authorize(req)
     assert decision.allowed is False
     assert decision.code == "unauthorized_role"
@@ -329,8 +420,20 @@ def test_tenant_isolation():
     from security.identity import Identity
     from security.policy import AuthorizationRequest, authorize
 
-    ident = Identity(actor="suby", actor_type="agent", tenant_id="tenant_a", client_id="client_a", role_id="ops_gm")
-    req = AuthorizationRequest(identity=ident, capability="wfm_forecast", tool="wfm_engine", owning_role_id="ops_gm", target_tenant_id="tenant_b")
+    ident = Identity(
+        actor="suby",
+        actor_type="agent",
+        tenant_id="tenant_a",
+        client_id="client_a",
+        role_id="ops_gm",
+    )
+    req = AuthorizationRequest(
+        identity=ident,
+        capability="wfm_forecast",
+        tool="wfm_engine",
+        owning_role_id="ops_gm",
+        target_tenant_id="tenant_b",
+    )
     decision = authorize(req)
     assert decision.allowed is False
     assert decision.code == "tenant_isolation"
@@ -343,8 +446,15 @@ def test_authorization_uses_stable_role_ids():
 
     # Test with canonical role IDs
     for role_id in ["marketing_gm", "sales_gm", "compliance_quality_gm", "ict_gm", "fraud_gm"]:
-        ident = Identity(actor="test", actor_type="agent", tenant_id="t1", client_id="c1", role_id=role_id)
-        req = AuthorizationRequest(identity=ident, capability="market_intelligence", tool="crm_engine_read", owning_role_id=role_id)
+        ident = Identity(
+            actor="test", actor_type="agent", tenant_id="t1", client_id="c1", role_id=role_id
+        )
+        req = AuthorizationRequest(
+            identity=ident,
+            capability="market_intelligence",
+            tool="crm_engine_read",
+            owning_role_id=role_id,
+        )
         decision = authorize(req)
         # Should not fail with unknown_capability or unauthorized_role due to name confusion
         # (market_intelligence is owned by marketing_gm, so marketing_gm should be allowed)
@@ -354,7 +464,11 @@ def test_authorization_uses_stable_role_ids():
         else:
             # Other roles may be denied but for correct reasons (not name confusion)
             if not decision.allowed:
-                assert decision.code in ("unauthorized_role", "tenant_isolation", "unknown_capability")
+                assert decision.code in (
+                    "unauthorized_role",
+                    "tenant_isolation",
+                    "unknown_capability",
+                )
 
 
 def test_audit_log_identity_fields_use_canonical_names():
@@ -368,7 +482,9 @@ def test_audit_log_identity_fields_use_canonical_names():
         rid = role["id"]
         agent_name = role["agent_name"]
         # The agent_name is the canonical identity
-        assert agent_name in CANONICAL_CREW, f"Role {rid} agent_name {agent_name!r} not in canonical crew"
+        assert (
+            agent_name in CANONICAL_CREW
+        ), f"Role {rid} agent_name {agent_name!r} not in canonical crew"
         # Verify it matches maps_to_agent
         assert agent_name == role["maps_to_agent"], f"Role {rid} agent_name != maps_to_agent"
 
@@ -389,9 +505,20 @@ def test_existing_c0_c5_regression():
     """Run C5 vertical slice to ensure no regression."""
     import tempfile
     from tests.fixtures.c5.fixtures import (
-        TENANT_ID, CLIENT_ID, ACTOR_SUBY, ACTOR_SAMI, ACTOR_PHILI, ACTOR_WILI,
-        ACTOR_COMPLIANCE, ACTOR_SALES, WFM_INPUT, RTA_INPUT, PERSONNEL_INPUT,
-        LD_INPUT, CX_INPUT, CRM_INPUT
+        TENANT_ID,
+        CLIENT_ID,
+        ACTOR_SUBY,
+        ACTOR_SAMI,
+        ACTOR_PHILI,
+        ACTOR_WILI,
+        ACTOR_COMPLIANCE,
+        ACTOR_SALES,
+        WFM_INPUT,
+        RTA_INPUT,
+        PERSONNEL_INPUT,
+        LD_INPUT,
+        CX_INPUT,
+        CRM_INPUT,
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -404,17 +531,27 @@ def test_existing_c0_c5_regression():
 
         from control_plane.vertical_slice import VerticalSliceController, VerticalSliceRequest
 
-        ctrl = VerticalSliceController(engine, audit_db_path=str(audit_path), log_path=str(log_path))
+        ctrl = VerticalSliceController(
+            engine, audit_db_path=str(audit_path), log_path=str(log_path)
+        )
 
         req = VerticalSliceRequest(
-            tenant_id=TENANT_ID, client_id=CLIENT_ID,
-            actor_suby=ACTOR_SUBY, actor_sami=ACTOR_SAMI,
-            actor_compliance=ACTOR_COMPLIANCE, actor_phili=ACTOR_PHILI,
-            actor_wili=ACTOR_WILI, actor_sales=ACTOR_SALES,
-            approve_compliance=True, is_sample=True,
-            wfm_input=WFM_INPUT, rta_input=RTA_INPUT,
-            personnel_input=PERSONNEL_INPUT, ld_input=LD_INPUT,
-            cx_input=CX_INPUT, crm_input=CRM_INPUT,
+            tenant_id=TENANT_ID,
+            client_id=CLIENT_ID,
+            actor_suby=ACTOR_SUBY,
+            actor_sami=ACTOR_SAMI,
+            actor_compliance=ACTOR_COMPLIANCE,
+            actor_phili=ACTOR_PHILI,
+            actor_wili=ACTOR_WILI,
+            actor_sales=ACTOR_SALES,
+            approve_compliance=True,
+            is_sample=True,
+            wfm_input=WFM_INPUT,
+            rta_input=RTA_INPUT,
+            personnel_input=PERSONNEL_INPUT,
+            ld_input=LD_INPUT,
+            cx_input=CX_INPUT,
+            crm_input=CRM_INPUT,
         )
 
         ev = ctrl.run(req)
@@ -464,6 +601,7 @@ def test_canonical_gms_no_execution_tools():
 
 # ── KPI Vocabulary Tests ──
 
+
 def test_kpi_vocabulary_complete():
     """All KPIs in vocabulary are used by at least one role."""
     catalog = load_role_catalog("organization/role-catalog.yaml")
@@ -482,6 +620,7 @@ def test_kpi_vocabulary_complete():
 
 
 # ── Data Domain Tests ──
+
 
 def test_new_gms_readable_data_domains():
     """New GMs have appropriate readable_data_domains."""

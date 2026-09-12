@@ -45,7 +45,10 @@ def _git_head() -> Optional[str]:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=str(ROOT), capture_output=True, text=True, timeout=3,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=3,
         )
         if out.returncode == 0:
             return out.stdout.strip()
@@ -58,7 +61,10 @@ def _git_branch() -> Optional[str]:
     try:
         out = subprocess.run(
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=str(ROOT), capture_output=True, text=True, timeout=3,
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=3,
         )
         if out.returncode == 0:
             return out.stdout.strip()
@@ -85,6 +91,7 @@ def data_schema_versions() -> Dict[str, str]:
                 versions["security.audit"] = ln.split("=")[1].strip().strip('"').strip("'")
     try:
         from control_plane.store import SCHEMA_VERSION as cp_schema
+
         versions["control_plane.store"] = cp_schema
     except Exception:
         versions.setdefault("control_plane.store", "unknown")
@@ -117,9 +124,14 @@ def build_manifest(
         "dependency_lock_ref": "release/requirements.lock.txt",
         "dependency_lock_count": len(deps),
         "enabled_capabilities": [
-            "control_plane", "six_engines", "nine_agents",
-            "vertical_slice", "audit", "classification",
-            "authorization", "sibling_transport(local)",
+            "control_plane",
+            "six_engines",
+            "nine_agents",
+            "vertical_slice",
+            "audit",
+            "classification",
+            "authorization",
+            "sibling_transport(local)",
             "gm_expansion",
         ],
         "disabled_capabilities": DISABLED_CAPABILITIES,

@@ -50,9 +50,7 @@ def test_drift_check_fails_when_migration_diverges(tmp_path):
 
     store = Store(db_path=divergent_db)
     try:
-        store.conn.execute(
-            "CREATE TABLE drift_probe (id TEXT PRIMARY KEY, added_by_store TEXT)"
-        )
+        store.conn.execute("CREATE TABLE drift_probe (id TEXT PRIMARY KEY, added_by_store TEXT)")
         store.conn.commit()
     finally:
         store.close()
@@ -64,12 +62,11 @@ def test_drift_check_fails_when_migration_diverges(tmp_path):
     divergent_schema = _dump_schema(divergent_db)
 
     missing_from_migrations = sorted(set(divergent_schema) - set(migrated_schema))
-    assert "table:drift_probe" in missing_from_migrations, (
-        f"divergent object not detected: {missing_from_migrations}"
-    )
+    assert (
+        "table:drift_probe" in missing_from_migrations
+    ), f"divergent object not detected: {missing_from_migrations}"
     assert all(
-        name == "table:drift_probe" or "drift_probe" in name
-        for name in missing_from_migrations
+        name == "table:drift_probe" or "drift_probe" in name for name in missing_from_migrations
     )
 
 
@@ -86,9 +83,7 @@ def test_alembic_bookkeeping_is_excluded(tmp_path):
 
 
 def test_normalisation_ignores_indentation_not_tokens():
-    deep = (
-        "CREATE TABLE t (\n    a TEXT PRIMARY KEY,\n    b TEXT NOT NULL\n)"
-    )
+    deep = "CREATE TABLE t (\n    a TEXT PRIMARY KEY,\n    b TEXT NOT NULL\n)"
     shallow = "CREATE TABLE t ( a TEXT PRIMARY KEY, b TEXT NOT NULL )"
     altered = "CREATE TABLE t ( a TEXT PRIMARY KEY, b INTEGER NOT NULL )"
     assert _normalise(deep) == _normalise(shallow)

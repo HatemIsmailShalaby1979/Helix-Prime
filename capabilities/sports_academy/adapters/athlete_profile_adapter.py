@@ -38,30 +38,28 @@ def athlete_profile(
         return None
     athlete = athletes[0]
 
-    families = [f for f in conn.list_families(ctx)
-                if f.family_id == athlete.family_id]
+    families = [f for f in conn.list_families(ctx) if f.family_id == athlete.family_id]
     family = families[0] if families else None
 
-    programs = [p for p in conn.list_programs(ctx)
-                if p.program_id == athlete.program_id]
+    programs = [p for p in conn.list_programs(ctx) if p.program_id == athlete.program_id]
     program = programs[0] if programs else None
 
-    sessions = [s for s in conn.list_sessions(ctx)
-                if athlete_id in s.roster]
-    checkins = [c for c in conn.list_checkins(ctx)
-                if c.athlete_id == athlete_id]
+    sessions = [s for s in conn.list_sessions(ctx) if athlete_id in s.roster]
+    checkins = [c for c in conn.list_checkins(ctx) if c.athlete_id == athlete_id]
     attended_session_ids = {c.session_id for c in checkins}
     attendance_history = [
-        {"session_id": s.session_id, "date": s.date, "attended":
-         s.session_id in attended_session_ids}
+        {
+            "session_id": s.session_id,
+            "date": s.date,
+            "attended": s.session_id in attended_session_ids,
+        }
         for s in sorted(sessions, key=lambda s: (s.date, s.session_id))
     ]
     expected = len(attendance_history)
     attended = sum(1 for h in attendance_history if h["attended"])
     attendance_rate = round(attended / expected, 4) if expected else 0.0
 
-    fee_records = [p for p in conn.list_fee_payments(ctx)
-                   if p.athlete_id == athlete_id]
+    fee_records = [p for p in conn.list_fee_payments(ctx) if p.athlete_id == athlete_id]
 
     return {
         "athlete_id": athlete.athlete_id,
@@ -76,7 +74,9 @@ def athlete_profile(
             "primary_contact_name": family.primary_contact_name,
             "phone": family.phone,
             "email": family.email,
-        } if family else None,
+        }
+        if family
+        else None,
         "attendance": {
             "expected": expected,
             "attended": attended,
@@ -84,8 +84,12 @@ def athlete_profile(
             "history": attendance_history,
         },
         "fees": [
-            {"payment_id": p.payment_id, "amount": p.amount,
-             "due_date": p.due_date, "paid_at": p.paid_at}
+            {
+                "payment_id": p.payment_id,
+                "amount": p.amount,
+                "due_date": p.due_date,
+                "paid_at": p.paid_at,
+            }
             for p in fee_records
         ],
         "tenant_id": athlete.tenant_id,
@@ -101,14 +105,18 @@ def enrollment_pipeline(
     conn = connectors["academy_ops"]
     athletes = conn.list_athletes(ctx)
     records = conn.list_enrollment_records(ctx)
-    by_stage: Dict[str, int] = {"inquiry": 0, "trial": 0, "enrolled": 0,
-                                "renewed": 0, "churned": 0}
+    by_stage: Dict[str, int] = {"inquiry": 0, "trial": 0, "enrolled": 0, "renewed": 0, "churned": 0}
     for a in athletes:
         if a.enrollment_status in by_stage:
             by_stage[a.enrollment_status] += 1
     stage_notes = [
-        {"enrollment_id": r.enrollment_id, "athlete_id": r.athlete_id,
-         "stage": r.stage, "recorded_at": r.recorded_at, "note": r.note}
+        {
+            "enrollment_id": r.enrollment_id,
+            "athlete_id": r.athlete_id,
+            "stage": r.stage,
+            "recorded_at": r.recorded_at,
+            "note": r.note,
+        }
         for r in records
     ]
     return {"stage_counts": by_stage, "records": stage_notes}
@@ -139,12 +147,14 @@ def churn_risk_signals(
             continue
         rate = v["attended"] / v["expected"]
         if rate < threshold:
-            at_risk.append({
-                "athlete_id": athlete_id,
-                "attendance_rate": round(rate, 4),
-                "expected": v["expected"],
-                "attended": v["attended"],
-            })
+            at_risk.append(
+                {
+                    "athlete_id": athlete_id,
+                    "attendance_rate": round(rate, 4),
+                    "expected": v["expected"],
+                    "attended": v["attended"],
+                }
+            )
     return sorted(at_risk, key=lambda r: r["attendance_rate"])
 
 
@@ -164,14 +174,12 @@ def churn_risk_scores(
     """
     from engines.cx.adapter import adapt as cx_adapt
 
-    at_risk = list(churn_risk_signals(
-        ctx, connectors, threshold=threshold, min_sessions=min_sessions))
+    at_risk = list(
+        churn_risk_signals(ctx, connectors, threshold=threshold, min_sessions=min_sessions)
+    )
     if not at_risk:
         return {"at_risk": [], "engine_metrics": None}
-    customers = [
-        {"customer_id": r["athlete_id"], "csat": r["attendance_rate"]}
-        for r in at_risk
-    ]
+    customers = [{"customer_id": r["athlete_id"], "csat": r["attendance_rate"]} for r in at_risk]
     result = cx_adapt(
         input_payload={"customers": customers, "is_sample": True},
         tenant_id=ctx.tenant_id,
@@ -207,11 +215,17 @@ def record_churn_flags(
     for r in scores.get("at_risk", []):
         correlation_id = ctx.correlation_id or "academy-churn"
         rec = mem.add(
-            kind="recommendation", nature="model_inference",
-            tenant_id=ctx.tenant_id, client_id=ctx.client_id,
-            actor=actor, role_id=role_id, source="academy_churn",
-            classification="client_confidential", timestamp=as_of,
-            correlation_id=correlation_id, confidence=0.8,
+            kind="recommendation",
+            nature="model_inference",
+            tenant_id=ctx.tenant_id,
+            client_id=ctx.client_id,
+            actor=actor,
+            role_id=role_id,
+            source="academy_churn",
+            classification="client_confidential",
+            timestamp=as_of,
+            correlation_id=correlation_id,
+            confidence=0.8,
             evidence_refs=[r["athlete_id"]],
             data_mode=DATA_MODE,
             provenance={

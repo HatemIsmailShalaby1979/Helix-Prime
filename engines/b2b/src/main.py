@@ -97,15 +97,11 @@ class OnboardingCLI:
         parser.add_argument("--client-id", required=True, help="Client ID")
         parser.add_argument("--name", required=True, help="Client name")
         parser.add_argument("--industry", required=True, help="Client industry")
-        parser.add_argument(
-            "--size", required=True, help="Client size (small, medium, large)"
-        )
+        parser.add_argument("--size", required=True, help="Client size (small, medium, large)")
         parser.add_argument(
             "--complexity", required=True, help="Client complexity (low, medium, high)"
         )
-        parser.add_argument(
-            "--requirements", nargs="+", required=True, help="Client requirements"
-        )
+        parser.add_argument("--requirements", nargs="+", required=True, help="Client requirements")
 
     def _add_list_clients_command(self, subparsers) -> None:
         """Add list clients command."""
@@ -142,9 +138,7 @@ class OnboardingCLI:
 
     def _add_export_staffing_plan_command(self, subparsers) -> None:
         """Add export staffing plan command."""
-        parser = subparsers.add_parser(
-            "export-staffing-plan", help="Export staffing plan to file"
-        )
+        parser = subparsers.add_parser("export-staffing-plan", help="Export staffing plan to file")
         parser.add_argument("--client-id", required=True, help="Client ID")
         parser.add_argument("--output", required=True, help="Output file path")
 
@@ -183,9 +177,7 @@ class OnboardingCLI:
             print("No clients found.")
             return
 
-        print(
-            f"\n{'Client ID':<15} {'Name':<30} {'Industry':<20} {'Size':<10} {'Complexity':<12}"
-        )
+        print(f"\n{'Client ID':<15} {'Name':<30} {'Industry':<20} {'Size':<10} {'Complexity':<12}")
         print("-" * 90)
 
         for client in clients:
@@ -263,9 +255,7 @@ class OnboardingCLI:
         print("-" * 75)
 
         for sop in sop_documents:
-            print(
-                f"{sop['client_id']:<15} {sop['title'][:40]:<40} {sop['created_at'][:20]:<20}"
-            )
+            print(f"{sop['client_id']:<15} {sop['title'][:40]:<40} {sop['created_at'][:20]:<20}")
 
     def _handle_list_staffing_plans(self, args) -> None:
         """Handle list staffing plans command."""

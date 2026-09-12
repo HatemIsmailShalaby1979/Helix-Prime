@@ -138,7 +138,9 @@ class Event:
         timestamp: Optional[str] = None,
     ) -> "Event":
         eid = uuid.uuid4().hex
-        ts = timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+        ts = timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat().replace(
+            "+00:00", "Z"
+        )
         return cls(
             event_id=eid,
             event_type=event_type,

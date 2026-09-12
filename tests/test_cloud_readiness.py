@@ -19,8 +19,14 @@ from cloud.config import CloudConfig
 from cloud.profile import CloudProvider, optional_cloud_services, SPEND_CONTROL_DOCS
 
 ALL_SERVICES = {
-    "database", "object_storage", "queue_event_transport", "secrets",
-    "identity", "observability", "scheduled_jobs", "model_providers",
+    "database",
+    "object_storage",
+    "queue_event_transport",
+    "secrets",
+    "identity",
+    "observability",
+    "scheduled_jobs",
+    "model_providers",
 }
 
 
@@ -77,7 +83,9 @@ def test_missing_cloud_service_fails_safe():
 def test_safe_failure_conditions():
     # live credentials not permitted in demo
     with pytest.raises(SafeFailure):
-        CloudProvider.build(CloudConfig.from_dict({"mode": "cloud_demo", "credentials": {"AWS": "x"}}))
+        CloudProvider.build(
+            CloudConfig.from_dict({"mode": "cloud_demo", "credentials": {"AWS": "x"}})
+        )
     # non-synthetic data forbidden in this local-first build
     with pytest.raises(SafeFailure):
         CloudProvider.build(CloudConfig.from_dict({"synthetic_data_only": False}))

@@ -325,7 +325,10 @@ from bandit/pip-audit.
     add an AST test forbidding hardcoded role ids in `engine.py`.
 11. Extend `detect_catalog_drift()` to capabilities/tools/peer-calls/SOD; change the test
     to `assert drift == []`.
-12. Decide `tenancy.py`: wire it in, or delete it and remove the constitutional clause.
+12. ~~Decide `tenancy.py`~~ **DECIDED 2026-09-11: delete it** (Decision B). Rationale: a
+    control that exists only in a file and is never invoked is not defense-in-depth — it
+    misleads auditors. Isolation stays at the policy seam; driver-level enforcement, if
+    ever required, belongs inside `Store`, not a wrapper module.
     Leaving it orphaned is the worst option.
 13. Add a kill switch honoured before every committal action.
 14. Wire `check_audit_integrity` into the release gate; ship an evidence
@@ -442,7 +445,7 @@ Severity: **P0** = blocks launch · **P1** = blocks enterprise sale · **P2** = 
 | G14 | P1 | SOD bypass on KeyError | `engine.py:687` | Deny + log; test | 3 h |
 | G15 | P1 | Hardcoded super-roles | `engine.py:680,683` | Move to catalog + AST test | 4 h |
 | G16 | P1 | Drift test can never fail | `test_c1_contracts.py:1099` | `assert drift == []`; widen to 4 fields | 4 h |
-| G17 | P1 | `tenancy.py` 100% dead | `control_plane/tenancy.py` | Wire in or delete + amend constitution | 1–2 d |
+| G17 | P1 | `tenancy.py` 100% dead (claims driver-level isolation, never invoked) | `control_plane/tenancy.py` | **DECIDED 2026-09-11: DELETE (Decision B).** Verified: zero refs; `release/gate.py:146`→`harness.py:327` uses `policy.authorize` not tenancy ⇒ no gate breaks; matrix:96 already credits `security/policy.py`. Also correct 4 docs claiming it is real: `C4-C8_IMPLEMENTATION.md:81`, `HELIX_CODEX_EXECUTION_STATUS.md:23,55`, `HELIX_CODEX_OS_MASTER_BLUEPRINT.md:39,373,374,378` | 0.5 d |
 | G18 | P1 | No kill switch | — | Global halt flag honoured pre-committal | 1 d |
 | G19 | P1 | Evidence not reproducible | `.gitignore:61`, `security_gate.py:160` | Export/verify CLI + wire gate | 1 d |
 | G20 | P1 | `production_readiness` unenforced | `capabilities/*/register.py:25` | Registry-level assertion | 2 h |

@@ -14,19 +14,29 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from capabilities.sports_academy import (  # noqa: E402
-    AcademyCapabilityPack, build_academy_connectors, build_synthetic_academy,
-    compute_attendance, daily_adherence_report, record_attendance_outcome,
-    get_capability, DATA_MODE,
+    AcademyCapabilityPack,
+    build_academy_connectors,
+    build_synthetic_academy,
+    compute_attendance,
+    daily_adherence_report,
+    record_attendance_outcome,
+    get_capability,
+    DATA_MODE,
 )
 from capabilities.sports_academy.adapters.attendance_adapter import (  # noqa: E402
     rta_attendance_adherence,
 )
 from capabilities.sports_academy import kpis as academy_kpis  # noqa: E402
 from capabilities.sports_academy.adapters.athlete_profile_adapter import (  # noqa: E402
-    athlete_profile, churn_risk_scores, record_churn_flags,
+    athlete_profile,
+    churn_risk_scores,
+    record_churn_flags,
 )
 from capabilities.sports_academy.workflows import (  # noqa: E402
-    AcademyDiagnosis, attendance_flow, enrollment_flow, load_flow_declaration,
+    AcademyDiagnosis,
+    attendance_flow,
+    enrollment_flow,
+    load_flow_declaration,
     renewal_flow,
 )
 from capabilities.sports_academy import roles as academy_roles  # noqa: E402
@@ -38,8 +48,14 @@ TS = "2026-09-07T20:00:00Z"
 
 
 def _ctx(tenant_id="a1", client_id="ac1", correlation_id="corr-academy-1"):
-    return ConnectorContext(tenant_id, "org-1", client_id, actor="academy-operator",
-                            correlation_id=correlation_id, data_mode=DATA_MODE)
+    return ConnectorContext(
+        tenant_id,
+        "org-1",
+        client_id,
+        actor="academy-operator",
+        correlation_id=correlation_id,
+        data_mode=DATA_MODE,
+    )
 
 
 def _connectors(tenant_id="a1", client_id="ac1"):
@@ -75,11 +91,15 @@ def test_connector_capabilites_declare_read_only():
 def test_attendance_overall_and_per_athlete():
     conns, _fx = _connectors()
     ctx = _ctx()
-    att = compute_attendance(conns["academy_ops"].list_sessions(ctx),
-                             conns["academy_ops"].list_checkins(ctx))
+    att = compute_attendance(
+        conns["academy_ops"].list_sessions(ctx), conns["academy_ops"].list_checkins(ctx)
+    )
     assert 0.75 < att["overall_attendance_rate"] <= 0.90
     assert att["total_expected"] == 266
-    assert att["total_attended"] == att["total_expected"] * round(att["overall_attendance_rate"], 2) or True
+    assert (
+        att["total_attended"] == att["total_expected"] * round(att["overall_attendance_rate"], 2)
+        or True
+    )
     # every active athlete has an expected/attended record
     assert len(att["by_athlete"]) == 38
 
@@ -87,8 +107,9 @@ def test_attendance_overall_and_per_athlete():
 def test_attendance_absent_athlete_below_full():
     conns, _fx = _connectors()
     ctx = _ctx()
-    att = compute_attendance(conns["academy_ops"].list_sessions(ctx),
-                             conns["academy_ops"].list_checkins(ctx))
+    att = compute_attendance(
+        conns["academy_ops"].list_sessions(ctx), conns["academy_ops"].list_checkins(ctx)
+    )
     # seeded declining athletes must be visibly below full attendance
     assert att["by_athlete"]["ath-01"]["attendance_rate"] < 0.6
     assert att["by_athlete"]["ath-02"]["attendance_rate"] < 0.6
@@ -99,8 +120,9 @@ def test_attendance_absent_athlete_below_full():
 def test_attendance_per_session_math():
     conns, _fx = _connectors()
     ctx = _ctx()
-    att = compute_attendance(conns["academy_ops"].list_sessions(ctx),
-                             conns["academy_ops"].list_checkins(ctx))
+    att = compute_attendance(
+        conns["academy_ops"].list_sessions(ctx), conns["academy_ops"].list_checkins(ctx)
+    )
     for sid, row in att["by_session"].items():
         assert row["present"] + row["absent"] == row["roster_size"]
         if row["roster_size"]:
@@ -111,8 +133,11 @@ def test_attendance_per_session_math():
 def test_rta_adherence_reuses_engine():
     fx = build_synthetic_academy("a1", "ac1", TS)
     result = rta_attendance_adherence(
-        fx["sessions"], fx["checkins"],
-        tenant_id="a1", client_id="ac1", correlation_id="corr-rta-1",
+        fx["sessions"],
+        fx["checkins"],
+        tenant_id="a1",
+        client_id="ac1",
+        correlation_id="corr-rta-1",
         date="2026-09-07",
     )
     assert "engine_error" not in result
@@ -124,8 +149,11 @@ def test_rta_adherence_reuses_engine():
 def test_rta_adherence_empty_day_fails_closed():
     fx = build_synthetic_academy("a1", "ac1", TS)
     result = rta_attendance_adherence(
-        fx["sessions"], fx["checkins"],
-        tenant_id="a1", client_id="ac1", correlation_id="corr-rta-2",
+        fx["sessions"],
+        fx["checkins"],
+        tenant_id="a1",
+        client_id="ac1",
+        correlation_id="corr-rta-2",
         date="2026-12-25",
     )
     assert result.get("empty") is True
@@ -178,10 +206,19 @@ def test_academy_kpi_yaml_drift():
     no implemented metric may be missing from the YAML."""
     academy = academy_kpis.load_kpi_definitions("academy")
     coach = academy_kpis.load_kpi_definitions("coach")
-    assert set(academy) == {"attendance_rate", "churn_rate",
-                            "facility_utilization", "mrr", "active_athletes"}
-    assert set(coach) == {"session_adherence", "athlete_attendance_rate",
-                          "session_delivery_ontime", "parent_satisfaction"}
+    assert set(academy) == {
+        "attendance_rate",
+        "churn_rate",
+        "facility_utilization",
+        "mrr",
+        "active_athletes",
+    }
+    assert set(coach) == {
+        "session_adherence",
+        "athlete_attendance_rate",
+        "session_delivery_ontime",
+        "parent_satisfaction",
+    }
     for kpi in list(academy.values()) + list(coach.values()):
         assert "target" in kpi and kpi["target"] is not None
         assert kpi["direction"] in ("higher_is_better", "lower_is_better")
@@ -197,8 +234,13 @@ def test_academy_metrics_five_owner_numbers():
         facility_slots=conns["academy_ops"].list_facility_slots(ctx),
         programs=conns["academy_ops"].list_programs(ctx),
     )
-    assert set(metrics) == {"attendance_rate", "churn_rate",
-                            "facility_utilization", "mrr", "active_athletes"}
+    assert set(metrics) == {
+        "attendance_rate",
+        "churn_rate",
+        "facility_utilization",
+        "mrr",
+        "active_athletes",
+    }
     assert metrics["active_athletes"]["value"] == 38
     assert metrics["active_athletes"]["met"] is True
     # attendance ~0.812 meets nothing below the 0.85 target
@@ -223,8 +265,12 @@ def test_coach_kpis_four_per_coach():
     assert len(all_coaches) == 6
     for cid, m in all_coaches.items():
         assert m["coach_id"] == cid
-        for k in ("session_adherence", "athlete_attendance_rate",
-                  "session_delivery_ontime", "parent_satisfaction"):
+        for k in (
+            "session_adherence",
+            "athlete_attendance_rate",
+            "session_delivery_ontime",
+            "parent_satisfaction",
+        ):
             assert k in m, k
             assert m[k]["target"] is not None
             assert m[k]["direction"] == "higher_is_better"
@@ -271,12 +317,20 @@ def test_enrollment_pipeline_stages():
     from capabilities.sports_academy.adapters.athlete_profile_adapter import (
         enrollment_pipeline as _ep,
     )
+
     pipe = _ep(ctx, conns)
-    assert pipe["stage_counts"] == {"inquiry": 1, "trial": 1, "enrolled": 0,
-                                    "renewed": 0, "churned": 0}
+    assert pipe["stage_counts"] == {
+        "inquiry": 1,
+        "trial": 1,
+        "enrolled": 0,
+        "renewed": 0,
+        "churned": 0,
+    }
     # 38 active athletes are the enrolled population in v1 terms
-    assert sum(1 for a in conns["academy_ops"].list_athletes(ctx)
-               if a.enrollment_status == "active") == 38
+    assert (
+        sum(1 for a in conns["academy_ops"].list_athletes(ctx) if a.enrollment_status == "active")
+        == 38
+    )
     assert len(pipe["records"]) == 2  # enr-001 inquiry, enr-002 trial
 
 
@@ -312,16 +366,22 @@ def test_churn_flags_recorded_in_governed_memory():
 # 7. roles + authority boundaries (pack-local) -----------------------------------
 def test_roles_match_yaml_declaration():
     import yaml as _yaml
+
     decl = _yaml.safe_load(
-        (ROOT / "capabilities/sports_academy/declarations/academy_roles.yaml")
-        .read_text(encoding="utf-8"))
+        (ROOT / "capabilities/sports_academy/declarations/academy_roles.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
     yaml_ids = [r["id"] for r in decl["roles"]]
     assert tuple(yaml_ids) == academy_roles.ROLES
-    yaml_bounds = {b["category"]: (b["owner_role"], b["approver_role"])
-                   for b in decl["authority_boundaries"]}
+    yaml_bounds = {
+        b["category"]: (b["owner_role"], b["approver_role"]) for b in decl["authority_boundaries"]
+    }
     for cat, (owner, approver) in yaml_bounds.items():
         assert academy_roles.AUTHORITY_BOUNDARIES[cat] == {
-            "owner_role": owner, "approver_role": approver}
+            "owner_role": owner,
+            "approver_role": approver,
+        }
     # parent holds no approval authority in any boundary
     assert "parent" not in {b["approver_role"] for b in decl["authority_boundaries"]}
     assert "parent" not in {b["owner_role"] for b in decl["authority_boundaries"]}
@@ -338,6 +398,7 @@ def test_roles_not_merged_into_core_catalog():
     core_ids = set()
     catalog_path = ROOT / "organization" / "role-catalog.yaml"
     import yaml as _yaml
+
     catalog = _yaml.safe_load(catalog_path.read_text(encoding="utf-8"))
     for section in catalog.values():
         if isinstance(section, list):
@@ -360,7 +421,8 @@ def test_flow_declarations_load():
             if step.get("committal"):
                 assert step.get("requires_approval") is True
                 assert step["approver_role"] == academy_roles.required_approver_role(
-                    decl["flow"] if decl["flow"] != "attendance" else "attendance_ops")
+                    decl["flow"] if decl["flow"] != "attendance" else "attendance_ops"
+                )
 
 
 def test_enrollment_flow_flags_stalled_pipeline():
@@ -368,6 +430,7 @@ def test_enrollment_flow_flags_stalled_pipeline():
     from capabilities.sports_academy.adapters.athlete_profile_adapter import (
         enrollment_pipeline as _ep,
     )
+
     diag = enrollment_flow(_ep(_ctx(), conns))
     assert isinstance(diag, AcademyDiagnosis)
     assert diag.category == "enrollment"
@@ -380,8 +443,9 @@ def test_enrollment_flow_flags_stalled_pipeline():
 def test_attendance_flow_ok_when_healthy():
     conns, _fx = _connectors()
     ctx = _ctx()
-    diag = attendance_flow(conns["academy_ops"].list_sessions(ctx),
-                           conns["academy_ops"].list_checkins(ctx), TS)
+    diag = attendance_flow(
+        conns["academy_ops"].list_sessions(ctx), conns["academy_ops"].list_checkins(ctx), TS
+    )
     assert diag.health_state == "ok"
     assert diag.findings == ()
     assert diag.recommended_actions == ()
@@ -390,8 +454,9 @@ def test_attendance_flow_ok_when_healthy():
 def test_attendance_flow_escalates_low_session():
     conns, fx = _connectors()
     # synthesize a low-attendance day: drop most check-ins from ses-013
-    kept = [c for c in fx["checkins"]
-            if not (c.session_id == "ses-013" and c.athlete_id != "ath-03")]
+    kept = [
+        c for c in fx["checkins"] if not (c.session_id == "ses-013" and c.athlete_id != "ath-03")
+    ]
     diag = attendance_flow(fx["sessions"], kept, TS)
     assert diag.health_state in ("at_risk", "critical")
     assert any(f.evidence_ref == "attendance:ses-013" for f in diag.findings)
@@ -417,9 +482,15 @@ def test_owner_dashboard_five_numbers():
     from capabilities.sports_academy.cockpit_views.owner_dashboard import (
         compute_owner_dashboard,
     )
+
     board = compute_owner_dashboard(ctx, conns, TS)
-    assert set(board["kpis"]) == {"attendance_rate", "churn_rate",
-                                 "facility_utilization", "mrr", "active_athletes"}
+    assert set(board["kpis"]) == {
+        "attendance_rate",
+        "churn_rate",
+        "facility_utilization",
+        "mrr",
+        "active_athletes",
+    }
     assert board["attendance_7d"] == 0.812
     assert board["data_mode"] == DATA_MODE
     assert board["enrollment_pipeline"] == {"inquiry": 1, "trial": 1}
@@ -432,12 +503,17 @@ def test_coach_dashboard_today_and_kpis():
     from capabilities.sports_academy.cockpit_views.coach_dashboard import (
         compute_coach_dashboard,
     )
+
     board = compute_coach_dashboard(ctx, conns, TS, "coach-1", date="2026-09-07")
     assert board["coach"]["name"] == "Coach Ahmed"
     assert board["data_mode"] == DATA_MODE
     assert len(board["today_sessions"]) == 1
-    assert set(board["kpis"]) >= {"session_adherence", "athlete_attendance_rate",
-                                 "session_delivery_ontime", "parent_satisfaction"}
+    assert set(board["kpis"]) >= {
+        "session_adherence",
+        "athlete_attendance_rate",
+        "session_delivery_ontime",
+        "parent_satisfaction",
+    }
     unknown = compute_coach_dashboard(ctx, conns, TS, "coach-999")
     assert unknown == {"error": "unknown_coach", "coach_id": "coach-999"}
 
@@ -448,6 +524,7 @@ def test_parent_view_scoped_to_own_family():
     from capabilities.sports_academy.cockpit_views.parent_portal import (
         compute_parent_view,
     )
+
     view = compute_parent_view(ctx, conns, TS, "fam-01")
     assert view["family"]["family_id"] == "fam-01"
     # fam-01 has ath-01 and ath-02 (the two seeded risk athletes)
@@ -458,8 +535,7 @@ def test_parent_view_scoped_to_own_family():
     assert {f["payment_id"] for f in view["fees"]} == {"pay-001", "pay-002"}
     assert view["data_mode"] == DATA_MODE
     # parent holds no approval authority (roles invariant)
-    assert "parent" not in {b["approver_role"] for b in
-                            academy_roles.AUTHORITY_BOUNDARIES.values()}
+    assert "parent" not in {b["approver_role"] for b in academy_roles.AUTHORITY_BOUNDARIES.values()}
 
 
 # 10. facility + manual payments (S6) ---------------------------------------------
@@ -468,6 +544,7 @@ def test_facility_overview_no_conflicts():
     from capabilities.sports_academy.adapters.facility_adapter import (
         facility_overview,
     )
+
     ov = facility_overview(_ctx(), conns)
     assert ov["total_slots"] == 21
     assert ov["booked_slots"] == 14
@@ -507,8 +584,10 @@ def test_payment_overview_and_outstanding():
     from capabilities.sports_academy.adapters.payment_adapter import (
         fee_status_overview,
     )
+
     ov = fee_status_overview(
-        ctx, conns,
+        ctx,
+        conns,
         conns["academy_ops"].list_athletes(ctx),
         conns["academy_ops"].list_programs(ctx),
     )
@@ -527,11 +606,18 @@ def test_record_manual_payment_governed_memory():
     from capabilities.sports_academy.adapters.payment_adapter import (
         record_manual_payment,
     )
+
     rid = record_manual_payment(
-        mem, ctx,
-        athlete_id="ath-40", family_id="fam-20", program_id="prog-u15",
-        amount=220.0, currency="USD", due_date="2026-09-10",
-        paid_at="2026-09-10T09:00:00Z", method_note="cash at front desk",
+        mem,
+        ctx,
+        athlete_id="ath-40",
+        family_id="fam-20",
+        program_id="prog-u15",
+        amount=220.0,
+        currency="USD",
+        due_date="2026-09-10",
+        paid_at="2026-09-10T09:00:00Z",
+        method_note="cash at front desk",
         as_of=TS,
     )
     recs = mem.retrieve(tenant_id="a1", kinds=["customer_context"], include_deleted=False)
@@ -555,11 +641,20 @@ def test_record_manual_payment_rejects_negative():
     from capabilities.sports_academy.adapters.payment_adapter import (
         record_manual_payment,
     )
+
     try:
         record_manual_payment(
-            mem, ctx, athlete_id="ath-40", family_id="fam-20",
-            program_id="prog-u15", amount=-5.0, currency="USD",
-            due_date="2026-09-10", paid_at=None, method_note="x", as_of=TS,
+            mem,
+            ctx,
+            athlete_id="ath-40",
+            family_id="fam-20",
+            program_id="prog-u15",
+            amount=-5.0,
+            currency="USD",
+            due_date="2026-09-10",
+            paid_at=None,
+            method_note="x",
+            as_of=TS,
         )
         raise AssertionError("negative amount must raise")
     except ValueError:
@@ -569,11 +664,16 @@ def test_record_manual_payment_rejects_negative():
 # 11. pack runtime — registration, walkthrough, approvals, SOD (S7) --------------
 def _valid_consent(tenant_id="a1", client_id="ac1"):
     return ConsentRecord(
-        consent_id="ac-consent-1", tenant_id=tenant_id, client_id=client_id,
-        customer_id="cust-a1", status="granted",
-        granted_at="2026-01-01T00:00:00Z", expires_at="2027-01-01T00:00:00Z",
+        consent_id="ac-consent-1",
+        tenant_id=tenant_id,
+        client_id=client_id,
+        customer_id="cust-a1",
+        status="granted",
+        granted_at="2026-01-01T00:00:00Z",
+        expires_at="2027-01-01T00:00:00Z",
         data_modes_permitted=("historical_consented", "simulated_realistic"),
-        recorded_by="csm", signature="sig",
+        recorded_by="csm",
+        signature="sig",
     )
 
 
@@ -582,16 +682,27 @@ def _runtime():
 
 
 def _fixtures():
-    return {("a1", "ac1"): build_synthetic_academy("a1", "ac1", TS),
-            ("a2", "ac2"): build_synthetic_academy("a2", "ac2", TS)}
+    return {
+        ("a1", "ac1"): build_synthetic_academy("a1", "ac1", TS),
+        ("a2", "ac2"): build_synthetic_academy("a2", "ac2", TS),
+    }
 
 
 def test_pack_registration_metadata():
     meta = get_capability("sports_academy_operations")
     assert meta is not None
-    for key in ("ontology", "roles", "workflows", "metrics",
-                "connector_contracts", "data_classifications", "approval_requirements",
-                "failure_modes", "fixtures", "reused_core"):
+    for key in (
+        "ontology",
+        "roles",
+        "workflows",
+        "metrics",
+        "connector_contracts",
+        "data_classifications",
+        "approval_requirements",
+        "failure_modes",
+        "fixtures",
+        "reused_core",
+    ):
         assert key in meta, key
     assert meta["read_only_start"] is True
     assert meta["production_readiness"] == "NOT_ESTABLISHED"
@@ -646,14 +757,17 @@ def test_approval_gating_read_only_period():
     owner_role = draft.body["owner_role"]
     blocked = False
     try:
-        rt.approve_action(draft.record_id, "approver-1", "academy_owner", owner, owner_role, as_of=TS)
+        rt.approve_action(
+            draft.record_id, "approver-1", "academy_owner", owner, owner_role, as_of=TS
+        )
     except Exception:
         blocked = True
     assert blocked, "read-only period must block committal approvals"
     # after exiting the read-only period, approval by the right role succeeds
     rt.exit_read_only_period(TS, "academy-owner", "academy_owner")
     approved = rt.approve_action(
-        draft.record_id, "approver-1", "academy_owner", owner, owner_role, as_of=TS)
+        draft.record_id, "approver-1", "academy_owner", owner, owner_role, as_of=TS
+    )
     assert approved.body["approval_state"] == "approved"
 
 
@@ -694,8 +808,9 @@ def test_runtime_deny_and_rollback():
     assert len(drafts) >= 2
     denied = rt.deny_action(drafts[0].record_id, "head-coach", "not needed", as_of=TS)
     assert denied.body["approval_state"] == "denied"
-    rolled = rt.rollback_action(drafts[1].record_id, "academy-owner", "academy_owner",
-                                 "clerical error", as_of=TS)
+    rolled = rt.rollback_action(
+        drafts[1].record_id, "academy-owner", "academy_owner", "clerical error", as_of=TS
+    )
     assert rolled.body["approval_state"] == "rolled_back"
     pack = rt.build_evidence_pack(TS)
     assert pack["approval_summary"]["denied"] >= 1

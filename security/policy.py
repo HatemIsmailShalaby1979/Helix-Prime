@@ -79,10 +79,28 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
     # 1. Tenant/client isolation
     # If identity has tenant/client scope, it must match target if target is specified
     # If identity is tenant-scoped and tries to access different tenant -> deny
-    if req.target_tenant_id and req.identity.tenant_id and req.identity.tenant_id != req.target_tenant_id:
-        return AuthorizationDecision(False, f"tenant isolation: identity tenant {req.identity.tenant_id!r} != target {req.target_tenant_id!r}", "tenant_isolation", None)
-    if req.target_client_id and req.identity.client_id and req.identity.client_id != req.target_client_id:
-        return AuthorizationDecision(False, f"client isolation: identity client {req.identity.client_id!r} != target {req.target_client_id!r}", "tenant_isolation", None)
+    if (
+        req.target_tenant_id
+        and req.identity.tenant_id
+        and req.identity.tenant_id != req.target_tenant_id
+    ):
+        return AuthorizationDecision(
+            False,
+            f"tenant isolation: identity tenant {req.identity.tenant_id!r} != target {req.target_tenant_id!r}",
+            "tenant_isolation",
+            None,
+        )
+    if (
+        req.target_client_id
+        and req.identity.client_id
+        and req.identity.client_id != req.target_client_id
+    ):
+        return AuthorizationDecision(
+            False,
+            f"client isolation: identity client {req.identity.client_id!r} != target {req.target_client_id!r}",
+            "tenant_isolation",
+            None,
+        )
     # Also, if identity is client-scoped and target is different client, deny
     # For service/human without tenant/client, we allow but log (local-first)
 
@@ -93,11 +111,18 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
     try:
         owner_role = get_agent_for_capability(cap)
     except ValueError as e:
-        return AuthorizationDecision(False, f"unknown capability {cap!r}: {e}", "unknown_capability")
+        return AuthorizationDecision(
+            False, f"unknown capability {cap!r}: {e}", "unknown_capability"
+        )
 
     # If owning_role_id explicitly provided, it must match the capability owner (deterministic routing)
     if req.owning_role_id and req.owning_role_id != owner_role:
-        return AuthorizationDecision(False, f"capability {cap!r} owned by {owner_role!r}, not {req.owning_role_id!r}", "unauthorized_role", owner_role)
+        return AuthorizationDecision(
+            False,
+            f"capability {cap!r} owned by {owner_role!r}, not {req.owning_role_id!r}",
+            "unauthorized_role",
+            owner_role,
+        )
 
     # 3. Allowed capability: check if identity's role is allowed to use this capability
     # For C3, we allow if:
@@ -113,11 +138,28 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
             # Check if identity's role is allowed to call owner
             try:
                 catalog = _load_catalog()
-                peer_allowed = catalog.get("roles_by_id", {}).get(req.identity.role_id, {}).get("allowed_peer_calls", [])
-                if owner_role not in peer_allowed and req.identity.role_id not in ("sami", "compliance_quality_gm"):
-                    return AuthorizationDecision(False, f"role {req.identity.role_id!r} not allowed to act on capability {cap!r} owned by {owner_role!r}", "unauthorized_role", owner_role)
+                peer_allowed = (
+                    catalog.get("roles_by_id", {})
+                    .get(req.identity.role_id, {})
+                    .get("allowed_peer_calls", [])
+                )
+                if owner_role not in peer_allowed and req.identity.role_id not in (
+                    "sami",
+                    "compliance_quality_gm",
+                ):
+                    return AuthorizationDecision(
+                        False,
+                        f"role {req.identity.role_id!r} not allowed to act on capability {cap!r} owned by {owner_role!r}",
+                        "unauthorized_role",
+                        owner_role,
+                    )
             except Exception:
-                return AuthorizationDecision(False, f"role {req.identity.role_id!r} not allowed for {cap!r}", "unauthorized_role", owner_role)
+                return AuthorizationDecision(
+                    False,
+                    f"role {req.identity.role_id!r} not allowed for {cap!r}",
+                    "unauthorized_role",
+                    owner_role,
+                )
 
     # 4. Allowed tool: if tool provided, must be allowed for owning role (or identity role)
     if req.tool:
@@ -126,9 +168,16 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
         try:
             allowed = is_tool_allowed(tool_role, req.tool)
             if not allowed:
-                return AuthorizationDecision(False, f"tool {req.tool!r} not allowed for role {tool_role!r}", "unauthorized_tool", owner_role)
+                return AuthorizationDecision(
+                    False,
+                    f"tool {req.tool!r} not allowed for role {tool_role!r}",
+                    "unauthorized_tool",
+                    owner_role,
+                )
         except ValueError as e:
-            return AuthorizationDecision(False, f"tool check failed: {e}", "unauthorized_tool", owner_role)
+            return AuthorizationDecision(
+                False, f"tool check failed: {e}", "unauthorized_tool", owner_role
+            )
 
     # 5. Approval: if requires_approval, we don't auto-allow; caller must provide approval.
     # For authorize, we return allowed but note approval required; the engine will enforce.

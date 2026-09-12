@@ -30,13 +30,39 @@ ROOT = manifest_mod.ROOT
 
 # File extensions we treat as source/evidence/text for secret scanning.
 SCAN_EXTENSIONS = {
-    ".py", ".json", ".yaml", ".yml", ".toml", ".txt",
-    ".md", ".bat", ".sql", ".csv", ".sh",
+    ".py",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".txt",
+    ".md",
+    ".bat",
+    ".sql",
+    ".csv",
+    ".sh",
 }
 # Directories to skip (generated, vendored, venv).
-SCAN_SKIP_DIRS = {".venv", "venv", "node_modules", "__pycache__", ".git", ".pytest_cache",
-                  ".mypy_cache", ".ruff_cache", "evidence", "dist", "build", "target",
-                  "site-packages", ".tox", ".nox", ".hypothesis", ".eggs", ".workbuddy-ai"}
+SCAN_SKIP_DIRS = {
+    ".venv",
+    "venv",
+    "node_modules",
+    "__pycache__",
+    ".git",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    "evidence",
+    "dist",
+    "build",
+    "target",
+    "site-packages",
+    ".tox",
+    ".nox",
+    ".hypothesis",
+    ".eggs",
+    ".workbuddy-ai",
+}
 
 
 def _is_skipped_dir(dirname: str) -> bool:
@@ -63,12 +89,26 @@ _SECRET_PATTERNS = [
 # demo/test fixture values. Real-looking credentials (long hex, aws keys,
 # private keys) are still flagged.
 _FAKE_SCAN_ALLOW = [
-    "api_key=example", "api_key=changeme", "api_key=your-api-key",
-    "password=changeme", "password=your-password", "secret=changeme",
-    "changeme", "your-api-key", "your-random-session-secret",
-    "XXXX", "xxxx", "example", "placeholder", "redacted",
-    "your_password", "your-password", "REPLACE", "REPLACE_ME",
-    "sk-1234567890abcdef", "s3cr3tpass",
+    "api_key=example",
+    "api_key=changeme",
+    "api_key=your-api-key",
+    "password=changeme",
+    "password=your-password",
+    "secret=changeme",
+    "changeme",
+    "your-api-key",
+    "your-random-session-secret",
+    "XXXX",
+    "xxxx",
+    "example",
+    "placeholder",
+    "redacted",
+    "your_password",
+    "your-password",
+    "REPLACE",
+    "REPLACE_ME",
+    "sk-1234567890abcdef",
+    "s3cr3tpass",
 ]
 
 
@@ -80,10 +120,12 @@ def _iter_scan_files(subdirs: Optional[List[str]] = None) -> List[pathlib.Path]:
         if not root.exists():
             continue
         import os
+
         for dirpath, dirnames, filenames in os.walk(root):
             dp = pathlib.Path(dirpath)
             dirnames[:] = [
-                d for d in dirnames
+                d
+                for d in dirnames
                 if not _is_skipped_dir(d)
                 and not any(_is_skipped_dir(part) for part in (dp / d).parts)
             ]
@@ -111,11 +153,13 @@ def scan_for_secrets(subdirs: Optional[List[str]] = None) -> Dict[str, Any]:
                     continue
                 if _is_allowed_value(seg):
                     continue
-                findings.append({
-                    "file": str(p.relative_to(ROOT)),
-                    "line": _line_of(text, m.start()),
-                    "match": seg[:40],
-                })
+                findings.append(
+                    {
+                        "file": str(p.relative_to(ROOT)),
+                        "line": _line_of(text, m.start()),
+                        "match": seg[:40],
+                    }
+                )
     return {"count": len(findings), "findings": findings}
 
 
@@ -136,8 +180,15 @@ def check_no_secrets(subdirs: Optional[List[str]] = None) -> Dict[str, Any]:
 
 def check_classification() -> Dict[str, Any]:
     from security.classification import is_valid_classification
-    canonical = {"public", "internal", "client_confidential", "personnel_sensitive",
-                 "financial", "regulated_high_risk"}
+
+    canonical = {
+        "public",
+        "internal",
+        "client_confidential",
+        "personnel_sensitive",
+        "financial",
+        "regulated_high_risk",
+    }
     ok = all(is_valid_classification(c) for c in canonical)
     return {"ok": ok, "detail": f"classification: canonical set present={ok}"}
 
@@ -145,12 +196,16 @@ def check_classification() -> Dict[str, Any]:
 def check_deny_by_default() -> Dict[str, Any]:
     from security.identity import Identity
     from security.policy import AuthorizationRequest, authorize
+
     # Unknown capability must deny by default, not allow.
-    idn = Identity(actor="probe", actor_type="agent", tenant_id="t1",
-                   client_id="c1", role_id="ops_gm")
+    idn = Identity(
+        actor="probe", actor_type="agent", tenant_id="t1", client_id="c1", role_id="ops_gm"
+    )
     req = AuthorizationRequest(
-        identity=idn, capability="__unknown_capability_zzz__",
-        owning_role_id="does_not_exist", action="execute",
+        identity=idn,
+        capability="__unknown_capability_zzz__",
+        owning_role_id="does_not_exist",
+        action="execute",
     )
     decision = authorize(req)
     ok = not decision.allowed
@@ -202,6 +257,7 @@ def check_audit_integrity(audit_db: Optional[str] = None) -> Dict[str, Any]:
 
 def check_redaction() -> Dict[str, Any]:
     from security.secrets import redact
+
     secret_value = "sk-super-secret-1234567890-abcdefghijklmnop"
     r = redact(f"the api key is {secret_value}")
     # The sensitive value must not survive redaction.
@@ -212,11 +268,20 @@ def check_redaction() -> Dict[str, Any]:
 def check_malformed_output() -> Dict[str, Any]:
     # Malformed/engine failure output must map to a typed failure, not a bare crash.
     from engines.contracts import EngineResult
+
     res = EngineResult.failure(
-        engine_id="wfm", display_name="WFM", capability_ids=["wfm_forecast"],
-        tenant_id="t1", client_id="c1", correlation_id="corr-1",
-        causation_id=None, actor="probe", owning_role_id="ops_gm",
-        input_payload={}, error_code="MALFORMED_OUTPUT", error_message="bad fields",
+        engine_id="wfm",
+        display_name="WFM",
+        capability_ids=["wfm_forecast"],
+        tenant_id="t1",
+        client_id="c1",
+        correlation_id="corr-1",
+        causation_id=None,
+        actor="probe",
+        owning_role_id="ops_gm",
+        input_payload={},
+        error_code="MALFORMED_OUTPUT",
+        error_message="bad fields",
     )
     ok = res.error is not None and res.error.get("code") == "MALFORMED_OUTPUT"
     return {"ok": ok, "detail": f"malformed_output: typed failure present={ok}"}

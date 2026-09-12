@@ -81,9 +81,12 @@ class TestSodIntegrity:
         eng = _make_engine(tmp_path)
         wf = eng.submit(_make_workflow_request())
         assert wf.state == WorkflowState.AWAITING_APPROVAL
-        appr = _make_approval("unknown_actor", role_id="unknown_role",
-                              correlation_id=wf.correlation.correlation_id,
-                              subject_id=wf.workflow_id)
+        appr = _make_approval(
+            "unknown_actor",
+            role_id="unknown_role",
+            correlation_id=wf.correlation.correlation_id,
+            subject_id=wf.workflow_id,
+        )
         with pytest.raises((ValueError, GovernanceControlUnavailable)):
             eng.approve(wf.workflow_id, appr)
 
@@ -92,19 +95,25 @@ class TestSodIntegrity:
         super-role literals in the approve() method's SOD check section."""
         import inspect
         from control_plane.engine import Engine
+
         src = inspect.getsource(Engine.approve)
         assert '"sami"' not in src, "Found hardcoded 'sami' literal in Engine.approve"
         assert "'sami'" not in src, "Found hardcoded 'sami' literal in Engine.approve"
-        assert "compliance_quality_gm" not in src, "Found hardcoded compliance_quality_gm in Engine.approve"
+        assert (
+            "compliance_quality_gm" not in src
+        ), "Found hardcoded compliance_quality_gm in Engine.approve"
 
     def test_sami_approves_ops_gm_workflow(self, tmp_path):
         """With the default catalog, sami (a universal approver) can approve ops_gm workflows."""
         eng = _make_engine(tmp_path)
         wf = eng.submit(_make_workflow_request(owning_role_id="ops_gm", capability="ops_execution"))
         assert wf.state == WorkflowState.AWAITING_APPROVAL
-        appr = _make_approval("sami", role_id="sami",
-                              correlation_id=wf.correlation.correlation_id,
-                              subject_id=wf.workflow_id)
+        appr = _make_approval(
+            "sami",
+            role_id="sami",
+            correlation_id=wf.correlation.correlation_id,
+            subject_id=wf.workflow_id,
+        )
         result = eng.approve(wf.workflow_id, appr)
         assert result.state == WorkflowState.EXECUTING
 
@@ -113,9 +122,12 @@ class TestSodIntegrity:
         eng = _make_engine(tmp_path)
         wf = eng.submit(_make_workflow_request(owning_role_id="ops_gm", capability="ops_execution"))
         assert wf.state == WorkflowState.AWAITING_APPROVAL
-        appr = _make_approval("andy", role_id="compliance_quality_gm",
-                              correlation_id=wf.correlation.correlation_id,
-                              subject_id=wf.workflow_id)
+        appr = _make_approval(
+            "andy",
+            role_id="compliance_quality_gm",
+            correlation_id=wf.correlation.correlation_id,
+            subject_id=wf.workflow_id,
+        )
         result = eng.approve(wf.workflow_id, appr)
         assert result.state == WorkflowState.EXECUTING
 
@@ -137,23 +149,32 @@ class TestSodIntegrity:
             if role["id"] == "sami" and "ops_gm" in can_review:
                 can_review.remove("ops_gm")
                 sod["can_review"] = can_review
-        with tempfile.NamedTemporaryFile(suffix=".yaml", mode="w", delete=False, encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            suffix=".yaml", mode="w", delete=False, encoding="utf-8"
+        ) as f:
             yaml.dump(modified, f)
             tmp_catalog = f.name
         try:
             from organization.role_catalog import load_role_catalog
+
             loaded = load_role_catalog(tmp_catalog)
             eng = _make_engine(tmp_path)
             eng.catalog = loaded
-            wf = eng.submit(_make_workflow_request(owning_role_id="ops_gm", capability="ops_execution"))
+            wf = eng.submit(
+                _make_workflow_request(owning_role_id="ops_gm", capability="ops_execution")
+            )
             assert wf.state == WorkflowState.AWAITING_APPROVAL
             # sami is no longer a universal approver and no longer in can_review for ops_gm;
             # ops_gm requires compliance_quality_gm review, so sami is denied.
-            appr = _make_approval("sami", role_id="sami",
-                                  correlation_id=wf.correlation.correlation_id,
-                                  subject_id=wf.workflow_id)
+            appr = _make_approval(
+                "sami",
+                role_id="sami",
+                correlation_id=wf.correlation.correlation_id,
+                subject_id=wf.workflow_id,
+            )
             with pytest.raises((ValueError, GovernanceControlUnavailable)):
                 eng.approve(wf.workflow_id, appr)
         finally:
             import os
+
             os.unlink(tmp_catalog)

@@ -29,6 +29,7 @@ from integrations.transport import Transport, TransportResult, InMemoryTransport
 @dataclass
 class StudyStudioResponse:
     """Standard response from Study Studio adapter calls."""
+
     success: bool
     event: Optional[IntegrationEvent] = None
     error: Optional[Dict[str, Any]] = None
@@ -89,7 +90,10 @@ class StudyStudioAdapter:
         if content_type not in {"lesson", "quiz", "podcast", "glossary", "podcast_script"}:
             return StudyStudioResponse(
                 success=False,
-                error={"code": "malformed_payload", "message": f"Invalid content_type: {content_type}"}
+                error={
+                    "code": "malformed_payload",
+                    "message": f"Invalid content_type: {content_type}",
+                },
             )
 
         corr = correlation_id or f"corr_{int(time.time() * 1000)}"
@@ -129,7 +133,9 @@ class StudyStudioAdapter:
 
     # ── Response Handling ────────────────────────────────────────────────────
 
-    def handle_content_generation_completed(self, event: ContentGenerationCompleted) -> StudyStudioResponse:
+    def handle_content_generation_completed(
+        self, event: ContentGenerationCompleted
+    ) -> StudyStudioResponse:
         """Process ContentGenerationCompleted event from Study Studio."""
         self.transport.acknowledge(event.event_id)
         p = event.payload
@@ -144,7 +150,7 @@ class StudyStudioAdapter:
                 "status": p.get("status"),
                 "error": p.get("error"),
                 "metadata": p.get("metadata"),
-            }
+            },
         )
 
     def handle_integration_error(self, event: IntegrationError) -> StudyStudioResponse:
@@ -157,7 +163,7 @@ class StudyStudioAdapter:
                 "code": event.payload.get("error_code"),
                 "message": event.payload.get("error_message"),
                 "retry_count": event.payload.get("retry_count", 0),
-            }
+            },
         )
 
     # ── Polling ──────────────────────────────────────────────────────────────
@@ -174,6 +180,7 @@ class StudyStudioAdapter:
 
 
 # ── Fake Study Studio for Testing ────────────────────────────────────────────
+
 
 class FakeStudyStudio:
     """

@@ -57,9 +57,7 @@ class AlertDispatcher:
         webhook_url: str | None = None,
     ):
         self.routing = routing or DEFAULT_ROUTING
-        self.audit_log = (
-            Path(audit_log) if audit_log else Path("alerts") / "audit.jsonl"
-        )
+        self.audit_log = Path(audit_log) if audit_log else Path("alerts") / "audit.jsonl"
         self.email_config = email_config or {}
         self.webhook_url = webhook_url
 
@@ -113,9 +111,7 @@ class AlertDispatcher:
         for channel in channels:
             handler = self._channels.get(channel)
             if handler is None:
-                logger.warning(
-                    "Unknown channel '%s' for severity '%s'", channel, severity
-                )
+                logger.warning("Unknown channel '%s' for severity '%s'", channel, severity)
                 continue
             try:
                 if handler(alert):
@@ -135,11 +131,7 @@ class AlertDispatcher:
     # Channel handlers
     # ------------------------------------------------------------------ #
     def _send_log(self, alert: dict[str, Any]) -> bool:
-        level = (
-            logging.WARNING
-            if alert.get("severity") in ("critical", "high")
-            else logging.INFO
-        )
+        level = logging.WARNING if alert.get("severity") in ("critical", "high") else logging.INFO
         logger.log(
             level,
             "ALERT [%s] customer=%s score=%.2f factors=%s",
@@ -258,9 +250,7 @@ def create_alert_dispatcher(
         email_config["from"] = os.environ.get("CX_ALERT_FROM", "helix-cx@local")
         recipients = os.environ.get("CX_ALERT_RECIPIENTS")
         if recipients:
-            email_config["recipients"] = [
-                r.strip() for r in recipients.split(",") if r.strip()
-            ]
+            email_config["recipients"] = [r.strip() for r in recipients.split(",") if r.strip()]
 
     webhook_url = webhook_url or os.environ.get("CX_ALERT_WEBHOOK")
 

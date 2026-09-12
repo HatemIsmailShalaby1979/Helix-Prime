@@ -15,7 +15,7 @@ Validation is typed and deterministic for task payloads, evidence, logs, workflo
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 
 class DataClassification:
@@ -55,7 +55,9 @@ def _require_valid_classification(value: Any, field_path: str) -> str:
         raise ValueError(f"{field_path}: classification must be non-empty string, got {value!r}")
     v = value.strip().lower()
     if v not in DataClassification.ALL:
-        raise ValueError(f"{field_path}: unknown classification {value!r} — fail closed (allowed: {sorted(DataClassification.ALL)})")
+        raise ValueError(
+            f"{field_path}: unknown classification {value!r} — fail closed (allowed: {sorted(DataClassification.ALL)})"
+        )
     return v
 
 
@@ -68,22 +70,32 @@ class ClassificationMetadata:
     source: Optional[str] = None
 
     def __post_init__(self) -> None:
-        self.classification = _require_valid_classification(self.classification, "ClassificationMetadata.classification")
+        self.classification = _require_valid_classification(
+            self.classification, "ClassificationMetadata.classification"
+        )
         if self.reason is not None:
             if not isinstance(self.reason, str) or not self.reason.strip():
-                raise ValueError(f"ClassificationMetadata.reason: must be non-empty string or None, got {self.reason!r}")
+                raise ValueError(
+                    f"ClassificationMetadata.reason: must be non-empty string or None, got {self.reason!r}"
+                )
             self.reason = self.reason.strip()
         if self.tenant_id is not None:
             if not isinstance(self.tenant_id, str) or not self.tenant_id.strip():
-                raise ValueError(f"ClassificationMetadata.tenant_id: must be non-empty string or None, got {self.tenant_id!r}")
+                raise ValueError(
+                    f"ClassificationMetadata.tenant_id: must be non-empty string or None, got {self.tenant_id!r}"
+                )
             self.tenant_id = self.tenant_id.strip()
         if self.client_id is not None:
             if not isinstance(self.client_id, str) or not self.client_id.strip():
-                raise ValueError(f"ClassificationMetadata.client_id: must be non-empty string or None, got {self.client_id!r}")
+                raise ValueError(
+                    f"ClassificationMetadata.client_id: must be non-empty string or None, got {self.client_id!r}"
+                )
             self.client_id = self.client_id.strip()
         if self.source is not None:
             if not isinstance(self.source, str) or not self.source.strip():
-                raise ValueError(f"ClassificationMetadata.source: must be non-empty string or None, got {self.source!r}")
+                raise ValueError(
+                    f"ClassificationMetadata.source: must be non-empty string or None, got {self.source!r}"
+                )
             self.source = self.source.strip()
 
     def to_dict(self) -> Dict[str, Any]:
@@ -118,7 +130,9 @@ def validate_payload_classification(
     if embedded is not None:
         emb = _require_valid_classification(embedded, f"{field_path}.data_classification")
         if emb != cls:
-            raise ValueError(f"{field_path}: embedded classification {emb!r} != declared {cls!r} — fail closed")
+            raise ValueError(
+                f"{field_path}: embedded classification {emb!r} != declared {cls!r} — fail closed"
+            )
     return cls
 
 

@@ -182,9 +182,7 @@ class SalesPipeline:
         if self._should_auto_advance(lead_id, new_status):
             self._auto_advance_lead(lead_id)
 
-        self.logger.info(
-            f"Updated lead {lead.name} status: {old_status} -> {new_status}"
-        )
+        self.logger.info(f"Updated lead {lead.name} status: {old_status} -> {new_status}")
         return True
 
     def update_deal_stage(
@@ -380,9 +378,7 @@ class SalesPipeline:
 
         # Average deal value
         average_deal_value = (
-            sum(d.value for d in self.deals.values()) / total_deals
-            if total_deals > 0
-            else 0
+            sum(d.value for d in self.deals.values()) / total_deals if total_deals > 0 else 0
         )
 
         # Total pipeline value
@@ -409,8 +405,7 @@ class SalesPipeline:
         for month in range(1, self.config["deal_forecasting"]["forecast_horizon"] + 1):
             # Calculate forecast based on current pipeline
             base_forecast = (
-                sum(d.value * d.probability for d in self.deals.values())
-                / len(self.deals)
+                sum(d.value * d.probability for d in self.deals.values()) / len(self.deals)
                 if self.deals
                 else 0
             )

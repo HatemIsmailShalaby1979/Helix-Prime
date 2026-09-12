@@ -35,11 +35,7 @@ GATE_IMPL: Dict[str, str] = {}
 
 
 def _now() -> str:
-    return (
-        datetime.datetime.now(datetime.timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
@@ -49,6 +45,7 @@ def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
 
 
 # ── individual gate checks ─────────────────────────────────────────────────
+
 
 def _gate_repository_state() -> tuple[bool, str]:
     manifest_mod.build_manifest()  # ensure git + runtime detectable
@@ -60,7 +57,8 @@ def _gate_reproducible_install() -> tuple[bool, str]:
     if not p.exists():
         return False, "missing release/requirements.lock.txt"
     lines = [
-        ln for ln in p.read_text(encoding="utf-8").splitlines()
+        ln
+        for ln in p.read_text(encoding="utf-8").splitlines()
         if ln.strip() and not ln.startswith("#")
     ]
     ok = len(lines) > 0
@@ -72,6 +70,7 @@ def _gate_configuration_validation() -> tuple[bool, str]:
     ok_gates = len(prof.get("gates", profiles.GATE_NAMES)) >= 10
     ok_profiles = len(prof.get("profiles", profiles.PROFILE_ORDER)) >= 4
     import json as _json
+
     schema_p = ROOT / "release" / "manifest.schema.json"
     try:
         _json.loads(schema_p.read_text(encoding="utf-8")) if schema_p.exists() else None
@@ -80,6 +79,7 @@ def _gate_configuration_validation() -> tuple[bool, str]:
         ok_schema = False
     ok = ok_gates and ok_profiles and ok_schema
     return ok, f"configuration: gates={ok_gates} profiles={ok_profiles} schema={ok_schema}"
+
 
 def _gate_dependency_locking() -> tuple[bool, str]:
     p = ROOT / "release" / "requirements.lock.txt"
@@ -98,10 +98,12 @@ def _gate_startup_readiness() -> tuple[bool, str]:
 def _gate_backup_restore() -> tuple[bool, str]:
     # Synthetic-state backup/restore (never mutates live DBs).
     from release import backup
+
     work = tempfile.mkdtemp(prefix="hp_gate_br_")
     try:
         from control_plane.store import Store
         from security.audit import AuditTrail, AuditRecord
+
         db = os.path.join(work, "control_plane", "workflow.db")
         store = Store(db_path=db)
         store.close()
@@ -109,8 +111,13 @@ def _gate_backup_restore() -> tuple[bool, str]:
         trail = AuditTrail(db_path=audit_db)
         prev = None
         for i in range(2):
-            rec = AuditRecord.new(event_type="br", actor="gate", actor_type="service",
-                                  decision="succeeded", previous_hash=prev)
+            rec = AuditRecord.new(
+                event_type="br",
+                actor="gate",
+                actor_type="service",
+                decision="succeeded",
+                previous_hash=prev,
+            )
             trail.append(rec)
             prev = rec.current_hash
         trail.close()
@@ -120,6 +127,7 @@ def _gate_backup_restore() -> tuple[bool, str]:
         backup.restore_state(backup_dir, restore_dir, repo_root=work, schema_ok=True)
         # verify restored audit chain
         from security.audit import AuditTrail as AT2
+
         t2 = AT2(db_path=os.path.join(restore_dir, "security", "audit.db"))
         valid, msg = t2.verify_chain()
         t2.close()
@@ -131,10 +139,12 @@ def _gate_backup_restore() -> tuple[bool, str]:
 
 def _gate_rollback() -> tuple[bool, str]:
     from release import backup
+
     prev = {"git_commit": "AAAA", "classification": "PRODUCTION_CANDIDATE", "version": "0.9.0-c8"}
     cur = {"git_commit": "BBBB", "classification": "PRODUCTION_CANDIDATE", "version": "0.9.0-c8"}
     import tempfile
     import os
+
     work = tempfile.mkdtemp(prefix="hp_gate_rb_")
     path = os.path.join(work, "release-manifest.json")
     backup.rollback_manifest(prev, cur, target_path=path)
@@ -145,6 +155,7 @@ def _gate_rollback() -> tuple[bool, str]:
 
 def _gate_data_isolation() -> tuple[bool, str]:
     from release import harness as h
+
     ti = h._check("tenant_isolation", h._check_tenant_isolation)
     cl = security_gate.check_classification()
     dbd = security_gate.check_deny_by_default()
@@ -180,9 +191,15 @@ def _gate_security_checks() -> tuple[bool, str]:
 
 def _gate_failure_recovery() -> tuple[bool, str]:
     h = harness_mod.run_harness(num_soak_workflows=3)
-    fail_sensitive = ["engine_timeout", "unavailable_ollama", "unavailable_sibling",
-                      "corrupted_event", "corrupted_db", "interrupted_workflow",
-                      "c7_transport_retry_deadletter"]
+    fail_sensitive = [
+        "engine_timeout",
+        "unavailable_ollama",
+        "unavailable_sibling",
+        "corrupted_event",
+        "corrupted_db",
+        "interrupted_workflow",
+        "c7_transport_retry_deadletter",
+    ]
     ok = all(h["checks"][k]["ok"] for k in fail_sensitive) and h["all_ok"]
     return ok, f"failure_recovery: all_ok={h['all_ok']}"
 
@@ -217,9 +234,7 @@ def _gate_release_approval() -> tuple[bool, str]:
         # The C8 go/no-go is a LOCAL consent flag scoped to candidate/pilot
         # classification only. It is NOT a human production approval; the
         # production profile additionally requires all production-only gates.
-        return approved and scope_ok, (
-            f"release_approval: approved={approved} scope_ok={scope_ok}"
-        )
+        return approved and scope_ok, (f"release_approval: approved={approved} scope_ok={scope_ok}")
     except Exception as e:  # noqa: BLE001
         return False, f"release_approval: {type(e).__name__}: {e}"
 
@@ -323,9 +338,7 @@ def run_gate(
 
     # release approval gate
     approval = results.get("release_approval", {}).get("ok", False)
-    classification = profiles.classify_from_gate_results(
-        profile, green, release_approved=approval
-    )
+    classification = profiles.classify_from_gate_results(profile, green, release_approved=approval)
 
     rep = observability.run_observability_report()
     harness_res = harness_mod.run_harness(num_soak_workflows=num_soak_workflows)

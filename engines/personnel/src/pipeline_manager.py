@@ -158,9 +158,7 @@ class PipelineManager:
     def create_job_posting(self, job_posting: JobPosting) -> None:
         """Create a new job posting."""
         self.job_postings[job_posting.job_id] = job_posting
-        self.logger.info(
-            f"Created job posting: {job_posting.title} in {job_posting.department}"
-        )
+        self.logger.info(f"Created job posting: {job_posting.title} in {job_posting.department}")
 
     def update_candidate_status(
         self,
@@ -214,9 +212,7 @@ class PipelineManager:
                 "Auto-advanced based on stage configuration",
             )
 
-    def screen_candidates(
-        self, job_id: str, min_score: float | None = None
-    ) -> list[Candidate]:
+    def screen_candidates(self, job_id: str, min_score: float | None = None) -> list[Candidate]:
         """Screen candidates for a job posting."""
         if job_id not in self.job_postings:
             return []
@@ -239,14 +235,10 @@ class PipelineManager:
                 candidate.status = "screened"
                 qualified_candidates.append(candidate)
 
-        self.logger.info(
-            f"Screened {len(qualified_candidates)} candidates for {job.title}"
-        )
+        self.logger.info(f"Screened {len(qualified_candidates)} candidates for {job.title}")
         return qualified_candidates
 
-    def _calculate_screening_score(
-        self, candidate: Candidate, job: JobPosting
-    ) -> float:
+    def _calculate_screening_score(self, candidate: Candidate, job: JobPosting) -> float:
         """Calculate screening score for a candidate."""
         scores = []
 
@@ -329,9 +321,7 @@ class PipelineManager:
         self.logger.info(f"Made offer to {candidate.name} for {candidate.position}")
         return True
 
-    def process_onboarding(
-        self, candidate_id: str, onboarding_tasks: list[str]
-    ) -> bool:
+    def process_onboarding(self, candidate_id: str, onboarding_tasks: list[str]) -> bool:
         """Process candidate onboarding."""
         if candidate_id not in self.candidates:
             return False
@@ -386,12 +376,8 @@ class PipelineManager:
         # Calculate statistics
         total_candidates = len(candidates)
         screened_candidates = len([c for c in candidates if c.status == "screened"])
-        interviewed_candidates = len(
-            [c for c in candidates if c.status == "interview_completed"]
-        )
-        offered_candidates = len(
-            [c for c in candidates if c.status == "offer_extended"]
-        )
+        interviewed_candidates = len([c for c in candidates if c.status == "interview_completed"])
+        offered_candidates = len([c for c in candidates if c.status == "offer_extended"])
         onboarded_candidates = len([c for c in candidates if c.status == "onboarded"])
 
         return {
@@ -406,9 +392,7 @@ class PipelineManager:
             "interviewed_candidates": interviewed_candidates,
             "offered_candidates": offered_candidates,
             "onboarded_candidates": onboarded_candidates,
-            "fill_rate": onboarded_candidates / total_candidates
-            if total_candidates > 0
-            else 0,
+            "fill_rate": onboarded_candidates / total_candidates if total_candidates > 0 else 0,
             "average_score": sum(c.score for c in candidates) / total_candidates
             if total_candidates > 0
             else 0,
@@ -432,12 +416,8 @@ class PipelineManager:
             stage_counts[stage] = stage_counts.get(stage, 0) + 1
 
         # Average time in pipeline
-        total_days = sum(
-            (datetime.now() - c.applied_date).days for c in self.candidates.values()
-        )
-        avg_days_in_pipeline = (
-            total_days / total_candidates if total_candidates > 0 else 0
-        )
+        total_days = sum((datetime.now() - c.applied_date).days for c in self.candidates.values())
+        avg_days_in_pipeline = total_days / total_candidates if total_candidates > 0 else 0
 
         return {
             "total_candidates": total_candidates,
@@ -455,9 +435,7 @@ class PipelineManager:
 
         # Calculate efficiency based on conversion rates
         total_candidates = len(self.candidates)
-        completed_candidates = len(
-            [c for c in self.candidates.values() if c.status == "onboarded"]
-        )
+        completed_candidates = len([c for c in self.candidates.values() if c.status == "onboarded"])
 
         efficiency = completed_candidates / total_candidates
         return efficiency
@@ -580,15 +558,9 @@ if __name__ == "__main__":
 
     # Schedule interviews
     print("\nScheduling interviews...")
-    pipeline_manager.schedule_interview(
-        "candidate_001", "technical_lead", "2024-01-20", "10:00"
-    )
-    pipeline_manager.schedule_interview(
-        "candidate_002", "hr_manager", "2024-01-21", "14:00"
-    )
-    pipeline_manager.schedule_interview(
-        "candidate_003", "department_head", "2024-01-22", "11:00"
-    )
+    pipeline_manager.schedule_interview("candidate_001", "technical_lead", "2024-01-20", "10:00")
+    pipeline_manager.schedule_interview("candidate_002", "hr_manager", "2024-01-21", "14:00")
+    pipeline_manager.schedule_interview("candidate_003", "department_head", "2024-01-22", "11:00")
 
     # Conduct interviews
     print("\nConducting interviews...")

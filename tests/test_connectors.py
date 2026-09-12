@@ -11,7 +11,9 @@ def test_demo_connectors_normalize_customer_success_data():
     assert account.source.provider == "Salesforce"
     assert tickets[0].source.provider == "Zendesk"
     assert enrichment.source.provider == "Clay"
-    assert all(x.source.data_mode == "simulated_realistic" for x in (account, tickets[0], enrichment))
+    assert all(
+        x.source.data_mode == "simulated_realistic" for x in (account, tickets[0], enrichment)
+    )
 
 
 def test_connector_scope_isolation():

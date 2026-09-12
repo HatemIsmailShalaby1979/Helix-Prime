@@ -57,14 +57,19 @@ def is_windows() -> bool:
     return os.name == "nt"
 
 
-def _retrying(predicate, attempts: int = _DEFAULT_ATTEMPTS, backoff: float = _DEFAULT_BACKOFF) -> bool:
+def _retrying(
+    predicate, attempts: int = _DEFAULT_ATTEMPTS, backoff: float = _DEFAULT_BACKOFF
+) -> bool:
     """Run ``predicate`` until it returns True, retrying transient lock errors."""
     for attempt in range(attempts):
         try:
             if predicate():
                 return True
         except OSError as exc:
-            if getattr(exc, "winerror", None) not in _RETRY_ERRNOS and exc.errno not in _RETRY_ERRNOS:
+            if (
+                getattr(exc, "winerror", None) not in _RETRY_ERRNOS
+                and exc.errno not in _RETRY_ERRNOS
+            ):
                 raise
         if attempt < attempts - 1:
             gc.collect()
@@ -115,7 +120,9 @@ def force_release(*paths: str | Path, attempts: int = _DEFAULT_ATTEMPTS) -> None
             )
 
 
-def rmtree(path: str | Path, *, database_names: Sequence[str] = (), attempts: int = _DEFAULT_ATTEMPTS) -> None:
+def rmtree(
+    path: str | Path, *, database_names: Sequence[str] = (), attempts: int = _DEFAULT_ATTEMPTS
+) -> None:
     """
     Delete a directory tree that may contain SQLite databases.
 
@@ -130,7 +137,9 @@ def rmtree(path: str | Path, *, database_names: Sequence[str] = (), attempts: in
     else:
         for candidate in root.rglob("*.db"):
             force_release(candidate, attempts=attempts)
-    _retrying(lambda: (shutil.rmtree(root, ignore_errors=True), not root.exists())[1], attempts=attempts)
+    _retrying(
+        lambda: (shutil.rmtree(root, ignore_errors=True), not root.exists())[1], attempts=attempts
+    )
 
 
 @contextmanager

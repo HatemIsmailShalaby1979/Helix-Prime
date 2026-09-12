@@ -70,6 +70,7 @@ def _engine(tmp_path=None):
 
 # ── valid workflow creation ────────────────────────────────────────────────
 
+
 def test_valid_workflow_creation(tmp_path):
     engine, store = _engine(tmp_path)
     corr = _corr(cid="corr_valid1", ikey="idem_valid1")
@@ -96,8 +97,15 @@ def test_valid_workflow_creation(tmp_path):
 
 # ── valid and invalid state transitions ───────────────────────────────────
 
+
 def test_valid_state_transitions():
-    wf = Workflow.new(correlation=_corr(cid="c_valid", ikey="idem_valid"), requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={})
+    wf = Workflow.new(
+        correlation=_corr(cid="c_valid", ikey="idem_valid"),
+        requesting_actor="sami",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={},
+    )
     assert wf.state == WorkflowState.PROPOSED
     wf.transition(WorkflowState.VALIDATED, "sami")
     assert wf.state == WorkflowState.VALIDATED
@@ -110,7 +118,13 @@ def test_valid_state_transitions():
 
 
 def test_invalid_state_transitions():
-    wf = Workflow.new(correlation=_corr(cid="c_inv", ikey="idem_inv"), requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={})
+    wf = Workflow.new(
+        correlation=_corr(cid="c_inv", ikey="idem_inv"),
+        requesting_actor="sami",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={},
+    )
     # proposed -> succeeded is invalid
     with pytest.raises(ValueError, match="invalid transition"):
         wf.transition(WorkflowState.SUCCEEDED, "sami")
@@ -138,10 +152,25 @@ def test_is_valid_transition_helper():
 
 # ── event append and replay ────────────────────────────────────────────────
 
+
 def test_event_append_and_replay(tmp_path):
     store = Store(db_path=str(tmp_path / "ev.db"))
-    ev1 = Event.new(event_type="workflow_created", aggregate_id="wf_test1", correlation_id="corr1", actor="sami", payload={"a": 1}, sequence=0)
-    ev2 = Event.new(event_type="workflow_validated", aggregate_id="wf_test1", correlation_id="corr1", actor="sami", payload={"b": 2}, sequence=1)
+    ev1 = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_test1",
+        correlation_id="corr1",
+        actor="sami",
+        payload={"a": 1},
+        sequence=0,
+    )
+    ev2 = Event.new(
+        event_type="workflow_validated",
+        aggregate_id="wf_test1",
+        correlation_id="corr1",
+        actor="sami",
+        payload={"b": 2},
+        sequence=1,
+    )
     store.append_event(ev1)
     store.append_event(ev2)
     replay = store.replay("wf_test1")
@@ -156,21 +185,44 @@ def test_event_append_and_replay(tmp_path):
 
 # ── sequence enforcement ───────────────────────────────────────────────────
 
+
 def test_sequence_enforcement(tmp_path):
     store = Store(db_path=str(tmp_path / "seq.db"))
-    ev0 = Event.new(event_type="workflow_created", aggregate_id="wf_seq", correlation_id="corr_seq", actor="sami", payload={}, sequence=0)
+    ev0 = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_seq",
+        correlation_id="corr_seq",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
     store.append_event(ev0)
     # Try to append sequence 2 skipping 1 -> should fail
-    ev_bad = Event.new(event_type="workflow_validated", aggregate_id="wf_seq", correlation_id="corr_seq", actor="sami", payload={}, sequence=2)
+    ev_bad = Event.new(
+        event_type="workflow_validated",
+        aggregate_id="wf_seq",
+        correlation_id="corr_seq",
+        actor="sami",
+        payload={},
+        sequence=2,
+    )
     with pytest.raises(ValueError, match="out-of-order"):
         store.append_event(ev_bad)
     # Correct sequence 1 should succeed
-    ev1 = Event.new(event_type="workflow_validated", aggregate_id="wf_seq", correlation_id="corr_seq", actor="sami", payload={}, sequence=1)
+    ev1 = Event.new(
+        event_type="workflow_validated",
+        aggregate_id="wf_seq",
+        correlation_id="corr_seq",
+        actor="sami",
+        payload={},
+        sequence=1,
+    )
     store.append_event(ev1)
     assert len(store.get_events("wf_seq")) == 2
 
 
 # ── idempotent duplicate submission ────────────────────────────────────────
+
 
 def test_idempotent_duplicate_submission(tmp_path):
     engine, store = _engine(tmp_path)
@@ -189,7 +241,9 @@ def test_idempotent_duplicate_submission(tmp_path):
     )
     wf1 = engine.submit(req)
     # Same idempotency key, different request_id should return same workflow (no duplicate execution)
-    corr2 = _corr(cid="corr_dup2", ikey="idem_dup")  # same ikey, different corr id would be weird but we test same ikey
+    corr2 = _corr(
+        cid="corr_dup2", ikey="idem_dup"
+    )  # same ikey, different corr id would be weird but we test same ikey
     # Use same correlation idempotency_key but different request_id
     req2 = TaskRequest(
         request_id="req_dup2",
@@ -212,9 +266,17 @@ def test_idempotent_duplicate_submission(tmp_path):
 
 # ── duplicate event rejection ──────────────────────────────────────────────
 
+
 def test_duplicate_event_rejection(tmp_path):
     store = Store(db_path=str(tmp_path / "dup.db"))
-    ev = Event.new(event_type="workflow_created", aggregate_id="wf_dup", correlation_id="corr_dup", actor="sami", payload={}, sequence=0)
+    ev = Event.new(
+        event_type="workflow_created",
+        aggregate_id="wf_dup",
+        correlation_id="corr_dup",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
     store.append_event(ev)
     # Same event_id again should be idempotent (return existing) not duplicate error, but our store treats same event_id as idempotent
     # To test duplicate rejection, we test that appending same event_id with different payload is idempotent and returns original
@@ -233,19 +295,34 @@ def test_duplicate_event_rejection(tmp_path):
     assert returned.event_id == ev.event_id
     assert returned.payload == ev.payload  # original preserved, not overwritten
     # Also test that duplicate sequence with different event_id fails
-    ev_dup_seq = Event.new(event_type="workflow_validated", aggregate_id="wf_dup", correlation_id="corr_dup", actor="sami", payload={}, sequence=0)
+    ev_dup_seq = Event.new(
+        event_type="workflow_validated",
+        aggregate_id="wf_dup",
+        correlation_id="corr_dup",
+        actor="sami",
+        payload={},
+        sequence=0,
+    )
     with pytest.raises(ValueError, match="out-of-order|UNIQUE|Integrity"):
         store.append_event(ev_dup_seq)
 
 
 # ── deadline timeout ───────────────────────────────────────────────────────
 
+
 def test_deadline_timeout(tmp_path):
     engine, store = _engine(tmp_path)
     # Create correlation with old timestamp and short timeout that is already past
     corr = _corr(cid="corr_deadline", ikey="idem_deadline")
     # Submit with timeout_seconds=0? Actually we need deadline in past. We can manually create workflow with deadline in past
-    wf = Workflow.new(correlation=corr, requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={}, deadline="2020-01-01T00:00:00Z")
+    wf = Workflow.new(
+        correlation=corr,
+        requesting_actor="sami",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={},
+        deadline="2020-01-01T00:00:00Z",
+    )
     wf = store.create_workflow(wf)
     # Submit via engine should detect deadline past and go to dead_letter
     # Instead test engine.submit with timeout that is already expired: use a workflow that has deadline in past
@@ -254,7 +331,13 @@ def test_deadline_timeout(tmp_path):
     # We'll directly test that a workflow with past deadline goes to dead_letter on submit
     req = TaskRequest(
         request_id="req_deadline",
-        correlation=CorrelationContext(correlation_id="corr_dl2", idempotency_key="idem_dl2", tenant_id="t", client_id="c", created_at=FIXED_TS),
+        correlation=CorrelationContext(
+            correlation_id="corr_dl2",
+            idempotency_key="idem_dl2",
+            tenant_id="t",
+            client_id="c",
+            created_at=FIXED_TS,
+        ),
         requesting_actor="sami",
         owning_role_id="ops_gm",
         capability="wfm_forecast",
@@ -265,7 +348,14 @@ def test_deadline_timeout(tmp_path):
         client_id="c",
     )
     # Manually set workflow deadline to past and test engine's handling
-    wf2 = Workflow.new(correlation=req.correlation, requesting_actor=req.requesting_actor, owning_role_id=req.owning_role_id, capability=req.capability, input_payload=req.input_payload, deadline="2020-01-01T00:00:00Z")
+    wf2 = Workflow.new(
+        correlation=req.correlation,
+        requesting_actor=req.requesting_actor,
+        owning_role_id=req.owning_role_id,
+        capability=req.capability,
+        input_payload=req.input_payload,
+        deadline="2020-01-01T00:00:00Z",
+    )
     wf2 = store.create_workflow(wf2)
     # Now try to execute — should go to dead_letter due to deadline
     engine.register_handler("wfm_forecast", lambda w: {"ok": True})
@@ -283,19 +373,40 @@ def test_deadline_timeout(tmp_path):
 def test_deadline_timeout_on_submit():
     # Test that submit with past deadline goes to dead_letter
     engine, _ = _engine()
-    corr = CorrelationContext(correlation_id="corr_to", idempotency_key="idem_to", tenant_id="t", client_id="c", created_at=FIXED_TS)
+    corr = CorrelationContext(
+        correlation_id="corr_to",
+        idempotency_key="idem_to",
+        tenant_id="t",
+        client_id="c",
+        created_at=FIXED_TS,
+    )
     # Create a workflow directly with past deadline via engine's internal
     # Use the engine's submit with a request that will have deadline set to past via workflow creation
     # For this test, we will manually test the helper _is_past_deadline
     from control_plane.engine import _is_past_deadline
     from control_plane.workflow import Workflow
-    wf = Workflow.new(correlation=corr, requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={}, deadline="2020-01-01T00:00:00Z")
+
+    wf = Workflow.new(
+        correlation=corr,
+        requesting_actor="sami",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={},
+        deadline="2020-01-01T00:00:00Z",
+    )
     assert _is_past_deadline(wf) is True
-    wf2 = Workflow.new(correlation=_corr(cid="c2", ikey="k2"), requesting_actor="sami", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={})
+    wf2 = Workflow.new(
+        correlation=_corr(cid="c2", ikey="k2"),
+        requesting_actor="sami",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={},
+    )
     assert _is_past_deadline(wf2) is False
 
 
 # ── bounded retry ──────────────────────────────────────────────────────────
+
 
 def test_bounded_retry(tmp_path):
     engine, store = _engine(tmp_path)
@@ -336,6 +447,7 @@ def test_bounded_retry(tmp_path):
 
 
 # ── cancellation ───────────────────────────────────────────────────────────
+
 
 def test_cancellation(tmp_path):
     engine, store = _engine(tmp_path)
@@ -386,6 +498,7 @@ def test_cancellation_from_awaiting_approval(tmp_path):
 
 # ── dead-letter routing ────────────────────────────────────────────────────
 
+
 def test_dead_letter_routing_for_unknown_capability(tmp_path):
     engine, store = _engine(tmp_path)
     corr = _corr(cid="corr_dl", ikey="idem_dl")
@@ -404,7 +517,13 @@ def test_dead_letter_routing_for_unknown_capability(tmp_path):
     wf = engine.submit(req)
     assert wf.state == WorkflowState.DEAD_LETTER
     assert wf.error is not None
-    assert wf.error.code in ("not_found", "conflict", "policy_denied", "unauthorized", "unknown_capability")
+    assert wf.error.code in (
+        "not_found",
+        "conflict",
+        "policy_denied",
+        "unauthorized",
+        "unknown_capability",
+    )
 
 
 def test_dead_letter_for_denied_approval(tmp_path):
@@ -442,6 +561,7 @@ def test_dead_letter_for_denied_approval(tmp_path):
 
 
 # ── approval required / granted / denied ───────────────────────────────────
+
 
 def test_approval_required(tmp_path):
     engine, store = _engine(tmp_path)
@@ -531,6 +651,7 @@ def test_approval_denied_prevents_execution(tmp_path):
 
 # ── segregation-of-duties rejection ────────────────────────────────────────
 
+
 def test_sod_rejection_self_approval(tmp_path):
     engine, store = _engine(tmp_path)
     corr = _corr(cid="corr_sod_self", ikey="idem_sod_self")
@@ -595,6 +716,7 @@ def test_sod_rejection_same_role_approval(tmp_path):
 
 # ── unknown capability rejection ───────────────────────────────────────────
 
+
 def test_unknown_capability_rejection(tmp_path):
     engine, store = _engine(tmp_path)
     corr = _corr(cid="corr_unknown", ikey="idem_unknown")
@@ -616,6 +738,7 @@ def test_unknown_capability_rejection(tmp_path):
 
 
 # ── unauthorized tool rejection ────────────────────────────────────────────
+
 
 def test_unauthorized_tool_rejection(tmp_path):
     engine, store = _engine(tmp_path)
@@ -639,6 +762,7 @@ def test_unauthorized_tool_rejection(tmp_path):
 
 
 # ── successful structured handler execution ─────────────────────────────────
+
 
 def test_successful_handler_execution(tmp_path):
     engine, store = _engine(tmp_path)
@@ -675,6 +799,7 @@ def test_successful_handler_execution(tmp_path):
 
 # ── handler failure ─────────────────────────────────────────────────────────
 
+
 def test_handler_failure(tmp_path):
     engine, store = _engine(tmp_path)
     corr = _corr(cid="corr_fail", ikey="idem_fail")
@@ -706,6 +831,7 @@ def test_handler_failure(tmp_path):
 
 
 # ── restart/reload persistence ─────────────────────────────────────────────
+
 
 def test_restart_reload_persistence(tmp_path):
     db_path = str(tmp_path / "persist.db")
@@ -745,6 +871,7 @@ def test_restart_reload_persistence(tmp_path):
 
 # ── tenant/client context preservation ─────────────────────────────────────
 
+
 def test_tenant_client_preservation(tmp_path):
     engine, store = _engine(tmp_path)
     corr = CorrelationContext(
@@ -782,6 +909,7 @@ def test_tenant_client_preservation(tmp_path):
 
 
 # ── correlation and causation ID preservation ──────────────────────────────
+
 
 def test_correlation_and_causation_preservation(tmp_path):
     engine, store = _engine(tmp_path)
@@ -821,6 +949,7 @@ def test_correlation_and_causation_preservation(tmp_path):
 
 # ── capability-registry drift detection ────────────────────────────────────
 
+
 def test_capability_registry_drift_detection():
     from organization.capability_registry import validate_mirror_drift
 
@@ -829,6 +958,7 @@ def test_capability_registry_drift_detection():
 
 
 # ── no silent retry loops ──────────────────────────────────────────────────
+
 
 def test_no_silent_retry_loops(tmp_path):
     engine, store = _engine(tmp_path)
@@ -866,6 +996,7 @@ def test_no_silent_retry_loops(tmp_path):
 
 
 # ── no duplicate execution for same idempotency key ────────────────────────
+
 
 def test_no_duplicate_execution_for_same_idempotency(tmp_path):
     engine, store = _engine(tmp_path)

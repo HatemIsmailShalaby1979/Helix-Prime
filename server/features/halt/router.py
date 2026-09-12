@@ -79,7 +79,9 @@ def halt_engage(
     try:
         return _switch().engage(payload.reason, identity.actor, tenant_id=payload.tenant_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
 
 
 @router.post("/release")
@@ -89,4 +91,6 @@ def halt_release(
     try:
         return _switch().release(identity.actor, tenant_id=payload.tenant_id)
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc

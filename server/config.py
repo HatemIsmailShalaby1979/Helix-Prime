@@ -73,7 +73,11 @@ class Settings(BaseSettings):
             return
         missing = [
             name
-            for name in ("HELIX_EVIDENCE_SIGNING_KEY", "HELIX_ISOLATION_CERT", "HELIX_OBSERVER_AUDIT")
+            for name in (
+                "HELIX_EVIDENCE_SIGNING_KEY",
+                "HELIX_ISOLATION_CERT",
+                "HELIX_OBSERVER_AUDIT",
+            )
             if not os.environ.get(name)
         ]
         if missing:

@@ -9,8 +9,14 @@ from __future__ import annotations
 from typing import Any, Callable, Optional
 
 from .interfaces import (
-    Database, ObjectStorage, EventTransport, SecretsStore, IdentityProvider,
-    Observability, Scheduler, ModelProvider,
+    Database,
+    ObjectStorage,
+    EventTransport,
+    SecretsStore,
+    IdentityProvider,
+    Observability,
+    Scheduler,
+    ModelProvider,
 )
 
 
@@ -93,7 +99,7 @@ class LocalSecrets(SecretsStore):
 
 class LocalIdentity(IdentityProvider):
     def __init__(self) -> None:
-        self._users: dict = {}   # token -> {user_id, roles}
+        self._users: dict = {}  # token -> {user_id, roles}
 
     def register(self, user_id: str, token: str, roles: list) -> None:
         self._users[token] = {"user_id": user_id, "roles": list(roles)}

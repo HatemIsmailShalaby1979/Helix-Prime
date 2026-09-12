@@ -40,9 +40,7 @@ try:
 except Exception:  # pragma: no cover - UI fallback
     _ControlPlaneStore = None
 
-_gov_check = (
-    Path(__file__).resolve().parent.parent / "GOVERNANCE" / "governance_check.py"
-)
+_gov_check = Path(__file__).resolve().parent.parent / "GOVERNANCE" / "governance_check.py"
 if _gov_check.exists():
     import subprocess
 
@@ -293,8 +291,7 @@ def call_wfm(client):
     try:
         params = ErlangCParameters(
             arrival_rate=c.get("calls_per_day", 5000) / 17,
-            average_handling_time=c.get("avg_handle_time", 480)
-            / 60,  # seconds أ¢â€ â€™ minutes
+            average_handling_time=c.get("avg_handle_time", 480) / 60,  # seconds أ¢â€ â€™ minutes
             service_level_target=c.get("service_level", 0.80),
             average_calls_per_period=17,
         )
@@ -489,9 +486,7 @@ ENGINE_CALLERS = {
     "Personnel Engine": _wrap_with_provenance(
         "Personnel Engine", ENGINE_MODULE_PATHS["Personnel Engine"], call_personnel
     ),
-    "CRM Engine": _wrap_with_provenance(
-        "CRM Engine", ENGINE_MODULE_PATHS["CRM Engine"], call_crm
-    ),
+    "CRM Engine": _wrap_with_provenance("CRM Engine", ENGINE_MODULE_PATHS["CRM Engine"], call_crm),
 }
 
 # ── Metric provenance ───────────────────────────────────────────────────────
@@ -564,9 +559,14 @@ def consult_agent(
 
 def _render_control_plane_panel() -> None:
     """Render C5 approvals and the hash-chained audit timeline."""
-    st.markdown("<div class='section-hdr'>Control Plane — Approvals & Audit Timeline</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='section-hdr'>Control Plane — Approvals & Audit Timeline</div>",
+        unsafe_allow_html=True,
+    )
     if _ControlPlaneStore is None:
-        st.warning("Control plane store unavailable; approvals and timeline are read-only unavailable.")
+        st.warning(
+            "Control plane store unavailable; approvals and timeline are read-only unavailable."
+        )
         return
 
     db_path = Path(__import__("os").environ.get("HELIX_DB_PATH", "control_plane/workflow.db"))
@@ -587,36 +587,54 @@ def _render_control_plane_panel() -> None:
             else:
                 for task in awaiting:
                     with st.container(border=True):
-                        st.write({
-                            "task_id": task.get("task_id"),
-                            "capability": task.get("capability"),
-                            "actor": task.get("actor_id"),
-                            "role": task.get("actor_role_id"),
-                            "estimated_cost_usd": task.get("estimated_financial_cost"),
-                            "reason": task.get("reason"),
-                        })
+                        st.write(
+                            {
+                                "task_id": task.get("task_id"),
+                                "capability": task.get("capability"),
+                                "actor": task.get("actor_id"),
+                                "role": task.get("actor_role_id"),
+                                "estimated_cost_usd": task.get("estimated_financial_cost"),
+                                "reason": task.get("reason"),
+                            }
+                        )
                         approve_col, deny_col = st.columns(2)
-                        approve_col.button("Approve", key=f"approve_{task.get('task_id')}", disabled=True, help="Approval mutation is deliberately delegated to the governed API path.")
-                        deny_col.button("Deny", key=f"deny_{task.get('task_id')}", disabled=True, help="Denial mutation is deliberately delegated to the governed API path.")
+                        approve_col.button(
+                            "Approve",
+                            key=f"approve_{task.get('task_id')}",
+                            disabled=True,
+                            help="Approval mutation is deliberately delegated to the governed API path.",
+                        )
+                        deny_col.button(
+                            "Deny",
+                            key=f"deny_{task.get('task_id')}",
+                            disabled=True,
+                            help="Denial mutation is deliberately delegated to the governed API path.",
+                        )
 
             st.markdown("### Run timeline")
             if events:
                 timeline = []
                 for event in events:
-                    timeline.append({
-                        "occurred_at": event.get("occurred_at"),
-                        "event_type": event.get("event_type"),
-                        "decision": event.get("decision"),
-                        "actor": event.get("actor_id"),
-                        "role": event.get("actor_role_id"),
-                        "from_state": event.get("from_state"),
-                        "to_state": event.get("to_state"),
-                        "correlation_id": event.get("correlation_id"),
-                        "prev_hash": event.get("prev_hash"),
-                        "record_hash": event.get("record_hash"),
-                    })
+                    timeline.append(
+                        {
+                            "occurred_at": event.get("occurred_at"),
+                            "event_type": event.get("event_type"),
+                            "decision": event.get("decision"),
+                            "actor": event.get("actor_id"),
+                            "role": event.get("actor_role_id"),
+                            "from_state": event.get("from_state"),
+                            "to_state": event.get("to_state"),
+                            "correlation_id": event.get("correlation_id"),
+                            "prev_hash": event.get("prev_hash"),
+                            "record_hash": event.get("record_hash"),
+                        }
+                    )
                 st.dataframe(pd.DataFrame(timeline), width="stretch", hide_index=True)
-                selected = st.selectbox("Inspect audit event", range(len(events)), format_func=lambda i: f"{i}: {events[i].get('event_type', 'event')}")
+                selected = st.selectbox(
+                    "Inspect audit event",
+                    range(len(events)),
+                    format_func=lambda i: f"{i}: {events[i].get('event_type', 'event')}",
+                )
                 st.json(events[selected])
             else:
                 st.info("No audit events in the local ledger.")
@@ -676,13 +694,9 @@ def main():
     st.divider()
     client = st.selectbox("Client Context", list(CLIENTS.keys()))
     st.divider()
-    total_online = sum(
-        1 for a in AGENTS if agent_probes[a["name"]]["can_run"] and _ollama_ok
-    )
+    total_online = sum(1 for a in AGENTS if agent_probes[a["name"]]["can_run"] and _ollama_ok)
     st.metric("Agents Online", f"{total_online}/{len(AGENTS)}")
-    engines_ok = sum(
-        1 for e in ENGINE_NAMES if probe_engine(e, ENGINE_MODULE_PATHS[e])["can_run"]
-    )
+    engines_ok = sum(1 for e in ENGINE_NAMES if probe_engine(e, ENGINE_MODULE_PATHS[e])["can_run"])
     st.metric("Engines Loaded", f"{engines_ok}/{len(ENGINE_NAMES)}")
     st.caption(f"Session: {st.session_state.session_id}")
 
@@ -757,9 +771,7 @@ def main():
         render_codex_command_center(client)
 
     elif page == "Dashboard":
-        st.markdown(
-            "<div class='section-hdr'>Business Engines</div>", unsafe_allow_html=True
-        )
+        st.markdown("<div class='section-hdr'>Business Engines</div>", unsafe_allow_html=True)
         eng_cols = st.columns(3, gap="small")
         for i, ename in enumerate(ENGINE_NAMES):
             pr = probe_engine(ename, ENGINE_MODULE_PATHS[ename])
@@ -854,9 +866,7 @@ def main():
                             unsafe_allow_html=True,
                         )
 
-        st.markdown(
-            "<div class='section-hdr'>Client Snapshot</div>", unsafe_allow_html=True
-        )
+        st.markdown("<div class='section-hdr'>Client Snapshot</div>", unsafe_allow_html=True)
         c = CLIENTS[client]
         cols = st.columns(5)
         cols[0].metric("Agent Headcount", c["agents"])
@@ -869,9 +879,7 @@ def main():
     # AGENTS PAGE
     # أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯أ¢â€¢ع¯
     elif page == "Agents":
-        st.markdown(
-            "<div class='section-hdr'>Agent Chat Panels</div>", unsafe_allow_html=True
-        )
+        st.markdown("<div class='section-hdr'>Agent Chat Panels</div>", unsafe_allow_html=True)
         st.markdown(
             "<div style='font-size:0.75rem; color:#888; margin-bottom:12px;'>Agents show collapsible reasoning traces (if supported by model) and real inter-agent calls.</div>",
             unsafe_allow_html=True,
@@ -1178,8 +1186,14 @@ def main():
 
         _as_of = _dt.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         _fx = _bld("academy-1", "scoach", _as_of)
-        _ctx = _Ctx("academy-1", "org-1", "scoach", actor="academy-operator",
-                    correlation_id="cockpit-academy", data_mode="simulated_realistic")
+        _ctx = _Ctx(
+            "academy-1",
+            "org-1",
+            "scoach",
+            actor="academy-operator",
+            correlation_id="cockpit-academy",
+            data_mode="simulated_realistic",
+        )
         _conns = _bc(_ctx, _fx)
 
         st.markdown(
@@ -1191,8 +1205,11 @@ def main():
             _render_owner(_ctx, _conns, _as_of)
         with ac_tab2:
             _coach_ids = [c.coach_id for c in _fx["coaches"]]
-            _sel = st.selectbox("Coach", _coach_ids, format_func=lambda cid: next(
-                c.name for c in _fx["coaches"] if c.coach_id == cid))
+            _sel = st.selectbox(
+                "Coach",
+                _coach_ids,
+                format_func=lambda cid: next(c.name for c in _fx["coaches"] if c.coach_id == cid),
+            )
             _render_coach(_ctx, _conns, _as_of, _sel)
         with ac_tab3:
             _fam_ids = [f.family_id for f in _fx["families"]]
@@ -1217,9 +1234,7 @@ def main():
             st.markdown("### Step 1: Create Client Profile")
             col1, col2 = st.columns(2)
             with col1:
-                sim_name = st.text_input(
-                    "Company Name", placeholder="e.g. NovaTech Solutions"
-                )
+                sim_name = st.text_input("Company Name", placeholder="e.g. NovaTech Solutions")
                 sim_industry = st.selectbox(
                     "Industry",
                     [
@@ -1301,13 +1316,9 @@ def main():
                     "Click each button below to execute a step. Each step calls real agents/engines."
                 )
 
-                sim_step_1 = st.button(
-                    "1. B2B Onboarding أ¢â‚¬â€‌ Register client in system"
-                )
+                sim_step_1 = st.button("1. B2B Onboarding أ¢â‚¬â€‌ Register client in system")
                 if sim_step_1:
-                    with st.spinner(
-                        "Registering client and generating onboarding plan..."
-                    ):
+                    with st.spinner("Registering client and generating onboarding plan..."):
                         b2b_result, err = ENGINE_CALLERS["B2B Onboarding"](profile["name"])
                         wili = AgentRegistry.get_agent("WILI")
                         wili.session_id = st.session_state.session_id
@@ -1339,9 +1350,7 @@ def main():
                         )
                         st.rerun()
 
-                sim_step_2 = st.button(
-                    "2. WFM Staffing Forecast أ¢â‚¬â€‌ Predict staffing needs"
-                )
+                sim_step_2 = st.button("2. WFM Staffing Forecast أ¢â‚¬â€‌ Predict staffing needs")
                 if sim_step_2:
                     with st.spinner("Running WFM Erlang-C forecast..."):
                         wfm_result, err = ENGINE_CALLERS["WFM Forecasting"](profile["name"])
@@ -1377,9 +1386,7 @@ def main():
                         )
                         st.rerun()
 
-                sim_step_3 = st.button(
-                    "3. Personnel Pipeline أ¢â‚¬â€‌ Mock hiring pipeline"
-                )
+                sim_step_3 = st.button("3. Personnel Pipeline أ¢â‚¬â€‌ Mock hiring pipeline")
                 if sim_step_3:
                     with st.spinner("Running personnel pipeline check..."):
                         pers_result, err = ENGINE_CALLERS["Personnel Engine"](profile["name"])
@@ -1415,9 +1422,7 @@ def main():
                         )
                         st.rerun()
 
-                sim_step_4 = st.button(
-                    "4. SOP Generation via WILI أ¢â‚¬â€‌ Create client SOPs"
-                )
+                sim_step_4 = st.button("4. SOP Generation via WILI أ¢â‚¬â€‌ Create client SOPs")
                 if sim_step_4:
                     with st.spinner("Generating SOPs with WILI + PHILI data..."):
                         wili = AgentRegistry.get_agent("WILI")
@@ -1454,9 +1459,7 @@ def main():
                         )
                         st.rerun()
 
-                sim_step_5 = st.button(
-                    "5. Strategic Review via SAMI أ¢â‚¬â€‌ CEO wrap-up"
-                )
+                sim_step_5 = st.button("5. Strategic Review via SAMI أ¢â‚¬â€‌ CEO wrap-up")
                 if sim_step_5:
                     with st.spinner("Consulting SAMI for strategic review..."):
                         sami = AgentRegistry.get_agent("SAMI")
@@ -1464,9 +1467,7 @@ def main():
                         sami.client_context = profile["name"]
 
                         summary_text = f"We just completed a full client simulation for {profile['name']} ({profile['industry']}). "
-                        summary_text += (
-                            f"Steps completed: {len(st.session_state.sim_steps)}. "
-                        )
+                        summary_text += f"Steps completed: {len(st.session_state.sim_steps)}. "
                         for s in st.session_state.sim_steps:
                             summary_text += f"- {s['step']}; "
 
@@ -1507,13 +1508,9 @@ def main():
 
         with sim_tab3:
             if not st.session_state.sim_steps:
-                st.info(
-                    "No simulation steps run yet. Go to the Scenario Walkthrough tab."
-                )
+                st.info("No simulation steps run yet. Go to the Scenario Walkthrough tab.")
             else:
-                st.markdown(
-                    f"### Simulation Log أ¢â‚¬â€‌ {len(st.session_state.sim_steps)} steps"
-                )
+                st.markdown(f"### Simulation Log أ¢â‚¬â€‌ {len(st.session_state.sim_steps)} steps")
                 for i, step in enumerate(st.session_state.sim_steps):
                     with st.expander(
                         f"Step {i + 1}: {step['step']} أ¢â‚¬â€‌ {step['timestamp'][:19]}"

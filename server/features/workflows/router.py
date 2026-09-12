@@ -38,7 +38,9 @@ def submit(
 
 
 @router.get("", response_model=List[WorkflowResponse])
-def list_recent(limit: int = 50, service: WorkflowService = Depends(_service)) -> List[Dict[str, Any]]:
+def list_recent(
+    limit: int = 50, service: WorkflowService = Depends(_service)
+) -> List[Dict[str, Any]]:
     return [service.repo.to_response(w) for w in service.repo.list_recent(limit=limit)]
 
 

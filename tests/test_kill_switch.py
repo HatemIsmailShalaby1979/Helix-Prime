@@ -201,21 +201,34 @@ def test_cancel_still_allowed_while_engaged(tmp_path):
 def test_cli_engage_release_status_roundtrip(tmp_path, capsys):
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location(
-        "kill_switch_cli", "scripts/kill_switch.py"
-    )
+    spec = importlib.util.spec_from_file_location("kill_switch_cli", "scripts/kill_switch.py")
     cli = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(cli)
     db = str(tmp_path / "ks.db")
     audit = str(tmp_path / "audit.db")
-    assert cli.main(["--db-path", db, "--audit-db-path", audit, "engage",
-                     "--reason", "cli drill", "--actor", "cli-op"]) == 0
+    assert (
+        cli.main(
+            [
+                "--db-path",
+                db,
+                "--audit-db-path",
+                audit,
+                "engage",
+                "--reason",
+                "cli drill",
+                "--actor",
+                "cli-op",
+            ]
+        )
+        == 0
+    )
     out = capsys.readouterr().out
     assert "engaged" in out
-    assert cli.main(["--db-path", db, "--audit-db-path", audit, "status"]) == 0
+    assert cli.main(["status", "--tenant", "other", "--db-path", db, "--audit-db-path", audit]) == 0
     assert '"engaged": true' in capsys.readouterr().out
-    assert cli.main(["--db-path", db, "--audit-db-path", audit, "release",
-                     "--actor", "cli-op"]) == 0
+    assert (
+        cli.main(["--db-path", db, "--audit-db-path", audit, "release", "--actor", "cli-op"]) == 0
+    )
     assert cli.main(["--db-path", db, "--audit-db-path", audit, "status"]) == 0
     assert '"engaged": false' in capsys.readouterr().out
     assert KillSwitch(db_path=db).is_engaged() is False

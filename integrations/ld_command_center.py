@@ -30,6 +30,7 @@ from integrations.transport import Transport, TransportResult, InMemoryTransport
 @dataclass
 class LDCommandCenterResponse:
     """Standard response from L&D Command Center adapter calls."""
+
     success: bool
     event: Optional[IntegrationEvent] = None
     error: Optional[Dict[str, Any]] = None
@@ -94,7 +95,10 @@ class LDCommandCenterAdapter:
         if artifact_type not in valid_types:
             return LDCommandCenterResponse(
                 success=False,
-                error={"code": "malformed_payload", "message": f"Invalid artifact_type: {artifact_type}"}
+                error={
+                    "code": "malformed_payload",
+                    "message": f"Invalid artifact_type: {artifact_type}",
+                },
             )
 
         corr = correlation_id or f"corr_{int(time.time() * 1000)}"
@@ -128,7 +132,9 @@ class LDCommandCenterAdapter:
                 "request_id": request_id,
                 "artifact_type": artifact_type,
             }
-        return LDCommandCenterResponse(success=result.success, event=result.event, error=result.error)
+        return LDCommandCenterResponse(
+            success=result.success, event=result.event, error=result.error
+        )
 
     # ── Response Handling ────────────────────────────────────────────────────
 
@@ -148,7 +154,7 @@ class LDCommandCenterAdapter:
                 "duration_ms": p.get("duration_ms"),
                 "status": p.get("status"),
                 "error": p.get("error"),
-            }
+            },
         )
 
     def handle_career_learning_signal(self, event: CareerLearningSignal) -> LDCommandCenterResponse:
@@ -164,7 +170,7 @@ class LDCommandCenterAdapter:
                 "details": p.get("details"),
                 "confidence": p.get("confidence"),
                 "source": p.get("source"),
-            }
+            },
         )
 
     def handle_integration_error(self, event: IntegrationError) -> LDCommandCenterResponse:
@@ -177,7 +183,7 @@ class LDCommandCenterAdapter:
                 "code": event.payload.get("error_code"),
                 "message": event.payload.get("error_message"),
                 "retry_count": event.payload.get("retry_count", 0),
-            }
+            },
         )
 
     # ── Polling ──────────────────────────────────────────────────────────────
@@ -193,6 +199,7 @@ class LDCommandCenterAdapter:
 
 
 # ── Fake L&D Command Center for Testing ──────────────────────────────────────
+
 
 class FakeLDCommandCenter:
     """

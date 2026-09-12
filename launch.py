@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Helix Prime - Unified Launcher
 ===============================
@@ -20,11 +20,11 @@ import time
 import urllib.request
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-COCKPIT_DIR = os.path.join(ROOT, 'cockpit')
-COCKPIT_APP = os.path.join(COCKPIT_DIR, 'cockpit.py')
+COCKPIT_DIR = os.path.join(ROOT, "cockpit")
+COCKPIT_APP = os.path.join(COCKPIT_DIR, "cockpit.py")
 
 if not os.path.exists(COCKPIT_APP):
-    print(f'Error: Cockpit app not found at {COCKPIT_APP}')
+    print(f"Error: Cockpit app not found at {COCKPIT_APP}")
     sys.exit(1)
 
 processes = []
@@ -39,7 +39,7 @@ def cleanup():
                 p.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 p.kill()
-    print('All services stopped.')
+    print("All services stopped.")
 
 
 def handle_signal(*_):
@@ -52,11 +52,18 @@ signal.signal(signal.SIGTERM, handle_signal)
 
 
 def start_cockpit(port=8501):
-    print(f'Starting Helix Prime Operations Cockpit on http://127.0.0.1:{port}')
+    print(f"Starting Helix Prime Operations Cockpit on http://127.0.0.1:{port}")
     p = subprocess.Popen(
-        [sys.executable, '-m', 'streamlit', 'run', COCKPIT_APP,
-         '--server.headless=true', f'--server.port={port}',
-         '--server.address=127.0.0.1'],
+        [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            COCKPIT_APP,
+            "--server.headless=true",
+            f"--server.port={port}",
+            "--server.address=127.0.0.1",
+        ],
         cwd=ROOT,
     )
     processes.append(p)
@@ -74,31 +81,31 @@ def wait_for_health(url: str, label: str, timeout: float = 30.0) -> bool:
             pass
         for p in processes:
             if p and p.poll() is not None and p.poll() != 0:
-                print(f'{label} exited unexpectedly (code {p.poll()}).')
+                print(f"{label} exited unexpectedly (code {p.poll()}).")
                 return False
         time.sleep(0.5)
-    print(f'{label} health check timed out after {timeout}s')
+    print(f"{label} health check timed out after {timeout}s")
     return False
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     port = 8501
     for i, arg in enumerate(sys.argv):
-        if arg == '--port' and i + 1 < len(sys.argv):
+        if arg == "--port" and i + 1 < len(sys.argv):
             port = int(sys.argv[i + 1])
 
     start_cockpit(port)
 
     print()
-    print('Waiting for cockpit to start...')
+    print("Waiting for cockpit to start...")
 
-    if wait_for_health(f'http://127.0.0.1:{port}', 'Cockpit'):
+    if wait_for_health(f"http://127.0.0.1:{port}", "Cockpit"):
         print()
-        print(f'Cockpit is running at http://127.0.0.1:{port}')
-        print('Press Ctrl+C to stop.')
+        print(f"Cockpit is running at http://127.0.0.1:{port}")
+        print("Press Ctrl+C to stop.")
     else:
         print()
-        print('Cockpit failed to start. See errors above.')
+        print("Cockpit failed to start. See errors above.")
         cleanup()
 
     try:

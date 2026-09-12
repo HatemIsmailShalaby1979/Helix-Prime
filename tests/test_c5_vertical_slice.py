@@ -111,10 +111,13 @@ def _make_request(approve_compliance=True, tenant=None, client=None, actor_suby=
 
 # ── complete successful vertical slice ────────────────────────────────────
 
+
 def test_complete_successful_vertical_slice(fresh_state):
     """Run the full 8-step slice (WFM→RTA→OPS→Compliance→HR→L&D→CX→CRM→SAMI). Approved."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     assert ev is not None
@@ -128,22 +131,38 @@ def test_complete_successful_vertical_slice(fresh_state):
 
 # ── correct step ordering ────────────────────────────────────────────────
 
+
 def test_correct_step_ordering(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
-    expected = ["wfm_forecast", "rta_adherence", "ops_recommendation", "compliance_review", "hr_action", "ld_action", "cx_impact", "crm_impact", "sami_summary"]
+    expected = [
+        "wfm_forecast",
+        "rta_adherence",
+        "ops_recommendation",
+        "compliance_review",
+        "hr_action",
+        "ld_action",
+        "cx_impact",
+        "crm_impact",
+        "sami_summary",
+    ]
     actual = [s.name for s in ev.steps]
     assert actual == expected
 
 
 # ── actual WFM/RTA/CX/CRM adapter invocation (not cockpit placeholders) ─
 
+
 def test_actual_wfm_adapter_invocation(fresh_state):
     """WFM step must invoke the real ErlangCEngine and return real metrics (optimal_agents)."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     wfm_step = ev.steps[0]
@@ -158,19 +177,27 @@ def test_actual_wfm_adapter_invocation(fresh_state):
 
 def test_actual_rta_adapter_invocation(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     rta_step = ev.steps[1]
     assert rta_step.name == "rta_adherence"
     assert rta_step.metrics is not None
     # RTA adapter returns adherence metrics
-    assert "adherence_result" in rta_step.metrics or "overall_adherence" in rta_step.metrics or "adherence" in str(rta_step.metrics).lower()
+    assert (
+        "adherence_result" in rta_step.metrics
+        or "overall_adherence" in rta_step.metrics
+        or "adherence" in str(rta_step.metrics).lower()
+    )
 
 
 def test_actual_cx_adapter_invocation(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     cx_step = ev.steps[6]
@@ -182,7 +209,9 @@ def test_actual_cx_adapter_invocation(fresh_state):
 
 def test_actual_crm_adapter_invocation(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     crm_step = ev.steps[7]
@@ -194,9 +223,12 @@ def test_actual_crm_adapter_invocation(fresh_state):
 
 # ── preserved correlation and causation IDs ──────────────────────────────
 
+
 def test_preserved_correlation_and_causation_ids(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     # All steps share the same correlation_id
@@ -205,29 +237,38 @@ def test_preserved_correlation_and_causation_ids(fresh_state):
     # Each step has its own workflow_id (separate C2 workflow per capability execution)
     # But they are linked via causation_id chain
     for i in range(1, len(ev.steps)):
-        assert ev.steps[i].causation_id == ev.steps[i-1].workflow_id, \
-            f"Step {i} causation_id should link to previous step workflow_id"
+        assert (
+            ev.steps[i].causation_id == ev.steps[i - 1].workflow_id
+        ), f"Step {i} causation_id should link to previous step workflow_id"
 
 
 # ── persisted events for every step ─────────────────────────────────────
 
+
 def test_persisted_events_for_every_step(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     wf_id = ev.steps[0].workflow_id
     # Each step should have at least one event in the store
     for step in ev.steps:
         events = engine.store.get_events(step.workflow_id)
-        assert len(events) > 0, f"Step {step.name} ({step.workflow_id}) should have persisted events"
+        assert (
+            len(events) > 0
+        ), f"Step {step.name} ({step.workflow_id}) should have persisted events"
 
 
 # ── audit records for every step ───────────────────────────────────────
 
+
 def test_audit_records_for_every_step(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     from security.audit import AuditTrail
@@ -242,29 +283,41 @@ def test_audit_records_for_every_step(fresh_state):
 
 # ── structured log identifiers ─────────────────────────────────────────
 
+
 def test_structured_log_identifiers(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     log_path = pathlib.Path(fresh_state["log_path"])
     assert log_path.exists(), "structured log file should exist"
-    logs = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    logs = [
+        json.loads(line)
+        for line in log_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     # Find logs for any of the steps
     wf_id = ev.steps[0].workflow_id
     found = [log for log in logs if log.get("workflow_id") == wf_id]
     assert len(found) > 0, "structured logs should contain workflow_id"
     sample = found[0]
-    assert "correlation_id" in sample, f"Log should contain correlation_id, got: {list(sample.keys())}"
+    assert (
+        "correlation_id" in sample
+    ), f"Log should contain correlation_id, got: {list(sample.keys())}"
     assert "tenant_id" in sample
     assert "client_id" in sample
 
 
 # ── calculated/recommendation separation ───────────────────────────────
 
+
 def test_calculated_vs_recommendation_separation(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     # OPS step: recommendations are distinct from metrics (calculated)
@@ -274,14 +327,20 @@ def test_calculated_vs_recommendation_separation(fresh_state):
     assert ops_step.recommendations is not None
     assert len(ops_step.recommendations) > 0
     rec = ops_step.recommendations[0]
-    assert rec.get("source") in ("calculated", "model"), f"OPS recommendation should be marked, got {rec}"
+    assert rec.get("source") in (
+        "calculated",
+        "model",
+    ), f"OPS recommendation should be marked, got {rec}"
 
 
 # ── Compliance approval path ───────────────────────────────────────────
 
+
 def test_compliance_approval_path(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     # Should have compliance step with approval
@@ -298,9 +357,12 @@ def test_compliance_approval_path(fresh_state):
 
 # ── Compliance denial path ────────────────────────────────────────────
 
+
 def test_compliance_denial_path(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=False)
     ev = ctrl.run(req)
     # Compliance step denied
@@ -311,15 +373,22 @@ def test_compliance_denial_path(fresh_state):
     for s in ev.steps[4:]:
         if s.name in ("hr_action", "ld_action", "cx_impact", "crm_impact", "sami_summary"):
             # If step was attempted, it should be dead_letter or denied
-            assert s.state in ("dead_letter", "failed", "denied", "cancelled"), \
-                f"After Compliance denial, step {s.name} should be dead_letter/failed, got {s.state}"
+            assert s.state in (
+                "dead_letter",
+                "failed",
+                "denied",
+                "cancelled",
+            ), f"After Compliance denial, step {s.name} should be dead_letter/failed, got {s.state}"
 
 
 # ── tenant isolation ──────────────────────────────────────────────────
 
+
 def test_tenant_isolation(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     # Use a different tenant_id
     req = _make_request(approve_compliance=True, tenant="tenant_other_999", client="client_other")
     ev = ctrl.run(req)
@@ -330,9 +399,12 @@ def test_tenant_isolation(fresh_state):
 
 # ── idempotent repeat submission ──────────────────────────────────────
 
+
 def test_idempotent_repeat_submission(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev1 = ctrl.run(req)
     wf_id = ev1.workflow_id
@@ -349,10 +421,13 @@ def test_idempotent_repeat_submission(fresh_state):
 
 # ── restart/replay ────────────────────────────────────────────────────
 
+
 def test_restart_replay(fresh_state):
     """Run once, close engine/store, reopen, replay events and verify state persists."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     wf_id = ev.steps[0].workflow_id
@@ -371,9 +446,12 @@ def test_restart_replay(fresh_state):
 
 # ── failure injection: invalid WFM input ──────────────────────────────
 
+
 def test_failure_injection_invalid_wfm(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     # Override wfm input to be invalid
     bad = WFM_INPUT.copy()
@@ -383,7 +461,10 @@ def test_failure_injection_invalid_wfm(fresh_state):
     wfm_step = ev.steps[0]
     assert wfm_step.name == "wfm_forecast"
     # WFM should fail visibly (dead_letter or error)
-    assert wfm_step.state in ("dead_letter", "failed"), f"Invalid WFM should fail visibly, got {wfm_step.state}"
+    assert wfm_step.state in (
+        "dead_letter",
+        "failed",
+    ), f"Invalid WFM should fail visibly, got {wfm_step.state}"
     assert wfm_step.error is not None
     # Downstream steps should not proceed (since WFM failed)
     for s in ev.steps[1:]:
@@ -395,10 +476,13 @@ def test_failure_injection_invalid_wfm(fresh_state):
 
 # ── failure injection: RTA dependency failure ───────────────────────
 
+
 def test_failure_injection_rta_dependency(monkeypatch, fresh_state):
     """Simulate RTA dependency failure (ImportError) by patching the adapter in registry."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     # Patch the RTA adapter in the registry's ADAPTER_MAP
     from engines.registry import ADAPTER_MAP
@@ -417,10 +501,13 @@ def test_failure_injection_rta_dependency(monkeypatch, fresh_state):
 
 # ── failure injection: engine timeout ───────────────────────────────
 
+
 def test_failure_injection_engine_timeout(monkeypatch, fresh_state):
     """Simulate engine timeout via deadline."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     # Patch the WFM adapter in the registry to simulate timeout
     from engines.registry import ADAPTER_MAP
@@ -439,17 +526,34 @@ def test_failure_injection_engine_timeout(monkeypatch, fresh_state):
 
 # ── failure injection: unauthorized role ───────────────────────────
 
+
 def test_failure_injection_unauthorized_role(fresh_state):
     """Engine authorization should block unauthorized roles."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     # Test authorization directly: marketing_gm cannot use wfm_forecast
     from security.identity import Identity
     from security.policy import AuthorizationRequest, authorize
-    ident = Identity(actor="marketing_user", actor_type="agent", tenant_id="tenant_demo_001", client_id="client_alpha", role_id="marketing_gm")
-    req_auth = AuthorizationRequest(identity=ident, capability="wfm_forecast", tool="wfm_engine", owning_role_id="marketing_gm", target_tenant_id="tenant_demo_001", target_client_id="client_alpha")
+
+    ident = Identity(
+        actor="marketing_user",
+        actor_type="agent",
+        tenant_id="tenant_demo_001",
+        client_id="client_alpha",
+        role_id="marketing_gm",
+    )
+    req_auth = AuthorizationRequest(
+        identity=ident,
+        capability="wfm_forecast",
+        tool="wfm_engine",
+        owning_role_id="marketing_gm",
+        target_tenant_id="tenant_demo_001",
+        target_client_id="client_alpha",
+    )
     decision = authorize(req_auth)
     assert decision.allowed is False
     assert decision.code == "unauthorized_role"
@@ -457,10 +561,13 @@ def test_failure_injection_unauthorized_role(fresh_state):
 
 # ── failure injection: tenant mismatch ──────────────────────────────
 
+
 def test_failure_injection_tenant_mismatch(fresh_state):
     """Engine identity's tenant doesn't match target tenant."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True, tenant="tenant_a", client="client_a")
     # Mutate the request mid-run to test, or test via direct authorization call
     # Simpler: verify that the workflow preserves tenant and authorization runs
@@ -470,8 +577,22 @@ def test_failure_injection_tenant_mismatch(fresh_state):
     # authorization would fail. We test this at the engine level.
     from security.identity import Identity
     from security.policy import AuthorizationRequest, authorize
-    ident = Identity(actor="suby", actor_type="agent", tenant_id="tenant_b", client_id="client_a", role_id="ops_gm")
-    req_auth = AuthorizationRequest(identity=ident, capability="wfm_forecast", tool="wfm_engine", owning_role_id="ops_gm", target_tenant_id="tenant_a", target_client_id="client_a")
+
+    ident = Identity(
+        actor="suby",
+        actor_type="agent",
+        tenant_id="tenant_b",
+        client_id="client_a",
+        role_id="ops_gm",
+    )
+    req_auth = AuthorizationRequest(
+        identity=ident,
+        capability="wfm_forecast",
+        tool="wfm_engine",
+        owning_role_id="ops_gm",
+        target_tenant_id="tenant_a",
+        target_client_id="client_a",
+    )
     decision = authorize(req_auth)
     assert decision.allowed is False
     assert decision.code == "tenant_isolation"
@@ -479,9 +600,12 @@ def test_failure_injection_tenant_mismatch(fresh_state):
 
 # ── failure injection: duplicate idempotency ───────────────────────
 
+
 def test_failure_injection_duplicate_idempotency(fresh_state):
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     # First run
     ev1 = ctrl.run(req)
@@ -489,21 +613,63 @@ def test_failure_injection_duplicate_idempotency(fresh_state):
     # For the vertical slice, each run is a new step workflow with a new workflow_id.
     # We test that the engine itself is idempotent by submitting the same TaskRequest twice.
     from contracts.task import TaskRequest
-    corr = CorrelationContext(correlation_id="c1", idempotency_key="k1", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
-    tr = TaskRequest(request_id="r1", correlation=corr, requesting_actor="suby", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={"arrival_rate": 10, "average_handling_time": 5, "service_level_target": 0.8, "average_calls_per_period": 17}, requires_approval=False, status="proposed", created_at="2026-08-27T18:00:00Z", client_id="c")
+
+    corr = CorrelationContext(
+        correlation_id="c1",
+        idempotency_key="k1",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
+    tr = TaskRequest(
+        request_id="r1",
+        correlation=corr,
+        requesting_actor="suby",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={
+            "arrival_rate": 10,
+            "average_handling_time": 5,
+            "service_level_target": 0.8,
+            "average_calls_per_period": 17,
+        },
+        requires_approval=False,
+        status="proposed",
+        created_at="2026-08-27T18:00:00Z",
+        client_id="c",
+    )
     wf1 = engine.submit(tr)
-    tr2 = TaskRequest(request_id="r2", correlation=corr, requesting_actor="suby", owning_role_id="ops_gm", capability="wfm_forecast", input_payload={"arrival_rate": 10, "average_handling_time": 5, "service_level_target": 0.8, "average_calls_per_period": 17}, requires_approval=False, status="proposed", created_at="2026-08-27T18:00:00Z", client_id="c")
+    tr2 = TaskRequest(
+        request_id="r2",
+        correlation=corr,
+        requesting_actor="suby",
+        owning_role_id="ops_gm",
+        capability="wfm_forecast",
+        input_payload={
+            "arrival_rate": 10,
+            "average_handling_time": 5,
+            "service_level_target": 0.8,
+            "average_calls_per_period": 17,
+        },
+        requires_approval=False,
+        status="proposed",
+        created_at="2026-08-27T18:00:00Z",
+        client_id="c",
+    )
     wf2 = engine.submit(tr2)
     assert wf1.workflow_id == wf2.workflow_id, "Same idempotency_key should return same workflow_id"
 
 
 # ── failure injection: Ollama unavailable ───────────────────────────
 
+
 def test_failure_injection_ollama_unavailable(fresh_state, monkeypatch):
     """Simulate Ollama unavailable. The vertical slice does not require Ollama (uses adapters directly),
     so this should not fail. We verify the slice completes without Ollama."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     # No Ollama dependency: vertical slice completes
     ev = ctrl.run(req)
@@ -513,10 +679,13 @@ def test_failure_injection_ollama_unavailable(fresh_state, monkeypatch):
 
 # ── failure injection: downstream handler failure ──────────────────
 
+
 def test_failure_injection_downstream_handler_failure(monkeypatch, fresh_state):
     """Simulate CX handler failure."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     from engines.registry import ADAPTER_MAP
 
@@ -539,10 +708,13 @@ def test_failure_injection_downstream_handler_failure(monkeypatch, fresh_state):
 
 # ── cockpit timeline / controller output ───────────────────────────
 
+
 def test_cockpit_timeline_controller_output(fresh_state):
     """The evidence package has the structure needed by the cockpit timeline view."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     # Must have workflow_id, steps with timeline
@@ -571,9 +743,11 @@ def test_cockpit_timeline_controller_output(fresh_state):
 
 # ── existing C0–C4 regression (smoke) ────────────────────────────────
 
+
 def test_existing_c0_c4_regression(fresh_state):
     """Quick check: C0 smoke still works (6/6 engines, 4/4 agents)."""
     import subprocess
+
     smoke_path = _ROOT / "Helix-Prime" / "scripts" / "smoke.py"
     r = subprocess.run(
         [sys.executable, str(smoke_path)],
@@ -589,10 +763,13 @@ def test_existing_c0_c4_regression(fresh_state):
 
 # ── written evidence artifact ────────────────────────────────────────
 
+
 def test_written_evidence_artifact(fresh_state, tmp_path):
     """The controller can write an evidence package to disk."""
     engine = _make_engine(fresh_state)
-    ctrl = VerticalSliceController(engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"])
+    ctrl = VerticalSliceController(
+        engine, audit_db_path=fresh_state["audit_path"], log_path=fresh_state["log_path"]
+    )
     req = _make_request(approve_compliance=True)
     ev = ctrl.run(req)
     # Write evidence package

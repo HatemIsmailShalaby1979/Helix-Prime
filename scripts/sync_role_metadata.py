@@ -60,9 +60,15 @@ def canonical_block() -> str:
     for role_id, spec in ORGANIZATION_CATALOG.items():
         engines = ", ".join(spec.owned_engines) or "none"
         classes = ", ".join(spec.allowed_data_classifications)
-        limit = "unlimited (human escalation)" if spec.financial_approval_limit_usd is None else f"{spec.financial_approval_limit_usd:.2f}"
+        limit = (
+            "unlimited (human escalation)"
+            if spec.financial_approval_limit_usd is None
+            else f"{spec.financial_approval_limit_usd:.2f}"
+        )
         kpis = ", ".join(spec.kpis)
-        lines.append(f"| `{role_id}` | {engines} | {classes} | {limit} | {kpis} | {spec.oversight_only} |")
+        lines.append(
+            f"| `{role_id}` | {engines} | {classes} | {limit} | {kpis} | {spec.oversight_only} |"
+        )
     lines += [
         "",
         "### Runtime aliases",
@@ -94,9 +100,13 @@ def stale_references(text: str) -> List[str]:
             # The generated matrix documents the one intentional YAML alias.
             if stale == "fraud_gm" and "YAML compatibility alias" in text:
                 continue
-            findings.append(f"retired role id `{stale}` found; use `{canonical}` or explain YAML compatibility")
+            findings.append(
+                f"retired role id `{stale}` found; use `{canonical}` or explain YAML compatibility"
+            )
     if re.search(r"immutable audit trail|proof ledger", text, re.IGNORECASE):
-        findings.append("legacy ledger wording found; use append-only hash-chained audit_events wording")
+        findings.append(
+            "legacy ledger wording found; use append-only hash-chained audit_events wording"
+        )
     return findings
 
 
@@ -116,8 +126,12 @@ def update_block(path: pathlib.Path, block: str) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check", action="store_true", help="scan targets and exit 1 on stale references")
-    parser.add_argument("--write", action="store_true", help="write/update the generated RoleSpec block")
+    parser.add_argument(
+        "--check", action="store_true", help="scan targets and exit 1 on stale references"
+    )
+    parser.add_argument(
+        "--write", action="store_true", help="write/update the generated RoleSpec block"
+    )
     parser.add_argument("paths", nargs="*", type=pathlib.Path)
     args = parser.parse_args()
 

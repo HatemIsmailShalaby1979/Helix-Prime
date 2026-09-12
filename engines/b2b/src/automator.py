@@ -149,9 +149,7 @@ class OnboardingAutomator:
         self.clients[client_profile.client_id] = client_profile
         self.logger.info(f"Added client: {client_profile.name}")
 
-    def generate_sop(
-        self, client_id: str, template_name: str = "template1"
-    ) -> SOPDocument:
+    def generate_sop(self, client_id: str, template_name: str = "template1") -> SOPDocument:
         """Generate SOP for a client."""
         if client_id not in self.clients:
             raise ValueError(f"Client {client_id} not found")
@@ -266,9 +264,7 @@ class OnboardingAutomator:
             },
         )
 
-    def generate_staffing_plan(
-        self, client_id: str, workload_data: dict
-    ) -> StaffingPlan:
+    def generate_staffing_plan(self, client_id: str, workload_data: dict) -> StaffingPlan:
         """Generate staffing plan for a client."""
         if client_id not in self.clients:
             raise ValueError(f"Client {client_id} not found")
@@ -395,8 +391,7 @@ class OnboardingAutomator:
                 "name": f"Phase {i + 1}: {role['name']}",
                 "start_date": (datetime.now() + timedelta(days=i * 5)).isoformat(),
                 "end_date": (
-                    datetime.now()
-                    + timedelta(days=i * 5 + role.get("duration_days", 5))
+                    datetime.now() + timedelta(days=i * 5 + role.get("duration_days", 5))
                 ).isoformat(),
                 "responsibilities": role["skills"],
                 "deliverables": [f"{role['name']} Deliverable {i + 1}"],

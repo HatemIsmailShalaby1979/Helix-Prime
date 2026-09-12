@@ -151,43 +151,74 @@ class Workflow:
     def __post_init__(self) -> None:
         self.workflow_id = _require_non_empty_str(self.workflow_id, "Workflow.workflow_id")
         if not isinstance(self.correlation, CorrelationContext):
-            raise ValueError(f"Workflow.correlation: must be CorrelationContext, got {type(self.correlation).__name__}")
+            raise ValueError(
+                f"Workflow.correlation: must be CorrelationContext, got {type(self.correlation).__name__}"
+            )
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "Workflow.tenant_id")
         if self.client_id is not None:
             self.client_id = _require_non_empty_str(self.client_id, "Workflow.client_id")
-        if not self.tenant_id and not self.client_id and not self.correlation.tenant_id and not self.correlation.client_id:
-            raise ValueError("Workflow: at least one of tenant_id/client_id or correlation tenant/client must be present")
-        self.requesting_actor = _require_non_empty_str(self.requesting_actor, "Workflow.requesting_actor")
+        if (
+            not self.tenant_id
+            and not self.client_id
+            and not self.correlation.tenant_id
+            and not self.correlation.client_id
+        ):
+            raise ValueError(
+                "Workflow: at least one of tenant_id/client_id or correlation tenant/client must be present"
+            )
+        self.requesting_actor = _require_non_empty_str(
+            self.requesting_actor, "Workflow.requesting_actor"
+        )
         self.owning_role_id = _require_non_empty_str(self.owning_role_id, "Workflow.owning_role_id")
         self.capability = _require_non_empty_str(self.capability, "Workflow.capability")
         if self.state not in WorkflowState.ALL:
-            raise ValueError(f"Workflow.state: must be one of {sorted(WorkflowState.ALL)}, got {self.state!r}")
+            raise ValueError(
+                f"Workflow.state: must be one of {sorted(WorkflowState.ALL)}, got {self.state!r}"
+            )
         if not isinstance(self.input_payload, dict):
-            raise ValueError(f"Workflow.input_payload: must be dict, got {type(self.input_payload).__name__}")
+            raise ValueError(
+                f"Workflow.input_payload: must be dict, got {type(self.input_payload).__name__}"
+            )
         if self.output_payload is not None and not isinstance(self.output_payload, dict):
-            raise ValueError(f"Workflow.output_payload: must be dict or None, got {type(self.output_payload).__name__}")
+            raise ValueError(
+                f"Workflow.output_payload: must be dict or None, got {type(self.output_payload).__name__}"
+            )
         self.created_at = _validate_iso(self.created_at, "Workflow.created_at")
         self.updated_at = _validate_iso(self.updated_at, "Workflow.updated_at")
-        self.schema_version = _validate_schema_version(self.schema_version, "Workflow.schema_version")
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "Workflow.schema_version"
+        )
         if not isinstance(self.retry_count, int) or self.retry_count < 0:
             raise ValueError(f"Workflow.retry_count: must be int >=0, got {self.retry_count!r}")
         if not isinstance(self.max_retries, int) or self.max_retries < 0:
             raise ValueError(f"Workflow.max_retries: must be int >=0, got {self.max_retries!r}")
         if self.deadline is not None:
             self.deadline = _validate_iso(self.deadline, "Workflow.deadline")
-        self.idempotency_key = _require_non_empty_str(self.idempotency_key, "Workflow.idempotency_key")
+        self.idempotency_key = _require_non_empty_str(
+            self.idempotency_key, "Workflow.idempotency_key"
+        )
         if not isinstance(self.evidence_refs, list):
-            raise ValueError(f"Workflow.evidence_refs: must be list, got {type(self.evidence_refs).__name__}")
+            raise ValueError(
+                f"Workflow.evidence_refs: must be list, got {type(self.evidence_refs).__name__}"
+            )
         for i, ev in enumerate(self.evidence_refs):
             if not isinstance(ev, EvidenceRef):
-                raise ValueError(f"Workflow.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}")
+                raise ValueError(
+                    f"Workflow.evidence_refs[{i}]: must be EvidenceRef, got {type(ev).__name__}"
+                )
         if self.error is not None and not isinstance(self.error, AgentError):
-            raise ValueError(f"Workflow.error: must be AgentError or None, got {type(self.error).__name__}")
+            raise ValueError(
+                f"Workflow.error: must be AgentError or None, got {type(self.error).__name__}"
+            )
         if self.approval is not None and not isinstance(self.approval, Approval):
-            raise ValueError(f"Workflow.approval: must be Approval or None, got {type(self.approval).__name__}")
+            raise ValueError(
+                f"Workflow.approval: must be Approval or None, got {type(self.approval).__name__}"
+            )
         if not isinstance(self.requires_approval, bool):
-            raise ValueError(f"Workflow.requires_approval: must be bool, got {type(self.requires_approval).__name__}")
+            raise ValueError(
+                f"Workflow.requires_approval: must be bool, got {type(self.requires_approval).__name__}"
+            )
         if self.task_id is not None:
             self.task_id = _require_non_empty_str(self.task_id, "Workflow.task_id")
 
@@ -203,7 +234,8 @@ class Workflow:
             raise ValueError(f"invalid transition {self.state!r} -> {to_state!r}")
         self.state = to_state
         self.updated_at = _validate_iso(
-            timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
+            timestamp
+            or datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z"),
             "Workflow.updated_at",
         )
         # actor is for event, not stored here; caller should create event
@@ -265,9 +297,17 @@ class Workflow:
             max_retries=int(data.get("max_retries", 3)),
             deadline=data.get("deadline"),
             idempotency_key=data.get("idempotency_key", ""),
-            evidence_refs=[EvidenceRef.from_dict(e) for e in data.get("evidence_refs", []) if isinstance(e, dict)],
-            error=AgentError.from_dict(data["error"]) if isinstance(data.get("error"), dict) else None,
-            approval=Approval.from_dict(data["approval"]) if isinstance(data.get("approval"), dict) else None,
+            evidence_refs=[
+                EvidenceRef.from_dict(e)
+                for e in data.get("evidence_refs", [])
+                if isinstance(e, dict)
+            ],
+            error=AgentError.from_dict(data["error"])
+            if isinstance(data.get("error"), dict)
+            else None,
+            approval=Approval.from_dict(data["approval"])
+            if isinstance(data.get("approval"), dict)
+            else None,
             requires_approval=bool(data.get("requires_approval", False)),
             task_id=data.get("task_id"),
         )

@@ -85,9 +85,7 @@ class RiskScorer:
             # Calculate normalized score (0-1)
             if kpi == "aht":
                 # Lower AHT is better (inverse scoring)
-                normalized_score = max(
-                    0, 1 - (value / 0.5)
-                )  # Assume max AHT is 0.5 minutes
+                normalized_score = max(0, 1 - (value / 0.5))  # Assume max AHT is 0.5 minutes
             else:
                 # Higher KPI is better
                 normalized_score = min(1, value)
@@ -183,9 +181,7 @@ class RiskScorer:
         risk_level = self.classify_risk_level(kpi_analysis["weighted_score"])
 
         # Generate risk factors
-        risk_factors = self._identify_risk_factors(
-            kpi_data, kpi_analysis["risk_levels"]
-        )
+        risk_factors = self._identify_risk_factors(kpi_data, kpi_analysis["risk_levels"])
 
         # Generate recommendations
         recommendations = self._generate_recommendations(risk_level, risk_factors)
@@ -218,27 +214,17 @@ class RiskScorer:
         for kpi, data in risk_levels.items():
             if data["risk_level"] in ["critical", "high"]:
                 if kpi == "csat":
-                    risk_factors.append(
-                        f"Low customer satisfaction (CSAT: {kpi_data[kpi]:.2f})"
-                    )
+                    risk_factors.append(f"Low customer satisfaction (CSAT: {kpi_data[kpi]:.2f})")
                 elif kpi == "sla":
-                    risk_factors.append(
-                        f"Poor service level compliance (SLA: {kpi_data[kpi]:.2f})"
-                    )
+                    risk_factors.append(f"Poor service level compliance (SLA: {kpi_data[kpi]:.2f})")
                 elif kpi == "fcr":
-                    risk_factors.append(
-                        f"Low first contact resolution (FCR: {kpi_data[kpi]:.2f})"
-                    )
+                    risk_factors.append(f"Low first contact resolution (FCR: {kpi_data[kpi]:.2f})")
                 elif kpi == "aht":
-                    risk_factors.append(
-                        f"High average handle time (AHT: {kpi_data[kpi]:.2f}s)"
-                    )
+                    risk_factors.append(f"High average handle time (AHT: {kpi_data[kpi]:.2f}s)")
 
         return risk_factors
 
-    def _generate_recommendations(
-        self, risk_level: str, risk_factors: list[str]
-    ) -> list[str]:
+    def _generate_recommendations(self, risk_level: str, risk_factors: list[str]) -> list[str]:
         """
         Generate recommendations based on risk level and factors.
 
@@ -288,9 +274,7 @@ class RiskScorer:
         # Add specific recommendations based on risk factors
         for factor in risk_factors:
             if "CSAT" in factor:
-                recommendations.append(
-                    "Implement customer satisfaction improvement program"
-                )
+                recommendations.append("Implement customer satisfaction improvement program")
             elif "SLA" in factor:
                 recommendations.append("Review and optimize service level processes")
             elif "FCR" in factor:
@@ -302,9 +286,7 @@ class RiskScorer:
 
         return recommendations
 
-    def analyze_customer_population(
-        self, customer_data: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def analyze_customer_population(self, customer_data: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Analyze risk across a population of customers.
 
@@ -327,14 +309,10 @@ class RiskScorer:
 
         # Calculate overall statistics
         total_customers = len(customer_data)
-        overall_risk_score = np.mean(
-            [r["kpi_analysis"]["weighted_score"] for r in customer_risks]
-        )
+        overall_risk_score = np.mean([r["kpi_analysis"]["weighted_score"] for r in customer_risks])
 
         # Identify high-risk customers
-        high_risk_customers = [
-            r for r in customer_risks if r["risk_level"] in ["critical", "high"]
-        ]
+        high_risk_customers = [r for r in customer_risks if r["risk_level"] in ["critical", "high"]]
 
         # Analyze trends
         trend_analysis = self._analyze_trends(customer_risks)
@@ -391,8 +369,7 @@ class RiskScorer:
             "average_risk_score": np.mean(risk_scores),
             "risk_score_std": np.std(risk_scores),
             "risk_level_distribution": {
-                level: count / len(risk_levels)
-                for level, count in Counter(risk_levels).items()
+                level: count / len(risk_levels) for level, count in Counter(risk_levels).items()
             },
             "average_kpi_scores": avg_kpi_scores,
             "risk_trend": "increasing"
@@ -425,9 +402,7 @@ class RiskScorer:
         critical_percentage = (
             risk_distribution.get("critical", 0) / sum(risk_distribution.values()) * 100
         )
-        high_percentage = (
-            risk_distribution.get("high", 0) / sum(risk_distribution.values()) * 100
-        )
+        high_percentage = risk_distribution.get("high", 0) / sum(risk_distribution.values()) * 100
 
         if critical_percentage > 10:
             recommendations.append(
@@ -486,8 +461,7 @@ class RiskScorerEngine:
         try:
             # Score individual customers
             result.customer_risks = [
-                self.risk_scorer.analyze_customer_risk(customer)
-                for customer in customer_data
+                self.risk_scorer.analyze_customer_risk(customer) for customer in customer_data
             ]
 
             # Calculate overall risk score
@@ -497,29 +471,21 @@ class RiskScorerEngine:
                 )
 
             # Calculate risk distribution
-            result.risk_distribution = self._calculate_risk_distribution(
-                result.customer_risks
-            )
+            result.risk_distribution = self._calculate_risk_distribution(result.customer_risks)
 
             # Identify high-risk customers
             result.high_risk_customers = [
-                r
-                for r in result.customer_risks
-                if r["risk_level"] in ["critical", "high"]
+                r for r in result.customer_risks if r["risk_level"] in ["critical", "high"]
             ]
 
             # Analyze trends
-            result.trend_analysis = self.risk_scorer._analyze_trends(
-                result.customer_risks
-            )
+            result.trend_analysis = self.risk_scorer._analyze_trends(result.customer_risks)
 
             # Generate recommendations
-            result.recommendations = (
-                self.risk_scorer._generate_population_recommendations(
-                    result.risk_distribution,
-                    result.trend_analysis,
-                    result.high_risk_customers,
-                )
+            result.recommendations = self.risk_scorer._generate_population_recommendations(
+                result.risk_distribution,
+                result.trend_analysis,
+                result.high_risk_customers,
             )
 
         except (ValueError, TypeError, OSError) as e:
@@ -528,9 +494,7 @@ class RiskScorerEngine:
 
         return result
 
-    def _calculate_risk_distribution(
-        self, customer_risks: list[dict[str, Any]]
-    ) -> dict[str, int]:
+    def _calculate_risk_distribution(self, customer_risks: list[dict[str, Any]]) -> dict[str, int]:
         """
         Calculate risk distribution.
 

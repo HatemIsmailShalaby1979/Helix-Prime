@@ -72,9 +72,9 @@ def test_every_registered_pack_declares_allowed_production_readiness():
 )
 def test_registered_pack_metadata_declares_readiness(pack_name, metadata):
     assert isinstance(metadata, dict)
-    assert "production_readiness" in metadata, (
-        f"pack {pack_name!r} must declare production_readiness"
-    )
+    assert (
+        "production_readiness" in metadata
+    ), f"pack {pack_name!r} must declare production_readiness"
     assert metadata["production_readiness"] in ALLOWED_PRODUCTION_READINESS, (
         f"pack {pack_name!r} production_readiness {metadata['production_readiness']!r} "
         f"not in allowed set {sorted(ALLOWED_PRODUCTION_READINESS)}"

@@ -14,9 +14,18 @@ SIMULATED_REALISTIC = "simulated_realistic"
 LIVE_CUSTOMER = "live_customer"
 
 DATA_MODE_DISTINCTION = (
-    (HISTORICAL_CONSENTED, "Real customer data previously consented for the pilot; tenant-scoped, classified."),
-    (SIMULATED_REALISTIC, "Synthetic data mirroring production shape; used for dry-runs and demos."),
-    (LIVE_CUSTOMER, "Live production customer data. NOT activated by the pilot package; requires separate real design-partner approval."),
+    (
+        HISTORICAL_CONSENTED,
+        "Real customer data previously consented for the pilot; tenant-scoped, classified.",
+    ),
+    (
+        SIMULATED_REALISTIC,
+        "Synthetic data mirroring production shape; used for dry-runs and demos.",
+    ),
+    (
+        LIVE_CUSTOMER,
+        "Live production customer data. NOT activated by the pilot package; requires separate real design-partner approval.",
+    ),
 )
 
 
@@ -31,7 +40,11 @@ class DataClassificationPolicy:
 class MinimumDataPolicy:
     enabled: bool = True
     collected_fields: tuple = ("account_id", "health_state", "risk_factors", "recommended_action")
-    excluded_fields: tuple = ("raw_conversation_transcripts", "payment_instruments", "government_ids")
+    excluded_fields: tuple = (
+        "raw_conversation_transcripts",
+        "payment_instruments",
+        "government_ids",
+    )
 
 
 @dataclass(frozen=True)
@@ -95,12 +108,26 @@ def default_scope() -> PilotScope:
         read_only_connectors=ReadOnlyConnectorConfig(),
         retention=RetentionDeletionPolicy(),
         success_metrics=(
-            SuccessMetric("response_time_reduction", "Baseline minus realized response time", "minutes"),
-            SuccessMetric("escalation_accuracy", "Share of escalations that matched a genuine risk state", "ratio"),
+            SuccessMetric(
+                "response_time_reduction", "Baseline minus realized response time", "minutes"
+            ),
+            SuccessMetric(
+                "escalation_accuracy",
+                "Share of escalations that matched a genuine risk state",
+                "ratio",
+            ),
             SuccessMetric("unresolved_risk_age", "Age of the oldest open risk factor", "days"),
-            SuccessMetric("customer_health_visibility", "Share of accounts with a confident diagnosis", "ratio"),
-            SuccessMetric("missed_follow_ups", "Recommended actions not approved/executed", "count"),
-            SuccessMetric("recommendation_acceptance_rate", "Approved / total recommendations", "ratio"),
+            SuccessMetric(
+                "customer_health_visibility",
+                "Share of accounts with a confident diagnosis",
+                "ratio",
+            ),
+            SuccessMetric(
+                "missed_follow_ups", "Recommended actions not approved/executed", "count"
+            ),
+            SuccessMetric(
+                "recommendation_acceptance_rate", "Approved / total recommendations", "ratio"
+            ),
             SuccessMetric("correction_rate", "Corrections / total records", "ratio"),
             SuccessMetric("operator_time_saved", "Estimated operator minutes saved", "minutes"),
         ),

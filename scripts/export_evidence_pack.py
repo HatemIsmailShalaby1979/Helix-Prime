@@ -41,7 +41,9 @@ def now_iso() -> str:
 
 
 def canonical(payload: Any) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+    return json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+    )
 
 
 def verify_rows(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -116,7 +118,10 @@ def load_ledger(db_path: pathlib.Path) -> List[Dict[str, Any]]:
             try:
                 record["payload"] = json.loads(record.get("payload") or "{}")
             except json.JSONDecodeError:
-                record["payload"] = {"_malformed": True, "raw_length": len(record.get("payload") or "")}
+                record["payload"] = {
+                    "_malformed": True,
+                    "raw_length": len(record.get("payload") or ""),
+                }
             output.append(record)
         return output
     finally:
@@ -204,8 +209,12 @@ def main() -> int:
 
     output = pathlib.Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
-    output.write_text(json.dumps(pack, indent=2, ensure_ascii=False, default=str) + "\n", encoding="utf-8")
-    print(f"wrote {output} (records={pack['integrity']['record_count']} verified={pack['integrity']['verified']})")
+    output.write_text(
+        json.dumps(pack, indent=2, ensure_ascii=False, default=str) + "\n", encoding="utf-8"
+    )
+    print(
+        f"wrote {output} (records={pack['integrity']['record_count']} verified={pack['integrity']['verified']})"
+    )
     return 0 if pack["integrity"]["verified"] else 2
 
 

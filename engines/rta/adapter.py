@@ -22,21 +22,56 @@ OWNING_ROLE = "ops_gm"
 DATA_CLASSIFICATION = DataClassification.INTERNAL
 
 
-def _audit(event_type: str, correlation_id: str, actor: str, workflow_id: str | None = None, decision: str = "succeeded", tenant_id: str | None = None, client_id: str | None = None):
+def _audit(
+    event_type: str,
+    correlation_id: str,
+    actor: str,
+    workflow_id: str | None = None,
+    decision: str = "succeeded",
+    tenant_id: str | None = None,
+    client_id: str | None = None,
+):
     try:
         trail = AuditTrail(db_path="security/audit.db")
         last = trail.list_records(limit=10000)
         prev = last[-1].current_hash if last else None
-        rec = AuditRecord.new(event_type=event_type, actor=actor, actor_type="service", decision=decision, correlation_id=correlation_id, tenant_id=tenant_id, client_id=client_id, role_id=OWNING_ROLE, workflow_id=workflow_id, previous_hash=prev)
+        rec = AuditRecord.new(
+            event_type=event_type,
+            actor=actor,
+            actor_type="service",
+            decision=decision,
+            correlation_id=correlation_id,
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id=OWNING_ROLE,
+            workflow_id=workflow_id,
+            previous_hash=prev,
+        )
         trail.append(rec)
         trail.close()
     except Exception:
         pass
 
 
-def _log(event_type: str, correlation_id: str, actor: str, workflow_id: str | None, result_status: str, **kwargs):
+def _log(
+    event_type: str,
+    correlation_id: str,
+    actor: str,
+    workflow_id: str | None,
+    result_status: str,
+    **kwargs,
+):
     try:
-        log_structured(event_type=event_type, correlation_id=correlation_id, workflow_id=workflow_id, actor=actor, capability=CAPABILITY_IDS[0], tool="rta_engine", result_status=result_status, **kwargs)
+        log_structured(
+            event_type=event_type,
+            correlation_id=correlation_id,
+            workflow_id=workflow_id,
+            actor=actor,
+            capability=CAPABILITY_IDS[0],
+            tool="rta_engine",
+            result_status=result_status,
+            **kwargs,
+        )
     except Exception:
         pass
 
@@ -57,26 +92,145 @@ def adapt(
     try:
         validate_no_secrets(input_payload)
     except ValueError as e:
-        _audit("rta_policy_denied", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-        _log("rta_policy_denied", correlation_id, actor, None, "denied", error_code="secret_detected", tenant_id=tenant_id, client_id=client_id)
-        return EngineResult.failure(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, input_payload, "policy_denied", str(e), warnings, data_classification=DATA_CLASSIFICATION, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=int((time.time() - start) * 1000))
+        _audit(
+            "rta_policy_denied",
+            correlation_id,
+            actor,
+            decision="denied",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "rta_policy_denied",
+            correlation_id,
+            actor,
+            None,
+            "denied",
+            error_code="secret_detected",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        return EngineResult.failure(
+            ENGINE_ID,
+            DISPLAY_NAME,
+            CAPABILITY_IDS,
+            tenant_id,
+            client_id,
+            correlation_id,
+            causation_id,
+            actor,
+            owning_role_id,
+            input_payload,
+            "policy_denied",
+            str(e),
+            warnings,
+            data_classification=DATA_CLASSIFICATION,
+            data_mode="sample" if is_sample else "real",
+            is_sample=is_sample,
+            duration_ms=int((time.time() - start) * 1000),
+        )
 
     data_class = input_payload.get("data_classification", DATA_CLASSIFICATION)
     try:
         validate_payload_classification(input_payload, data_class)
     except ValueError as e:
-        return EngineResult.failure(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, input_payload, "invalid_classification", str(e), warnings, data_classification=DATA_CLASSIFICATION, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=int((time.time() - start) * 1000))
+        return EngineResult.failure(
+            ENGINE_ID,
+            DISPLAY_NAME,
+            CAPABILITY_IDS,
+            tenant_id,
+            client_id,
+            correlation_id,
+            causation_id,
+            actor,
+            owning_role_id,
+            input_payload,
+            "invalid_classification",
+            str(e),
+            warnings,
+            data_classification=DATA_CLASSIFICATION,
+            data_mode="sample" if is_sample else "real",
+            is_sample=is_sample,
+            duration_ms=int((time.time() - start) * 1000),
+        )
 
     try:
-        ident = Identity(actor=actor, actor_type=ActorType.SERVICE, tenant_id=tenant_id, client_id=client_id, role_id=owning_role_id)
-        decision = authorize(AuthorizationRequest(identity=ident, capability="rta_adherence", tool="rta_engine", owning_role_id=OWNING_ROLE, target_tenant_id=tenant_id, target_client_id=client_id))
+        ident = Identity(
+            actor=actor,
+            actor_type=ActorType.SERVICE,
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id=owning_role_id,
+        )
+        decision = authorize(
+            AuthorizationRequest(
+                identity=ident,
+                capability="rta_adherence",
+                tool="rta_engine",
+                owning_role_id=OWNING_ROLE,
+                target_tenant_id=tenant_id,
+                target_client_id=client_id,
+            )
+        )
         if not decision.allowed:
-            _audit("rta_authorization_denied", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-            _log("rta_authorization_denied", correlation_id, actor, None, "denied", error_code=decision.code, tenant_id=tenant_id, client_id=client_id)
-            return EngineResult.failure(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, input_payload, "unauthorized", decision.reason, warnings, data_classification=data_class, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=int((time.time() - start) * 1000))
+            _audit(
+                "rta_authorization_denied",
+                correlation_id,
+                actor,
+                decision="denied",
+                tenant_id=tenant_id,
+                client_id=client_id,
+            )
+            _log(
+                "rta_authorization_denied",
+                correlation_id,
+                actor,
+                None,
+                "denied",
+                error_code=decision.code,
+                tenant_id=tenant_id,
+                client_id=client_id,
+            )
+            return EngineResult.failure(
+                ENGINE_ID,
+                DISPLAY_NAME,
+                CAPABILITY_IDS,
+                tenant_id,
+                client_id,
+                correlation_id,
+                causation_id,
+                actor,
+                owning_role_id,
+                input_payload,
+                "unauthorized",
+                decision.reason,
+                warnings,
+                data_classification=data_class,
+                data_mode="sample" if is_sample else "real",
+                is_sample=is_sample,
+                duration_ms=int((time.time() - start) * 1000),
+            )
     except Exception as e:
         if "unauthorized" in str(e).lower():
-            return EngineResult.failure(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, input_payload, "unauthorized", str(e), warnings, data_classification=data_class, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=int((time.time() - start) * 1000))
+            return EngineResult.failure(
+                ENGINE_ID,
+                DISPLAY_NAME,
+                CAPABILITY_IDS,
+                tenant_id,
+                client_id,
+                correlation_id,
+                causation_id,
+                actor,
+                owning_role_id,
+                input_payload,
+                "unauthorized",
+                str(e),
+                warnings,
+                data_classification=data_class,
+                data_mode="sample" if is_sample else "real",
+                is_sample=is_sample,
+                duration_ms=int((time.time() - start) * 1000),
+            )
 
     # Validate RTA specific inputs: schedule and actual adherence inputs
     try:
@@ -99,10 +253,29 @@ def adapt(
 
                 np.random.seed(42)
                 n = 5
-                schedule = pd.DataFrame({"agent_id": [f"A{i}" for i in range(n)], "scheduled_min": [480] * n, "date": ["2026-08-27"] * n, "hour": [9] * n, "scheduled_hours": [8] * n})
-                actual = pd.DataFrame({"agent_id": [f"A{i}" for i in range(n)], "logged_min": [460] * n, "productive_min": [450] * n, "date": ["2026-08-27"] * n, "hour": [9] * n, "actual_hours": [7.5] * n})
+                schedule = pd.DataFrame(
+                    {
+                        "agent_id": [f"A{i}" for i in range(n)],
+                        "scheduled_min": [480] * n,
+                        "date": ["2026-08-27"] * n,
+                        "hour": [9] * n,
+                        "scheduled_hours": [8] * n,
+                    }
+                )
+                actual = pd.DataFrame(
+                    {
+                        "agent_id": [f"A{i}" for i in range(n)],
+                        "logged_min": [460] * n,
+                        "productive_min": [450] * n,
+                        "date": ["2026-08-27"] * n,
+                        "hour": [9] * n,
+                        "actual_hours": [7.5] * n,
+                    }
+                )
             else:
-                raise ValueError("missing required RTA inputs: schedule and actual (or schedule_data/actual_data)")
+                raise ValueError(
+                    "missing required RTA inputs: schedule and actual (or schedule_data/actual_data)"
+                )
 
         # Validate they are not empty
         if hasattr(schedule, "__len__") and len(schedule) == 0:
@@ -111,9 +284,44 @@ def adapt(
             raise ValueError("actual data is empty")
 
     except (ValueError, TypeError) as e:
-        _audit("rta_validation_failed", correlation_id, actor, decision="denied", tenant_id=tenant_id, client_id=client_id)
-        _log("rta_validation_failed", correlation_id, actor, None, "failed", error_code="invalid_input", tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
-        return EngineResult.failure(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, input_payload, "invalid_input", str(e), warnings, data_classification=data_class, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=int((time.time() - start) * 1000))
+        _audit(
+            "rta_validation_failed",
+            correlation_id,
+            actor,
+            decision="denied",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "rta_validation_failed",
+            correlation_id,
+            actor,
+            None,
+            "failed",
+            error_code="invalid_input",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            payload={"error": str(e)},
+        )
+        return EngineResult.failure(
+            ENGINE_ID,
+            DISPLAY_NAME,
+            CAPABILITY_IDS,
+            tenant_id,
+            client_id,
+            correlation_id,
+            causation_id,
+            actor,
+            owning_role_id,
+            input_payload,
+            "invalid_input",
+            str(e),
+            warnings,
+            data_classification=data_class,
+            data_mode="sample" if is_sample else "real",
+            is_sample=is_sample,
+            duration_ms=int((time.time() - start) * 1000),
+        )
 
     # Invoke actual engine code
     try:
@@ -133,7 +341,11 @@ def adapt(
             result = calc.calculate_adherence(schedule, actual)
         except TypeError:
             # Alternative API
-            result = calc.analyze(schedule, actual) if hasattr(calc, "analyze") else calc.calculate(schedule, actual)
+            result = (
+                calc.analyze(schedule, actual)
+                if hasattr(calc, "analyze")
+                else calc.calculate(schedule, actual)
+            )
 
         # Normalize result to metrics
         if isinstance(result, dict):
@@ -156,13 +368,84 @@ def adapt(
         duration = int((time.time() - start) * 1000)
         evidence = [{"type": "engine_output", "engine": ENGINE_ID, "capability": CAPABILITY_IDS[0]}]
 
-        _audit("rta_executed", correlation_id, actor, decision="succeeded", tenant_id=tenant_id, client_id=client_id)
-        _log("rta_executed", correlation_id, actor, None, "succeeded", tenant_id=tenant_id, client_id=client_id, capability=CAPABILITY_IDS[0], tool="rta_engine", duration_ms=duration)
+        _audit(
+            "rta_executed",
+            correlation_id,
+            actor,
+            decision="succeeded",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "rta_executed",
+            correlation_id,
+            actor,
+            None,
+            "succeeded",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            capability=CAPABILITY_IDS[0],
+            tool="rta_engine",
+            duration_ms=duration,
+        )
 
-        return EngineResult.success(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, metrics, input_payload, warnings=warnings, evidence=evidence, data_classification=data_class, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=duration)
+        return EngineResult.success(
+            ENGINE_ID,
+            DISPLAY_NAME,
+            CAPABILITY_IDS,
+            tenant_id,
+            client_id,
+            correlation_id,
+            causation_id,
+            actor,
+            owning_role_id,
+            metrics,
+            input_payload,
+            warnings=warnings,
+            evidence=evidence,
+            data_classification=data_class,
+            data_mode="sample" if is_sample else "real",
+            is_sample=is_sample,
+            duration_ms=duration,
+        )
 
     except Exception as e:
         code = "dependency_unavailable" if "No module" in str(e) else "engine_error"
-        _audit("rta_failed", correlation_id, actor, decision="failed", tenant_id=tenant_id, client_id=client_id)
-        _log("rta_failed", correlation_id, actor, None, "failed", error_code=code, tenant_id=tenant_id, client_id=client_id, payload={"error": str(e)})
-        return EngineResult.failure(ENGINE_ID, DISPLAY_NAME, CAPABILITY_IDS, tenant_id, client_id, correlation_id, causation_id, actor, owning_role_id, input_payload, code, str(e), warnings, data_classification=data_class, data_mode="sample" if is_sample else "real", is_sample=is_sample, duration_ms=int((time.time() - start) * 1000))
+        _audit(
+            "rta_failed",
+            correlation_id,
+            actor,
+            decision="failed",
+            tenant_id=tenant_id,
+            client_id=client_id,
+        )
+        _log(
+            "rta_failed",
+            correlation_id,
+            actor,
+            None,
+            "failed",
+            error_code=code,
+            tenant_id=tenant_id,
+            client_id=client_id,
+            payload={"error": str(e)},
+        )
+        return EngineResult.failure(
+            ENGINE_ID,
+            DISPLAY_NAME,
+            CAPABILITY_IDS,
+            tenant_id,
+            client_id,
+            correlation_id,
+            causation_id,
+            actor,
+            owning_role_id,
+            input_payload,
+            code,
+            str(e),
+            warnings,
+            data_classification=data_class,
+            data_mode="sample" if is_sample else "real",
+            is_sample=is_sample,
+            duration_ms=int((time.time() - start) * 1000),
+        )

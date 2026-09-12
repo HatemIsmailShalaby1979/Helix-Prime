@@ -29,43 +29,61 @@ def compute_parent_view(
     family = families[0]
     athletes = [a for a in conn.list_athletes(ctx) if a.family_id == family_id]
     athlete_ids = {a.athlete_id for a in athletes}
-    sessions = [s for s in conn.list_sessions(ctx)
-                if any(aid in s.roster for aid in athlete_ids)]
+    sessions = [s for s in conn.list_sessions(ctx) if any(aid in s.roster for aid in athlete_ids)]
     checkins = [c for c in conn.list_checkins(ctx) if c.athlete_id in athlete_ids]
     attendance = compute_attendance(sessions, checkins)
     fees = [p for p in conn.list_fee_payments(ctx) if p.family_id == family_id]
     return {
         "as_of": as_of,
         "data_mode": DATA_MODE,
-        "family": {"family_id": family.family_id,
-                   "primary_contact_name": family.primary_contact_name},
+        "family": {
+            "family_id": family.family_id,
+            "primary_contact_name": family.primary_contact_name,
+        },
         "athletes": [
-            {"athlete_id": a.athlete_id, "name": a.name,
-             "program_id": a.program_id, "enrollment_status": a.enrollment_status}
+            {
+                "athlete_id": a.athlete_id,
+                "name": a.name,
+                "program_id": a.program_id,
+                "enrollment_status": a.enrollment_status,
+            }
             for a in athletes
         ],
         "schedule": [
-            {"session_id": s.session_id, "date": s.date, "start": s.start,
-             "end": s.end, "program_id": s.program_id}
+            {
+                "session_id": s.session_id,
+                "date": s.date,
+                "start": s.start,
+                "end": s.end,
+                "program_id": s.program_id,
+            }
             for s in sorted(sessions, key=lambda s: (s.date, s.start))
         ],
         "attendance_by_athlete": {
-            aid: {"expected": v["expected"], "attended": v["attended"],
-                  "rate": v["attendance_rate"]}
-            for aid, v in attendance["by_athlete"].items() if aid in athlete_ids
+            aid: {
+                "expected": v["expected"],
+                "attended": v["attended"],
+                "rate": v["attendance_rate"],
+            }
+            for aid, v in attendance["by_athlete"].items()
+            if aid in athlete_ids
         },
         "fees": [
-            {"payment_id": p.payment_id, "athlete_id": p.athlete_id,
-             "amount": p.amount, "due_date": p.due_date,
-             "status": "paid" if p.paid_at else "outstanding"}
+            {
+                "payment_id": p.payment_id,
+                "athlete_id": p.athlete_id,
+                "amount": p.amount,
+                "due_date": p.due_date,
+                "status": "paid" if p.paid_at else "outstanding",
+            }
             for p in fees
         ],
     }
 
 
-def render_parent_view(st, ctx: ConnectorContext,
-                       connectors: Dict[str, Any], as_of: str,
-                       family_id: str) -> None:
+def render_parent_view(
+    st, ctx: ConnectorContext, connectors: Dict[str, Any], as_of: str, family_id: str
+) -> None:
     """Streamlit wiring — thin; logic lives in compute_parent_view."""
     view = compute_parent_view(ctx, connectors, as_of, family_id)
     if "error" in view:
@@ -83,9 +101,14 @@ def render_parent_view(st, ctx: ConnectorContext,
     if view["athletes"]:
         st.markdown("**Attendance**")
         st.dataframe(
-            [{"athlete_id": aid, "attended": f"{v['attended']}/{v['expected']}",
-              "rate": f"{v['rate']:.0%}"}
-             for aid, v in view["attendance_by_athlete"].items()],
+            [
+                {
+                    "athlete_id": aid,
+                    "attended": f"{v['attended']}/{v['expected']}",
+                    "rate": f"{v['rate']:.0%}",
+                }
+                for aid, v in view["attendance_by_athlete"].items()
+            ],
             hide_index=True,
         )
         st.markdown("**Upcoming/past sessions**")

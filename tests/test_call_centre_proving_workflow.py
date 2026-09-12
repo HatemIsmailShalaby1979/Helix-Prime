@@ -51,8 +51,15 @@ def _corr(cid="corr_cc", ikey="idem_cc", tenant="acme", client="clientX"):
     )
 
 
-def _req(corr, capability="wfm_forecast", owning_role="ops_gm", actor="suby",
-         requires_approval=False, input_payload=None, client="clientX"):
+def _req(
+    corr,
+    capability="wfm_forecast",
+    owning_role="ops_gm",
+    actor="suby",
+    requires_approval=False,
+    input_payload=None,
+    client="clientX",
+):
     return TaskRequest(
         request_id="req_" + corr.correlation_id,
         correlation=corr,
@@ -69,6 +76,7 @@ def _req(corr, capability="wfm_forecast", owning_role="ops_gm", actor="suby",
 
 # ── 1. all 9 agents discoverable ────────────────────────────────────────────
 
+
 def test_all_nine_agents_discoverable():
     available = set(AgentRegistry.list_available())
     for name in CANONICAL:
@@ -77,6 +85,7 @@ def test_all_nine_agents_discoverable():
 
 
 # ── 2. all expected routes resolve ──────────────────────────────────────────
+
 
 def test_all_expected_routes_resolve():
     o = Orchestrator()
@@ -106,6 +115,7 @@ def test_all_nine_agents_loadable_by_orchestrator():
 
 # ── 3. cockpit displays all agents ──────────────────────────────────────────
 
+
 def test_cockpit_displays_all_agents():
     names = {a["name"] for a in cockpit.AGENTS}
     assert names == set(CANONICAL)
@@ -119,6 +129,7 @@ def test_cockpit_displays_all_agents():
 
 
 # ── 4. typed adapter execution ──────────────────────────────────────────────
+
 
 def test_typed_adapter_execution(tmp_path):
     store = Store(db_path=str(tmp_path / "wf.db"))
@@ -152,6 +163,7 @@ def test_typed_adapter_execution(tmp_path):
 
 # ── 5. offline deterministic mode ───────────────────────────────────────────
 
+
 def test_offline_deterministic_mode(monkeypatch):
     # Force the real call_llm branch: Ollama unreachable -> deterministic marker.
     def fake_post(self, *args, **kwargs):
@@ -180,6 +192,7 @@ def test_offline_via_cockpit_consult(monkeypatch):
 
 # ── 6. provenance on every displayed metric ─────────────────────────────────
 
+
 def test_provenance_on_displayed_metric():
     # Drive an engine result through the same path the cockpit dashboard uses.
     df, error = cockpit.ENGINE_CALLERS["WFM Forecasting"]("Account Alpha")
@@ -195,10 +208,13 @@ def test_provenance_on_displayed_metric():
 
 # ── 7. inter-agent calls through the actual cockpit workflow ────────────────
 
+
 def test_inter_agent_cockpit_workflow(monkeypatch):
     def fake_call_llm(self, prompt):
         if self.name == "SAMI":
-            return '<think>need headcount</think>\ncall_agent("PHILI", "What is headcount for Acme?")'
+            return (
+                '<think>need headcount</think>\ncall_agent("PHILI", "What is headcount for Acme?")'
+            )
         return "<think>ok</think>\nPHILI: headcount is 50."
 
     # cockpit re-imports base_agent (it deletes the cached module), so patch the
@@ -216,6 +232,7 @@ def test_inter_agent_cockpit_workflow(monkeypatch):
 
 
 # ── 8. context preserved across handoff ─────────────────────────────────────
+
 
 def test_context_preserved_across_handoff(tmp_path):
     store = Store(db_path=str(tmp_path / "wf.db"))
@@ -254,6 +271,7 @@ def test_context_preserved_across_handoff(tmp_path):
 
 
 # ── 9. tenant isolation + approval gating ───────────────────────────────────
+
 
 def test_tenant_isolation_policy():
     ident = Identity(
@@ -326,6 +344,7 @@ def test_approval_self_approval_and_same_role_denied(tmp_path):
 
 # ── 10. retry and dead-letter behaviour ─────────────────────────────────────
 
+
 def test_retry_and_dead_letter(tmp_path):
     store = Store(db_path=str(tmp_path / "wf.db"))
     engine = Engine(
@@ -350,6 +369,7 @@ def test_retry_and_dead_letter(tmp_path):
 
 
 # ── 11. audit-chain verification ────────────────────────────────────────────
+
 
 def test_workflow_replay_idempotency(tmp_path):
     """Repeated submit with same idempotency_key must not duplicate the

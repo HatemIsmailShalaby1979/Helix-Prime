@@ -43,7 +43,9 @@ def _now_iso() -> str:
 
 def _canonical_json(payload: Any) -> str:
     try:
-        return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+        return json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+        )
     except Exception:  # pragma: no cover - defensive
         return str(payload)
 
@@ -54,7 +56,9 @@ def _sha256(payload: Any) -> str:
 
 def _hash_payload(payload: Dict[str, Any]) -> str:
     try:
-        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+        canonical = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+        )
     except Exception:
         canonical = str(payload)
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
@@ -105,12 +109,36 @@ ENGINE_BASELINE_PAYLOADS: Dict[str, Dict[str, Any]] = {
     "crm": {
         "operation": "analytics",
         "leads": [
-            {"lead_id": "lead-1", "name": "Northwind", "source": "outbound", "score": 0.72, "status": "qualified"},
-            {"lead_id": "lead-2", "name": "Contoso", "source": "inbound", "score": 0.55, "status": "new"},
+            {
+                "lead_id": "lead-1",
+                "name": "Northwind",
+                "source": "outbound",
+                "score": 0.72,
+                "status": "qualified",
+            },
+            {
+                "lead_id": "lead-2",
+                "name": "Contoso",
+                "source": "inbound",
+                "score": 0.55,
+                "status": "new",
+            },
         ],
         "deals": [
-            {"lead_id": "lead-1", "deal_id": "deal-1", "value": 48000.0, "stage": "proposal", "probability": 0.6},
-            {"lead_id": "lead-2", "deal_id": "deal-2", "value": 22000.0, "stage": "qualification", "probability": 0.25},
+            {
+                "lead_id": "lead-1",
+                "deal_id": "deal-1",
+                "value": 48000.0,
+                "stage": "proposal",
+                "probability": 0.6,
+            },
+            {
+                "lead_id": "lead-2",
+                "deal_id": "deal-2",
+                "value": 22000.0,
+                "stage": "qualification",
+                "probability": 0.25,
+            },
         ],
         "data_mode": DATA_MODE_SAMPLE,
     },

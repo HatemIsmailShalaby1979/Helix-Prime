@@ -30,6 +30,7 @@ from integrations.transport import Transport, TransportResult, InMemoryTransport
 @dataclass
 class HelixEducationResponse:
     """Standard response from Helix Education adapter calls."""
+
     success: bool
     event: Optional[IntegrationEvent] = None
     error: Optional[Dict[str, Any]] = None
@@ -134,7 +135,9 @@ class HelixEducationAdapter:
                 "employee_id": employee_id,
                 "gap_name": gap_name,
             }
-        return HelixEducationResponse(success=result.success, event=result.event, error=result.error)
+        return HelixEducationResponse(
+            success=result.success, event=result.event, error=result.error
+        )
 
     # ── Learning Plan Request ────────────────────────────────────────────────
 
@@ -182,7 +185,9 @@ class HelixEducationAdapter:
                 "employee_id": employee_id,
                 "gap_id": gap_id,
             }
-        return HelixEducationResponse(success=result.success, event=result.event, error=result.error)
+        return HelixEducationResponse(
+            success=result.success, event=result.event, error=result.error
+        )
 
     # ── Assessment Submission ────────────────────────────────────────────────
 
@@ -227,11 +232,15 @@ class HelixEducationAdapter:
         )
 
         result = self._send_event(event)
-        return HelixEducationResponse(success=result.success, event=result.event, error=result.error)
+        return HelixEducationResponse(
+            success=result.success, event=result.event, error=result.error
+        )
 
     # ── Response Handling (called when Helix Education sends events to Prime) ──
 
-    def handle_learning_artifact_ready(self, event: LearningArtifactReady) -> HelixEducationResponse:
+    def handle_learning_artifact_ready(
+        self, event: LearningArtifactReady
+    ) -> HelixEducationResponse:
         """Process LearningArtifactReady event from Helix Education."""
         # Acknowledge the event
         self.transport.acknowledge(event.event_id)
@@ -244,7 +253,7 @@ class HelixEducationAdapter:
                 "employee_id": event.payload.get("employee_id"),
                 "gap_id": event.payload.get("gap_id"),
                 "storage_ref": event.payload.get("storage_ref"),
-            }
+            },
         )
 
     def handle_assessment_completed(self, event: AssessmentCompleted) -> HelixEducationResponse:
@@ -259,7 +268,7 @@ class HelixEducationAdapter:
                 "competency_id": event.payload.get("competency_id"),
                 "score": event.payload.get("score"),
                 "passed": event.payload.get("passed"),
-            }
+            },
         )
 
     def handle_competency_updated(self, event: CompetencyUpdated) -> HelixEducationResponse:
@@ -274,7 +283,7 @@ class HelixEducationAdapter:
                 "old_level": event.payload.get("old_level"),
                 "new_level": event.payload.get("new_level"),
                 "evidence_ref": event.payload.get("evidence_ref"),
-            }
+            },
         )
 
     def handle_integration_error(self, event: IntegrationError) -> HelixEducationResponse:
@@ -288,7 +297,7 @@ class HelixEducationAdapter:
                 "code": event.payload.get("error_code"),
                 "message": event.payload.get("error_message"),
                 "retry_count": event.payload.get("retry_count", 0),
-            }
+            },
         )
 
     # ── Polling for Responses ────────────────────────────────────────────────
@@ -307,6 +316,7 @@ class HelixEducationAdapter:
 
 
 # ── Fake Helix Education for Testing ─────────────────────────────────────────
+
 
 class FakeHelixEducation:
     """

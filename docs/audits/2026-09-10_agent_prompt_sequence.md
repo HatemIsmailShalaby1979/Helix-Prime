@@ -13,7 +13,11 @@
    (fresh context beats a long polluted one at this size).
 4. If a prompt fails verification, do **not** move on. Send `PREAMBLE` + the prompt again
    with the error output appended.
-5. **Prompt 6 (H1.4) is blocked** on a user decision — skip it and continue, or ask first.
+5. **If the suite is not at 571/571, run `Prompt R1` first** — it is the regression fix
+   for the 5 release-gate failures introduced by the H0.3 auth work.
+5. **Prompt 10 (H1.4 / tenancy) was a decision gate. DECIDED 2026-09-11: DELETE.**
+   It is now a normal implementation prompt — run it in sequence, no need to ask.
+   Rationale is recorded in `AGENTS.md` §0.4 H1.4.
 
 ---
 
@@ -496,32 +500,120 @@ COMMIT: test(gov): make catalog drift able to fail CI; extend detector to all 4 
 Then update AGENTS.md §0.4 (check H1.3).
 ```
 
-## Prompt 10 — H1.4: Tenant isolation — ⛔ BLOCKED, ASK THE USER FIRST
+## ⚠️ Prompt R1 — REGRESSION FIX: restore 571/571 — ✅ APPLIED 2026-09-11
+
+> **Already executed by the main agent.** Tests now generate tokens via
+> `secrets.token_urlsafe(24)`; scanner reports 0 findings. Kept here as the written
+> record of the fix and the reasoning (do not weaken the scanner).
+> Note: the literal token values were deliberately NOT written into this document either —
+> doing so tripped the same scanner.
 
 ```
 PREAMBLE
 
-GOAL: Resolve control_plane/tenancy.py. DO NOT IMPLEMENT — this is a product decision.
+GOAL: Fix 5 failing tests. The suite must be back to >= 571 passed, 0 failed.
+Do not start Prompt 10 until this is green.
 
-CONTEXT — verified:
-- control_plane/tenancy.py is 12 KB implementing TenantContext, TenantScopedStore,
-  TenantViolation, ensure_tenant_indexes, verify_isolation, partition_key.
-- It has ZERO references anywhere outside its own module and ZERO tests. It is dead.
-- Yet 00_CONSTITUTION.md declares tenant/client isolation as a governing clause, and
-  GOVERNANCE/IMPLEMENTATION_MATRIX.md attributes tenant isolation to security/policy.py
-  instead — tenancy.py is not mentioned.
-- security/policy.py::authorize DOES enforce tenant/client isolation at the policy layer
-  (checks identity tenant/client against target).
+DIAGNOSIS (already done — do not re-investigate, just verify and fix):
+All 5 failures are the SAME root cause.
+  FAILED tests/test_c8_release_gate.py::test_gate_returns_candidate_or_ready
+  FAILED tests/test_c8_release_gate.py::test_gate_controlled_pilot_ready
+  FAILED tests/test_capabilities_restaurant.py::test_release_gates
+  FAILED tests/test_command_center_integration.py::test_release_gates
+  FAILED tests/test_pilot.py::test_release_gates
+Each asserts classification == "CONTROLLED_PILOT_READY" but gets "NOT_READY", because
+the core gate `security_checks` is False. Running it shows:
+  security_checks: all_ok=False (secrets_scan:False; everything else True)
+and scan_for_secrets() reports exactly 2 findings — both hardcoded token string literals:
+  tests/test_server_auth.py:16    TOKEN = "<hardcoded literal>"
+  tests/test_server_spine.py:27   TOKEN = "<hardcoded literal>"
+Both literals were introduced by commit 7432823 (the H0.3 auth work).
+(The literal values are deliberately NOT reproduced in this document — writing them here
+would itself trip the scanner. Run scan_for_secrets() to see them.)
 
-TASK: Do NOT write code. Produce a decision brief, under 300 words, with:
-  A) What it would take to wire tenancy.py into control_plane/engine.py — which call
-     sites, roughly how many, and what breaks.
-  B) What deleting it would require (amend 00_CONSTITUTION.md? the matrix?).
-  C) Your recommendation, with the one sentence that justifies it.
-Then STOP and wait for the user's decision. No commit.
+THE SCANNER IS CORRECT. Do not weaken it. Do not add a blanket allowlist for tests/.
+Do not add these files to a global skip list.
+
+FIX: remove the hardcoded literals — generate the token at runtime in the tests, e.g.
+  import secrets
+  _TEST_TOKEN = secrets.token_urlsafe(24)
+and set the env var the server reads (HELIX_API_TOKEN) from that value in the test
+setup/fixture. The tests only need *a* token, not a fixed one. Apply the same treatment
+in both files. If any test asserts on a specific token STRING, change it to assert on the
+generated value.
+
+VERIFY:
+  .venv-py312\Scripts\python.exe -c "from release.security_gate import scan_for_secrets; r=scan_for_secrets(); print(r['count'])"
+    -> must print 0
+  .venv-py312\Scripts\python.exe -m pytest tests/test_server_auth.py tests/test_server_spine.py -q
+  .venv-py312\Scripts\python.exe -m pytest tests/ -q -m "not smoke" 2>&1 | tail -5
+    -> must be >= 571 passed, 0 failed
+
+COMMIT: test(sec): generate API test tokens at runtime (was hardcoded literals tripping secret scanner)
+Then update AGENTS.md §1.1 "Last full-suite result" with the real numbers.
 ```
 
-## Prompt 11 — H1.5: Kill switch (G18) ⏭ run next if 10 is blocked
+---
+
+## Prompt 10 — H1.4: Delete tenancy.py (G17) — DECIDED: delete
+
+```
+PREAMBLE
+
+GOAL: Delete control_plane/tenancy.py and correct every document that claims it is real.
+The user has DECIDED: delete. Do not re-litigate this; do not propose wiring it in.
+
+CONTEXT — a decision brief was produced and the user chose deletion. Verified facts:
+- control_plane/tenancy.py (12 KB) implements TenantContext, TenantScopedStore,
+  TenantViolation, ensure_tenant_indexes, verify_isolation, partition_key.
+- It has ZERO references outside its own module and ZERO tests. It is dead code that
+  advertises "driver-level tenant isolation" it never performs.
+- release/gate.py:146 _gate_data_isolation -> release/harness.py:327
+  _check_tenant_isolation uses security.policy.authorize, NOT tenancy.py.
+  => deleting breaks NO release gate. Confirmed by reading both.
+- GOVERNANCE/IMPLEMENTATION_MATRIX.md:96 already credits security/policy.py + identity.py
+  for tenant isolation, so the matrix needs NO change.
+- Wiring it in was costed at ~30 SQL rewrites + ~15 engine call sites and would have
+  broken scripts/export_evidence_pack.py (it does a cross-tenant dump). Rejected.
+
+CHANGES:
+1. Delete control_plane/tenancy.py (use `git rm`).
+2. Grep the whole repo for any remaining import/reference (tenancy, TenantScopedStore,
+   TenantContext, TenantViolation, verify_isolation, partition_key) and fix or remove
+   each. There should be ZERO.
+3. Correct these 4 docs that currently claim tenancy.py is real — state plainly that
+   driver-level (SQL) tenant isolation is NOT implemented and that isolation is enforced
+   at the policy seam (security/policy.py::authorize), and that driver-level enforcement
+   is deliberately DEFERRED, with a note that if it is ever required it belongs inside
+   Store, not in a wrapper module:
+   - docs/C4-C8_IMPLEMENTATION.md:81
+   - docs/HELIX_CODEX_EXECUTION_STATUS.md:23 and :55
+   - docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md:39, :373, :374, :378
+   Minimal, factual edits. Do not rewrite these documents.
+4. Add ONE sentence to the module docstring of security/policy.py noting that it is the
+   single enforcement point for tenant/client isolation and that driver-level enforcement
+   is deferred. Do not change any logic.
+5. Update AGENTS.md §0.4: mark H1.4 done and note "Decision B — deleted 2026-09-11".
+
+CONSTRAINTS:
+- Do NOT touch security/policy.py logic, security/identity.py, or any release gate.
+- Do NOT add a replacement abstraction. Deletion is the fix.
+- Do NOT delete docs/archive/ historical files over this (leave archive alone).
+
+VERIFY:
+  grep -rni "tenancy\|TenantScopedStore\|TenantContext\|TenantViolation" --include=*.py . | grep -v "\.venv"
+    -> must return ZERO (no .py file may reference it)
+  .venv-py312\Scripts\ruff.exe check control_plane/ security/
+  .venv-py312\Scripts\python.exe -m pytest tests/ -q -m "not smoke" 2>&1 | tail -5
+    -> must be >= 571 passed, 0 failed
+  .venv-py312\Scripts\python.exe -m pytest tests/test_c3_security.py -q -k isolation
+    -> tenant isolation tests must still pass (they test the policy layer)
+
+COMMIT: fix(gov): delete unwired tenancy.py; correct docs that claimed driver-level isolation
+Then update AGENTS.md §0.4 (check H1.4).
+```
+
+## Prompt 11 — H1.5: Kill switch (G18)
 
 ```
 PREAMBLE
@@ -752,7 +844,10 @@ PREAMBLE
 GOAL: Four documented facts are wrong. Fix exactly these, no rewriting.
 1. GOVERNANCE/IMPLEMENTATION_MATRIX.md:198 and :235 say "445 tests" / "Test suite: 445
    tests pass". Actual collection is 571. Update both, and add the date + commit.
-2. docs/PRODUCT_DEFINITION.md:11 says "four AI agents (SAMI, SUBY, PHILI, WILI)".
+0. The tenancy-related doc corrections are ALREADY handled in Prompt 10 — do not redo
+   them here. (docs/C4-C8_IMPLEMENTATION.md, docs/HELIX_CODEX_EXECUTION_STATUS.md,
+   docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md.)
+1. docs/PRODUCT_DEFINITION.md:11 says "four AI agents (SAMI, SUBY, PHILI, WILI)".
    docs/ENGINEERING_SPECIFICATION.md has a "The nine agents" heading and CHANGELOG
    records the change to 9. Update PRODUCT_DEFINITION.md to match reality — verify the
    real count first (check the agent registry, do not assume nine).
@@ -796,6 +891,41 @@ GOAL: Make the security documentation honest and current.
 VERIFY: no broken relative links; full suite >= 571; `git status` clean of stray binaries.
 COMMIT: one commit per numbered item (5 commits).
 Then update AGENTS.md §0.4 (check H3.3, H3.4) and mark the program complete in §1.
+```
+
+---
+
+## Prompt 20 — AGENTS.md de-duplication (added 2026-09-11)
+
+```
+PREAMBLE
+
+GOAL: AGENTS.md has grown a duplicate — clean it up.
+
+CONTEXT: While the hardening program ran, a second status section was appended
+("## 1. Production Hardening Task (H0-H3)"), so the file now has TWO numbered "## 1"
+sections: the original academy "## 1. Status snapshot" (says "ALL STEPS COMPLETE (S0-S7)"
+and knows nothing about the hardening program) and the new hardening one. A landing agent
+reads the first and concludes there is nothing to do.
+
+CHANGES:
+1. Make ONE status section the single source of truth: the HARDENING one (that is the
+   active work). Keep the academy S0-S7 ledger below it as history, clearly labelled
+   "COMPLETE — historical record".
+2. Renumber so headings are unique and monotonic. Search the whole file for references to
+   old section numbers and update them (the handoff checklist referenced "§0 + §1").
+3. Keep the H1.4 decision text ("DECIDED 2026-09-11: DELETE (Decision B)") verbatim — do
+   not drop it.
+4. Ensure the top of the file tells a landing agent which section is ACTIVE in the first
+   5 lines.
+
+CONSTRAINTS: Do not delete the academy ledger. Do not lose any checked [x] H-step.
+
+VERIFY:
+  grep -n "^## " AGENTS.md     -> no duplicate numbers, monotonic order
+  .venv-py312\Scripts\python.exe -m pytest tests/ -q -m "not smoke" 2>&1 | tail -3
+
+COMMIT: docs: de-duplicate AGENTS.md status sections, make hardening task the active one
 ```
 
 ---

@@ -37,7 +37,8 @@ class NodeStore:
         if self._conn is None:
             raise RuntimeError("Not connected")
 
-        self._conn.execute("""
+        self._conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS nodes (
                 node_id TEXT PRIMARY KEY,
                 tenant_id TEXT NOT NULL,
@@ -54,15 +55,20 @@ class NodeStore:
                 provenance_data_mode TEXT,
                 provenance_retrieved_at TEXT
             )
-        """)
-        self._conn.execute("""
+        """
+        )
+        self._conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_nodes_tenant
             ON nodes(tenant_id, created_at DESC)
-        """)
-        self._conn.execute("""
+        """
+        )
+        self._conn.execute(
+            """
             CREATE INDEX IF NOT EXISTS idx_nodes_correlation
             ON nodes(correlation_id)
-        """)
+        """
+        )
         self._conn.commit()
 
     def create(self, node: Node) -> Node:

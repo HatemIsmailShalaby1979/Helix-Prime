@@ -20,6 +20,7 @@ class WritePlan:
         idempotency_key: Key for replay safety.
         compensating_op: Optional compensation action for rollback.
     """
+
     def __init__(
         self,
         plan_id: str,
@@ -46,6 +47,7 @@ class WriteReceipt:
         source_of_truth: Which system is now authoritative.
         reversibility: Whether this write can be reversed.
     """
+
     def __init__(
         self,
         external_id: str,

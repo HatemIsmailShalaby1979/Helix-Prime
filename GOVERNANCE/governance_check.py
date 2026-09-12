@@ -47,7 +47,15 @@ def check_master_story_authority() -> dict[str, object]:
 
 
 def check_stale_authority_references(paths: Iterable[Path] | None = None) -> dict[str, object]:
-    scan_paths = list(paths or [ROOT / "README.md", ROOT / "CONTRIBUTING.md", ROOT / "MASTER_STORY.md", ROOT / "GOVERNANCE"])
+    scan_paths = list(
+        paths
+        or [
+            ROOT / "README.md",
+            ROOT / "CONTRIBUTING.md",
+            ROOT / "MASTER_STORY.md",
+            ROOT / "GOVERNANCE",
+        ]
+    )
     findings: list[str] = []
     for path in scan_paths:
         if path.is_dir():
@@ -65,7 +73,10 @@ def check_stale_authority_references(paths: Iterable[Path] | None = None) -> dic
                     except ValueError:
                         display_path = candidate
                     findings.append(f"{display_path} references {stale}")
-    return {"ok": not findings, "detail": "no stale authority references" if not findings else "; ".join(findings)}
+    return {
+        "ok": not findings,
+        "detail": "no stale authority references" if not findings else "; ".join(findings),
+    }
 
 
 def run_checks() -> dict[str, object]:

@@ -36,14 +36,18 @@ TENANT = "tenant-seam"
 CLIENT = "client-seam"
 
 
-def _stub_port(engine_id: str, *, code: str = "engine_error", message: str = "stub failure") -> EnginePort:
+def _stub_port(
+    engine_id: str, *, code: str = "engine_error", message: str = "stub failure"
+) -> EnginePort:
     """An :class:`EnginePort` that always fails, for injecting a hop failure."""
 
     class _StubPort:
         def __init__(self, engine_id: str) -> None:
             self.engine_id = engine_id
 
-        def execute(self, request: TaskRequest, *, sample_data_mode: bool = False) -> EngineInvocation:
+        def execute(
+            self, request: TaskRequest, *, sample_data_mode: bool = False
+        ) -> EngineInvocation:
             result = EngineResult.failure(
                 engine_id=engine_id,
                 display_name=engine_id,

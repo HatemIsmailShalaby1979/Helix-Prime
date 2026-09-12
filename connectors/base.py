@@ -178,7 +178,9 @@ class BaseConnector:
             return ConnectorResult(
                 status="error",
                 error=FailureDetail(
-                    "scope_denied", "cross-tenant enrichment denied", retryable=False,
+                    "scope_denied",
+                    "cross-tenant enrichment denied",
+                    retryable=False,
                 ),
                 correlation_id=context.correlation_id,
             )
@@ -196,7 +198,9 @@ class BaseConnector:
         return self._fetch_enrichment(context, account)
 
     # ------------------------------------------------------------------- retry
-    def with_retry(self, op: Callable[[], ConnectorResult], context: ConnectorContext) -> ConnectorResult:
+    def with_retry(
+        self, op: Callable[[], ConnectorResult], context: ConnectorContext
+    ) -> ConnectorResult:
         """Run `op` with deterministic retry. Retries only on retryable errors,
         up to `retry.max_attempts`. Never sleeps."""
         attempts = 0
@@ -236,7 +240,9 @@ class BaseConnector:
                 correlation_id=context.correlation_id,
             )
         cap = matching[0]
-        if getattr(cap, "writes_require_approval", True) and not self._approval_valid(approval, context):
+        if getattr(cap, "writes_require_approval", True) and not self._approval_valid(
+            approval, context
+        ):
             return ConnectorWriteResult(
                 executed=False,
                 approval_required=True,

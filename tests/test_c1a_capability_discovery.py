@@ -22,6 +22,7 @@ from organization.role_catalog import load_role_catalog
 
 # ── agent capability discovery ────────────────────────────────────────────
 
+
 def test_agent_capability_discovery():
     from organization.capability_registry import get_agent_for_capability
 
@@ -50,8 +51,12 @@ def test_engine_capability_discovery():
 
 # ── role-to-capability ownership ──────────────────────────────────────────
 
+
 def test_role_to_capability_ownership():
-    from organization.capability_registry import get_capabilities_for_role, is_capability_owned_by_role
+    from organization.capability_registry import (
+        get_capabilities_for_role,
+        is_capability_owned_by_role,
+    )
 
     ops_caps = get_capabilities_for_role("ops_gm")
     assert "wfm_forecast" in ops_caps
@@ -64,6 +69,7 @@ def test_role_to_capability_ownership():
 
 
 # ── allowed / denied tool access ──────────────────────────────────────────
+
 
 def test_allowed_tool_access():
     from organization.capability_registry import is_tool_allowed
@@ -90,6 +96,7 @@ def test_denied_tool_access():
 
 # ── unknown capability ─────────────────────────────────────────────────────
 
+
 def test_unknown_capability_fails_closed():
     from organization.capability_registry import get_agent_for_capability, get_engine_for_capability
 
@@ -107,6 +114,7 @@ def test_unknown_capability_discovery_via_unified_api():
 
 
 # ── ambiguous capability ──────────────────────────────────────────────────
+
 
 def test_ambiguous_capability_fails_closed():
     from organization.capability_registry import discover
@@ -137,6 +145,7 @@ def test_ambiguous_capability_fails_closed():
 
 
 # ── legacy name-based compatibility ───────────────────────────────────────
+
 
 def test_legacy_name_based_compatibility():
     # Legacy orchestrator keyword routing must still work
@@ -170,6 +179,7 @@ def test_legacy_engine_paths_preserved():
 
 # ── deterministic routing ─────────────────────────────────────────────────
 
+
 def test_deterministic_routing():
     from organization.capability_registry import get_agent_for_capability, discover
     from contracts.task import CorrelationContext
@@ -183,7 +193,13 @@ def test_deterministic_routing():
     assert first == second == "ops_gm"
 
     # discover via TaskRequest should be deterministic
-    corr = CorrelationContext(correlation_id="corr_det", idempotency_key="idem_det", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr_det",
+        idempotency_key="idem_det",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     from organization.capability_registry import route_task_request
 
     req1 = to_task_request(
@@ -201,7 +217,13 @@ def test_deterministic_routing():
 
     # Different capabilities route to different owners deterministically
     req2 = to_task_request(
-        correlation=CorrelationContext(correlation_id="corr_det2", idempotency_key="idem_det2", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z"),
+        correlation=CorrelationContext(
+            correlation_id="corr_det2",
+            idempotency_key="idem_det2",
+            tenant_id="t",
+            client_id="c",
+            created_at="2026-08-27T18:00:00Z",
+        ),
         requesting_actor="sami",
         requesting_role_id="sami",
         owning_role_id="hr_personnel_gm",
@@ -221,6 +243,7 @@ def test_deterministic_engine_routing():
 
 
 # ── no regression in current orchestrator behavior ─────────────────────────
+
 
 def test_no_regression_orchestrator_keyword_routing():
     from orchestration.orchestrator import Orchestrator
@@ -242,7 +265,13 @@ def test_no_regression_c1_contracts_still_green():
 
     catalog = load_role_catalog("organization/role-catalog.yaml")
     assert "sami" in catalog["roles_by_id"]
-    c = CorrelationContext(correlation_id="corr_reg", idempotency_key="idem_reg", tenant_id="t", client_id="c", created_at="2026-08-27T18:00:00Z")
+    c = CorrelationContext(
+        correlation_id="corr_reg",
+        idempotency_key="idem_reg",
+        tenant_id="t",
+        client_id="c",
+        created_at="2026-08-27T18:00:00Z",
+    )
     req = TaskRequest(
         request_id="req_reg",
         correlation=c,

@@ -20,7 +20,9 @@ POLICIES = (
 
 
 def authority_for(category: str) -> dict:
-    return AUTHORITY_BOUNDARIES.get(category, {"owner_role": "restaurant_gm", "approver_role": "restaurant_gm"})
+    return AUTHORITY_BOUNDARIES.get(
+        category, {"owner_role": "restaurant_gm", "approver_role": "restaurant_gm"}
+    )
 
 
 __all__ = ["POLICIES", "AUTHORITY_BOUNDARIES", "required_approver_role", "authority_for"]

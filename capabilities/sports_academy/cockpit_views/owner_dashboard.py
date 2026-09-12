@@ -31,8 +31,11 @@ def compute_owner_dashboard(
     programs = conn.list_programs(ctx)
 
     metrics = academy_kpis.compute_academy_metrics(
-        athletes=athletes, sessions=sessions, checkins=checkins,
-        facility_slots=slots, programs=programs,
+        athletes=athletes,
+        sessions=sessions,
+        checkins=checkins,
+        facility_slots=slots,
+        programs=programs,
     )
     attendance = compute_attendance(sessions, checkins)
     at_risk = list(churn_risk_signals(ctx, connectors))
@@ -50,8 +53,9 @@ def compute_owner_dashboard(
     }
 
 
-def render_owner_dashboard(st, ctx: ConnectorContext,
-                           connectors: Dict[str, Any], as_of: str) -> None:
+def render_owner_dashboard(
+    st, ctx: ConnectorContext, connectors: Dict[str, Any], as_of: str
+) -> None:
     """Streamlit wiring — thin; logic lives in compute_owner_dashboard."""
     board = compute_owner_dashboard(ctx, connectors, as_of)
     st.markdown(
@@ -62,25 +66,40 @@ def render_owner_dashboard(st, ctx: ConnectorContext,
     )
     k = board["kpis"]
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric("Active athletes", k["active_athletes"]["value"],
-                delta=f"target {k['active_athletes']['target']}")
-    col2.metric("MRR (USD)", f"{k['mrr']['value']:,.0f}",
-                delta=f"target {k['mrr']['target']:,.0f}")
-    col3.metric("Attendance (7d)", f"{board['attendance_7d']:.0%}",
-                delta=f"target {k['attendance_rate']['target']:.0%}",
-                delta_color="normal" if k["attendance_rate"]["met"] else "inverse")
-    col4.metric("At-risk athletes", len(board["at_risk_athletes"]),
-                delta=f"churn target {k['churn_rate']['target']:.0%}")
-    col5.metric("Facility utilization", f"{k['facility_utilization']['value']:.0%}",
-                delta=f"target {k['facility_utilization']['target']:.0%}")
+    col1.metric(
+        "Active athletes",
+        k["active_athletes"]["value"],
+        delta=f"target {k['active_athletes']['target']}",
+    )
+    col2.metric("MRR (USD)", f"{k['mrr']['value']:,.0f}", delta=f"target {k['mrr']['target']:,.0f}")
+    col3.metric(
+        "Attendance (7d)",
+        f"{board['attendance_7d']:.0%}",
+        delta=f"target {k['attendance_rate']['target']:.0%}",
+        delta_color="normal" if k["attendance_rate"]["met"] else "inverse",
+    )
+    col4.metric(
+        "At-risk athletes",
+        len(board["at_risk_athletes"]),
+        delta=f"churn target {k['churn_rate']['target']:.0%}",
+    )
+    col5.metric(
+        "Facility utilization",
+        f"{k['facility_utilization']['value']:.0%}",
+        delta=f"target {k['facility_utilization']['target']:.0%}",
+    )
     st.divider()
     if board["at_risk_athletes"]:
         st.markdown("**At-risk athletes (attendance below 60%)**")
         st.dataframe(
-            [{"athlete_id": r["athlete_id"],
-              "attendance_rate": f"{r['attendance_rate']:.0%}",
-              "attended": f"{r['attended']}/{r['expected']}"}
-             for r in board["at_risk_athletes"]],
+            [
+                {
+                    "athlete_id": r["athlete_id"],
+                    "attendance_rate": f"{r['attendance_rate']:.0%}",
+                    "attended": f"{r['attended']}/{r['expected']}",
+                }
+                for r in board["at_risk_athletes"]
+            ],
             hide_index=True,
         )
     else:

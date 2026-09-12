@@ -37,18 +37,23 @@ def main(argv=None) -> int:
     )
     parser.add_argument("--db-path", default="control_plane/workflow.db")
     parser.add_argument("--audit-db-path", default="security/audit.db")
+    flag_parent = argparse.ArgumentParser(add_help=False)
+    flag_parent.add_argument("--db-path", default=argparse.SUPPRESS)
+    flag_parent.add_argument("--audit-db-path", default=argparse.SUPPRESS)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    engage_parser = sub.add_parser("engage", help="halt the platform (or one tenant)")
+    engage_parser = sub.add_parser(
+        "engage", parents=[flag_parent], help="halt the platform (or one tenant)"
+    )
     engage_parser.add_argument("--reason", required=True)
     engage_parser.add_argument("--actor", default="operator")
     engage_parser.add_argument("--tenant", default=None)
 
-    release_parser = sub.add_parser("release", help="lift the halt")
+    release_parser = sub.add_parser("release", parents=[flag_parent], help="lift the halt")
     release_parser.add_argument("--actor", default="operator")
     release_parser.add_argument("--tenant", default=None)
 
-    status_parser = sub.add_parser("status", help="show halt state")
+    status_parser = sub.add_parser("status", parents=[flag_parent], help="show halt state")
     status_parser.add_argument("--tenant", default=None)
 
     args = parser.parse_args(argv)

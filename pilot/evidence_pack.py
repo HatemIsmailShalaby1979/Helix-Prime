@@ -28,10 +28,14 @@ def build_evidence_pack(runtime: Any, as_of: str) -> dict:
     states = [a.body.get("approval_state") for a in latest.values()]
 
     incidents = [
-        {"action": r.body.get("action"), "target": r.body.get("target"),
-         "reason": r.body.get("reason")}
+        {
+            "action": r.body.get("action"),
+            "target": r.body.get("target"),
+            "reason": r.body.get("reason"),
+        }
         for r in all_recs
-        if r.kind == "workflow_history" and r.body.get("action") in ("connector_failure", "rollback", "incident")
+        if r.kind == "workflow_history"
+        and r.body.get("action") in ("connector_failure", "rollback", "incident")
     ]
 
     ok, _ = mem.verify_chain()

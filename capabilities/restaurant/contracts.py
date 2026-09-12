@@ -29,16 +29,18 @@ class RestaurantConnector(BaseConnector):
 
     # ----------------------------------------------------------------- capabilities
     def capabilities(self) -> Sequence[ConnectorCapability]:
-        return (ConnectorCapability(
-            connector_id=self.connector_id,
-            provider=self.provider,
-            capability_id="restaurant_read",
-            reads=("shifts", "inventory", "suppliers", "complaints", "daily_summary"),
-            writes=("reorder", "notify_staff"),
-            risk_class="client_confidential",
-            writes_require_approval=True,
-            approval_required=True,
-        ),)
+        return (
+            ConnectorCapability(
+                connector_id=self.connector_id,
+                provider=self.provider,
+                capability_id="restaurant_read",
+                reads=("shifts", "inventory", "suppliers", "complaints", "daily_summary"),
+                writes=("reorder", "notify_staff"),
+                risk_class="client_confidential",
+                writes_require_approval=True,
+                approval_required=True,
+            ),
+        )
 
     # -------------------------------------------------------------- scope-filtered fetchers
     def _scope_ok(self, ctx: ConnectorContext, obj: Any) -> bool:  # type: ignore[override]
@@ -66,9 +68,12 @@ class RestaurantConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch_shifts(ctx))
-        return ConnectorResult(status="ok", data=data,
-                               provenance=self._provenance(ctx, len(data)),
-                               correlation_id=ctx.correlation_id)
+        return ConnectorResult(
+            status="ok",
+            data=data,
+            provenance=self._provenance(ctx, len(data)),
+            correlation_id=ctx.correlation_id,
+        )
 
     def list_shifts(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self.list_shifts_result(ctx).data or ()
@@ -79,9 +84,12 @@ class RestaurantConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch_inventory(ctx))
-        return ConnectorResult(status="ok", data=data,
-                               provenance=self._provenance(ctx, len(data)),
-                               correlation_id=ctx.correlation_id)
+        return ConnectorResult(
+            status="ok",
+            data=data,
+            provenance=self._provenance(ctx, len(data)),
+            correlation_id=ctx.correlation_id,
+        )
 
     def list_inventory(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self.list_inventory_result(ctx).data or ()
@@ -92,9 +100,12 @@ class RestaurantConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch_suppliers(ctx))
-        return ConnectorResult(status="ok", data=data,
-                               provenance=self._provenance(ctx, len(data)),
-                               correlation_id=ctx.correlation_id)
+        return ConnectorResult(
+            status="ok",
+            data=data,
+            provenance=self._provenance(ctx, len(data)),
+            correlation_id=ctx.correlation_id,
+        )
 
     def list_suppliers(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self.list_suppliers_result(ctx).data or ()
@@ -105,9 +116,12 @@ class RestaurantConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch_complaints(ctx))
-        return ConnectorResult(status="ok", data=data,
-                               provenance=self._provenance(ctx, len(data)),
-                               correlation_id=ctx.correlation_id)
+        return ConnectorResult(
+            status="ok",
+            data=data,
+            provenance=self._provenance(ctx, len(data)),
+            correlation_id=ctx.correlation_id,
+        )
 
     def list_complaints(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self.list_complaints_result(ctx).data or ()
@@ -118,9 +132,12 @@ class RestaurantConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch_daily_summary(ctx))
-        return ConnectorResult(status="ok", data=data,
-                               provenance=self._provenance(ctx, len(data)),
-                               correlation_id=ctx.correlation_id)
+        return ConnectorResult(
+            status="ok",
+            data=data,
+            provenance=self._provenance(ctx, len(data)),
+            correlation_id=ctx.correlation_id,
+        )
 
     def list_daily_summary(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self.list_daily_summary_result(ctx).data or ()

@@ -32,7 +32,9 @@ DEFAULT_MEMORY_PATH = "memory/governed_memory.jsonl"
 
 def render(client_name: str) -> None:
     st.markdown("<div class='section-hdr'>Codex Command Center</div>", unsafe_allow_html=True)
-    st.info("Synthetic, governed customer-success command view. No external systems are written from here.")
+    st.info(
+        "Synthetic, governed customer-success command view. No external systems are written from here."
+    )
 
     # 1. tenant/client selector + 2. data-mode indicator
     col_t, col_c, col_r, col_m = st.columns(4)
@@ -41,7 +43,8 @@ def render(client_name: str) -> None:
     col_c.text_input("Client ID", client_id, disabled=True)
     role_id = col_r.selectbox("Your role", ["customer_success_gm", "sales_gm", "ict_gm"])
     requested_data_mode = col_m.selectbox(
-        "Data mode", ["simulated_realistic", "historical_consented", "live_external"],
+        "Data mode",
+        ["simulated_realistic", "historical_consented", "live_external"],
     )
 
     correlation_id = st.session_state.get("session_id", "codex-session")
@@ -60,15 +63,21 @@ def render(client_name: str) -> None:
 
     # Build the governed view
     ctx = ConnectorContext(
-        tenant_id, "org-1", client_id, actor=actor,
-        correlation_id=correlation_id, data_mode="simulated_realistic",
+        tenant_id,
+        "org-1",
+        client_id,
+        actor=actor,
+        correlation_id=correlation_id,
+        data_mode="simulated_realistic",
     )
     connectors = None
     bundle = None
     if sim_outage:
         reg = ConnectorRegistry(mode="fake")
         connectors = {p: reg.get_connector(p, ctx) for p in ("salesforce", "zendesk", "clay")}
-        connectors["zendesk"] = FakeConnector("zendesk", "Zendesk", status=ConnectorStatus.DISCONNECTED)
+        connectors["zendesk"] = FakeConnector(
+            "zendesk", "Zendesk", status=ConnectorStatus.DISCONNECTED
+        )
     if sim_contradictory:
         bundle = contradictory_account(ctx)
     elif sim_stale:
@@ -80,9 +89,16 @@ def render(client_name: str) -> None:
         st.session_state.cs_memory = GovernedMemory(path=DEFAULT_MEMORY_PATH)
 
     view = assemble_command_center(
-        tenant_id, client_id, actor, role_id, requested_data_mode, correlation_id,
-        client_name=client_name, memory=st.session_state.cs_memory,
-        connectors=connectors, bundle=bundle,
+        tenant_id,
+        client_id,
+        actor,
+        role_id,
+        requested_data_mode,
+        correlation_id,
+        client_name=client_name,
+        memory=st.session_state.cs_memory,
+        connectors=connectors,
+        bundle=bundle,
     )
 
     _display_view(view)
@@ -94,8 +110,10 @@ def _display_view(view) -> None:
     # 2. data-mode indicator (never present simulated as live)
     if meta.live_warning:
         st.warning("⚠ Live mode requested but not activated — showing SIMULATED data only.")
-    st.caption(f"Data mode: requested={meta.requested_data_mode} • effective={meta.effective_data_mode} "
-               f"• classification={meta.classification} • correlation={meta.correlation_id}")
+    st.caption(
+        f"Data mode: requested={meta.requested_data_mode} • effective={meta.effective_data_mode} "
+        f"• classification={meta.classification} • correlation={meta.correlation_id}"
+    )
 
     # 12. clear state banners
     for alert in view.state_flags.get("alerts", []):
@@ -103,9 +121,14 @@ def _display_view(view) -> None:
 
     # 3. connector status (Zendesk / Salesforce / Clay)
     st.markdown("### Connector status")
-    st.dataframe([c.health | {"governance_tenant": meta.tenant_id,
-                              "governance_client": meta.client_id} for c in view.connector_status],
-                 width="stretch", hide_index=True)
+    st.dataframe(
+        [
+            c.health | {"governance_tenant": meta.tenant_id, "governance_client": meta.client_id}
+            for c in view.connector_status
+        ],
+        width="stretch",
+        hide_index=True,
+    )
 
     # 4. account-health diagnosis
     d = view.diagnosis
@@ -120,14 +143,18 @@ def _display_view(view) -> None:
     st.markdown("### Risk factors & evidence references")
     if d.risk_factors:
         for rf in d.risk_factors:
-            st.warning(f"**{rf.factor}** — severity {rf.severity} — evidence: {', '.join(rf.evidence_refs) or 'n/a'}")
+            st.warning(
+                f"**{rf.factor}** — severity {rf.severity} — evidence: {', '.join(rf.evidence_refs) or 'n/a'}"
+            )
     else:
         st.success("No current risks detected in the available data.")
 
     # 6. recommended next action + 7. responsible role & confidence
     st.markdown("### Recommended next action")
     st.write(f"• {d.recommended_action}")
-    st.caption(f"Responsible role: **{d.responsible_role}** • Expected outcome: {d.expected_outcome}")
+    st.caption(
+        f"Responsible role: **{d.responsible_role}** • Expected outcome: {d.expected_outcome}"
+    )
 
     # 8. approval preview + cross-role enforcement
     st.markdown("### Approval preview")
@@ -154,7 +181,9 @@ def _display_view(view) -> None:
         if st.button("Record outcome"):
             rec = st.session_state.cs_memory.add(
                 kind="outcome",
-                nature="verified_outcome" if d.health_state != "contradictory" else "model_inference",
+                nature="verified_outcome"
+                if d.health_state != "contradictory"
+                else "model_inference",
                 tenant_id=meta.tenant_id,
                 client_id=meta.client_id,
                 actor="local-operator",
@@ -172,7 +201,11 @@ def _display_view(view) -> None:
                     "basis": d.provenance.basis,
                     "sources": list(d.provenance.sources),
                 },
-                body={"decision": decision, "rationale": rationale, "diagnosis_ref": d.fingerprint()},
+                body={
+                    "decision": decision,
+                    "rationale": rationale,
+                    "diagnosis_ref": d.fingerprint(),
+                },
             )
             st.success(f"Recorded {rec.record_id} ({decision}).")
 
@@ -196,7 +229,9 @@ def _display_view(view) -> None:
     st.markdown("### Outcome-memory timeline")
     if view.outcome_timeline:
         for o in view.outcome_timeline:
-            st.write(f"- {o.recorded_at} **{o.decision}** ({o.nature}) by {o.actor}/{o.role_id} — {o.rationale} (ref {o.diagnosis_ref})")
+            st.write(
+                f"- {o.recorded_at} **{o.decision}** ({o.nature}) by {o.actor}/{o.role_id} — {o.rationale} (ref {o.diagnosis_ref})"
+            )
     else:
         st.info("No recorded outcomes yet for this account.")
 

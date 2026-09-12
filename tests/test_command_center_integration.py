@@ -56,8 +56,9 @@ AS_OF = "2026-08-29T12:00:00Z"
 
 
 def _ctx(data_mode="simulated_realistic", tenant=TENANT):
-    return ConnectorContext(tenant, "org-1", CLIENT, actor=ACTOR,
-                            correlation_id=CORR, data_mode=data_mode)
+    return ConnectorContext(
+        tenant, "org-1", CLIENT, actor=ACTOR, correlation_id=CORR, data_mode=data_mode
+    )
 
 
 def _view(**kw):
@@ -71,11 +72,20 @@ def _view(**kw):
     return assemble_command_center(**kw)
 
 
-def _add_outcome(memory, diagnosis, decision, actor=ACTOR, role_id="customer_success_gm",
-                 correlation_id=CORR, data_mode="simulated_realistic"):
+def _add_outcome(
+    memory,
+    diagnosis,
+    decision,
+    actor=ACTOR,
+    role_id="customer_success_gm",
+    correlation_id=CORR,
+    data_mode="simulated_realistic",
+):
     return memory.add(
         kind="outcome",
-        nature="verified_outcome" if diagnosis.health_state != "contradictory" else "model_inference",
+        nature="verified_outcome"
+        if diagnosis.health_state != "contradictory"
+        else "model_inference",
         tenant_id=diagnosis.tenant_id,
         client_id=diagnosis.client_id,
         actor=actor,
@@ -87,8 +97,12 @@ def _add_outcome(memory, diagnosis, decision, actor=ACTOR, role_id="customer_suc
         confidence=diagnosis.confidence,
         evidence_refs=[e.ref for e in diagnosis.evidence],
         data_mode=data_mode,
-        provenance={"correlation_id": correlation_id, "data_mode": data_mode,
-                    "basis": diagnosis.provenance.basis, "sources": list(diagnosis.provenance.sources)},
+        provenance={
+            "correlation_id": correlation_id,
+            "data_mode": data_mode,
+            "basis": diagnosis.provenance.basis,
+            "sources": list(diagnosis.provenance.sources),
+        },
         body={"decision": decision, "diagnosis_ref": diagnosis.fingerprint()},
     )
 
@@ -186,7 +200,9 @@ def test_self_approval_denied():
 def test_cross_role_approval():
     # operator is ICT GM; the required approver role is customer_success_gm -> cross-role
     v = _view(bundle=contradictory_account(_ctx()), role_id="ict_gm")
-    dec = evaluate_approval(v, approver_actor="approver-bob", approver_role_id="customer_success_gm")
+    dec = evaluate_approval(
+        v, approver_actor="approver-bob", approver_role_id="customer_success_gm"
+    )
     assert dec.decision == "allowed"
     # same-role approval is denied
     dec2 = evaluate_approval(v, approver_actor="approver-bob", approver_role_id="ict_gm")
@@ -202,7 +218,9 @@ def test_outcome_recorded():
     assert rec.body["decision"] == "accepted"
     # rebuild view; outcome appears in the timeline
     v2 = _view(memory=mem, bundle=healthy_account(_ctx()))
-    assert any(o.decision == "accepted" and o.outcome_id == rec.record_id for o in v2.outcome_timeline)
+    assert any(
+        o.decision == "accepted" and o.outcome_id == rec.record_id for o in v2.outcome_timeline
+    )
     assert rec.correlation_id == CORR
 
 
@@ -236,9 +254,15 @@ def test_reset_demo_clears_outcomes():
     mem = GovernedMemory()
     v = _view(memory=mem, bundle=healthy_account(_ctx()))
     _add_outcome(mem, v.diagnosis, "accepted")
-    assert any(o.decision == "accepted" for o in _view(memory=mem, bundle=healthy_account(_ctx())).outcome_timeline)
+    assert any(
+        o.decision == "accepted"
+        for o in _view(memory=mem, bundle=healthy_account(_ctx())).outcome_timeline
+    )
     reset_demo(mem)
-    assert not any(o.decision == "accepted" for o in _view(memory=mem, bundle=healthy_account(_ctx())).outcome_timeline)
+    assert not any(
+        o.decision == "accepted"
+        for o in _view(memory=mem, bundle=healthy_account(_ctx())).outcome_timeline
+    )
 
 
 # audit status reflects recorded chain ------------------------------------------
@@ -255,7 +279,9 @@ def test_audit_status_verified(tmp_path):
 def test_governance_checker_passes():
     out = subprocess.run(
         [sys.executable, "-m", "GOVERNANCE.governance_check", "check"],
-        cwd=".", capture_output=True, text=True,
+        cwd=".",
+        capture_output=True,
+        text=True,
     )
     assert "governance=PASS" in out.stdout, out.stdout + out.stderr
 

@@ -39,12 +39,16 @@ def detect_booking_conflicts(
         for j in range(i + 1, len(booked)):
             a, b = booked[i], booked[j]
             if _overlaps(a, b):
-                conflicts.append({
-                    "slot_a": a.slot_id, "slot_b": b.slot_id,
-                    "date": a.date, "surface": a.surface,
-                    "window": f"{a.start}–{b.end}",
-                    "sessions": sorted({a.booked_by_session_id, b.booked_by_session_id}),
-                })
+                conflicts.append(
+                    {
+                        "slot_a": a.slot_id,
+                        "slot_b": b.slot_id,
+                        "date": a.date,
+                        "surface": a.surface,
+                        "window": f"{a.start}–{b.end}",
+                        "sessions": sorted({a.booked_by_session_id, b.booked_by_session_id}),
+                    }
+                )
     return conflicts
 
 
@@ -69,9 +73,15 @@ def facility_overview(
         "utilization": facility_utilization(slots),
         "conflicts": detect_booking_conflicts(slots),
         "slots": [
-            {"slot_id": s.slot_id, "date": s.date, "start": s.start, "end": s.end,
-             "surface": s.surface, "booked": s.booked_by_session_id is not None,
-             "session_id": s.booked_by_session_id}
+            {
+                "slot_id": s.slot_id,
+                "date": s.date,
+                "start": s.start,
+                "end": s.end,
+                "surface": s.surface,
+                "booked": s.booked_by_session_id is not None,
+                "session_id": s.booked_by_session_id,
+            }
             for s in sorted(slots, key=lambda s: (s.date, s.surface, s.start))
         ],
     }

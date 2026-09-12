@@ -90,7 +90,9 @@ class CompetencyGapDetected:
         self.client_id = _require_non_empty(self.client_id, "CompetencyGapDetected.client_id")
         self.agent_ref = _require_non_empty(self.agent_ref, "CompetencyGapDetected.agent_ref")
         self.capability = _require_non_empty(self.capability, "CompetencyGapDetected.capability")
-        self.measured_value = _require_number(self.measured_value, "CompetencyGapDetected.measured_value")
+        self.measured_value = _require_number(
+            self.measured_value, "CompetencyGapDetected.measured_value"
+        )
         self.target_value = _require_number(self.target_value, "CompetencyGapDetected.target_value")
         self.severity = _require_severity(self.severity, "CompetencyGapDetected.severity")
         self.attribution_confidence = _require_number(
@@ -192,9 +194,13 @@ class LearningPlanRequested:
         self.tenant_id = _require_non_empty(self.tenant_id, "LearningPlanRequested.tenant_id")
         self.client_id = _require_non_empty(self.client_id, "LearningPlanRequested.client_id")
         self.agent_ref = _require_non_empty(self.agent_ref, "LearningPlanRequested.agent_ref")
-        targets = _require_list(self.target_capabilities, "LearningPlanRequested.target_capabilities")
+        targets = _require_list(
+            self.target_capabilities, "LearningPlanRequested.target_capabilities"
+        )
         if not targets:
-            raise ValueError("LearningPlanRequested.target_capabilities: must contain at least one capability")
+            raise ValueError(
+                "LearningPlanRequested.target_capabilities: must contain at least one capability"
+            )
         self.target_capabilities = [str(t) for t in targets]
         self.proficiency_target = _require_number(
             self.proficiency_target, "LearningPlanRequested.proficiency_target"
@@ -287,7 +293,9 @@ class LearningArtifactReady:
         self.tenant_id = _require_non_empty(self.tenant_id, "LearningArtifactReady.tenant_id")
         self.client_id = _require_non_empty(self.client_id, "LearningArtifactReady.client_id")
         self.request_id = _require_non_empty(self.request_id, "LearningArtifactReady.request_id")
-        self.artifact_type = _require_non_empty(self.artifact_type, "LearningArtifactReady.artifact_type")
+        self.artifact_type = _require_non_empty(
+            self.artifact_type, "LearningArtifactReady.artifact_type"
+        )
         self.artifact_locator = _require_non_empty(
             self.artifact_locator, "LearningArtifactReady.artifact_locator"
         )
@@ -379,7 +387,9 @@ class AssessmentCompleted:
     schema_version: str = V1
 
     def __post_init__(self) -> None:
-        self.assessment_id = _require_non_empty(self.assessment_id, "AssessmentCompleted.assessment_id")
+        self.assessment_id = _require_non_empty(
+            self.assessment_id, "AssessmentCompleted.assessment_id"
+        )
         self.tenant_id = _require_non_empty(self.tenant_id, "AssessmentCompleted.tenant_id")
         self.client_id = _require_non_empty(self.client_id, "AssessmentCompleted.client_id")
         self.agent_ref = _require_non_empty(self.agent_ref, "AssessmentCompleted.agent_ref")
@@ -388,7 +398,9 @@ class AssessmentCompleted:
         if not 0.0 <= self.score <= 1.0:
             raise ValueError(f"AssessmentCompleted.score: must be within [0, 1], got {self.score}")
         if not isinstance(self.passed, bool):
-            raise ValueError(f"AssessmentCompleted.passed: must be a bool, got {type(self.passed).__name__}")
+            raise ValueError(
+                f"AssessmentCompleted.passed: must be a bool, got {type(self.passed).__name__}"
+            )
         self.qualification_token = _require_non_empty(
             self.qualification_token, "AssessmentCompleted.qualification_token"
         )

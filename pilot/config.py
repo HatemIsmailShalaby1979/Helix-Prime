@@ -25,7 +25,9 @@ class PilotConfig:
             tenant_isolation_enabled=d.get("tenant_isolation_enabled", True),
             minimum_data=d.get("minimum_data", True),
             live_activated=d.get("live_activated", False),
-            permitted_data_modes=tuple(d.get("permitted_data_modes", (HISTORICAL_CONSENTED, SIMULATED_REALISTIC))),
+            permitted_data_modes=tuple(
+                d.get("permitted_data_modes", (HISTORICAL_CONSENTED, SIMULATED_REALISTIC))
+            ),
             retention_days=d.get("retention_days", 90),
         )
 

@@ -172,17 +172,13 @@ def update_data():
             {
                 "status": "success",
                 "message": "Data updated successfully",
-                "adherence_score": rta_result.adherence_metrics.get(
-                    "overall_adherence", 0
-                ),
+                "adherence_score": rta_result.adherence_metrics.get("overall_adherence", 0),
             }
         )
 
     except (KeyError, TypeError, ValueError, pd.errors.EmptyDataError) as e:
         logger.error("Error updating data: %s", e)
-        return jsonify(
-            {"status": "error", "message": f"Error updating data: {e!s}"}
-        ), 500
+        return jsonify({"status": "error", "message": f"Error updating data: {e!s}"}), 500
 
 
 @app.route("/api/generate-report", methods=["POST"])
@@ -202,8 +198,7 @@ def generate_report():
 
         # Save report to file
         report_path = (
-            Path("reports")
-            / f"rta_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+            Path("reports") / f"rta_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         )
         report_path.parent.mkdir(exist_ok=True)
 
@@ -220,9 +215,7 @@ def generate_report():
 
     except (OSError, TypeError, ValueError) as e:
         logger.error("Error generating report: %s", e)
-        return jsonify(
-            {"status": "error", "message": f"Error generating report: {e!s}"}
-        ), 500
+        return jsonify({"status": "error", "message": f"Error generating report: {e!s}"}), 500
 
 
 @app.route("/api/health")
@@ -241,9 +234,7 @@ def health_check():
 @app.errorhandler(404)
 def not_found(error):
     """Handle 404 errors."""
-    return jsonify(
-        {"error": "Not found", "message": "The requested resource was not found"}
-    ), 404
+    return jsonify({"error": "Not found", "message": "The requested resource was not found"}), 404
 
 
 @app.errorhandler(500)
@@ -266,9 +257,7 @@ if __name__ == "__main__":
     print("=== RTA Command Center ===")
     print("Starting RTA Command Center server...")
     print(f"Initial data points: {len(schedule_data)}")
-    print(
-        f"Overall adherence: {rta_result.adherence_metrics.get('overall_adherence', 0):.1f}%"
-    )
+    print(f"Overall adherence: {rta_result.adherence_metrics.get('overall_adherence', 0):.1f}%")
     print(f"Confidence score: {rta_result.confidence_score:.2f}")
 
     # Run the application

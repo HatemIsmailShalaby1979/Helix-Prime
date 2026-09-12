@@ -41,7 +41,17 @@ _DECISION_BUCKETS = ("allowed", "denied", "held", "succeeded", "failed")
 _VERIFICATION_RESULTS = ("ok", "failure")
 
 DEFAULT_DURATION_BUCKETS: Tuple[float, ...] = (
-    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
 )
 
 _METRIC_HELP = {
@@ -56,7 +66,9 @@ _METRIC_HELP = {
 
 def _validate_metric_name(name: str) -> str:
     if not isinstance(name, str) or not name or not name.startswith("helix_"):
-        raise ValueError(f"metrics: metric name must be a non-empty 'helix_'-prefixed string, got {name!r}")
+        raise ValueError(
+            f"metrics: metric name must be a non-empty 'helix_'-prefixed string, got {name!r}"
+        )
     return name
 
 
@@ -64,7 +76,9 @@ def _validate_label_value(value: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"metrics: label value must be a non-empty string, got {value!r}")
     if "\\" in value or '"' in value or "\n" in value:
-        raise ValueError(f"metrics: label value contains a character forbidden by the exposition format: {value!r}")
+        raise ValueError(
+            f"metrics: label value contains a character forbidden by the exposition format: {value!r}"
+        )
     return value
 
 
@@ -109,7 +123,9 @@ class Gauge(_Metric):
 
 
 class Histogram(_Metric):
-    def __init__(self, name: str, help_text: str, label_keys: Tuple[str, ...], buckets: Tuple[float, ...]) -> None:
+    def __init__(
+        self, name: str, help_text: str, label_keys: Tuple[str, ...], buckets: Tuple[float, ...]
+    ) -> None:
         super().__init__(name, help_text, label_keys)
         if not buckets or list(buckets) != sorted(set(buckets)):
             raise ValueError(f"metrics: histogram {name} requires sorted, unique buckets")
@@ -120,7 +136,9 @@ class Histogram(_Metric):
 
     def observe(self, value: float, **labels: str) -> None:
         if not isinstance(value, (int, float)) or value < 0:
-            raise ValueError(f"metrics: histogram {self.name} requires a non-negative number, got {value!r}")
+            raise ValueError(
+                f"metrics: histogram {self.name} requires a non-negative number, got {value!r}"
+            )
         key = self._series_key(labels[k] for k in self.label_keys)
         with _LOCK:
             self.sums[key] = self.sums.get(key, 0.0) + float(value)
@@ -184,7 +202,9 @@ class MetricsRegistry:
 
     def set_approval_queue_depth(self, depth: int) -> None:
         if not isinstance(depth, int) or depth < 0:
-            raise ValueError(f"metrics: approval queue depth must be a non-negative int, got {depth!r}")
+            raise ValueError(
+                f"metrics: approval queue depth must be a non-negative int, got {depth!r}"
+            )
         self.approval_queue_depth.set(depth)
 
     def snapshot(self) -> Dict[str, Dict[str, float]]:
@@ -199,7 +219,9 @@ class MetricsRegistry:
                         snapshot.setdefault(metric.name + "_bucket", {}).setdefault(
                             f"{'|'.join(key)}|le={metric.buckets[idx]}", 0.0
                         )
-                        snapshot[metric.name + "_bucket"][f"{'|'.join(key)}|le={metric.buckets[idx]}"] = count
+                        snapshot[metric.name + "_bucket"][
+                            f"{'|'.join(key)}|le={metric.buckets[idx]}"
+                        ] = count
             return snapshot
 
     def _all_metrics(self) -> List[_Metric]:
@@ -233,7 +255,9 @@ class MetricsRegistry:
             metrics = self._all_metrics()
             for metric in metrics:
                 lines.append(f"# HELP {metric.name} {metric.help}")
-                lines.append(f"# TYPE {metric.name} {'counter' if isinstance(metric, (Counter,)) else 'gauge' if isinstance(metric, Gauge) else 'histogram'}")
+                lines.append(
+                    f"# TYPE {metric.name} {'counter' if isinstance(metric, (Counter,)) else 'gauge' if isinstance(metric, Gauge) else 'histogram'}"
+                )
                 if isinstance(metric, Histogram):
                     self._render_histogram(metric, lines)
                 else:
@@ -252,14 +276,14 @@ class MetricsRegistry:
             self._emit_histogram_line(
                 metric, label_pairs + [("le", "+Inf")], metric.counts.get(key, 0.0), lines
             )
-            self._emit_named(
-                metric.name + "_sum", label_pairs, metric.sums.get(key, 0.0), lines
-            )
+            self._emit_named(metric.name + "_sum", label_pairs, metric.sums.get(key, 0.0), lines)
             self._emit_named(
                 metric.name + "_count", label_pairs, metric.counts.get(key, 0.0), lines
             )
 
-    def _emit_sample(self, metric: _Metric, key: Tuple[str, ...], value: float, lines: List[str]) -> None:
+    def _emit_sample(
+        self, metric: _Metric, key: Tuple[str, ...], value: float, lines: List[str]
+    ) -> None:
         label_pairs = list(zip(metric.label_keys, key))
         self._emit_named(metric.name, label_pairs, value, lines)
 

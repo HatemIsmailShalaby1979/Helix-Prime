@@ -188,9 +188,7 @@ def parse_chapters(text: str) -> list[Chapter]:
                 f"{(idx - 1) * CHAPTER_SECONDS // 60}:{(idx - 1) * CHAPTER_SECONDS % 60:02d}"
             )
 
-        chapters.append(
-            Chapter(index=idx, title=title, visual=visual, narration=narration)
-        )
+        chapters.append(Chapter(index=idx, title=title, visual=visual, narration=narration))
 
     return chapters
 
@@ -206,9 +204,7 @@ def load_font(path: str, size: int) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(path, size)
 
 
-def draw_slide(
-    chapter: Chapter, second_in_chapter: int, total_seconds: int
-) -> Image.Image:
+def draw_slide(chapter: Chapter, second_in_chapter: int, total_seconds: int) -> Image.Image:
     """Render a single 1920x1080 frame for the given chapter at the given second."""
     img = Image.new("RGB", (WIDTH, HEIGHT), BG)
     draw = ImageDraw.Draw(img)
@@ -248,9 +244,7 @@ def draw_slide(
         visual_short = visual_short[:107] + "..."
     vbox = draw.textbbox((0, 0), "[Visual] " + visual_short, font=f_visual)
     vw = vbox[2] - vbox[0]
-    draw.text(
-        ((WIDTH - vw) // 2, 430), "[Visual] " + visual_short, font=f_visual, fill=MUTED
-    )
+    draw.text(((WIDTH - vw) // 2, 430), "[Visual] " + visual_short, font=f_visual, fill=MUTED)
 
     # Narration excerpt (word-by-word reveal over 60s, all on screen at this point)
     # We render the full narration, wrapped, on the slide. The voiceover carries timing.
@@ -435,8 +429,7 @@ def mux_audio(chapter: Chapter, silent_mp4: Path, audio_mp3: Path) -> Path:
         "-i",
         str(audio_mp3),
         "-filter_complex",
-        f"[0:v]tpad=stop_mode=clone:stop_duration={target}[v];"
-        f"[1:a]apad=whole_dur={target}[a]",
+        f"[0:v]tpad=stop_mode=clone:stop_duration={target}[v];" f"[1:a]apad=whole_dur={target}[a]",
         "-map",
         "[v]",
         "-map",
@@ -576,10 +569,7 @@ def main() -> int:
 
     # 3. Mux audio
     print("\n[3/4] Muxing narration audio...")
-    muxed = [
-        mux_audio(ch, sv, au)
-        for ch, sv, au in zip(chapters, silent_videos, audio_files)
-    ]
+    muxed = [mux_audio(ch, sv, au) for ch, sv, au in zip(chapters, silent_videos, audio_files)]
 
     # 4. Concatenate
     print("\n[4/4] Concatenating final video...")

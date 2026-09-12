@@ -87,7 +87,9 @@ def to_task_request(
     before execution — this function alone does not authorize.
     """
     if not isinstance(correlation, CorrelationContext):
-        raise ValueError(f"to_task_request: correlation must be CorrelationContext, got {type(correlation).__name__}")
+        raise ValueError(
+            f"to_task_request: correlation must be CorrelationContext, got {type(correlation).__name__}"
+        )
     now = datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
     # request_id stable within correlation but unique per call
     import uuid
@@ -125,9 +127,13 @@ def validate_request_against_catalog(request: TaskRequest, catalog: Dict[str, An
     Does NOT execute the request.
     """
     if not isinstance(request, TaskRequest):
-        raise ValueError(f"validate_request_against_catalog: request must be TaskRequest, got {type(request).__name__}")
+        raise ValueError(
+            f"validate_request_against_catalog: request must be TaskRequest, got {type(request).__name__}"
+        )
     if not isinstance(catalog, dict) or "roles_by_id" not in catalog:
-        raise ValueError("validate_request_against_catalog: catalog must be loaded via load_role_catalog (missing roles_by_id)")
+        raise ValueError(
+            "validate_request_against_catalog: catalog must be loaded via load_role_catalog (missing roles_by_id)"
+        )
 
     roles_by_id = catalog["roles_by_id"]
     if request.owning_role_id not in roles_by_id:
@@ -186,7 +192,9 @@ def validate_request_against_catalog(request: TaskRequest, catalog: Dict[str, An
                 # allow if escalation_owner's role can approve
                 esc_owner = owning.get("escalation_owner")
                 if esc_owner and esc_owner in roles_by_id:
-                    esc_can = roles_by_id[esc_owner].get("approval_limits", {}).get("can_approve", [])
+                    esc_can = (
+                        roles_by_id[esc_owner].get("approval_limits", {}).get("can_approve", [])
+                    )
                     if tier not in esc_can:
                         raise ValueError(
                             f"Approval tier {tier!r} not allowed for role {request.owning_role_id!r} "

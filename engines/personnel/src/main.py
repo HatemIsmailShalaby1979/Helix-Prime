@@ -124,15 +124,9 @@ class PersonnelCLI:
         parser.add_argument("--name", required=True, help="Candidate name")
         parser.add_argument("--email", required=True, help="Candidate email")
         parser.add_argument("--position", required=True, help="Position applied for")
-        parser.add_argument(
-            "--experience", type=int, required=True, help="Years of experience"
-        )
-        parser.add_argument(
-            "--skills", nargs="+", required=True, help="Candidate skills"
-        )
-        parser.add_argument(
-            "--score", type=float, required=True, help="Candidate score (0-1)"
-        )
+        parser.add_argument("--experience", type=int, required=True, help="Years of experience")
+        parser.add_argument("--skills", nargs="+", required=True, help="Candidate skills")
+        parser.add_argument("--score", type=float, required=True, help="Candidate score (0-1)")
         parser.add_argument("--status", default="applied", help="Candidate status")
 
     def _add_job_posting_command(self, subparsers) -> None:
@@ -141,21 +135,15 @@ class PersonnelCLI:
         parser.add_argument("--job-id", required=True, help="Job ID")
         parser.add_argument("--title", required=True, help="Job title")
         parser.add_argument("--department", required=True, help="Department")
-        parser.add_argument(
-            "--required-skills", nargs="+", required=True, help="Required skills"
-        )
+        parser.add_argument("--required-skills", nargs="+", required=True, help="Required skills")
         parser.add_argument(
             "--experience-level",
             type=int,
             required=True,
             help="Required experience level",
         )
-        parser.add_argument(
-            "--salary-min", type=float, required=True, help="Minimum salary"
-        )
-        parser.add_argument(
-            "--salary-max", type=float, required=True, help="Maximum salary"
-        )
+        parser.add_argument("--salary-min", type=float, required=True, help="Minimum salary")
+        parser.add_argument("--salary-max", type=float, required=True, help="Maximum salary")
         parser.add_argument("--deadline", required=True, help="Application deadline")
 
     def _add_list_candidates_command(self, subparsers) -> None:
@@ -191,16 +179,12 @@ class PersonnelCLI:
         )
         parser.add_argument("--candidate-id", required=True, help="Candidate ID")
         parser.add_argument("--interviewer", required=True, help="Interviewer name")
-        parser.add_argument(
-            "--score", type=float, required=True, help="Interview score (0-10)"
-        )
+        parser.add_argument("--score", type=float, required=True, help="Interview score (0-10)")
         parser.add_argument("--feedback", required=True, help="Interview feedback")
 
     def _add_make_offer_command(self, subparsers) -> None:
         """Add make offer command."""
-        parser = subparsers.add_parser(
-            "make-offer", help="Make job offer to a candidate"
-        )
+        parser = subparsers.add_parser("make-offer", help="Make job offer to a candidate")
         parser.add_argument("--candidate-id", required=True, help="Candidate ID")
         parser.add_argument("--salary", type=float, required=True, help="Salary")
         parser.add_argument("--bonus", type=float, default=0, help="Bonus")
@@ -209,26 +193,18 @@ class PersonnelCLI:
 
     def _add_process_onboarding_command(self, subparsers) -> None:
         """Add process onboarding command."""
-        parser = subparsers.add_parser(
-            "process-onboarding", help="Process candidate onboarding"
-        )
+        parser = subparsers.add_parser("process-onboarding", help="Process candidate onboarding")
         parser.add_argument("--candidate-id", required=True, help="Candidate ID")
-        parser.add_argument(
-            "--tasks", nargs="+", required=True, help="Onboarding tasks"
-        )
+        parser.add_argument("--tasks", nargs="+", required=True, help="Onboarding tasks")
 
     def _add_get_candidate_status_command(self, subparsers) -> None:
         """Add get candidate status command."""
-        parser = subparsers.add_parser(
-            "get-candidate-status", help="Get candidate pipeline status"
-        )
+        parser = subparsers.add_parser("get-candidate-status", help="Get candidate pipeline status")
         parser.add_argument("--candidate-id", required=True, help="Candidate ID")
 
     def _add_get_job_posting_status_command(self, subparsers) -> None:
         """Add get job posting status command."""
-        parser = subparsers.add_parser(
-            "get-job-posting-status", help="Get job posting status"
-        )
+        parser = subparsers.add_parser("get-job-posting-status", help="Get job posting status")
         parser.add_argument("--job-id", required=True, help="Job ID")
 
     def _add_get_pipeline_analytics_command(self, subparsers) -> None:
@@ -237,16 +213,12 @@ class PersonnelCLI:
 
     def _add_export_data_command(self, subparsers) -> None:
         """Add export data command."""
-        parser = subparsers.add_parser(
-            "export-data", help="Export pipeline data to file"
-        )
+        parser = subparsers.add_parser("export-data", help="Export pipeline data to file")
         parser.add_argument("--output", required=True, help="Output file path")
 
     def _add_import_data_command(self, subparsers) -> None:
         """Add import data command."""
-        parser = subparsers.add_parser(
-            "import-data", help="Import pipeline data from file"
-        )
+        parser = subparsers.add_parser("import-data", help="Import pipeline data from file")
         parser.add_argument("--input", required=True, help="Input file path")
 
     def _handle_add_candidate(self, args) -> None:
@@ -288,9 +260,7 @@ class PersonnelCLI:
             print("No candidates found.")
             return
 
-        print(
-            f"\n{'Candidate ID':<15} {'Name':<20} {'Position':<20} {'Status':<15} {'Score':<10}"
-        )
+        print(f"\n{'Candidate ID':<15} {'Name':<20} {'Position':<20} {'Status':<15} {'Score':<10}")
         print("-" * 85)
 
         for candidate in candidates:
@@ -306,9 +276,7 @@ class PersonnelCLI:
             print("No job postings found.")
             return
 
-        print(
-            f"\n{'Job ID':<10} {'Title':<30} {'Department':<20} {'Status':<10} {'Deadline':<15}"
-        )
+        print(f"\n{'Job ID':<10} {'Title':<30} {'Department':<20} {'Status':<10} {'Deadline':<15}")
         print("-" * 90)
 
         for job in job_postings:
@@ -322,9 +290,7 @@ class PersonnelCLI:
             qualified_candidates = self.pipeline_manager.screen_candidates(
                 args.job_id, args.min_score
             )
-            print(
-                f"أ¢إ“â€œ Screened {len(qualified_candidates)} candidates for job {args.job_id}"
-            )
+            print(f"أ¢إ“â€œ Screened {len(qualified_candidates)} candidates for job {args.job_id}")
         except ValueError as e:
             print(f"أ¢إ“â€” Error: {e}")
 
@@ -377,9 +343,7 @@ class PersonnelCLI:
     def _handle_process_onboarding(self, args) -> None:
         """Handle process onboarding command."""
         try:
-            success = self.pipeline_manager.process_onboarding(
-                args.candidate_id, args.tasks
-            )
+            success = self.pipeline_manager.process_onboarding(args.candidate_id, args.tasks)
             if success:
                 print(f"أ¢إ“â€œ Processed onboarding for candidate {args.candidate_id}")
             else:
@@ -390,9 +354,7 @@ class PersonnelCLI:
     def _handle_get_candidate_status(self, args) -> None:
         """Handle get candidate status command."""
         try:
-            status = self.pipeline_manager.get_candidate_pipeline_status(
-                args.candidate_id
-            )
+            status = self.pipeline_manager.get_candidate_pipeline_status(args.candidate_id)
             if status:
                 print(f"\nCandidate Status for {status['name']}:")
                 print(f"  Candidate ID: {status['candidate_id']}")
@@ -416,9 +378,7 @@ class PersonnelCLI:
         try:
             status = self.pipeline_manager.get_job_posting_status(args.job_id)
             if status:
-                print(
-                    f"\nJob Posting Status for {status['title']} ({status['department']}):"
-                )
+                print(f"\nJob Posting Status for {status['title']} ({status['department']}):")
                 print(f"  Job ID: {status['job_id']}")
                 print(f"  Status: {status['status']}")
                 print(f"  Posted Date: {status['posted_date']}")
@@ -439,9 +399,7 @@ class PersonnelCLI:
             print("\n=== Pipeline Analytics ===")
             print(f"Total Candidates: {analytics['total_candidates']}")
             print(f"Total Job Postings: {analytics['total_job_postings']}")
-            print(
-                f"Average Days in Pipeline: {analytics['average_days_in_pipeline']:.1f}"
-            )
+            print(f"Average Days in Pipeline: {analytics['average_days_in_pipeline']:.1f}")
             print(f"Pipeline Efficiency: {analytics['pipeline_efficiency']:.2%}")
 
             print("\n=== Status Distribution ===")

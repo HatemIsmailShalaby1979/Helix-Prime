@@ -197,9 +197,7 @@ class NotionAdapter:
         update_data = {"properties": page.properties}
 
         if title:
-            update_data["properties"]["title"] = [
-                {"type": "text", "text": {"content": title}}
-            ]
+            update_data["properties"]["title"] = [{"type": "text", "text": {"content": title}}]
 
         if content:
             update_data["children"] = self._convert_markdown_to_blocks(content)
@@ -299,9 +297,7 @@ class NotionAdapter:
                         "object": "block",
                         "type": "heading_1",
                         "heading_1": {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": line[2:]}}
-                            ]
+                            "rich_text": [{"type": "text", "text": {"content": line[2:]}}]
                         },
                     }
                 )
@@ -312,9 +308,7 @@ class NotionAdapter:
                         "object": "block",
                         "type": "heading_2",
                         "heading_2": {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": line[3:]}}
-                            ]
+                            "rich_text": [{"type": "text", "text": {"content": line[3:]}}]
                         },
                     }
                 )
@@ -325,9 +319,7 @@ class NotionAdapter:
                         "object": "block",
                         "type": "heading_3",
                         "heading_3": {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": line[4:]}}
-                            ]
+                            "rich_text": [{"type": "text", "text": {"content": line[4:]}}]
                         },
                     }
                 )
@@ -338,9 +330,7 @@ class NotionAdapter:
                         "object": "block",
                         "type": "bulleted_list_item",
                         "bulleted_list_item": {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": line[2:]}}
-                            ]
+                            "rich_text": [{"type": "text", "text": {"content": line[2:]}}]
                         },
                     }
                 )
@@ -351,9 +341,7 @@ class NotionAdapter:
                         "object": "block",
                         "type": "numbered_list_item",
                         "numbered_list_item": {
-                            "rich_text": [
-                                {"type": "text", "text": {"content": line[3:]}}
-                            ]
+                            "rich_text": [{"type": "text", "text": {"content": line[3:]}}]
                         },
                     }
                 )
@@ -391,9 +379,7 @@ class NotionAdapter:
                     {
                         "object": "block",
                         "type": "paragraph",
-                        "paragraph": {
-                            "rich_text": [{"type": "text", "text": {"content": line}}]
-                        },
+                        "paragraph": {"rich_text": [{"type": "text", "text": {"content": line}}]},
                     }
                 )
             else:
@@ -422,9 +408,7 @@ class NotionAdapter:
 
         return NotionPage(
             id=page_data["id"],
-            title=properties.get("title", [{"text": {"content": ""}}])[0]["text"][
-                "content"
-            ],
+            title=properties.get("title", [{"text": {"content": ""}}])[0]["text"]["content"],
             content="",  # Content is in children
             url=page_data.get("url", ""),
             created_time=page_data.get("created_time", ""),
@@ -444,16 +428,14 @@ class NotionAdapter:
         Returns:
             NotionDatabase object
         """
-        title = database_data.get("title", [{"text": {"content": ""}}])[0]["text"][
-            "content"
-        ]
+        title = database_data.get("title", [{"text": {"content": ""}}])[0]["text"]["content"]
 
         return NotionDatabase(
             id=database_data["id"],
             title=title,
-            description=database_data.get("description", [{"text": {"content": ""}}])[
-                0
-            ]["text"]["content"],
+            description=database_data.get("description", [{"text": {"content": ""}}])[0]["text"][
+                "content"
+            ],
             url=database_data.get("url", ""),
             properties=database_data.get("properties", {}),
             created_time=database_data.get("created_time", ""),
@@ -515,9 +497,7 @@ class NotionAdapter:
         return self.create_page(title, markdown, parent_id)
 
 
-def create_notion_adapter(
-    api_key: str, database_id: str | None = None
-) -> NotionAdapter:
+def create_notion_adapter(api_key: str, database_id: str | None = None) -> NotionAdapter:
     """
     Factory function to create NotionAdapter.
 

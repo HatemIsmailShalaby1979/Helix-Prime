@@ -505,7 +505,9 @@ class ControlSeam:
             return step
 
         run.approval_decision = compliance_decision
-        step.state = WorkflowState.APPROVED if compliance_decision == "approved" else WorkflowState.CANCELLED
+        step.state = (
+            WorkflowState.APPROVED if compliance_decision == "approved" else WorkflowState.CANCELLED
+        )
         step.reason_code = f"compliance_{compliance_decision}"
         step.reason = f"compliance {compliance_decision} the OPS_GM recommendation"
         run.steps.append(step)

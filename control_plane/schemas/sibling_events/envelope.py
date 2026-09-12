@@ -34,10 +34,10 @@ SUPPORTED_ENVELOPE_VERSIONS = ("1.0",)
 
 #: Every event type in the v1 contract, with its direction and owning system.
 EVENT_DIRECTIONS: Dict[str, str] = {
-    "CompetencyGapDetected": "outbound",   # Helix Prime -> ecosystem
-    "LearningPlanRequested": "outbound",   # Helix Prime -> Helix Education
-    "LearningArtifactReady": "inbound",    # L&D Command Center -> Helix Prime
-    "AssessmentCompleted": "inbound",      # Study Studio -> Helix Prime
+    "CompetencyGapDetected": "outbound",  # Helix Prime -> ecosystem
+    "LearningPlanRequested": "outbound",  # Helix Prime -> Helix Education
+    "LearningArtifactReady": "inbound",  # L&D Command Center -> Helix Prime
+    "AssessmentCompleted": "inbound",  # Study Studio -> Helix Prime
 }
 
 EVENT_OWNERS: Dict[str, str] = {
@@ -57,7 +57,9 @@ def _now_iso() -> str:
 
 
 def _canonical_json(payload: Any) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+    return json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+    )
 
 
 def _sha256(payload: Any) -> str:
@@ -112,7 +114,9 @@ class SiblingEventEnvelope:
         self.payload = _require_mapping(self.payload, "SiblingEventEnvelope.payload")
         self.tenant_id = _require_non_empty(self.tenant_id, "SiblingEventEnvelope.tenant_id")
         self.client_id = _require_non_empty(self.client_id, "SiblingEventEnvelope.client_id")
-        self.correlation_id = _require_non_empty(self.correlation_id, "SiblingEventEnvelope.correlation_id")
+        self.correlation_id = _require_non_empty(
+            self.correlation_id, "SiblingEventEnvelope.correlation_id"
+        )
         if self.envelope_version not in SUPPORTED_ENVELOPE_VERSIONS:
             raise ValueError(
                 f"SiblingEventEnvelope.envelope_version: {self.envelope_version!r} not supported "
@@ -171,7 +175,9 @@ class SiblingEventEnvelope:
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "SiblingEventEnvelope":
         if not isinstance(data, Mapping):
-            raise ValueError(f"SiblingEventEnvelope.from_dict: expected mapping, got {type(data).__name__}")
+            raise ValueError(
+                f"SiblingEventEnvelope.from_dict: expected mapping, got {type(data).__name__}"
+            )
         version = str(data.get("envelope_version", "1.0"))
         if version not in SUPPORTED_ENVELOPE_VERSIONS:
             raise ValueError(

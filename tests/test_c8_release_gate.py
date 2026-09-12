@@ -18,6 +18,7 @@ from release import backup, harness, manifest, observability, profiles, security
 
 # ── profiles / classification ──────────────────────────────────────────────
 
+
 def test_never_emits_bare_production():
     # Even when everything is green, production adds production-only gates that
     # are not satisfied, so bare PRODUCTION is impossible.
@@ -60,12 +61,21 @@ def test_profiles_yaml_mirror():
 
 # ── manifest ───────────────────────────────────────────────────────────────
 
+
 def test_manifest_required_fields():
     m = manifest.build_manifest(classification="PRODUCTION_CANDIDATE")
-    for key in ["product", "release_profile", "classification", "git_commit",
-                "dependency_lock_ref", "enabled_capabilities",
-                "disabled_capabilities", "data_schema_versions",
-                "known_limitations", "evidence_refs"]:
+    for key in [
+        "product",
+        "release_profile",
+        "classification",
+        "git_commit",
+        "dependency_lock_ref",
+        "enabled_capabilities",
+        "disabled_capabilities",
+        "data_schema_versions",
+        "known_limitations",
+        "evidence_refs",
+    ]:
         assert key in m
     assert m["product"] == "Helix-Prime-Codex"
     assert "cloud_deployment" in m["disabled_capabilities"]
@@ -80,28 +90,50 @@ def test_dependency_lock_present():
 
 # ── backup / restore / rollback ────────────────────────────────────────────
 
+
 def _make_synthetic_state():
     work = tempfile.mkdtemp(prefix="hp_test_")
     from control_plane.store import Store
     from control_plane.workflow import Workflow
     from contracts.task import CorrelationContext
+
     db = os.path.join(work, "control_plane", "workflow.db")
     store = Store(db_path=db)
-    corr = CorrelationContext(correlation_id="corr-1", idempotency_key="k-1",
-                              tenant_id="t1", client_id="c1", created_at="2026-01-01T00:00:00Z")
-    wf = Workflow(workflow_id="wf-1", idempotency_key="k-1", correlation=corr,
-                  tenant_id="t1", client_id="c1", requesting_actor="suby",
-                  owning_role_id="cadence_suby", capability="wfm_forecast",
-                  state="proposed", input_payload={"is_sample": True},
-                  created_at="2026-01-01T00:00:00Z", updated_at="2026-01-01T00:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="corr-1",
+        idempotency_key="k-1",
+        tenant_id="t1",
+        client_id="c1",
+        created_at="2026-01-01T00:00:00Z",
+    )
+    wf = Workflow(
+        workflow_id="wf-1",
+        idempotency_key="k-1",
+        correlation=corr,
+        tenant_id="t1",
+        client_id="c1",
+        requesting_actor="suby",
+        owning_role_id="cadence_suby",
+        capability="wfm_forecast",
+        state="proposed",
+        input_payload={"is_sample": True},
+        created_at="2026-01-01T00:00:00Z",
+        updated_at="2026-01-01T00:00:00Z",
+    )
     store.create_workflow(wf)
     store.close()
     from security.audit import AuditTrail, AuditRecord
+
     trail = AuditTrail(db_path=os.path.join(work, "security", "audit.db"))
     prev = None
     for i in range(3):
-        rec = AuditRecord.new(event_type="test", actor="suby", actor_type="agent",
-                              decision="succeeded", previous_hash=prev)
+        rec = AuditRecord.new(
+            event_type="test",
+            actor="suby",
+            actor_type="agent",
+            decision="succeeded",
+            previous_hash=prev,
+        )
         trail.append(rec)
         prev = rec.current_hash
     trail.close()
@@ -117,6 +149,7 @@ def test_backup_restore_verify():
     report = backup.restore_state(backup_dir, restore_dir, repo_root=work, schema_ok=True)
     assert report["restore_count"] > 0
     from security.audit import AuditTrail
+
     t = AuditTrail(db_path=os.path.join(restore_dir, "security", "audit.db"))
     try:
         valid, msg = t.verify_chain()
@@ -148,11 +181,13 @@ def test_rollback_manifest():
     work = tempfile.mkdtemp(prefix="hp_rollback_")
     target = os.path.join(work, "release-manifest.json")
     prev = {
-        "git_commit": "AAAAAAAA", "version": "0.9.0-c7",
+        "git_commit": "AAAAAAAA",
+        "version": "0.9.0-c7",
         "classification": "PRODUCTION_CANDIDATE",
     }
     cur = {
-        "git_commit": "BBBBBBBB", "version": "0.9.0-c8",
+        "git_commit": "BBBBBBBB",
+        "version": "0.9.0-c8",
         "classification": "PRODUCTION_CANDIDATE",
     }
     backup.rollback_manifest(prev, cur, target_path=target)
@@ -162,6 +197,7 @@ def test_rollback_manifest():
 
 
 # ── security gate ──────────────────────────────────────────────────────────
+
 
 def test_security_gate_all_green():
     # Scan only the release package + tests fixtures region (fast, isolated).
@@ -181,6 +217,7 @@ def test_redaction_removes_secret():
 
 # ── observability ──────────────────────────────────────────────────────────
 
+
 def test_observability_startup_slo():
     res = observability.measure_startup()
     assert res.get("slo_met") is True
@@ -193,6 +230,7 @@ def test_observability_readiness_required_components():
 
 
 # ── harness / failure / soak ───────────────────────────────────────────────
+
 
 def test_harness_all_green():
     r = harness.run_harness(num_soak_workflows=3)
@@ -210,6 +248,7 @@ def test_harness_components_present():
 
 def test_soak_bounded_within_limits():
     import release.harness as h
+
     n = h.MAX_SOAK_WORKFLOWS + 100  # exceed cap -> clamp
     r = harness.run_bounded_soak(num_workflows=n, num_events_per_workflow=1)
     assert r["workflow_count"] <= h.MAX_SOAK_WORKFLOWS
@@ -218,8 +257,10 @@ def test_soak_bounded_within_limits():
 
 # ── gate end-to-end ────────────────────────────────────────────────────────
 
+
 def test_gate_returns_candidate_or_ready():
     from release import gate
+
     summary = gate.run_gate(
         profile="production_candidate", num_soak_workflows=3, write_evidence=False
     )
@@ -229,20 +270,18 @@ def test_gate_returns_candidate_or_ready():
 
 def test_gate_controlled_pilot_ready():
     from release import gate
-    summary = gate.run_gate(
-        profile="controlled_pilot", num_soak_workflows=3, write_evidence=False
-    )
+
+    summary = gate.run_gate(profile="controlled_pilot", num_soak_workflows=3, write_evidence=False)
     assert summary["classification"] in {"CONTROLLED_PILOT_READY", "PRODUCTION_CANDIDATE"}
     assert summary["exit_code"] == 0
 
 
 def test_gate_never_production():
     from release import gate
+
     # Requesting the production profile must never yield a bare PRODUCTION label
     # (production-only gates are not met); the gate fails closed as NOT_READY.
-    summary = gate.run_gate(
-        profile="production", num_soak_workflows=3, write_evidence=False
-    )
+    summary = gate.run_gate(profile="production", num_soak_workflows=3, write_evidence=False)
     assert summary["classification"] != "PRODUCTION"
     assert summary["classification"] == "NOT_READY"
     assert summary["permitted_c8_outcome"] is False

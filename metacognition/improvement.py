@@ -37,7 +37,7 @@ GENESIS_HASH = "0" * 64
 # Approval-state machine -------------------------------------------------------
 DRAFT = "draft"
 EVALUATING = "evaluating"
-EVALUATED = "evaluated"                # passed evaluation, awaiting approval
+EVALUATED = "evaluated"  # passed evaluation, awaiting approval
 EVALUATED_FAILED = "evaluated_failed"  # failed evaluation, cannot be approved
 REJECTED = "rejected"
 APPROVED = "approved"
@@ -194,10 +194,14 @@ class MetacognitionEngine:
         out = []
         for target, ids in groups.items():
             if len(ids) >= threshold:
-                out.append(FailureSignal(
-                    target=target, count=len(ids), sample_ids=ids[:5],
-                    detail=f"{len(ids)} repeated failures on {target}",
-                ))
+                out.append(
+                    FailureSignal(
+                        target=target,
+                        count=len(ids),
+                        sample_ids=ids[:5],
+                        detail=f"{len(ids)} repeated failures on {target}",
+                    )
+                )
         return out
 
     def detect_performance_drift(
@@ -206,8 +210,11 @@ class MetacognitionEngine:
         delta = recent_rate - baseline_rate
         if abs(delta) > threshold:
             return DriftSignal(
-                metric=metric, baseline_rate=baseline_rate, recent_rate=recent_rate,
-                delta=delta, detail=f"{metric} drifted by {delta:+.3f}",
+                metric=metric,
+                baseline_rate=baseline_rate,
+                recent_rate=recent_rate,
+                delta=delta,
+                detail=f"{metric} drifted by {delta:+.3f}",
             )
         return None
 
@@ -304,12 +311,19 @@ class MetacognitionEngine:
             n_historical=len(historical_cases),
             n_simulated=len(simulated_cases),
             passed=passed,
-            detail=("proposed change meets/exceeds minimum improvement"
-                    if passed else "proposed change does not improve over baseline"),
+            detail=(
+                "proposed change meets/exceeds minimum improvement"
+                if passed
+                else "proposed change does not improve over baseline"
+            ),
         )
         new_state = EVALUATED if passed else EVALUATED_FAILED
         updated = ImprovementProposal(
-            **{**proposal.to_dict(), "evaluation_results": asdict(result), "approval_state": new_state},
+            **{
+                **proposal.to_dict(),
+                "evaluation_results": asdict(result),
+                "approval_state": new_state,
+            },
         )
         self._append(updated)
         return result
@@ -319,7 +333,14 @@ class MetacognitionEngine:
         prev = self._latest.get(proposal_id)
         if prev is None:
             raise KeyError(f"no such proposal {proposal_id!r}")
-        new = ImprovementProposal(**{**prev.to_dict(), "version": prev.version + 1, "supersedes": prev.proposal_id, **changes})
+        new = ImprovementProposal(
+            **{
+                **prev.to_dict(),
+                "version": prev.version + 1,
+                "supersedes": prev.proposal_id,
+                **changes,
+            }
+        )
         self._append(new)
         return new
 
@@ -337,7 +358,9 @@ class MetacognitionEngine:
         if prev.approval_state == EVALUATED_FAILED:
             return ApprovalDecision("denied", "Proposal failed evaluation; cannot be approved")
         if prev.approval_state not in _APPROVABLE:
-            return ApprovalDecision("denied", f"Proposal not in an approvable state ({prev.approval_state})")
+            return ApprovalDecision(
+                "denied", f"Proposal not in an approvable state ({prev.approval_state})"
+            )
         req_actor = requester_actor or prev.created_by
         req_role = requester_role or prev.role_id
         if reviewer == req_actor:
@@ -348,12 +371,19 @@ class MetacognitionEngine:
         return ApprovalDecision("allowed", "Cross-role approval satisfied")
 
     def reject(self, proposal_id: str, reviewer: str, reason: str) -> ImprovementProposal:
-        return self._transition(proposal_id, reviewer=reviewer, approval_state=REJECTED,
-                                rollback_plan=f"rejected by {reviewer}: {reason}")
+        return self._transition(
+            proposal_id,
+            reviewer=reviewer,
+            approval_state=REJECTED,
+            rollback_plan=f"rejected by {reviewer}: {reason}",
+        )
 
     def rollback(self, proposal_id: str, actor: str, reason: str) -> ImprovementProposal:
-        return self._transition(proposal_id, approval_state=ROLLED_BACK,
-                                rollback_plan=f"rolled back by {actor}: {reason}")
+        return self._transition(
+            proposal_id,
+            approval_state=ROLLED_BACK,
+            rollback_plan=f"rolled back by {actor}: {reason}",
+        )
 
     # ----------------------------------------------------------- queries
     def get_proposal(self, proposal_id: str) -> ImprovementProposal:
@@ -399,11 +429,15 @@ class MetacognitionEngine:
 
 
 # Explicit, gated deployment steps (NEVER called by the engine) ----------------
-def apply_proposal(runtime: Mapping[str, Any], proposal: ImprovementProposal, actor: str, role_id: str) -> None:
+def apply_proposal(
+    runtime: Mapping[str, Any], proposal: ImprovementProposal, actor: str, role_id: str
+) -> None:
     """Human-gated deployment. Requires an APPROVED proposal and an explicit call.
     The engine never invokes this, so unapproved proposals cannot change runtime."""
     if proposal.approval_state != APPROVED:
-        raise RuntimeError(f"cannot deploy unapproved proposal {proposal.proposal_id} ({proposal.approval_state})")
+        raise RuntimeError(
+            f"cannot deploy unapproved proposal {proposal.proposal_id} ({proposal.approval_state})"
+        )
     if proposal.kind not in ("policy", "workflow", "permission", "memory_rule"):
         raise RuntimeError(f"unsupported proposal kind {proposal.kind!r}")
     # Apply the proposed change to the (caller-owned) runtime mapping.
@@ -413,7 +447,9 @@ def apply_proposal(runtime: Mapping[str, Any], proposal: ImprovementProposal, ac
         runtime[target] = value
 
 
-def rollback_proposal(runtime: Mapping[str, Any], proposal: ImprovementProposal, actor: str, role_id: str) -> None:
+def rollback_proposal(
+    runtime: Mapping[str, Any], proposal: ImprovementProposal, actor: str, role_id: str
+) -> None:
     """Human-gated rollback. Restores the baseline value into the runtime mapping."""
     if isinstance(runtime, dict):
         runtime[proposal.target] = proposal.baseline_policy.get("value", proposal.baseline_policy)

@@ -159,10 +159,7 @@ class TalentAcquisition:
             source_candidates = min(
                 int(
                     target_count
-                    * (
-                        source.reach
-                        / sum(s.reach for s in self.candidate_sources.values())
-                    )
+                    * (source.reach / sum(s.reach for s in self.candidate_sources.values()))
                 ),
                 target_count - len(sourced_candidates),
             )
@@ -178,9 +175,7 @@ class TalentAcquisition:
                 # Add to candidate database
                 self.candidates[candidate["candidate_id"]] = candidate
 
-        self.logger.info(
-            f"Sourced {len(sourced_candidates)} candidates for job {job_id}"
-        )
+        self.logger.info(f"Sourced {len(sourced_candidates)} candidates for job {job_id}")
         return sourced_candidates
 
     def _generate_candidate_profile(
@@ -188,7 +183,9 @@ class TalentAcquisition:
     ) -> dict[str, Any]:
         """Generate candidate profile based on job requirements and source."""
         # Generate random candidate profile
-        candidate_id = f"candidate_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.candidates)}"
+        candidate_id = (
+            f"candidate_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.candidates)}"
+        )
 
         # Determine candidate name (random)
         first_names = [
@@ -212,9 +209,7 @@ class TalentAcquisition:
             "Davis",
         ]
 
-        candidate_name = (
-            f"{np.random.choice(first_names)} {np.random.choice(last_names)}"
-        )
+        candidate_name = f"{np.random.choice(first_names)} {np.random.choice(last_names)}"
 
         # Generate skills based on job requirements
         job_skills = job.get("required_skills", [])
@@ -277,9 +272,7 @@ class TalentAcquisition:
         if job_id not in self.job_postings:
             return []
 
-        min_score = (
-            min_score or self.config["recruitment_metrics"]["source_quality_threshold"]
-        )
+        min_score = min_score or self.config["recruitment_metrics"]["source_quality_threshold"]
 
         # Get all candidates for this position
         qualified_candidates = []
@@ -292,9 +285,7 @@ class TalentAcquisition:
                 candidate["status"] = "screened"
                 qualified_candidates.append(candidate)
 
-        self.logger.info(
-            f"Screened {len(qualified_candidates)} candidates for job {job_id}"
-        )
+        self.logger.info(f"Screened {len(qualified_candidates)} candidates for job {job_id}")
         return qualified_candidates
 
     def schedule_interviews(
@@ -342,9 +333,7 @@ class TalentAcquisition:
             if score >= 0.8:
                 quality_distribution["high"] = quality_distribution.get("high", 0) + 1
             elif score >= 0.6:
-                quality_distribution["medium"] = (
-                    quality_distribution.get("medium", 0) + 1
-                )
+                quality_distribution["medium"] = quality_distribution.get("medium", 0) + 1
             else:
                 quality_distribution["low"] = quality_distribution.get("low", 0) + 1
 
@@ -495,12 +484,8 @@ if __name__ == "__main__":
 
     # Schedule interviews
     print("\nScheduling interviews...")
-    software_engineer_candidates = [
-        c for c in qualified_software_engineers if c["score"] >= 0.7
-    ]
-    data_scientist_candidates = [
-        c for c in qualified_data_scientists if c["score"] >= 0.7
-    ]
+    software_engineer_candidates = [c for c in qualified_software_engineers if c["score"] >= 0.7]
+    data_scientist_candidates = [c for c in qualified_data_scientists if c["score"] >= 0.7]
 
     candidate_ids = [c["candidate_id"] for c in software_engineer_candidates[:5]] + [
         c["candidate_id"] for c in data_scientist_candidates[:3]

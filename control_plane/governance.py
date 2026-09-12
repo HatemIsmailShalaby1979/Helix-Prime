@@ -61,6 +61,7 @@ _UUID4_RE = re.compile(
 
 # ── validation helpers ─────────────────────────────────────────────────────
 
+
 def _require_non_empty_str(value: Any, field_path: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_path}: must be non-empty string, got {value!r}")
@@ -87,7 +88,9 @@ def _require_money(value: Any, field_path: str) -> float:
 
 def _require_confidence(value: Any, field_path: str) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise ValueError(f"{field_path}: confidence must be number 0.0-1.0, got {type(value).__name__}")
+        raise ValueError(
+            f"{field_path}: confidence must be number 0.0-1.0, got {type(value).__name__}"
+        )
     f = float(value)
     if not (0.0 <= f <= 1.0):
         raise ValueError(f"{field_path}: confidence must be 0.0-1.0, got {f}")
@@ -99,7 +102,9 @@ def _now_iso() -> str:
 
 
 def _canonical_json(payload: Any) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+    return json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+    )
 
 
 def _sha256(payload: Any) -> str:
@@ -107,6 +112,7 @@ def _sha256(payload: Any) -> str:
 
 
 # ── errors ─────────────────────────────────────────────────────────────────
+
 
 class AccessDeniedError(PermissionError):
     """
@@ -133,6 +139,7 @@ class GovernanceStateError(ValueError):
 
 # ── canonical organization catalog ─────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class RoleSpec:
     """
@@ -141,6 +148,10 @@ class RoleSpec:
     financial_approval_limit_usd is the fail-closed boundary: any task whose
     estimated cost crosses it is frozen for human validation. ``None`` means
     unlimited (SAMI only, and only via human escalation).
+
+    The structural fields (owned_capabilities, allowed_tools, allowed_peer_calls,
+    segregation_of_duties) are sourced from organization/role-catalog.yaml and
+    used by detect_catalog_drift() to surface any divergence.
     """
 
     role_id: str
@@ -151,12 +162,20 @@ class RoleSpec:
     financial_approval_limit_usd: Optional[float]
     kpis: Tuple[str, ...]
     oversight_only: bool = False
+    # Structural fields sourced from YAML — used for drift detection.
+    owned_capabilities: Tuple[str, ...] = ()
+    allowed_tools: Tuple[str, ...] = ()
+    allowed_peer_calls: Tuple[str, ...] = ()
+    segregation_of_duties: Tuple[Tuple[str, ...], Tuple[str, ...]] = ()  # (must_review, can_review)
 
     def __post_init__(self) -> None:
         if not self.role_id:
             raise ValueError("RoleSpec.role_id: must be non-empty")
         if self.financial_approval_limit_usd is not None:
-            _require_money(self.financial_approval_limit_usd, f"RoleSpec[{self.role_id}].financial_approval_limit_usd")
+            _require_money(
+                self.financial_approval_limit_usd,
+                f"RoleSpec[{self.role_id}].financial_approval_limit_usd",
+            )
         unknown = [c for c in self.allowed_data_classifications if c not in DataClassification.ALL]
         if unknown:
             raise ValueError(
@@ -353,7 +372,7 @@ ORGANIZATION_CATALOG: Dict[str, RoleSpec] = _OrganizationCatalog(_ROLE_CATALOG)
 
 #: Source matrix uses shorthand engine names; normalize before comparison.
 ENGINE_ALIASES: Dict[str, str] = {
-    "wfont": "wfm",      # WILI/LD alignment shorthand in the role matrix
+    "wfont": "wfm",  # WILI/LD alignment shorthand in the role matrix
     "wf": "wfm",
     "cx_engine": "cx",
     "crm_engine": "crm",
@@ -429,7 +448,15 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
 
         yaml_catalog = load_role_catalog("organization/role-catalog.yaml")
     except Exception as exc:  # pragma: no cover - environment dependent
-        return [{"role_id": "*", "field": "role-catalog.yaml", "runtime": None, "yaml": None, "detail": str(exc)}]
+        return [
+            {
+                "role_id": "*",
+                "field": "role-catalog.yaml",
+                "runtime": None,
+                "yaml": None,
+                "detail": str(exc),
+            }
+        ]
 
     yaml_roles = yaml_catalog.get("roles_by_id", {})
     for role_id, spec in ORGANIZATION_CATALOG.items():
@@ -462,6 +489,7 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
 
 # ── contract layer: correlation / request / result ──────────────────────────
 
+
 @dataclass
 class CorrelationContext(_BaseCorrelationContext):
     """
@@ -476,7 +504,9 @@ class CorrelationContext(_BaseCorrelationContext):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.correlation_id = _require_uuid4(self.correlation_id, "CorrelationContext.correlation_id")
+        self.correlation_id = _require_uuid4(
+            self.correlation_id, "CorrelationContext.correlation_id"
+        )
         if self.actor_id is not None:
             self.actor_id = _require_non_empty_str(self.actor_id, "CorrelationContext.actor_id")
 
@@ -488,7 +518,9 @@ class CorrelationContext(_BaseCorrelationContext):
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "CorrelationContext":
         if not isinstance(data, dict):
-            raise ValueError(f"CorrelationContext.from_dict: expected dict, got {type(data).__name__}")
+            raise ValueError(
+                f"CorrelationContext.from_dict: expected dict, got {type(data).__name__}"
+            )
         base = _BaseCorrelationContext.from_dict(data)
         return cls(
             correlation_id=base.correlation_id,
@@ -550,7 +582,9 @@ class TaskRequest(_BaseTaskRequest):
         self.estimated_financial_cost = _require_money(
             self.estimated_financial_cost, "TaskRequest.estimated_financial_cost"
         )
-        self.confidence_score = _require_confidence(self.confidence_score, "TaskRequest.confidence_score")
+        self.confidence_score = _require_confidence(
+            self.confidence_score, "TaskRequest.confidence_score"
+        )
         if self.requested_data_classification not in DataClassification.ALL:
             raise ValueError(
                 f"TaskRequest.requested_data_classification: unknown classification "
@@ -561,10 +595,14 @@ class TaskRequest(_BaseTaskRequest):
         if self.target_engine is not None:
             role_id = resolve_actor_role(self.requesting_actor, self.owning_role_id)
             if not role_id:
-                raise AccessDeniedError(self.requesting_actor, "<unresolved>", self.target_engine, ())
+                raise AccessDeniedError(
+                    self.requesting_actor, "<unresolved>", self.target_engine, ()
+                )
             spec = get_role(role_id)
             if not spec.owns_engine(self.target_engine):
-                raise AccessDeniedError(self.requesting_actor, role_id, self.target_engine, spec.owned_engines)
+                raise AccessDeniedError(
+                    self.requesting_actor, role_id, self.target_engine, spec.owned_engines
+                )
 
     # Convenience: actor_id is the canonical contract's requesting_actor.
     @property
@@ -604,7 +642,9 @@ class TaskResult(_BaseTaskResult):
                 f"TaskResult.workflow_state: must be one of {sorted(WorkflowState.ALL)}, got {self.workflow_state!r}"
             )
         if self.financial_cost_usd is not None:
-            self.financial_cost_usd = _require_money(self.financial_cost_usd, "TaskResult.financial_cost_usd")
+            self.financial_cost_usd = _require_money(
+                self.financial_cost_usd, "TaskResult.financial_cost_usd"
+            )
         if self.governance_decision is not None:
             self.governance_decision = _require_non_empty_str(
                 self.governance_decision, "TaskResult.governance_decision"
@@ -628,6 +668,7 @@ class TaskResult(_BaseTaskResult):
 
 
 # ── bounded autonomy: the fail-closed gate ─────────────────────────────────
+
 
 @dataclass(frozen=True)
 class GovernanceDecision:
@@ -783,6 +824,7 @@ def evaluate_gate(
 
 # ── durable records ────────────────────────────────────────────────────────
 
+
 @dataclass
 class WorkflowTaskRecord:
     """Row contract for the ``workflow_tasks`` table."""
@@ -862,10 +904,14 @@ class WorkflowTaskRecord:
             state=row["state"],
             estimated_financial_cost=float(row.get("estimated_financial_cost") or 0.0),
             financial_limit_usd=(
-                None if row.get("financial_limit_usd") is None else float(row["financial_limit_usd"])
+                None
+                if row.get("financial_limit_usd") is None
+                else float(row["financial_limit_usd"])
             ),
             data_classification=row["data_classification"],
-            confidence_score=float(row.get("confidence_score") if row.get("confidence_score") is not None else 1.0),
+            confidence_score=float(
+                row.get("confidence_score") if row.get("confidence_score") is not None else 1.0
+            ),
             reason_code=row.get("reason_code") or "",
             reason=row.get("reason") or "",
             payload=row.get("payload") or {},
@@ -936,6 +982,7 @@ class AuditEventRecord:
 
 # ── governed workflow manager ──────────────────────────────────────────────
 
+
 class GovernedWorkflowManager:
     """
     Fail-closed workflow manager for the enterprise control plane.
@@ -952,7 +999,9 @@ class GovernedWorkflowManager:
 
     # ── submit ─────────────────────────────────────────────────────────────
 
-    def submit(self, request: TaskRequest, *, target_engine: Optional[str] = None) -> WorkflowTaskRecord:
+    def submit(
+        self, request: TaskRequest, *, target_engine: Optional[str] = None
+    ) -> WorkflowTaskRecord:
         """
         Admit a governed task request.
 
@@ -1006,7 +1055,9 @@ class GovernedWorkflowManager:
             actor_id=request.requesting_actor,
             actor_role_id=record.actor_role_id,
             event_type="task_proposed",
-            decision="denied" if not decision.allowed else ("held" if decision.requires_human_approval else "allowed"),
+            decision="denied"
+            if not decision.allowed
+            else ("held" if decision.requires_human_approval else "allowed"),
             reason_code=decision.reason_code,
             reason=decision.reason,
             from_state=None,
@@ -1073,7 +1124,9 @@ class GovernedWorkflowManager:
 
         approver_role_id = resolve_actor_role(approver_id)
         if not approver_role_id:
-            raise GovernanceStateError(f"approve: unknown approver {approver_id!r} — cannot validate")
+            raise GovernanceStateError(
+                f"approve: unknown approver {approver_id!r} — cannot validate"
+            )
 
         approver_limit = get_role(approver_role_id).financial_approval_limit_usd
         if approver_limit is not None and record.estimated_financial_cost > approver_limit:
@@ -1141,7 +1194,9 @@ class GovernedWorkflowManager:
             record,
             to_state,
             actor_id,
-            reason_code="engine_succeeded" if to_state == WorkflowState.SUCCEEDED else "engine_failed",
+            reason_code="engine_succeeded"
+            if to_state == WorkflowState.SUCCEEDED
+            else "engine_failed",
             reason=f"task {to_state}",
             error=error,
         )
@@ -1152,8 +1207,13 @@ class GovernedWorkflowManager:
         row = self.store.get_workflow_task(task_id)
         return WorkflowTaskRecord.from_row(row) if row else None
 
-    def list_tasks(self, *, state: Optional[str] = None, limit: int = 100) -> List[WorkflowTaskRecord]:
-        return [WorkflowTaskRecord.from_row(r) for r in self.store.list_workflow_tasks(state=state, limit=limit)]
+    def list_tasks(
+        self, *, state: Optional[str] = None, limit: int = 100
+    ) -> List[WorkflowTaskRecord]:
+        return [
+            WorkflowTaskRecord.from_row(r)
+            for r in self.store.list_workflow_tasks(state=state, limit=limit)
+        ]
 
     def audit_trail(self, task_id: Optional[str] = None, limit: int = 200) -> List[Dict[str, Any]]:
         return self.store.list_audit_events(task_id=task_id, limit=limit)

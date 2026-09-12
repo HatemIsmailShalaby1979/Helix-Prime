@@ -75,7 +75,9 @@ class CapabilityRegistry:
             raise ValueError("get_agent_for_capability: capability must be non-empty string")
         if cap in self.ambiguous_agent_capabilities:
             owners = self.agent_capability_to_roles.get(cap, [])
-            raise ValueError(f"ambiguous capability {cap!r} owned by multiple roles {owners} — fail closed to review queue")
+            raise ValueError(
+                f"ambiguous capability {cap!r} owned by multiple roles {owners} — fail closed to review queue"
+            )
         if cap not in self.agent_capability_to_role:
             raise ValueError(f"unknown capability {cap!r} for agent lookup — fail closed")
         return self.agent_capability_to_role[cap]
@@ -105,7 +107,9 @@ class CapabilityRegistry:
             raise ValueError("get_engine_for_capability: capability must be non-empty string")
         if cap in self.ambiguous_engine_capabilities:
             owners = self.engine_capability_to_engines.get(cap, [])
-            raise ValueError(f"ambiguous engine capability {cap!r} owned by multiple engines {owners} — fail closed")
+            raise ValueError(
+                f"ambiguous engine capability {cap!r} owned by multiple engines {owners} — fail closed"
+            )
         if cap not in self.engine_capability_to_engine:
             raise ValueError(f"unknown capability {cap!r} for engine lookup — fail closed")
         return self.engine_capability_to_engine[cap]
@@ -138,7 +142,9 @@ class CapabilityRegistry:
         from contracts.task import TaskRequest
 
         if not isinstance(request, TaskRequest):
-            raise ValueError(f"route_task_request: expected TaskRequest, got {type(request).__name__}")
+            raise ValueError(
+                f"route_task_request: expected TaskRequest, got {type(request).__name__}"
+            )
         cap = request.capability.strip()
         # Use agent lookup (TaskRequest capability is always an agent capability)
         return self.get_agent_for_capability(cap)
@@ -169,7 +175,9 @@ def build_registry_from_catalog(
     # detect ambiguous agent caps
     ambiguous_agent: Set[str] = {cap for cap, owners in cap_to_roles.items() if len(owners) > 1}
     # deterministic mapping: only unique caps get single owner
-    cap_to_role: Dict[str, str] = {cap: owners[0] for cap, owners in cap_to_roles.items() if len(owners) == 1}
+    cap_to_role: Dict[str, str] = {
+        cap: owners[0] for cap, owners in cap_to_roles.items() if len(owners) == 1
+    }
 
     # engine capabilities: load from file if not provided
     if engine_capabilities is None:
@@ -178,7 +186,9 @@ def build_registry_from_catalog(
         if p.exists() and yaml is not None:
             try:
                 data = yaml.safe_load(p.read_text(encoding="utf-8"))
-                engine_capabilities = data.get("engine_capabilities", {}) if isinstance(data, dict) else {}
+                engine_capabilities = (
+                    data.get("engine_capabilities", {}) if isinstance(data, dict) else {}
+                )
             except Exception:
                 engine_capabilities = {}
         else:
@@ -195,7 +205,9 @@ def build_registry_from_catalog(
         eng_to_cap.setdefault(eng, []).append(cap)
 
     ambiguous_engine: Set[str] = {cap for cap, owners in cap_to_engines.items() if len(owners) > 1}
-    cap_to_engine: Dict[str, str] = {cap: owners[0] for cap, owners in cap_to_engines.items() if len(owners) == 1}
+    cap_to_engine: Dict[str, str] = {
+        cap: owners[0] for cap, owners in cap_to_engines.items() if len(owners) == 1
+    }
 
     return CapabilityRegistry(
         agent_capability_to_role=cap_to_role,
@@ -242,6 +254,7 @@ def get_default_registry() -> CapabilityRegistry:
 
 
 # ── module-level helpers (used by tests) ───────────────────────────────────
+
 
 def get_agent_for_capability(capability: str) -> str:
     return get_default_registry().get_agent_for_capability(capability)
@@ -291,14 +304,20 @@ def validate_mirror_drift() -> None:
     if yaml is None:
         raise ValueError("PyYAML not installed for drift check")
     canonical_data = yaml.safe_load(canonical_path.read_text(encoding="utf-8"))
-    canonical_eng = (canonical_data or {}).get("engine_capabilities", {}) if isinstance(canonical_data, dict) else {}
+    canonical_eng = (
+        (canonical_data or {}).get("engine_capabilities", {})
+        if isinstance(canonical_data, dict)
+        else {}
+    )
 
     # Check YAML mirror
     yaml_mirror = pathlib.Path("contracts/capabilities.yaml")
     if yaml_mirror.exists():
         try:
             y_data = yaml.safe_load(yaml_mirror.read_text(encoding="utf-8"))
-            y_eng = (y_data or {}).get("engine_capabilities", {}) if isinstance(y_data, dict) else {}
+            y_eng = (
+                (y_data or {}).get("engine_capabilities", {}) if isinstance(y_data, dict) else {}
+            )
         except Exception as e:
             raise ValueError(f"failed to load YAML mirror {yaml_mirror}: {e}") from e
         if y_eng != canonical_eng:

@@ -13,6 +13,7 @@ from typing import Any, Mapping
 
 class SideEffect(Enum):
     """Types of side effects a tool call may have."""
+
     NONE = "none"
     LOCAL_WRITE = "local_write"
     EXTERNAL_WRITE = "external_write"
@@ -28,6 +29,7 @@ class ToolCall:
         args: The arguments to the tool.
         idempotency_key: Optional key for replay safety.
     """
+
     call_id: str
     tool: str
     args: Mapping[str, Any] = field(default_factory=dict)
@@ -63,6 +65,7 @@ class ToolResult:
         error: Optional error message if the call failed.
         nature: The nature of the result (verified_fact, model_inference, etc.)
     """
+
     call_id: str
     output: Any = None
     error: str | None = None
@@ -76,6 +79,7 @@ class ToolCallEnvelope:
     This wraps the tool calls in a structured envelope that includes
     tenant, client, and correlation context.
     """
+
     content: str
     tool_calls: list[ToolCall] = field(default_factory=list)
 
@@ -89,10 +93,7 @@ class ToolCallEnvelope:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ToolCallEnvelope:
         """Parse from dictionary (e.g., from JSON)."""
-        tool_calls = [
-            ToolCall.from_dict(tc)
-            for tc in data.get("tool_calls", [])
-        ]
+        tool_calls = [ToolCall.from_dict(tc) for tc in data.get("tool_calls", [])]
         return cls(
             content=data.get("content", ""),
             tool_calls=tool_calls,
@@ -110,6 +111,7 @@ class ToolDefinition:
         capability: The capability this tool belongs to.
         side_effect: The type of side effect.
     """
+
     name: str
     description: str
     owning_role: str
@@ -140,31 +142,39 @@ class ToolRegistry:
 TOOLS = ToolRegistry()
 
 # Register core tools
-TOOLS.register(ToolDefinition(
-    name="call_agent",
-    description="Call another agent to consult their expertise",
-    owning_role="any",
-    capability="agent_consult",
-    side_effect=SideEffect.NONE,
-))
-TOOLS.register(ToolDefinition(
-    name="submit_task",
-    description="Submit a task for approval and execution",
-    owning_role="any",
-    capability="task_submission",
-    side_effect=SideEffect.LOCAL_WRITE,
-))
-TOOLS.register(ToolDefinition(
-    name="request_approval",
-    description="Request approval for a decision or action",
-    owning_role="any",
-    capability="approval_request",
-    side_effect=SideEffect.LOCAL_WRITE,
-))
-TOOLS.register(ToolDefinition(
-    name="read_document",
-    description="Read a document from the workspace",
-    owning_role="any",
-    capability="document_read",
-    side_effect=SideEffect.NONE,
-))
+TOOLS.register(
+    ToolDefinition(
+        name="call_agent",
+        description="Call another agent to consult their expertise",
+        owning_role="any",
+        capability="agent_consult",
+        side_effect=SideEffect.NONE,
+    )
+)
+TOOLS.register(
+    ToolDefinition(
+        name="submit_task",
+        description="Submit a task for approval and execution",
+        owning_role="any",
+        capability="task_submission",
+        side_effect=SideEffect.LOCAL_WRITE,
+    )
+)
+TOOLS.register(
+    ToolDefinition(
+        name="request_approval",
+        description="Request approval for a decision or action",
+        owning_role="any",
+        capability="approval_request",
+        side_effect=SideEffect.LOCAL_WRITE,
+    )
+)
+TOOLS.register(
+    ToolDefinition(
+        name="read_document",
+        description="Read a document from the workspace",
+        owning_role="any",
+        capability="document_read",
+        side_effect=SideEffect.NONE,
+    )
+)

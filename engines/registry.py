@@ -40,9 +40,12 @@ def _make_handler(adapter_func, capability: str):
     For C4, we return the EngineResult's metrics as handler output, and let Engine handle the rest.
     If adapter returns failure EngineResult, we raise to trigger Engine's retry/dead_letter handling.
     """
+
     def handler(workflow):
         # Determine is_sample from workflow input_payload or workflow.is_sample? Use payload flag
-        is_sample = workflow.input_payload.get("is_sample", False) or workflow.input_payload.get("use_sample", False)
+        is_sample = workflow.input_payload.get("is_sample", False) or workflow.input_payload.get(
+            "use_sample", False
+        )
         # Call adapter
         result: EngineResult = adapter_func(
             input_payload=workflow.input_payload,

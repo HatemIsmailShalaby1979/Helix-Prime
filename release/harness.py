@@ -31,8 +31,13 @@ from release import manifest as manifest_mod
 ROOT = manifest_mod.ROOT
 
 GM_NAMES = ["SAMI", "SUBY", "PHILI", "WILI", "ANDY"]
-GM_ALIASES = {"COMPLIANCE": "ANDY", "FRAUD": "NONO", "MARKETING": "MAYA",
-              "SALES": "LIZA", "ICT": "TOMY"}
+GM_ALIASES = {
+    "COMPLIANCE": "ANDY",
+    "FRAUD": "NONO",
+    "MARKETING": "MAYA",
+    "SALES": "LIZA",
+    "ICT": "TOMY",
+}
 MIN_AGENTS = 9
 ENGINE_CAP_COUNT = 18  # ~3 caps per engine x 6 engines (with aliases)
 DEFAULT_SOAK_WORKFLOWS = 6
@@ -41,11 +46,7 @@ MAX_SOAK_EVENTS = 200
 
 
 def _now() -> str:
-    return (
-        datetime.datetime.now(datetime.timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _check(name: str, fn: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
@@ -61,10 +62,13 @@ def _check(name: str, fn: Callable[[], Dict[str, Any]]) -> Dict[str, Any]:
 
 # ── registry / structural checks ───────────────────────────────────────────
 
+
 def _check_components() -> Dict[str, Any]:
     import sys
+
     sys.path.insert(0, str(ROOT / "app" / "command_center" / "agents"))
     from base_agent import AgentRegistry
+
     available = AgentRegistry.list_available()
     # distinct canonical agents (instances/factories, excluding alias-only entries)
     distinct = {a for a in available} - set(GM_ALIASES.keys())
@@ -73,15 +77,13 @@ def _check_components() -> Dict[str, Any]:
     cap_count = 0
     try:
         import engines.registry as reg
+
         cap_count = len(reg.list_registered_capabilities())
         engines = reg.list_engines()
         six_engines = len(engines) >= 6
     except Exception:
         six_engines = False
-    ok = (
-        gms and aliases and len(distinct) >= MIN_AGENTS
-        and six_engines and cap_count >= 12
-    )
+    ok = gms and aliases and len(distinct) >= MIN_AGENTS and six_engines and cap_count >= 12
     return {
         "ok": ok,
         "detail": (
@@ -96,14 +98,23 @@ def _check_components() -> Dict[str, Any]:
 
 def _check_c7_contracts() -> Dict[str, Any]:
     from integrations.contracts import IntegrationEvent, SCHEMA_VERSION
+
     ev = IntegrationEvent(
-        event_id=uuid.uuid4().hex, event_type="CompetencyGapDetected",
-        schema_version=SCHEMA_VERSION, source_system="helix-prime",
+        event_id=uuid.uuid4().hex,
+        event_type="CompetencyGapDetected",
+        schema_version=SCHEMA_VERSION,
+        source_system="helix-prime",
         target_system="helix-education",
-        tenant_id="t1", client_id="c1", actor="suby", role_id="cadence_suby",
-        correlation_id="corr-x", causation_id="cause-x",
+        tenant_id="t1",
+        client_id="c1",
+        actor="suby",
+        role_id="cadence_suby",
+        correlation_id="corr-x",
+        causation_id="cause-x",
         idempotency_key="idem-1",
-        timestamp=_now(), data_classification="public", payload={"gap": "skill_x"},
+        timestamp=_now(),
+        data_classification="public",
+        payload={"gap": "skill_x"},
     )
     ev2 = IntegrationEvent.from_dict(ev.to_dict())
     ok = ev2.event_id == ev.event_id and ev2.correlation_id == ev.correlation_id
@@ -113,15 +124,24 @@ def _check_c7_contracts() -> Dict[str, Any]:
 def _check_transport_retry_deadletter() -> Dict[str, Any]:
     from integrations.transport import InMemoryTransport, TransportConfig
     from integrations.contracts import IntegrationEvent, SCHEMA_VERSION
+
     t = InMemoryTransport(config=TransportConfig(max_retries=2))
     ev = IntegrationEvent(
-        event_id="ev-retry-1", event_type="CompetencyGapDetected",
+        event_id="ev-retry-1",
+        event_type="CompetencyGapDetected",
         schema_version=SCHEMA_VERSION,
-        source_system="helix-prime", target_system="helix-education",
-        tenant_id="t1", client_id="c1", actor="suby", role_id="cadence_suby",
-        correlation_id="corr-r", causation_id="cause-r",
+        source_system="helix-prime",
+        target_system="helix-education",
+        tenant_id="t1",
+        client_id="c1",
+        actor="suby",
+        role_id="cadence_suby",
+        correlation_id="corr-r",
+        causation_id="cause-r",
         idempotency_key="idem-r",
-        timestamp=_now(), data_classification="public", payload={},
+        timestamp=_now(),
+        data_classification="public",
+        payload={},
     )
     t.send(ev)
     got = t.receive(event_type="CompetencyGapDetected")
@@ -146,6 +166,7 @@ def _check_unavailable_sibling() -> Dict[str, Any]:
     # No reachable sibling in this local release: transport should reflect
     # that delivery to a sibling is not available, not crash.
     from integrations.transport import InMemoryTransport, TransportConfig
+
     t = InMemoryTransport(config=TransportConfig(max_retries=1))
     # An empty receive is the deterministic "nothing available" signal.
     got = t.receive(event_type="never_sent")
@@ -155,12 +176,21 @@ def _check_unavailable_sibling() -> Dict[str, Any]:
 
 def _check_engine_timeout() -> Dict[str, Any]:
     from engines.contracts import EngineResult
+
     # A handler that raises a timeout is mapped to a typed failure envelope.
     res = EngineResult.failure(
-        engine_id="wfm", display_name="WFM", capability_ids=["wfm_forecast"],
-        tenant_id="t1", client_id="c1", correlation_id="corr-to",
-        causation_id=None, actor="probe", owning_role_id="ops_gm",
-        input_payload={}, error_code="ENGINE_TIMEOUT", error_message="timed out",
+        engine_id="wfm",
+        display_name="WFM",
+        capability_ids=["wfm_forecast"],
+        tenant_id="t1",
+        client_id="c1",
+        correlation_id="corr-to",
+        causation_id=None,
+        actor="probe",
+        owning_role_id="ops_gm",
+        input_payload={},
+        error_code="ENGINE_TIMEOUT",
+        error_message="timed out",
     )
     ok = res.error is not None and res.error.get("code") == "ENGINE_TIMEOUT"
     return {"ok": ok, "detail": "engine_timeout: typed ENGINE_TIMEOUT envelope"}
@@ -175,8 +205,10 @@ def _check_unavailable_ollama() -> Dict[str, Any]:
 
 # ── store / persistence checks ─────────────────────────────────────────────
 
+
 def _fresh_store():
     from control_plane.store import Store
+
     d = tempfile.mkdtemp(prefix="hp_harness_")
     return Store(db_path=os.path.join(d, "wf.db")), pathlib.Path(d)
 
@@ -185,6 +217,7 @@ def _write_workflow(store, eid: str = "wf-1", key: str = "k-1", aggregate: str =
     from control_plane.events import Event
     from control_plane.workflow import Workflow
     from contracts.task import CorrelationContext
+
     corr = CorrelationContext(
         correlation_id="corr-" + key,
         idempotency_key=key,
@@ -193,21 +226,34 @@ def _write_workflow(store, eid: str = "wf-1", key: str = "k-1", aggregate: str =
         created_at=_now(),
     )
     wf = Workflow(
-        workflow_id=eid, idempotency_key=key, correlation=corr,
-        tenant_id="t1", client_id="c1", requesting_actor="suby",
-        owning_role_id="cadence_suby", capability="wfm_forecast",
-        state="proposed", input_payload={"is_sample": True, "volume": 10},
-        created_at=_now(), updated_at=_now(),
+        workflow_id=eid,
+        idempotency_key=key,
+        correlation=corr,
+        tenant_id="t1",
+        client_id="c1",
+        requesting_actor="suby",
+        owning_role_id="cadence_suby",
+        capability="wfm_forecast",
+        state="proposed",
+        input_payload={"is_sample": True, "volume": 10},
+        created_at=_now(),
+        updated_at=_now(),
     )
     existing = store.get_workflow_by_idempotency(key)
     if existing is None:
         store.create_workflow(wf)
         from control_plane.events import SCHEMA_VERSION as EV_SCHEMA
+
         event = Event(
-            event_id=eid + "-e0", event_type="workflow_created",
-            aggregate_id=aggregate, correlation_id="corr-" + key,
-            actor="suby", schema_version=EV_SCHEMA, timestamp=_now(),
-            payload={"event_type": "workflow_created"}, sequence=0,
+            event_id=eid + "-e0",
+            event_type="workflow_created",
+            aggregate_id=aggregate,
+            correlation_id="corr-" + key,
+            actor="suby",
+            schema_version=EV_SCHEMA,
+            timestamp=_now(),
+            payload={"event_type": "workflow_created"},
+            sequence=0,
         )
         store.append_event(event)
     return wf
@@ -215,6 +261,7 @@ def _write_workflow(store, eid: str = "wf-1", key: str = "k-1", aggregate: str =
 
 def _check_persistence() -> Dict[str, Any]:
     from control_plane.store import Store
+
     d = tempfile.mkdtemp(prefix="hp_harness_")
     db = os.path.join(d, "wf.db")
     store = Store(db_path=db)
@@ -261,10 +308,18 @@ def _check_corrupted_event() -> Dict[str, Any]:
         _write_workflow(store, eid="wf-c", key="k-c", aggregate="agg-c")
         # out-of-order append must be rejected deterministically
         from control_plane.events import Event, SCHEMA_VERSION as EV_SCHEMA
-        bad = Event(event_id="wf-c-bad", event_type="tamper",
-                    aggregate_id="agg-c", correlation_id="c", actor="suby",
-                    schema_version=EV_SCHEMA, timestamp=_now(),
-                    payload={"x": 1}, sequence=5)
+
+        bad = Event(
+            event_id="wf-c-bad",
+            event_type="tamper",
+            aggregate_id="agg-c",
+            correlation_id="c",
+            actor="suby",
+            schema_version=EV_SCHEMA,
+            timestamp=_now(),
+            payload={"x": 1},
+            sequence=5,
+        )
         rejected = False
         try:
             store.append_event(bad)
@@ -293,6 +348,7 @@ def _check_corrupted_db() -> Dict[str, Any]:
     # A corrupt/truncated SQLite DB must fail closed (open/query raises) rather
     # than silently returning wrong data.
     from control_plane.store import Store
+
     d = tempfile.mkdtemp(prefix="hp_corrupt_")
     db = os.path.join(d, "wf.db")
     with open(db, "wb") as f:
@@ -308,15 +364,22 @@ def _check_corrupted_db() -> Dict[str, Any]:
 
 # ── audit / authorization checks ───────────────────────────────────────────
 
+
 def _check_audit_integrity() -> Dict[str, Any]:
     from security.audit import AuditTrail, AuditRecord
+
     d = tempfile.mkdtemp(prefix="hp_audit_")
     db = os.path.join(d, "audit.db")
     trail = AuditTrail(db_path=db)
     prev = None
     for i in range(3):
-        rec = AuditRecord.new(event_type="harness", actor="suby", actor_type="agent",
-                              decision="succeeded", previous_hash=prev)
+        rec = AuditRecord.new(
+            event_type="harness",
+            actor="suby",
+            actor_type="agent",
+            decision="succeeded",
+            previous_hash=prev,
+        )
         trail.append(rec)
         prev = rec.current_hash
     valid, msg = trail.verify_chain()
@@ -327,17 +390,29 @@ def _check_audit_integrity() -> Dict[str, Any]:
 def _check_tenant_isolation() -> Dict[str, Any]:
     from security.identity import Identity
     from security.policy import authorize, AuthorizationRequest
-    idn = Identity(actor="suby_a", actor_type="agent", tenant_id="tenantA",
-                   client_id="clientA", role_id="ops_gm")
-    req = AuthorizationRequest(identity=idn, capability="wfm_forecast",
-                               owning_role_id="ops_gm", action="execute",
-                               target_tenant_id="tenantB", target_client_id="clientB")
+
+    idn = Identity(
+        actor="suby_a",
+        actor_type="agent",
+        tenant_id="tenantA",
+        client_id="clientA",
+        role_id="ops_gm",
+    )
+    req = AuthorizationRequest(
+        identity=idn,
+        capability="wfm_forecast",
+        owning_role_id="ops_gm",
+        action="execute",
+        target_tenant_id="tenantB",
+        target_client_id="clientB",
+    )
     d = authorize(req)
     ok = not d.allowed
     return {"ok": ok, "detail": f"tenant_isolation: cross-tenant denied={ok} code={d.code}"}
 
 
 # ── bounded load / soak ────────────────────────────────────────────────────
+
 
 def run_bounded_soak(
     num_workflows: int = DEFAULT_SOAK_WORKFLOWS,
@@ -360,21 +435,20 @@ def run_bounded_soak(
         for i in range(n):
             for _retry in range(num_events_per_workflow):
                 try:
-                    _write_workflow(store, eid=f"soak-{i}", key=f"soak-{i}",
-                                    aggregate=f"agg-soak-{i}")
+                    _write_workflow(
+                        store, eid=f"soak-{i}", key=f"soak-{i}", aggregate=f"agg-soak-{i}"
+                    )
                 except Exception:  # noqa: BLE001
                     failures += 1
         wf_count = len(store.list_workflows(limit=MAX_SOAK_WORKFLOWS + 10))
         # Re-applying same idempotency keys must NOT grow the store.
         before = wf_count
         for i in range(n):
-            _write_workflow(store, eid=f"soak-{i}", key=f"soak-{i}",
-                            aggregate=f"agg-soak-{i}")
+            _write_workflow(store, eid=f"soak-{i}", key=f"soak-{i}", aggregate=f"agg-soak-{i}")
         after = len(store.list_workflows(limit=MAX_SOAK_WORKFLOWS + 10))
         no_growth = after == before
         duration = time.monotonic() - start
-        ok = (failures == 0 and wf_count == n and no_growth
-              and wf_count <= MAX_SOAK_WORKFLOWS)
+        ok = failures == 0 and wf_count == n and no_growth and wf_count <= MAX_SOAK_WORKFLOWS
     finally:
         store.close()
     return {
@@ -394,13 +468,15 @@ def run_bounded_soak(
 
 # ── assembled harness ──────────────────────────────────────────────────────
 
+
 def run_harness(num_soak_workflows: int = DEFAULT_SOAK_WORKFLOWS) -> Dict[str, Any]:
     """Run all verification checks. Returns {checks, all_ok, summary}."""
     checks = {
         "components": _check("components", _check_components),
         "c7_contracts": _check("c7_contracts", _check_c7_contracts),
-        "c7_transport_retry_deadletter":
-            _check("c7_transport_retry_deadletter", _check_transport_retry_deadletter),
+        "c7_transport_retry_deadletter": _check(
+            "c7_transport_retry_deadletter", _check_transport_retry_deadletter
+        ),
         "unavailable_sibling": _check("unavailable_sibling", _check_unavailable_sibling),
         "engine_timeout": _check("engine_timeout", _check_engine_timeout),
         "unavailable_ollama": _check("unavailable_ollama", _check_unavailable_ollama),

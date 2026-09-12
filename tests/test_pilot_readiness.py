@@ -22,6 +22,7 @@ from scripts import pilot_dry_run
 
 # ── profile correctness ─────────────────────────────────────────────────────
 
+
 def test_controlled_pilot_profile_is_known():
     assert profiles.is_known_profile("controlled_pilot") is True
     required = profiles.gates_required_for("controlled_pilot")
@@ -72,6 +73,7 @@ def test_prod_gate_impls_are_registered_and_red():
 
 
 # ── sign-off state machine ──────────────────────────────────────────────────
+
 
 def _pilot_signoff(**over):
     base = dict(
@@ -155,6 +157,7 @@ def test_unknown_state_is_rejected():
 
 # ── pilot metrics ───────────────────────────────────────────────────────────
 
+
 def test_metrics_separate_measured_proposed_and_production():
     m = pilot_metrics.build_summary(
         total_workflows=8,
@@ -179,10 +182,9 @@ def test_metrics_separate_measured_proposed_and_production():
 
 # ── pilot dry-run ───────────────────────────────────────────────────────────
 
+
 def test_dry_run_is_isolated_and_reports_ready(tmp_path):
-    summary = pilot_dry_run.run_pilot_dry_run(
-        artifact_dir=tmp_path / "evidence", cleanup=True
-    )
+    summary = pilot_dry_run.run_pilot_dry_run(artifact_dir=tmp_path / "evidence", cleanup=True)
     assert summary["classification"] == "CONTROLLED_PILOT_READY"
     assert summary["exit_code"] == 0
     assert summary["all_checks_green"] is True
@@ -203,9 +205,7 @@ def test_dry_run_does_not_touch_repo_state():
 
 def test_dry_run_records_no_data_violations():
     with tempfile.TemporaryDirectory() as d:
-        s = pilot_dry_run.run_pilot_dry_run(
-            artifact_dir=pathlib.Path(d) / "ev", cleanup=True
-        )
+        s = pilot_dry_run.run_pilot_dry_run(artifact_dir=pathlib.Path(d) / "ev", cleanup=True)
     m = s["metrics"]["measured_synthetic_dry_run"]
     assert m["data_classification_violations"] == 0
     assert m["tenant_isolation_violations"] == 0
@@ -215,9 +215,7 @@ def test_dry_run_records_no_data_violations():
 
 def test_dry_run_vertical_slice_success_and_denial():
     with tempfile.TemporaryDirectory() as d:
-        s = pilot_dry_run.run_pilot_dry_run(
-            artifact_dir=pathlib.Path(d) / "ev", cleanup=True
-        )
+        s = pilot_dry_run.run_pilot_dry_run(artifact_dir=pathlib.Path(d) / "ev", cleanup=True)
     checks = s["checks"]
     assert checks["c5_vertical_slice"]["ok"] is True
     assert checks["c5_vertical_slice"]["detail"].startswith("vertical_slice: 9 steps")
@@ -226,9 +224,7 @@ def test_dry_run_vertical_slice_success_and_denial():
 
 def test_dry_run_backup_restore_and_audit_integrity():
     with tempfile.TemporaryDirectory() as d:
-        s = pilot_dry_run.run_pilot_dry_run(
-            artifact_dir=pathlib.Path(d) / "ev", cleanup=True
-        )
+        s = pilot_dry_run.run_pilot_dry_run(artifact_dir=pathlib.Path(d) / "ev", cleanup=True)
     br = s["checks"]["backup_restore"]
     assert br["ok"] is True
     assert "audit_valid=True" in br["detail"]
@@ -237,9 +233,7 @@ def test_dry_run_backup_restore_and_audit_integrity():
 
 def test_dry_run_tenant_isolation_and_scenarios():
     with tempfile.TemporaryDirectory() as d:
-        s = pilot_dry_run.run_pilot_dry_run(
-            artifact_dir=pathlib.Path(d) / "ev", cleanup=True
-        )
+        s = pilot_dry_run.run_pilot_dry_run(artifact_dir=pathlib.Path(d) / "ev", cleanup=True)
     sc = s["checks"]["scenarios"]
     assert sc["ok"] is True
     assert sc["checks"]["tenant_isolation"] is True
@@ -249,9 +243,7 @@ def test_dry_run_tenant_isolation_and_scenarios():
 
 def test_dry_run_verifies_security_gate():
     with tempfile.TemporaryDirectory() as d:
-        s = pilot_dry_run.run_pilot_dry_run(
-            artifact_dir=pathlib.Path(d) / "ev", cleanup=True
-        )
+        s = pilot_dry_run.run_pilot_dry_run(artifact_dir=pathlib.Path(d) / "ev", cleanup=True)
     sg = s["checks"]["security_audit_redaction"]
     assert sg["ok"] is True
     for k in ("secrets_scan", "classification", "redaction", "audit_integrity"):
@@ -265,17 +257,17 @@ def test_no_real_secrets_committed():
 
 # ── smoke nuance handling ───────────────────────────────────────────────────
 
+
 def test_smoke_nuance_components_and_alias_are_informational():
     # The dry-run C6 names/aliases check must pass and report agent count.
     with tempfile.TemporaryDirectory() as d:
-        s = pilot_dry_run.run_pilot_dry_run(
-            artifact_dir=pathlib.Path(d) / "ev", cleanup=True
-        )
+        s = pilot_dry_run.run_pilot_dry_run(artifact_dir=pathlib.Path(d) / "ev", cleanup=True)
     assert s["checks"]["c6_names_aliases"]["ok"] is True
     assert s["checks"]["c6_names_aliases"].get("agent_count", 0) >= 1
 
 
 # ── C0-C8 regression ────────────────────────────────────────────────────────
+
 
 def test_c8_regression_production_candidate_still_emits_candidate():
     result = profiles.classify_from_gate_results(

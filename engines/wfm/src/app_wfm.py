@@ -194,9 +194,7 @@ class WFMForecastingApp:
         results["variance_analysis"] = variance_analysis
 
         # Store results
-        self.results_history.append(
-            {"timestamp": datetime.now().isoformat(), "results": results}
-        )
+        self.results_history.append({"timestamp": datetime.now().isoformat(), "results": results})
 
         return results
 
@@ -255,9 +253,7 @@ class WFMForecastingApp:
         # Calculate key metrics
         hourly_agg = actuals.groupby("hour").agg({"calls": ["mean", "std", "count"]})
         # Flatten multi-level columns for pandas 3.x compatibility
-        hourly_agg.columns = [
-            "-".join(col).strip("-") for col in hourly_agg.columns.values
-        ]
+        hourly_agg.columns = ["-".join(col).strip("-") for col in hourly_agg.columns.values]
         hourly_stats = hourly_agg.to_dict()
 
         # Calculate variance
@@ -289,9 +285,7 @@ class WFMForecastingApp:
 
         if len(x) > 1:
             slope = np.polyfit(x, y, 1)[0]
-            trend = (
-                "increasing" if slope > 0 else "decreasing" if slope < 0 else "stable"
-            )
+            trend = "increasing" if slope > 0 else "decreasing" if slope < 0 else "stable"
         else:
             trend = "insufficient_data"
 
@@ -355,9 +349,7 @@ class WFMForecastingApp:
         for agents in agents_range:
             engine = create_erlang_c_engine(
                 arrival_rate=forecast["parameters"]["arrival_rate"],
-                average_handling_time=forecast["parameters"][
-                    "average_handling_time_minutes"
-                ],
+                average_handling_time=forecast["parameters"]["average_handling_time_minutes"],
                 service_level_target=forecast["parameters"]["service_level_target"],
                 average_calls_per_period=1000,
             )
@@ -392,9 +384,7 @@ class WFMForecastingApp:
         for agents in agents_range:
             engine = create_erlang_c_engine(
                 arrival_rate=forecast["parameters"]["arrival_rate"],
-                average_handling_time=forecast["parameters"][
-                    "average_handling_time_minutes"
-                ],
+                average_handling_time=forecast["parameters"]["average_handling_time_minutes"],
                 service_level_target=forecast["parameters"]["service_level_target"],
                 average_calls_per_period=1000,
             )
@@ -455,36 +445,28 @@ class WFMForecastingApp:
             weights.append(scenario["weight"])
 
         # Plot 1: Scenario comparison by agent count
-        axes[0, 0].scatter(
-            agent_counts, service_levels, c=weights, cmap="viridis", s=100
-        )
+        axes[0, 0].scatter(agent_counts, service_levels, c=weights, cmap="viridis", s=100)
         axes[0, 0].set_xlabel("Number of Agents")
         axes[0, 0].set_ylabel("Service Level")
         axes[0, 0].set_title("Scenario Comparison: Service Level vs Agent Count")
         axes[0, 0].grid(True)
 
         # Plot 2: Scenario comparison by weight
-        axes[0, 1].scatter(
-            agent_counts, weights, c=service_levels, cmap="plasma", s=100
-        )
+        axes[0, 1].scatter(agent_counts, weights, c=service_levels, cmap="plasma", s=100)
         axes[0, 1].set_xlabel("Number of Agents")
         axes[0, 1].set_ylabel("Weight")
         axes[0, 1].set_title("Scenario Comparison: Weight vs Agent Count")
         axes[0, 1].grid(True)
 
         # Plot 3: Service level distribution
-        axes[1, 0].hist(
-            service_levels, bins=10, alpha=0.7, color="skyblue", edgecolor="black"
-        )
+        axes[1, 0].hist(service_levels, bins=10, alpha=0.7, color="skyblue", edgecolor="black")
         axes[1, 0].set_xlabel("Service Level")
         axes[1, 0].set_ylabel("Frequency")
         axes[1, 0].set_title("Service Level Distribution")
         axes[1, 0].grid(True)
 
         # Plot 4: Agent count distribution
-        axes[1, 1].hist(
-            agent_counts, bins=10, alpha=0.7, color="lightgreen", edgecolor="black"
-        )
+        axes[1, 1].hist(agent_counts, bins=10, alpha=0.7, color="lightgreen", edgecolor="black")
         axes[1, 1].set_xlabel("Number of Agents")
         axes[1, 1].set_ylabel("Frequency")
         axes[1, 1].set_title("Agent Count Distribution")
@@ -515,9 +497,7 @@ class WFMForecastingApp:
         exports = {}
 
         # Export to JSON
-        json_path = (
-            self.output_dir / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        )
+        json_path = self.output_dir / f"results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(json_path, "w") as f:
             json.dump(results, f, indent=2, default=str)
         exports["json"] = str(json_path)
@@ -537,10 +517,7 @@ class WFMForecastingApp:
                 ]
             )
 
-            csv_path = (
-                self.output_dir
-                / f"scenarios_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            )
+            csv_path = self.output_dir / f"scenarios_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
             scenarios_df.to_csv(csv_path, index=False)
             exports["csv"] = str(csv_path)
 
@@ -580,9 +557,7 @@ class WFMForecastingApp:
         print(f"Probability of Waiting: {main_forecast['probability_waiting']:.2%}")
 
         print(f"\nScenarios Analyzed: {len(results['scenarios'])}")
-        print(
-            f"Variance Analysis: {results['variance_analysis']['trend_analysis']['trend']}"
-        )
+        print(f"Variance Analysis: {results['variance_analysis']['trend_analysis']['trend']}")
 
         print("\nVisualizations Generated:")
         for viz_name, viz_path in visualizations.items():

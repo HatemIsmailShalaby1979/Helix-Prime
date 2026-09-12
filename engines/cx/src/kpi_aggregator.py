@@ -74,9 +74,7 @@ class KPIAggregator:
 
         return normalized_data
 
-    def apply_decay(
-        self, time_series_data: dict[str, list[float]]
-    ) -> dict[str, list[float]]:
+    def apply_decay(self, time_series_data: dict[str, list[float]]) -> dict[str, list[float]]:
         """
         Apply exponential decay to time series data.
 
@@ -140,9 +138,7 @@ class KPIAggregator:
             "decayed_data": decayed_data,
         }
 
-    def calculate_quality_score(
-        self, kpi_data: dict[str, list[float]]
-    ) -> dict[str, Any]:
+    def calculate_quality_score(self, kpi_data: dict[str, list[float]]) -> dict[str, Any]:
         """
         Calculate data quality score.
 
@@ -173,9 +169,7 @@ class KPIAggregator:
             accuracy_score = 1.0  # Assume data is accurate
 
             # Calculate overall quality score
-            overall_score = (
-                completeness_score + consistency_score + accuracy_score
-            ) / 3
+            overall_score = (completeness_score + consistency_score + accuracy_score) / 3
 
             quality_metrics[kpi] = {
                 "completeness_score": completeness_score,
@@ -187,9 +181,7 @@ class KPIAggregator:
             }
 
         # Calculate overall quality score
-        overall_quality = np.mean(
-            [m["overall_score"] for m in quality_metrics.values()]
-        )
+        overall_quality = np.mean([m["overall_score"] for m in quality_metrics.values()])
 
         return {
             "quality_metrics": quality_metrics,
@@ -354,9 +346,7 @@ if __name__ == "__main__":
     report = aggregator.generate_kpi_report(sample_kpi_data, sample_weights)
 
     print("\n=== KPI Aggregator Results ===")
-    print(
-        f"Overall quality score: {report['quality_report']['overall_quality_score']:.2f}"
-    )
+    print(f"Overall quality score: {report['quality_report']['overall_quality_score']:.2f}")
     print(f"Quality pass: {report['quality_report']['quality_pass']}")
     print(f"Total weighted score: {report['aggregated_scores']['total_score']:.2f}")
 

@@ -139,11 +139,7 @@ class SQLExtractor:
         if long_df.empty:
             return pd.DataFrame()
 
-        latest = (
-            long_df.sort_values("date")
-            .groupby(["client_id", "kpi"], as_index=False)
-            .tail(1)
-        )
+        latest = long_df.sort_values("date").groupby(["client_id", "kpi"], as_index=False).tail(1)
         wide = latest.pivot_table(
             index="client_id", columns="kpi", values="value", aggfunc="last"
         ).reset_index()
@@ -163,9 +159,7 @@ class SQLExtractor:
             if self.connection is not None:
                 return self.extract_from_db(view)
         except (ValueError, TypeError, OSError) as exc:
-            logger.warning(
-                "DB extraction failed for %s (%s); trying CSV fallback", view, exc
-            )
+            logger.warning("DB extraction failed for %s (%s); trying CSV fallback", view, exc)
 
         if csv_fallback and kpi in csv_fallback:
             try:

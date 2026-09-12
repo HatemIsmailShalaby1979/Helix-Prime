@@ -113,9 +113,13 @@ class Engine:
 
     def register_handler(self, capability: str, handler: Handler) -> None:
         if not isinstance(capability, str) or not capability.strip():
-            raise ValueError(f"register_handler: capability must be non-empty string, got {capability!r}")
+            raise ValueError(
+                f"register_handler: capability must be non-empty string, got {capability!r}"
+            )
         if not callable(handler):
-            raise ValueError(f"register_handler: handler must be callable, got {type(handler).__name__}")
+            raise ValueError(
+                f"register_handler: handler must be callable, got {type(handler).__name__}"
+            )
         self.handlers[capability.strip()] = handler
 
     def _emit_event(
@@ -153,7 +157,17 @@ class Engine:
             self._audit_prev_hash_loaded = True
         return self._audit_prev_hash
 
-    def _audit(self, event_type: str, workflow: Workflow, actor: str, actor_type: str = "agent", decision: str = "allowed", input_ref: str | None = None, output_ref: str | None = None, approval_decision: str | None = None) -> None:
+    def _audit(
+        self,
+        event_type: str,
+        workflow: Workflow,
+        actor: str,
+        actor_type: str = "agent",
+        decision: str = "allowed",
+        input_ref: str | None = None,
+        output_ref: str | None = None,
+        approval_decision: str | None = None,
+    ) -> None:
         """Helper: append tamper-evident audit record (best-effort, no cloud)."""
         _metrics_registry.record_governance_decision(decision)
         try:
@@ -204,7 +218,15 @@ class Engine:
             # Audit failures must not silently disappear but should not crash workflow; log and continue
             try:
                 if log_structured:
-                    log_structured(event_type="audit_verification_failure", correlation_id=workflow.correlation.correlation_id, workflow_id=workflow.workflow_id, actor=actor, result_status="failed", error_code="audit_error", payload={"event_type": event_type})
+                    log_structured(
+                        event_type="audit_verification_failure",
+                        correlation_id=workflow.correlation.correlation_id,
+                        workflow_id=workflow.workflow_id,
+                        actor=actor,
+                        result_status="failed",
+                        error_code="audit_error",
+                        payload={"event_type": event_type},
+                    )
             except Exception:
                 pass
 
@@ -230,7 +252,9 @@ class Engine:
                 tenant_id=workflow.tenant_id,
                 client_id=workflow.client_id,
                 actor=actor,
-                actor_type="agent" if "agent" in actor.lower() or actor in ("sami", "suby", "phili", "wili", "system") else "human",
+                actor_type="agent"
+                if "agent" in actor.lower() or actor in ("sami", "suby", "phili", "wili", "system")
+                else "human",
                 role_id=workflow.owning_role_id,
                 capability=workflow.capability,
                 **kwargs,
@@ -329,7 +353,9 @@ class Engine:
             correlation_id=request.correlation.correlation_id,
         )
         # Idempotency: if workflow with same idempotency_key exists, return it (no duplicate execution)
-        existing = self.store.get_workflow_by_idempotency(request.idempotency_key or request.correlation.idempotency_key)
+        existing = self.store.get_workflow_by_idempotency(
+            request.idempotency_key or request.correlation.idempotency_key
+        )
         if existing is not None:
             return existing
 
@@ -354,9 +380,24 @@ class Engine:
                 timestamp=_now_iso(),
             )
             self.store.create_workflow(workflow)
-            self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
-            self._audit("secret_redaction", workflow, request.requesting_actor, decision="denied", input_ref=request.request_id)
-            self._log("secret_redaction", workflow, request.requesting_actor, result_status="denied", error_code="secret_detected", payload={"reason": str(e)})
+            self._emit_event(
+                workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
+            )
+            self._audit(
+                "secret_redaction",
+                workflow,
+                request.requesting_actor,
+                decision="denied",
+                input_ref=request.request_id,
+            )
+            self._log(
+                "secret_redaction",
+                workflow,
+                request.requesting_actor,
+                result_status="denied",
+                error_code="secret_detected",
+                payload={"reason": str(e)},
+            )
             return workflow
 
         # C3: Validate data classification (unknown -> fail-closed)
@@ -383,9 +424,18 @@ class Engine:
                     timestamp=_now_iso(),
                 )
                 self.store.create_workflow(workflow)
-                self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
+                self._emit_event(
+                    workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
+                )
                 self._audit("policy_denied", workflow, request.requesting_actor, decision="denied")
-                self._log("policy_denied", workflow, request.requesting_actor, result_status="denied", error_code="invalid_classification", payload={"reason": str(e)})
+                self._log(
+                    "policy_denied",
+                    workflow,
+                    request.requesting_actor,
+                    result_status="denied",
+                    error_code="invalid_classification",
+                    payload={"reason": str(e)},
+                )
                 return workflow
 
         # C3: Policy authorize (tenant/client isolation, role/capability/tool, deny-by-default)
@@ -402,11 +452,19 @@ class Engine:
                 # If actor matches a role id, use it
                 try:
                     from organization.role_catalog import load_role_catalog
-                    catalog_roles = load_role_catalog("organization/role-catalog.yaml")["roles_by_id"]
+
+                    catalog_roles = load_role_catalog("organization/role-catalog.yaml")[
+                        "roles_by_id"
+                    ]
                     if actor_lower in catalog_roles:
                         role_for_identity = actor_lower
                     elif actor_lower.upper() in ("SAMI", "SUBY", "PHILI", "WILI"):
-                        mapping = {"SAMI": "sami", "SUBY": "ops_gm", "PHILI": "hr_personnel_gm", "WILI": "ld_gm"}
+                        mapping = {
+                            "SAMI": "sami",
+                            "SUBY": "ops_gm",
+                            "PHILI": "hr_personnel_gm",
+                            "WILI": "ld_gm",
+                        }
                         role_for_identity = mapping.get(actor_lower.upper(), role_for_identity)
                 except Exception:
                     pass
@@ -437,9 +495,26 @@ class Engine:
                             timestamp=_now_iso(),
                         )
                         self.store.create_workflow(workflow)
-                        self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": "suspicious prompt"})
-                        self._audit("suspicious_prompt", workflow, request.requesting_actor, decision="denied")
-                        self._log("suspicious_prompt", workflow, request.requesting_actor, result_status="denied", error_code="injection", payload={"capability": request.capability})
+                        self._emit_event(
+                            workflow,
+                            "workflow_dead_letter",
+                            request.requesting_actor,
+                            {"reason": "suspicious prompt"},
+                        )
+                        self._audit(
+                            "suspicious_prompt",
+                            workflow,
+                            request.requesting_actor,
+                            decision="denied",
+                        )
+                        self._log(
+                            "suspicious_prompt",
+                            workflow,
+                            request.requesting_actor,
+                            result_status="denied",
+                            error_code="injection",
+                            payload={"capability": request.capability},
+                        )
                         return workflow
 
                 auth_req = AuthorizationRequest(
@@ -469,9 +544,26 @@ class Engine:
                         timestamp=_now_iso(),
                     )
                     self.store.create_workflow(workflow)
-                    self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": decision.reason})
-                    self._audit("authorization_denied", workflow, request.requesting_actor, decision="denied")
-                    self._log("authorization_denied", workflow, request.requesting_actor, result_status="denied", error_code=decision.code, payload={"reason": decision.reason})
+                    self._emit_event(
+                        workflow,
+                        "workflow_dead_letter",
+                        request.requesting_actor,
+                        {"reason": decision.reason},
+                    )
+                    self._audit(
+                        "authorization_denied",
+                        workflow,
+                        request.requesting_actor,
+                        decision="denied",
+                    )
+                    self._log(
+                        "authorization_denied",
+                        workflow,
+                        request.requesting_actor,
+                        result_status="denied",
+                        error_code=decision.code,
+                        payload={"reason": decision.reason},
+                    )
                     return workflow
             except ValueError as e:
                 # Authorization raised ValueError (unknown capability etc.) -> already handled as dead_letter, but catch here for safety
@@ -492,9 +584,20 @@ class Engine:
                     timestamp=_now_iso(),
                 )
                 self.store.create_workflow(workflow)
-                self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
-                self._audit("authorization_denied", workflow, request.requesting_actor, decision="denied")
-                self._log("authorization_denied", workflow, request.requesting_actor, result_status="denied", error_code="unauthorized", payload={"reason": str(e)})
+                self._emit_event(
+                    workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
+                )
+                self._audit(
+                    "authorization_denied", workflow, request.requesting_actor, decision="denied"
+                )
+                self._log(
+                    "authorization_denied",
+                    workflow,
+                    request.requesting_actor,
+                    result_status="denied",
+                    error_code="unauthorized",
+                    payload={"reason": str(e)},
+                )
                 return workflow
 
         # Validate capability via registry (unknown -> dead_letter)
@@ -521,7 +624,9 @@ class Engine:
             )
             # Persist
             self.store.create_workflow(workflow)
-            self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
+            self._emit_event(
+                workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
+            )
             return workflow
 
         # Validate owning role matches capability owner (deterministic routing)
@@ -544,7 +649,12 @@ class Engine:
                 timestamp=_now_iso(),
             )
             self.store.create_workflow(workflow)
-            self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": workflow.error.message})
+            self._emit_event(
+                workflow,
+                "workflow_dead_letter",
+                request.requesting_actor,
+                {"reason": workflow.error.message},
+            )
             return workflow
 
         # Validate tool permissions: if request input_payload contains tool, check is_tool_allowed
@@ -572,7 +682,12 @@ class Engine:
                         timestamp=_now_iso(),
                     )
                     self.store.create_workflow(workflow)
-                    self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": workflow.error.message})
+                    self._emit_event(
+                        workflow,
+                        "workflow_dead_letter",
+                        request.requesting_actor,
+                        {"reason": workflow.error.message},
+                    )
                     return workflow
             except ValueError as e:
                 workflow = Workflow.new(
@@ -592,7 +707,9 @@ class Engine:
                     timestamp=_now_iso(),
                 )
                 self.store.create_workflow(workflow)
-                self._emit_event(workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)})
+                self._emit_event(
+                    workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
+                )
                 return workflow
 
         # Create workflow in proposed state (deadline only if timeout provided)
@@ -606,23 +723,48 @@ class Engine:
         )
         # Set deadline if request has timeout
         if request.timeout_seconds:
-            deadline_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=request.timeout_seconds)
+            deadline_dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
+                seconds=request.timeout_seconds
+            )
             workflow.deadline = deadline_dt.isoformat().replace("+00:00", "Z")
-            workflow.updated_at = workflow.deadline  # ensure updated_at reflects deadline change before store
+            workflow.updated_at = (
+                workflow.deadline
+            )  # ensure updated_at reflects deadline change before store
 
         # Idempotency key already set via correlation
         workflow = self.store.create_workflow(workflow)
-        self._emit_event(workflow, "workflow_created", request.requesting_actor, {"request_id": request.request_id})
-        self._audit("workflow_created", workflow, request.requesting_actor, decision="allowed", input_ref=request.request_id)
-        self._log("workflow_created", workflow, request.requesting_actor, result_status="proposed", payload={"request_id": request.request_id})
+        self._emit_event(
+            workflow,
+            "workflow_created",
+            request.requesting_actor,
+            {"request_id": request.request_id},
+        )
+        self._audit(
+            "workflow_created",
+            workflow,
+            request.requesting_actor,
+            decision="allowed",
+            input_ref=request.request_id,
+        )
+        self._log(
+            "workflow_created",
+            workflow,
+            request.requesting_actor,
+            result_status="proposed",
+            payload={"request_id": request.request_id},
+        )
 
         # Transition proposed -> validated
         try:
             workflow.transition(WorkflowState.VALIDATED, request.requesting_actor)
             self.store.update_workflow(workflow)
             self._emit_event(workflow, "workflow_validated", request.requesting_actor)
-            self._audit("workflow_validated", workflow, request.requesting_actor, decision="allowed")
-            self._log("workflow_validated", workflow, request.requesting_actor, result_status="validated")
+            self._audit(
+                "workflow_validated", workflow, request.requesting_actor, decision="allowed"
+            )
+            self._log(
+                "workflow_validated", workflow, request.requesting_actor, result_status="validated"
+            )
         except ValueError as e:
             workflow.state = WorkflowState.FAILED
             workflow.error = AgentError(
@@ -633,9 +775,18 @@ class Engine:
                 timestamp=_now_iso(),
             )
             self.store.update_workflow(workflow)
-            self._emit_event(workflow, "workflow_failed", request.requesting_actor, {"reason": str(e)})
+            self._emit_event(
+                workflow, "workflow_failed", request.requesting_actor, {"reason": str(e)}
+            )
             self._audit("workflow_failed", workflow, request.requesting_actor, decision="denied")
-            self._log("workflow_failed", workflow, request.requesting_actor, result_status="failed", error_code="invalid_input", payload={"reason": str(e)})
+            self._log(
+                "workflow_failed",
+                workflow,
+                request.requesting_actor,
+                result_status="failed",
+                error_code="invalid_input",
+                payload={"reason": str(e)},
+            )
             return workflow
 
         # Governance gate (enterprise control plane): bounded autonomy, fail-closed.
@@ -647,7 +798,8 @@ class Engine:
             from control_plane.governance import evaluate_gate, resolve_actor_role
 
             gate_role = (
-                resolve_actor_role(request.requesting_actor, request.owning_role_id) or request.owning_role_id
+                resolve_actor_role(request.requesting_actor, request.owning_role_id)
+                or request.owning_role_id
             )
             cost = getattr(request, "estimated_financial_cost", None)
             if cost is None:
@@ -719,7 +871,14 @@ class Engine:
             self._emit_event(workflow, "workflow_dead_letter", "system", {"reason": "deadline"})
             self._audit("timeout", workflow, "system", decision="denied")
             self._audit("workflow_dead_letter", workflow, "system", decision="denied")
-            self._log("timeout", workflow, "system", result_status="denied", error_code="timeout", payload={"reason": "deadline"})
+            self._log(
+                "timeout",
+                workflow,
+                "system",
+                result_status="denied",
+                error_code="timeout",
+                payload={"reason": "deadline"},
+            )
             return workflow
 
         # If requires approval, go to awaiting_approval
@@ -727,8 +886,15 @@ class Engine:
             workflow.transition(WorkflowState.AWAITING_APPROVAL, request.requesting_actor)
             self.store.update_workflow(workflow)
             self._emit_event(workflow, "workflow_awaiting_approval", request.requesting_actor)
-            self._audit("workflow_awaiting_approval", workflow, request.requesting_actor, decision="allowed")
-            self._log("workflow_awaiting_approval", workflow, request.requesting_actor, result_status="awaiting_approval")
+            self._audit(
+                "workflow_awaiting_approval", workflow, request.requesting_actor, decision="allowed"
+            )
+            self._log(
+                "workflow_awaiting_approval",
+                workflow,
+                request.requesting_actor,
+                result_status="awaiting_approval",
+            )
             return workflow
 
         # Otherwise, go to executing (but do not auto-execute handler here; caller must call execute)
@@ -736,7 +902,9 @@ class Engine:
         self.store.update_workflow(workflow)
         self._emit_event(workflow, "workflow_executing", request.requesting_actor)
         self._audit("workflow_executing", workflow, request.requesting_actor, decision="allowed")
-        self._log("workflow_executing", workflow, request.requesting_actor, result_status="executing")
+        self._log(
+            "workflow_executing", workflow, request.requesting_actor, result_status="executing"
+        )
         return workflow
 
     def approve(self, workflow_id: str, approval: Approval) -> Workflow:
@@ -756,7 +924,9 @@ class Engine:
             correlation_id=workflow.correlation.correlation_id,
         )
         if workflow.state != WorkflowState.AWAITING_APPROVAL:
-            raise ValueError(f"approve: workflow {workflow_id!r} not in awaiting_approval (current {workflow.state!r})")
+            raise ValueError(
+                f"approve: workflow {workflow_id!r} not in awaiting_approval (current {workflow.state!r})"
+            )
 
         # Validate approval correlation matches workflow
         if approval.correlation_id != workflow.correlation.correlation_id:
@@ -765,9 +935,13 @@ class Engine:
             )
         # Validate SOD: approval already validates self-approval and same-role, but we double-check
         if approval.approver_actor == workflow.requesting_actor:
-            raise ValueError(f"approve: self-approval forbidden: approver {approval.approver_actor!r} == requester {workflow.requesting_actor!r}")
+            raise ValueError(
+                f"approve: self-approval forbidden: approver {approval.approver_actor!r} == requester {workflow.requesting_actor!r}"
+            )
         if approval.approver_role_id == workflow.owning_role_id:
-            raise ValueError(f"approve: same-role approval forbidden: {approval.approver_role_id!r} == owning {workflow.owning_role_id!r}")
+            raise ValueError(
+                f"approve: same-role approval forbidden: {approval.approver_role_id!r} == owning {workflow.owning_role_id!r}"
+            )
 
         # Check if approver role is allowed to approve (must be compliance or escalation owner? For C2, allow compliance and sami)
         # Use catalog to check: if workflow's must_be_reviewed_by includes approver_role, allow; else check if approver can_review
@@ -776,12 +950,22 @@ class Engine:
             # Check if approver_role can review workflow's owning role
             # For simplicity, allow if approver_role is in workflow's must_be_reviewed_by or is sami/compliance
             workflow_role_data = catalog["roles_by_id"].get(workflow.owning_role_id, {})
-            must_review = workflow_role_data.get("segregation_of_duties", {}).get("must_be_reviewed_by", [])
-            can_review = self.catalog["roles_by_id"].get(approval.approver_role_id, {}).get("segregation_of_duties", {}).get("can_review", [])
+            must_review = workflow_role_data.get("segregation_of_duties", {}).get(
+                "must_be_reviewed_by", []
+            )
+            can_review = (
+                self.catalog["roles_by_id"]
+                .get(approval.approver_role_id, {})
+                .get("segregation_of_duties", {})
+                .get("can_review", [])
+            )
             # Allow if approver is in must_review, can_review includes owning role, or is a universal approver
             universal_approvers = set(catalog.get("universal_approvers", []))
             allowed_approvers = set(must_review) | universal_approvers
-            if approval.approver_role_id not in allowed_approvers and workflow.owning_role_id not in can_review:
+            if (
+                approval.approver_role_id not in allowed_approvers
+                and workflow.owning_role_id not in can_review
+            ):
                 raise ValueError(
                     f"approve: role {approval.approver_role_id!r} not authorized to approve {workflow.owning_role_id!r} (must be in {must_review} or can_review {workflow.owning_role_id!r})"
                 )
@@ -794,16 +978,35 @@ class Engine:
         if approval.decision == "approved":
             workflow.transition(WorkflowState.APPROVED, approval.approver_actor)
             self.store.update_workflow(workflow)
-            self._emit_event(workflow, "approval_granted", approval.approver_actor, {"approval_id": approval.approval_id})
+            self._emit_event(
+                workflow,
+                "approval_granted",
+                approval.approver_actor,
+                {"approval_id": approval.approval_id},
+            )
             self._emit_event(workflow, "workflow_approved", approval.approver_actor)
-            self._audit("approval_granted", workflow, approval.approver_actor, decision="approved", approval_decision="approved")
-            self._log("approval_granted", workflow, approval.approver_actor, result_status="approved", payload={"approval_id": approval.approval_id})
+            self._audit(
+                "approval_granted",
+                workflow,
+                approval.approver_actor,
+                decision="approved",
+                approval_decision="approved",
+            )
+            self._log(
+                "approval_granted",
+                workflow,
+                approval.approver_actor,
+                result_status="approved",
+                payload={"approval_id": approval.approval_id},
+            )
             # Then move to executing
             workflow.transition(WorkflowState.EXECUTING, approval.approver_actor)
             self.store.update_workflow(workflow)
             self._emit_event(workflow, "workflow_executing", approval.approver_actor)
             self._audit("workflow_executing", workflow, approval.approver_actor, decision="allowed")
-            self._log("workflow_executing", workflow, approval.approver_actor, result_status="executing")
+            self._log(
+                "workflow_executing", workflow, approval.approver_actor, result_status="executing"
+            )
         elif approval.decision == "denied":
             workflow.transition(WorkflowState.DEAD_LETTER, approval.approver_actor)
             workflow.error = AgentError(
@@ -814,12 +1017,40 @@ class Engine:
                 timestamp=_now_iso(),
             )
             self.store.update_workflow(workflow)
-            self._emit_event(workflow, "approval_denied", approval.approver_actor, {"reason": approval.reason})
-            self._emit_event(workflow, "workflow_dead_letter", approval.approver_actor, {"reason": "approval denied"})
-            self._audit("approval_denied", workflow, approval.approver_actor, decision="denied", approval_decision="denied")
-            self._log("approval_denied", workflow, approval.approver_actor, result_status="denied", error_code="approval_denied", payload={"reason": approval.reason})
-            self._audit("workflow_dead_letter", workflow, approval.approver_actor, decision="denied")
-            self._log("workflow_dead_letter", workflow, approval.approver_actor, result_status="denied", error_code="approval_denied")
+            self._emit_event(
+                workflow, "approval_denied", approval.approver_actor, {"reason": approval.reason}
+            )
+            self._emit_event(
+                workflow,
+                "workflow_dead_letter",
+                approval.approver_actor,
+                {"reason": "approval denied"},
+            )
+            self._audit(
+                "approval_denied",
+                workflow,
+                approval.approver_actor,
+                decision="denied",
+                approval_decision="denied",
+            )
+            self._log(
+                "approval_denied",
+                workflow,
+                approval.approver_actor,
+                result_status="denied",
+                error_code="approval_denied",
+                payload={"reason": approval.reason},
+            )
+            self._audit(
+                "workflow_dead_letter", workflow, approval.approver_actor, decision="denied"
+            )
+            self._log(
+                "workflow_dead_letter",
+                workflow,
+                approval.approver_actor,
+                result_status="denied",
+                error_code="approval_denied",
+            )
         else:
             raise ValueError(f"approve: unknown decision {approval.decision!r}")
         return workflow
@@ -840,7 +1071,9 @@ class Engine:
             correlation_id=workflow.correlation.correlation_id,
         )
         if workflow.state != WorkflowState.EXECUTING:
-            raise ValueError(f"execute: workflow {workflow_id!r} not in executing (current {workflow.state!r})")
+            raise ValueError(
+                f"execute: workflow {workflow_id!r} not in executing (current {workflow.state!r})"
+            )
 
         # Check deadline
         if _is_past_deadline(workflow):
@@ -857,7 +1090,14 @@ class Engine:
             self._emit_event(workflow, "workflow_dead_letter", "system", {"reason": "deadline"})
             self._audit("timeout", workflow, "system", decision="denied")
             self._audit("workflow_dead_letter", workflow, "system", decision="denied")
-            self._log("timeout", workflow, "system", result_status="denied", error_code="timeout", payload={"reason": "deadline"})
+            self._log(
+                "timeout",
+                workflow,
+                "system",
+                result_status="denied",
+                error_code="timeout",
+                payload={"reason": "deadline"},
+            )
             return workflow
 
         handler = self.handlers.get(workflow.capability)
@@ -876,7 +1116,14 @@ class Engine:
             self._emit_event(workflow, "workflow_dead_letter", "system", {"reason": "no handler"})
             self._audit("handler_failed", workflow, "system", decision="denied")
             self._audit("workflow_dead_letter", workflow, "system", decision="denied")
-            self._log("handler_failed", workflow, "system", result_status="failed", error_code="not_found", payload={"reason": "no handler"})
+            self._log(
+                "handler_failed",
+                workflow,
+                "system",
+                result_status="failed",
+                error_code="not_found",
+                payload={"reason": "no handler"},
+            )
             return workflow
 
         # Execute handler with bounded retries
@@ -886,30 +1133,80 @@ class Engine:
                 result_payload = handler(workflow)
                 # Success: validate output is dict
                 if not isinstance(result_payload, dict):
-                    raise ValueError(f"handler must return dict, got {type(result_payload).__name__}")
+                    raise ValueError(
+                        f"handler must return dict, got {type(result_payload).__name__}"
+                    )
                 workflow.output_payload = result_payload
                 workflow.transition(WorkflowState.SUCCEEDED, workflow.owning_role_id)
                 self.store.update_workflow(workflow)
-                self._emit_event(workflow, "handler_succeeded", workflow.owning_role_id, {"attempt": attempt})
-                self._emit_event(workflow, "workflow_succeeded", workflow.owning_role_id, {"output": result_payload})
-                self._audit("handler_succeeded", workflow, workflow.owning_role_id, decision="succeeded", output_ref=str(result_payload)[:100])
-                self._log("handler_succeeded", workflow, workflow.owning_role_id, result_status="succeeded", payload={"attempt": attempt})
+                self._emit_event(
+                    workflow, "handler_succeeded", workflow.owning_role_id, {"attempt": attempt}
+                )
+                self._emit_event(
+                    workflow,
+                    "workflow_succeeded",
+                    workflow.owning_role_id,
+                    {"output": result_payload},
+                )
+                self._audit(
+                    "handler_succeeded",
+                    workflow,
+                    workflow.owning_role_id,
+                    decision="succeeded",
+                    output_ref=str(result_payload)[:100],
+                )
+                self._log(
+                    "handler_succeeded",
+                    workflow,
+                    workflow.owning_role_id,
+                    result_status="succeeded",
+                    payload={"attempt": attempt},
+                )
                 # Then close
                 workflow.transition(WorkflowState.CLOSED, workflow.owning_role_id)
                 self.store.update_workflow(workflow)
                 self._emit_event(workflow, "workflow_closed", workflow.owning_role_id)
-                self._audit("workflow_closed", workflow, workflow.owning_role_id, decision="succeeded")
-                self._log("workflow_closed", workflow, workflow.owning_role_id, result_status="succeeded")
+                self._audit(
+                    "workflow_closed", workflow, workflow.owning_role_id, decision="succeeded"
+                )
+                self._log(
+                    "workflow_closed", workflow, workflow.owning_role_id, result_status="succeeded"
+                )
                 return workflow
             except Exception as e:
                 last_error = e
                 workflow.retry_count = attempt + 1
                 self.store.update_workflow(workflow)
-                self._emit_event(workflow, "handler_failed", workflow.owning_role_id, {"attempt": attempt, "error": str(e)})
-                self._emit_event(workflow, "retry_scheduled", workflow.owning_role_id, {"attempt": attempt, "max": workflow.max_retries})
+                self._emit_event(
+                    workflow,
+                    "handler_failed",
+                    workflow.owning_role_id,
+                    {"attempt": attempt, "error": str(e)},
+                )
+                self._emit_event(
+                    workflow,
+                    "retry_scheduled",
+                    workflow.owning_role_id,
+                    {"attempt": attempt, "max": workflow.max_retries},
+                )
                 self._audit("handler_failed", workflow, workflow.owning_role_id, decision="failed")
-                self._log("handler_failed", workflow, workflow.owning_role_id, result_status="failed", error_code="engine_error", retry_count=workflow.retry_count, payload={"attempt": attempt, "error": str(e)})
-                self._log("retry_scheduled", workflow, workflow.owning_role_id, result_status="retry", retry_count=workflow.retry_count, payload={"attempt": attempt})
+                self._log(
+                    "handler_failed",
+                    workflow,
+                    workflow.owning_role_id,
+                    result_status="failed",
+                    error_code="engine_error",
+                    retry_count=workflow.retry_count,
+                    payload={"attempt": attempt, "error": str(e)},
+                )
+                self._log(
+                    "retry_scheduled",
+                    workflow,
+                    workflow.owning_role_id,
+                    result_status="retry",
+                    retry_count=workflow.retry_count,
+                    payload={"attempt": attempt},
+                )
                 if workflow.retry_count > workflow.max_retries:
                     break
                 # No sleep for tests (bounded, no silent loop) — immediate retry
@@ -917,9 +1214,18 @@ class Engine:
         # Retries exhausted -> dead_letter
         workflow.transition(WorkflowState.FAILED, workflow.owning_role_id)
         self.store.update_workflow(workflow)
-        self._emit_event(workflow, "workflow_failed", workflow.owning_role_id, {"reason": str(last_error)})
+        self._emit_event(
+            workflow, "workflow_failed", workflow.owning_role_id, {"reason": str(last_error)}
+        )
         self._audit("workflow_failed", workflow, workflow.owning_role_id, decision="failed")
-        self._log("workflow_failed", workflow, workflow.owning_role_id, result_status="failed", error_code="engine_error", payload={"reason": str(last_error)})
+        self._log(
+            "workflow_failed",
+            workflow,
+            workflow.owning_role_id,
+            result_status="failed",
+            error_code="engine_error",
+            payload={"reason": str(last_error)},
+        )
         # Then dead_letter
         workflow.transition(WorkflowState.DEAD_LETTER, workflow.owning_role_id)
         workflow.error = AgentError(
@@ -930,17 +1236,32 @@ class Engine:
             timestamp=_now_iso(),
         )
         self.store.update_workflow(workflow)
-        self._emit_event(workflow, "workflow_dead_letter", workflow.owning_role_id, {"reason": str(last_error)})
+        self._emit_event(
+            workflow, "workflow_dead_letter", workflow.owning_role_id, {"reason": str(last_error)}
+        )
         self._audit("workflow_dead_letter", workflow, workflow.owning_role_id, decision="denied")
-        self._log("workflow_dead_letter", workflow, workflow.owning_role_id, result_status="denied", error_code="engine_error", payload={"reason": str(last_error)})
+        self._log(
+            "workflow_dead_letter",
+            workflow,
+            workflow.owning_role_id,
+            result_status="denied",
+            error_code="engine_error",
+            payload={"reason": str(last_error)},
+        )
         return workflow
 
     def cancel(self, workflow_id: str, actor: str, reason: str = "cancelled") -> Workflow:
         workflow = self.store.get_workflow(workflow_id)
         if workflow is None:
             raise ValueError(f"cancel: workflow {workflow_id!r} not found")
-        if workflow.state in (WorkflowState.CLOSED, WorkflowState.CANCELLED, WorkflowState.DEAD_LETTER):
-            raise ValueError(f"cancel: workflow {workflow_id!r} already terminal {workflow.state!r}")
+        if workflow.state in (
+            WorkflowState.CLOSED,
+            WorkflowState.CANCELLED,
+            WorkflowState.DEAD_LETTER,
+        ):
+            raise ValueError(
+                f"cancel: workflow {workflow_id!r} already terminal {workflow.state!r}"
+            )
         workflow.transition(WorkflowState.CANCELLED, actor)
         self.store.update_workflow(workflow)
         self._emit_event(workflow, "workflow_cancelled", actor, {"reason": reason})
@@ -958,7 +1279,10 @@ class Engine:
         state_to_result = {
             WorkflowState.SUCCEEDED: "succeeded",
             WorkflowState.FAILED: "failed",
-            WorkflowState.DEAD_LETTER: "refused" if workflow.error and workflow.error.code in ("approval_denied", "policy_denied", "unauthorized") else "failed",
+            WorkflowState.DEAD_LETTER: "refused"
+            if workflow.error
+            and workflow.error.code in ("approval_denied", "policy_denied", "unauthorized")
+            else "failed",
             WorkflowState.CANCELLED: "failed",
             WorkflowState.CLOSED: "succeeded" if workflow.output_payload else "failed",
         }
@@ -967,7 +1291,12 @@ class Engine:
         if workflow.error:
             if workflow.error.code == "timeout":
                 status = "timed_out"
-            elif workflow.error.code in ("policy_denied", "approval_denied", "unauthorized", "refused"):
+            elif workflow.error.code in (
+                "policy_denied",
+                "approval_denied",
+                "unauthorized",
+                "refused",
+            ):
                 status = "refused"
 
         # Build TaskResult

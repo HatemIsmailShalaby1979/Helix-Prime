@@ -29,17 +29,28 @@ class AcademyConnector(BaseConnector):
 
     # ----------------------------------------------------------------- capabilities
     def capabilities(self) -> Sequence[ConnectorCapability]:
-        return (ConnectorCapability(
-            connector_id=self.connector_id,
-            provider=self.provider,
-            capability_id="academy_read",
-            reads=("athletes", "families", "coaches", "programs", "sessions",
-                   "checkins", "facility_slots", "fee_payments", "enrollment_records"),
-            writes=(),
-            risk_class="client_confidential",
-            writes_require_approval=True,
-            approval_required=True,
-        ),)
+        return (
+            ConnectorCapability(
+                connector_id=self.connector_id,
+                provider=self.provider,
+                capability_id="academy_read",
+                reads=(
+                    "athletes",
+                    "families",
+                    "coaches",
+                    "programs",
+                    "sessions",
+                    "checkins",
+                    "facility_slots",
+                    "fee_payments",
+                    "enrollment_records",
+                ),
+                writes=(),
+                risk_class="client_confidential",
+                writes_require_approval=True,
+                approval_required=True,
+            ),
+        )
 
     # -------------------------------------------------------------- scope-filtered fetchers
     def _scope_ok(self, ctx: ConnectorContext, obj: Any) -> bool:  # type: ignore[override]
@@ -55,9 +66,12 @@ class AcademyConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch(ctx, key))
-        return ConnectorResult(status="ok", data=data,
-                               provenance=self._provenance(ctx, len(data)),
-                               correlation_id=ctx.correlation_id)
+        return ConnectorResult(
+            status="ok",
+            data=data,
+            provenance=self._provenance(ctx, len(data)),
+            correlation_id=ctx.correlation_id,
+        )
 
     def list_athletes(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self._list_result(ctx, "athletes").data or ()

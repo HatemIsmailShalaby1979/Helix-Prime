@@ -103,6 +103,7 @@ def log_structured(
 
 def get_logger(log_path: str = DEFAULT_LOG_PATH):
     """Return a simple logger closure for the given path."""
+
     def logger(event_type: str, **kwargs: Any) -> Dict[str, Any]:
         return log_structured(event_type=event_type, log_path=log_path, **kwargs)
 

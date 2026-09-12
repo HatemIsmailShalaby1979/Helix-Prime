@@ -44,11 +44,7 @@ EVIDENCE_ROOT = ROOT / "evidence" / "pilot"
 
 
 def _now() -> str:
-    return (
-        datetime.datetime.now(datetime.timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
@@ -59,10 +55,7 @@ def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
 
 def step_validate_profile() -> Dict[str, Any]:
     required = profiles.gates_required_for("controlled_pilot")
-    ok = (
-        profiles.is_known_profile("controlled_pilot")
-        and set(profiles.GATE_NAMES) == set(required)
-    )
+    ok = profiles.is_known_profile("controlled_pilot") and set(profiles.GATE_NAMES) == set(required)
     return {"ok": ok, "detail": f"controlled_pilot requires {len(required)} gates"}
 
 
@@ -109,7 +102,7 @@ def step_c5_vertical_slice(state: str) -> Dict[str, Any]:
     return {
         "ok": ok,
         "detail": f"vertical_slice: {len(ev.steps)} steps, final={ev.final_state}, "
-                  f"duration_ms={duration_ms}",
+        f"duration_ms={duration_ms}",
         "steps": step_names,
         "duration_ms": duration_ms,
         "is_sample": True,
@@ -131,8 +124,10 @@ def step_c5_denial(state: str) -> Dict[str, Any]:
         log_path=os.path.join(state, "logs-denial.jsonl"),
     )
     req = VerticalSliceRequest(
-        tenant_id="pilot-tenant-0001", client_id="pilot-client-0001",
-        approve_compliance=False, is_sample=True,
+        tenant_id="pilot-tenant-0001",
+        client_id="pilot-client-0001",
+        approve_compliance=False,
+        is_sample=True,
     )
     ev = ctrl.run(req)
     engine.close()
@@ -147,24 +142,31 @@ def step_c7_sibling(state: str) -> Dict[str, Any]:
     from integrations.transport import InMemoryTransport
 
     transport = InMemoryTransport()
-    adapter = HelixEducationAdapter(transport=transport, tenant_id="pilot-tenant-0001",
-                                    client_id="pilot-client-0001")
+    adapter = HelixEducationAdapter(
+        transport=transport, tenant_id="pilot-tenant-0001", client_id="pilot-client-0001"
+    )
     fake = FakeHelixEducation(transport=transport)
 
     r1 = adapter.detect_competency_gap(
-        employee_id="emp-0001", gap_name="Excel", required_level="5", current_level="2",
+        employee_id="emp-0001",
+        gap_name="Excel",
+        required_level="5",
+        current_level="2",
         correlation_id="pilot-corr-1",
     )
     fake.process_inbound()  # sibling records the gap (no response)
     r2 = adapter.request_learning_plan(
-        employee_id="emp-0001", gap_id="gap_x", learning_objectives=["Excel skills"],
+        employee_id="emp-0001",
+        gap_id="gap_x",
+        learning_objectives=["Excel skills"],
         correlation_id="pilot-corr-1",
     )
     responses = fake.process_inbound()  # sibling emits LearningArtifactReady
     got = list(responses)
 
     ok = (
-        r1.success and r2.success
+        r1.success
+        and r2.success
         and any(getattr(e, "event_type", None) == "LearningArtifactReady" for e in got)
     )
     return {"ok": ok, "detail": f"sibling round-trip ok={ok}, responses={len(got)}"}
@@ -172,6 +174,7 @@ def step_c7_sibling(state: str) -> Dict[str, Any]:
 
 def step_c6_names_aliases() -> Dict[str, Any]:
     from release import harness
+
     c = harness._check_components()
     return {"ok": c["ok"], "detail": c["detail"], "agent_count": c.get("agent_count")}
 
@@ -179,6 +182,7 @@ def step_c6_names_aliases() -> Dict[str, Any]:
 def step_scenarios(state: str) -> Dict[str, Any]:
     """Timeout, retry, dead-letter via the harness (deterministic, isolated)."""
     from release import harness
+
     timeout = harness._check("engine_timeout", harness._check_engine_timeout)
     retry_dl = harness._check(
         "c7_transport_retry_deadletter", harness._check_transport_retry_deadletter
@@ -189,7 +193,7 @@ def step_scenarios(state: str) -> Dict[str, Any]:
     return {
         "ok": ok,
         "detail": f"scenarios: timeout={timeout['ok']} retry/dl={retry_dl['ok']} "
-                  f"restart={restart['ok']} isolation={isolation['ok']}",
+        f"restart={restart['ok']} isolation={isolation['ok']}",
         "checks": {
             "engine_timeout": timeout["ok"],
             "retry_deadletter": retry_dl["ok"],
@@ -215,13 +219,27 @@ def step_backup_restore(state: str) -> Dict[str, Any]:
     os.makedirs(os.path.dirname(audit_db), exist_ok=True)
 
     store = Store(db_path=wf_db)
-    corr = CorrelationContext(correlation_id="c", idempotency_key="k", tenant_id="t1",
-                              client_id="c1", created_at="2026-01-01T00:00:00Z")
-    wf = Workflow(workflow_id="br-1", idempotency_key="k", correlation=corr,
-                  tenant_id="t1", client_id="c1", requesting_actor="suby",
-                  owning_role_id="cadence_suby", capability="wfm_forecast",
-                  state="proposed", input_payload={"is_sample": True},
-                  created_at="2026-01-01T00:00:00Z", updated_at="2026-01-01T00:00:00Z")
+    corr = CorrelationContext(
+        correlation_id="c",
+        idempotency_key="k",
+        tenant_id="t1",
+        client_id="c1",
+        created_at="2026-01-01T00:00:00Z",
+    )
+    wf = Workflow(
+        workflow_id="br-1",
+        idempotency_key="k",
+        correlation=corr,
+        tenant_id="t1",
+        client_id="c1",
+        requesting_actor="suby",
+        owning_role_id="cadence_suby",
+        capability="wfm_forecast",
+        state="proposed",
+        input_payload={"is_sample": True},
+        created_at="2026-01-01T00:00:00Z",
+        updated_at="2026-01-01T00:00:00Z",
+    )
     store.create_workflow(wf)
     store.close()
 
@@ -253,7 +271,7 @@ def step_backup_restore(state: str) -> Dict[str, Any]:
     return {
         "ok": ok,
         "detail": f"backup/restore ok={ok} captured={m.get('captured_state')} "
-                  f"restored={report['restore_count']} audit_valid={valid} ({msg})",
+        f"restored={report['restore_count']} audit_valid={valid} ({msg})",
     }
 
 
@@ -262,11 +280,17 @@ def step_security_audit_redaction(state: str) -> Dict[str, Any]:
     isolated_audit = os.path.join(state, "security", "audit-isolated.db")
     os.makedirs(os.path.dirname(isolated_audit), exist_ok=True)
     from security.audit import AuditTrail, AuditRecord as AR
+
     trail = AuditTrail(db_path=isolated_audit)
     prev = None
     for i in range(3):
-        rec = AR.new(event_type="pilot.security", actor="suby", actor_type="agent",
-                     decision="allow", previous_hash=prev)
+        rec = AR.new(
+            event_type="pilot.security",
+            actor="suby",
+            actor_type="agent",
+            decision="allow",
+            previous_hash=prev,
+        )
         trail.append(rec)
         prev = rec.current_hash
     trail.close()
@@ -307,9 +331,9 @@ def run_pilot_dry_run(
             total_workflows=8,
             completed=8 if ok else 7,
             denied_approvals=1,  # compliance-denial path exercised (expected)
-            timeouts=1,          # engine-timeout envelope exercised (expected)
-            retries=1,           # retry path exercised (expected)
-            dead_letter=1,       # dead-letter path exercised (expected)
+            timeouts=1,  # engine-timeout envelope exercised (expected)
+            retries=1,  # retry path exercised (expected)
+            dead_letter=1,  # dead-letter path exercised (expected)
             audit_verified=1,
             audit_total=1,
             data_classification_violations=0,

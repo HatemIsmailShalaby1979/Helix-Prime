@@ -48,7 +48,9 @@ def _validate_schema_version(value: Any, field_path: str) -> str:
 
 def _hash_record(data: Dict[str, Any]) -> str:
     """Deterministic SHA-256 over canonical JSON (sorted keys, no whitespace)."""
-    canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str)
+    canonical = json.dumps(
+        data, sort_keys=True, separators=(",", ":"), ensure_ascii=False, default=str
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
@@ -78,7 +80,9 @@ class AuditRecord:
         self.event_type = _require_non_empty_str(self.event_type, "AuditRecord.event_type")
         self.actor = _require_non_empty_str(self.actor, "AuditRecord.actor")
         if self.actor_type not in ("human", "agent", "service"):
-            raise ValueError(f"AuditRecord.actor_type: must be human/agent/service, got {self.actor_type!r}")
+            raise ValueError(
+                f"AuditRecord.actor_type: must be human/agent/service, got {self.actor_type!r}"
+            )
         if self.tenant_id is not None:
             self.tenant_id = _require_non_empty_str(self.tenant_id, "AuditRecord.tenant_id")
         if self.client_id is not None:
@@ -90,7 +94,9 @@ class AuditRecord:
         if self.task_id is not None:
             self.task_id = _require_non_empty_str(self.task_id, "AuditRecord.task_id")
         if self.correlation_id is not None:
-            self.correlation_id = _require_non_empty_str(self.correlation_id, "AuditRecord.correlation_id")
+            self.correlation_id = _require_non_empty_str(
+                self.correlation_id, "AuditRecord.correlation_id"
+            )
         if self.input_ref is not None:
             self.input_ref = _require_non_empty_str(self.input_ref, "AuditRecord.input_ref")
         if self.output_ref is not None:
@@ -99,14 +105,22 @@ class AuditRecord:
         if self.approval_decision is not None:
             if self.approval_decision not in ("approved", "denied", None):
                 # allow other strings but normalize
-                self.approval_decision = _require_non_empty_str(self.approval_decision, "AuditRecord.approval_decision").lower()
+                self.approval_decision = _require_non_empty_str(
+                    self.approval_decision, "AuditRecord.approval_decision"
+                ).lower()
         self.timestamp = _validate_iso(self.timestamp, "AuditRecord.timestamp")
         if self.previous_hash is not None:
             if not isinstance(self.previous_hash, str) or len(self.previous_hash) != 64:
-                raise ValueError(f"AuditRecord.previous_hash: must be 64-char hex or None, got {self.previous_hash!r}")
+                raise ValueError(
+                    f"AuditRecord.previous_hash: must be 64-char hex or None, got {self.previous_hash!r}"
+                )
         if not isinstance(self.current_hash, str) or len(self.current_hash) != 64:
-            raise ValueError(f"AuditRecord.current_hash: must be 64-char hex, got {self.current_hash!r}")
-        self.schema_version = _validate_schema_version(self.schema_version, "AuditRecord.schema_version")
+            raise ValueError(
+                f"AuditRecord.current_hash: must be 64-char hex, got {self.current_hash!r}"
+            )
+        self.schema_version = _validate_schema_version(
+            self.schema_version, "AuditRecord.schema_version"
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         d: Dict[str, Any] = {
@@ -161,7 +175,9 @@ class AuditRecord:
         timestamp: Optional[str] = None,
     ) -> "AuditRecord":
         audit_id = uuid.uuid4().hex
-        ts = timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
+        ts = timestamp or datetime.datetime.now(datetime.timezone.utc).isoformat().replace(
+            "+00:00", "Z"
+        )
         # Compute current_hash deterministically from content + previous_hash
         # Use canonical dict without current_hash itself
         content = {
@@ -243,6 +259,7 @@ class AuditTrail:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_prev ON audit(previous_hash)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit(timestamp)")
         self.conn.commit()
+
     def last_hash(self) -> Optional[str]:
         """
         Return the current tip of the hash chain, or None for an empty trail.
@@ -272,7 +289,9 @@ class AuditTrail:
         # For genesis, previous_hash should be None; otherwise must match last_hash
         if last_hash is None:
             if record.previous_hash is not None:
-                raise ValueError(f"AuditTrail.append: genesis record must have previous_hash=None, got {record.previous_hash!r}")
+                raise ValueError(
+                    f"AuditTrail.append: genesis record must have previous_hash=None, got {record.previous_hash!r}"
+                )
         else:
             if record.previous_hash != last_hash:
                 raise ValueError(
@@ -302,14 +321,22 @@ class AuditTrail:
         content_filtered = {k: v for k, v in content.items() if v is not None}
         expected_hash = _hash_record(content_filtered)
         if expected_hash != record.current_hash:
-            raise ValueError(f"AuditTrail.append: current_hash mismatch: expected {expected_hash}, got {record.current_hash}")
+            raise ValueError(
+                f"AuditTrail.append: current_hash mismatch: expected {expected_hash}, got {record.current_hash}"
+            )
 
         data_json = json.dumps(record.to_dict(), default=str)
         try:
             cur.execute("BEGIN IMMEDIATE")
             cur.execute(
                 "INSERT INTO audit (audit_id, previous_hash, current_hash, data, timestamp) VALUES (?, ?, ?, ?, ?)",
-                (record.audit_id, record.previous_hash, record.current_hash, data_json, record.timestamp),
+                (
+                    record.audit_id,
+                    record.previous_hash,
+                    record.current_hash,
+                    data_json,
+                    record.timestamp,
+                ),
             )
             self.conn.commit()
         except sqlite3.IntegrityError as e:
@@ -377,7 +404,10 @@ class AuditTrail:
         for rec in records:
             if rec.previous_hash != prev_hash:
                 self._record_verification(False)
-                return False, f"tamper detected: record {rec.audit_id} previous_hash {rec.previous_hash!r} != expected {prev_hash!r}"
+                return (
+                    False,
+                    f"tamper detected: record {rec.audit_id} previous_hash {rec.previous_hash!r} != expected {prev_hash!r}",
+                )
             # Recompute hash
             content = {
                 "audit_id": rec.audit_id,

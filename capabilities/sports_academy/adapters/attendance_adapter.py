@@ -66,8 +66,7 @@ def compute_attendance(
         for athlete_id in s.roster:
             slot = per_athlete.setdefault(athlete_id, {"expected": 0, "attended": 0})
             slot["expected"] += 1
-            if any(c.athlete_id == athlete_id and c.session_id == s.session_id
-                   for c in checkins):
+            if any(c.athlete_id == athlete_id and c.session_id == s.session_id for c in checkins):
                 slot["attended"] += 1
 
     total_expected = sum(v["expected"] for v in per_athlete.values())
@@ -80,9 +79,13 @@ def compute_attendance(
         "total_attended": total_attended,
         "by_session": by_session,
         "by_athlete": {
-            aid: {"expected": v["expected"], "attended": v["attended"],
-                  "attendance_rate": round(v["attended"] / v["expected"], 4)
-                  if v["expected"] else 0.0}
+            aid: {
+                "expected": v["expected"],
+                "attended": v["attended"],
+                "attendance_rate": round(v["attended"] / v["expected"], 4)
+                if v["expected"]
+                else 0.0,
+            }
             for aid, v in per_athlete.items()
         },
     }
@@ -109,16 +112,24 @@ def build_rta_payloads(
             continue
         scheduled_hours = _hours(s.start, s.end)
         for athlete_id in s.roster:
-            rows_schedule.append({
-                "agent_id": athlete_id, "date": s.date, "hour": 0,
-                "scheduled_hours": scheduled_hours,
-            })
+            rows_schedule.append(
+                {
+                    "agent_id": athlete_id,
+                    "date": s.date,
+                    "hour": 0,
+                    "scheduled_hours": scheduled_hours,
+                }
+            )
             c = checkin_index.get((athlete_id, s.session_id))
             if c is not None:
-                rows_actual.append({
-                    "agent_id": athlete_id, "date": s.date, "hour": 0,
-                    "actual_hours": _attended_hours(s, c),
-                })
+                rows_actual.append(
+                    {
+                        "agent_id": athlete_id,
+                        "date": s.date,
+                        "hour": 0,
+                        "actual_hours": _attended_hours(s, c),
+                    }
+                )
     return {
         "schedule": pd.DataFrame(rows_schedule),
         "actual": pd.DataFrame(rows_actual),
@@ -148,8 +159,12 @@ def rta_attendance_adherence(
 
     payloads = build_rta_payloads(sessions, checkins, date=date)
     if payloads["schedule"].empty:
-        return {"overall_adherence": 0.0, "agent_adherence": {},
-                "date_adherence": {}, "empty": True}
+        return {
+            "overall_adherence": 0.0,
+            "agent_adherence": {},
+            "date_adherence": {},
+            "empty": True,
+        }
     result = rta_adapt(
         input_payload={
             "schedule": payloads["schedule"],
@@ -190,8 +205,10 @@ def daily_adherence_report(
 
     attendance = compute_attendance(day_sessions, day_checkins)
     adherence = rta_attendance_adherence(
-        day_sessions, day_checkins,
-        tenant_id=ctx.tenant_id, client_id=ctx.client_id,
+        day_sessions,
+        day_checkins,
+        tenant_id=ctx.tenant_id,
+        client_id=ctx.client_id,
         correlation_id=ctx.correlation_id or f"attendance-{report_date}",
     )
     return {
@@ -218,10 +235,15 @@ def record_attendance_outcome(
     remain visibly distinct).
     """
     rec = mem.add(
-        kind="outcome", nature="simulated_event",
-        tenant_id=ctx.tenant_id, client_id=ctx.client_id,
-        actor=actor, role_id=role_id, source="academy_attendance",
-        classification="client_confidential", timestamp=as_of,
+        kind="outcome",
+        nature="simulated_event",
+        tenant_id=ctx.tenant_id,
+        client_id=ctx.client_id,
+        actor=actor,
+        role_id=role_id,
+        source="academy_attendance",
+        classification="client_confidential",
+        timestamp=as_of,
         correlation_id=ctx.correlation_id or f"attendance-{report.get('date')}",
         confidence=1.0,
         evidence_refs=[report.get("evidence_ref", "attendance-report")],
@@ -235,11 +257,9 @@ def record_attendance_outcome(
         body={
             "action": "daily_attendance_report",
             "date": report.get("date"),
-            "overall_attendance_rate": report.get("attendance", {}).get(
-                "overall_attendance_rate"),
+            "overall_attendance_rate": report.get("attendance", {}).get("overall_attendance_rate"),
             "sessions_reported": report.get("sessions_reported"),
-            "overall_adherence": report.get("rta_adherence", {}).get(
-                "overall_adherence"),
+            "overall_adherence": report.get("rta_adherence", {}).get("overall_adherence"),
         },
     )
     return rec.record_id

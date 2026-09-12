@@ -64,11 +64,26 @@ def test_proposal_generation(tmp_path):
     eng = MetacognitionEngine(path=str(tmp_path / "prop.jsonl"))
     p = _propose(eng, 0.3)
     assert p.approval_state == DRAFT
-    for f in ("proposal_id", "version", "baseline", "hypothesis", "evidence",
-              "evaluation_results", "risk_assessment", "approval_state",
-              "rollback_plan", "provenance", "tenant_id", "client_id",
-              "created_by", "role_id", "correlation_id", "timestamp",
-              "data_mode", "classification"):
+    for f in (
+        "proposal_id",
+        "version",
+        "baseline",
+        "hypothesis",
+        "evidence",
+        "evaluation_results",
+        "risk_assessment",
+        "approval_state",
+        "rollback_plan",
+        "provenance",
+        "tenant_id",
+        "client_id",
+        "created_by",
+        "role_id",
+        "correlation_id",
+        "timestamp",
+        "data_mode",
+        "classification",
+    ):
         assert hasattr(p, f) and getattr(p, f) is not None, f
     # persists + reloads
     eng2 = MetacognitionEngine(path=str(tmp_path / "prop.jsonl"))
@@ -207,8 +222,18 @@ def test_evidence_report(tmp_path):
     eng.evaluate(p, historical_cases=_cases(), simulated_cases=_cases(), simulate=_simulate)
     eng.approve(p.proposal_id, "human-1", "ict_gm")
     rep = eng.generate_evidence_report(eng.get_proposal(p.proposal_id))
-    for k in ("baseline", "hypothesis", "evidence", "evaluation_results", "risk_assessment",
-              "reviewer", "approval_state", "rollback_plan", "version", "audit_chain"):
+    for k in (
+        "baseline",
+        "hypothesis",
+        "evidence",
+        "evaluation_results",
+        "risk_assessment",
+        "reviewer",
+        "approval_state",
+        "rollback_plan",
+        "version",
+        "audit_chain",
+    ):
         assert k in rep, k
     assert rep["approval_state"] == APPROVED
     assert rep["audit_chain"] == "chain intact"

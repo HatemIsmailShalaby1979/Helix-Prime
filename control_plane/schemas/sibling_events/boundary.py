@@ -78,7 +78,9 @@ def scan_file_imports(path: Path) -> List[Dict[str, str]]:
     try:
         tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"), filename=str(path))
     except SyntaxError as exc:
-        return [{"file": str(path), "module": "<unparseable>", "project": "unknown", "detail": str(exc)}]
+        return [
+            {"file": str(path), "module": "<unparseable>", "project": "unknown", "detail": str(exc)}
+        ]
 
     for node in ast.walk(tree):
         targets: List[str] = []
@@ -136,7 +138,11 @@ def detect_vendored_sibling_source(root: Path | None = None) -> List[Dict[str, s
                         "project": project,
                         "detail": (
                             "directory matches a sibling project name"
-                            + (" and carries its own packaging metadata" if has_project_file else "")
+                            + (
+                                " and carries its own packaging metadata"
+                                if has_project_file
+                                else ""
+                            )
                         ),
                     }
                 )
@@ -168,7 +174,9 @@ def assert_legal_integration(
     if not uses_event_contract:
         problems.append("does not use an event contract — every crossing must be a versioned event")
     if problems:
-        raise ValueError("Illegal sibling integration: " + "; ".join(problems) + ". " + BOUNDARY_STATEMENT)
+        raise ValueError(
+            "Illegal sibling integration: " + "; ".join(problems) + ". " + BOUNDARY_STATEMENT
+        )
 
 
 def boundary_report(root: Path | None = None) -> Dict[str, object]:

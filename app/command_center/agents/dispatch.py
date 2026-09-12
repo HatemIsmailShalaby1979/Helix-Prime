@@ -56,10 +56,7 @@ class AgentDispatch:
         try:
             # Try to extract tool calls from JSON
             data = json.loads(content)
-            tool_calls = [
-                ToolCall.from_dict(tc)
-                for tc in data.get("tool_calls", [])
-            ]
+            tool_calls = [ToolCall.from_dict(tc) for tc in data.get("tool_calls", [])]
             return ToolCallEnvelope(
                 content=data.get("content", ""),
                 tool_calls=tool_calls,
@@ -272,6 +269,7 @@ def parse_legacy_calls(content: str) -> list[dict]:
         List of parsed call dictionaries.
     """
     import re
+
     call_pattern = r'call_agent\((["\'])([A-Z_]+)\1,\s*(["\'])(.*?)\3\)'
     matches = re.findall(call_pattern, content, re.DOTALL)
     return [

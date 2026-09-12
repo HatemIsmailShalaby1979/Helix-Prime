@@ -21,8 +21,10 @@ CLOSED = "closed"
 class ReadOnlyPeriod:
     starts_at: str
     ends_at: str
-    note: str = ("Initial pilot phase is read-only: previews/recommendations only, "
-                 "no committal approvals until explicitly exited.")
+    note: str = (
+        "Initial pilot phase is read-only: previews/recommendations only, "
+        "no committal approvals until explicitly exited."
+    )
 
     def is_active(self, as_of: str) -> bool:
         return self.starts_at <= as_of <= self.ends_at
@@ -37,7 +39,9 @@ class ConnectorPermissions:
     providers: Tuple[str, ...] = ("zendesk", "salesforce", "clay")
     read_allowed: bool = True
     write_allowed: bool = False
-    note: str = "Connectors are permitted read-only; all write capabilities are denied in the pilot."
+    note: str = (
+        "Connectors are permitted read-only; all write capabilities are denied in the pilot."
+    )
 
     def validate(self) -> "ConnectorPermissions":
         if self.write_allowed:

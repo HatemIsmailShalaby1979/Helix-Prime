@@ -65,9 +65,7 @@ SKIP_DIRS = {
     "src-tauri",
 }
 
-_REQUIREMENT_RE = re.compile(
-    r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?P<spec>[<>=!~].*)?$"
-)
+_REQUIREMENT_RE = re.compile(r"^(?P<name>[A-Za-z0-9][A-Za-z0-9._-]*)\s*(?P<spec>[<>=!~].*)?$")
 _SKIP_PREFIXES = ("-r ", "--", "#")
 
 
@@ -188,7 +186,6 @@ def check() -> Tuple[List[str], List[str]]:
                 "fold it into requirements.txt and delete it"
             )
             continue
-
 
         if manifest == CANONICAL or manifest == LOCK:
             continue

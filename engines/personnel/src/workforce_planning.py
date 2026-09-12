@@ -161,9 +161,7 @@ class WorkforcePlanning:
         gap_score = self._calculate_skills_gap_score(required_skills, available_skills)
 
         # Create skills gap analysis
-        skills_gap = SkillsGap(
-            gap_id, position, required_skills, available_skills, gap_score
-        )
+        skills_gap = SkillsGap(gap_id, position, required_skills, available_skills, gap_score)
 
         self.skills_gaps[gap_id] = skills_gap
         self.logger.info(f"Created skills gap analysis for {position}: {gap_score:.2f}")
@@ -197,9 +195,7 @@ class WorkforcePlanning:
     ) -> dict[str, Any]:
         """Generate staffing plan for a requirement."""
         # Filter candidates by position and skill level
-        qualified_candidates = self._filter_candidates(
-            requirement, available_candidates
-        )
+        qualified_candidates = self._filter_candidates(requirement, available_candidates)
 
         # Sort candidates by score
         qualified_candidates.sort(key=lambda x: x.get("score", 0), reverse=True)
@@ -219,9 +215,7 @@ class WorkforcePlanning:
             "skill_level": requirement.skill_level,
             "selected_candidates": selected_candidates,
             "total_cost": total_cost,
-            "average_salary": total_cost / len(selected_candidates)
-            if selected_candidates
-            else 0,
+            "average_salary": total_cost / len(selected_candidates) if selected_candidates else 0,
             "created_at": datetime.now().isoformat(),
             "status": "planned",
         }
@@ -262,8 +256,7 @@ class WorkforcePlanning:
             candidate_skills = candidate.get("skills", [])
 
             skills_match = (
-                len(set(required_skills).intersection(set(candidate_skills)))
-                / len(required_skills)
+                len(set(required_skills).intersection(set(candidate_skills))) / len(required_skills)
                 if required_skills
                 else 0
             )
@@ -275,15 +268,11 @@ class WorkforcePlanning:
 
         return filtered_candidates
 
-    def analyze_workforce_needs(
-        self, department: str, forecast_period: int
-    ) -> dict[str, Any]:
+    def analyze_workforce_needs(self, department: str, forecast_period: int) -> dict[str, Any]:
         """Analyze workforce needs for a department."""
         # Get staffing requirements for department
         department_requirements = [
-            req
-            for req in self.staffing_requirements.values()
-            if req.department == department
+            req for req in self.staffing_requirements.values() if req.department == department
         ]
 
         # Calculate total needs
@@ -305,15 +294,11 @@ class WorkforcePlanning:
 
         # Calculate average gap score
         average_gap_score = (
-            sum(gap.gap_score for gap in skills_gaps) / len(skills_gaps)
-            if skills_gaps
-            else 0
+            sum(gap.gap_score for gap in skills_gaps) / len(skills_gaps) if skills_gaps else 0
         )
 
         # Generate workforce forecast
-        workforce_forecast = self._generate_workforce_forecast(
-            department, forecast_period
-        )
+        workforce_forecast = self._generate_workforce_forecast(department, forecast_period)
 
         return {
             "department": department,
@@ -365,9 +350,7 @@ class WorkforcePlanning:
         department_distribution = {}
         for requirement in self.staffing_requirements.values():
             department = requirement.department
-            department_distribution[department] = (
-                department_distribution.get(department, 0) + 1
-            )
+            department_distribution[department] = department_distribution.get(department, 0) + 1
 
         # Position distribution
         position_distribution = {}
@@ -397,9 +380,7 @@ class WorkforcePlanning:
     def export_workforce_data(self, output_path: str) -> None:
         """Export workforce data to file."""
         data = {
-            "staffing_requirements": [
-                req.to_dict() for req in self.staffing_requirements.values()
-            ],
+            "staffing_requirements": [req.to_dict() for req in self.staffing_requirements.values()],
             "skills_gaps": [gap.to_dict() for gap in self.skills_gaps.values()],
             "candidates": self.candidates,
             "exported_at": datetime.now().isoformat(),
@@ -558,9 +539,7 @@ if __name__ == "__main__":
     print(
         f"Software Engineer Plan: {len(software_engineer_plan['selected_candidates'])} candidates"
     )
-    print(
-        f"Data Scientist Plan: {len(data_scientist_plan['selected_candidates'])} candidates"
-    )
+    print(f"Data Scientist Plan: {len(data_scientist_plan['selected_candidates'])} candidates")
 
     # Analyze workforce needs
     print("\nAnalyzing workforce needs...")
@@ -569,9 +548,7 @@ if __name__ == "__main__":
 
     print(f"Engineering Needs: {engineering_needs['total_requirements']} positions")
     print(f"Data Needs: {data_needs['total_requirements']} positions")
-    print(
-        f"Engineering Average Gap Score: {engineering_needs['average_gap_score']:.2f}"
-    )
+    print(f"Engineering Average Gap Score: {engineering_needs['average_gap_score']:.2f}")
     print(f"Data Average Gap Score: {data_needs['average_gap_score']:.2f}")
 
     # Get workforce analytics

@@ -32,6 +32,7 @@ def _ctx(tenant="tenant-1", org="org-1", client="client-1", corr="corr-1"):
 
 # ── each connector independently ─────────────────────────────────────────────
 
+
 def test_salesforce_connector_independent():
     ctx = _ctx()
     sf = ConnectorRegistry().get_connector("salesforce", ctx)
@@ -80,6 +81,7 @@ def test_capabilities_declare_classification_rate_limit_retry_approval():
 
 # ── malformed + unavailable providers ───────────────────────────────────────
 
+
 def test_malformed_provider_rejected():
     ctx = _ctx()
     for bad in ("bogus", "", "hubspot", "sales force"):
@@ -114,6 +116,7 @@ def test_unavailable_provider_returns_error_result():
 
 # ── cross-tenant access denial ──────────────────────────────────────────────
 
+
 def test_cross_tenant_access_denied():
     ctx = _ctx(tenant="tenant-1", client="client-1")
     other = _ctx(tenant="tenant-2", client="client-2")
@@ -134,6 +137,7 @@ def test_cross_tenant_access_denied():
 
 
 # ── provenance preservation ─────────────────────────────────────────────────
+
 
 def test_provenance_preserved_on_read():
     ctx = _ctx(corr="corr-prov")
@@ -163,6 +167,7 @@ def test_provenance_preserved_on_enrichment():
 
 # ── write capabilities cannot execute without approval ─────────────────────
 
+
 def test_write_requires_approval_and_is_read_only():
     ctx = _ctx()
     sf = ConnectorRegistry().get_connector("salesforce", ctx)
@@ -176,7 +181,9 @@ def test_write_requires_approval_and_is_read_only():
     # Even with a valid cross-role approval, the read-only first version still
     # cannot execute a write (live adapter not activated).
     approval = types.SimpleNamespace(
-        decision="approved", approver_actor="approver-bob", approver_role_id="sales_gm",
+        decision="approved",
+        approver_actor="approver-bob",
+        approver_role_id="sales_gm",
     )
     with_approval = sf.request_write(ctx, write_cap, {"name": "x"}, approval=approval)
     assert with_approval.executed is False
@@ -191,7 +198,9 @@ def test_self_approval_is_rejected():
     write_cap = cap.writes[0]
     # approver == requester actor -> invalid (separation of duties)
     bad = types.SimpleNamespace(
-        decision="approved", approver_actor=ctx.actor, approver_role_id="sales_gm",
+        decision="approved",
+        approver_actor=ctx.actor,
+        approver_role_id="sales_gm",
     )
     res = sf.request_write(ctx, write_cap, {}, approval=bad)
     assert res.executed is False
@@ -201,11 +210,14 @@ def test_self_approval_is_rejected():
 
 # ── rate-limit behavior (fail closed) ───────────────────────────────────────
 
+
 def test_rate_limit_fail_closed():
     ctx = _ctx()
     account = build_demo_connectors(ctx)["salesforce"].list_accounts(ctx)[0]
     limited = FakeConnector(
-        "salesforce", "Salesforce", accounts=[account],
+        "salesforce",
+        "Salesforce",
+        accounts=[account],
         rate_limit=RateLimitPolicy(max_requests_per_window=2, on_exceed="fail_closed"),
     )
     assert limited.list_accounts_result(ctx).status == "ok"
@@ -218,6 +230,7 @@ def test_rate_limit_fail_closed():
 
 
 # ── retry behavior (deterministic, retryable only) ──────────────────────────
+
 
 def test_retry_succeeds_after_transient_failures():
     ctx = _ctx()
@@ -259,6 +272,7 @@ def test_retry_does_not_retry_non_retryable():
 
 
 # ── failure behavior (typed envelope, malformed input) ──────────────────────
+
 
 def test_failure_behavior_malformed_input():
     ctx = _ctx()

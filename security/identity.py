@@ -32,18 +32,26 @@ class Identity:
             raise ValueError(f"Identity.actor: must be non-empty string, got {self.actor!r}")
         self.actor = self.actor.strip()
         if self.actor_type not in ActorType.ALL:
-            raise ValueError(f"Identity.actor_type: must be one of {sorted(ActorType.ALL)}, got {self.actor_type!r}")
+            raise ValueError(
+                f"Identity.actor_type: must be one of {sorted(ActorType.ALL)}, got {self.actor_type!r}"
+            )
         if self.tenant_id is not None:
             if not isinstance(self.tenant_id, str) or not self.tenant_id.strip():
-                raise ValueError(f"Identity.tenant_id: must be non-empty string or None, got {self.tenant_id!r}")
+                raise ValueError(
+                    f"Identity.tenant_id: must be non-empty string or None, got {self.tenant_id!r}"
+                )
             self.tenant_id = self.tenant_id.strip()
         if self.client_id is not None:
             if not isinstance(self.client_id, str) or not self.client_id.strip():
-                raise ValueError(f"Identity.client_id: must be non-empty string, got {self.client_id!r}")
+                raise ValueError(
+                    f"Identity.client_id: must be non-empty string, got {self.client_id!r}"
+                )
             self.client_id = self.client_id.strip()
         if self.role_id is not None:
             if not isinstance(self.role_id, str) or not self.role_id.strip():
-                raise ValueError(f"Identity.role_id: must be non-empty string or None, got {self.role_id!r}")
+                raise ValueError(
+                    f"Identity.role_id: must be non-empty string or None, got {self.role_id!r}"
+                )
             self.role_id = self.role_id.strip()
 
     def to_dict(self) -> dict:

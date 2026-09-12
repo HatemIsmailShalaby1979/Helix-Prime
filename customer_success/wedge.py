@@ -28,7 +28,9 @@ from connectors.contracts import (
     SourceRef,
     SupportTicket,
 )
-from customer_success.health import assess_account_health  # reuse the user's deterministic base score
+from customer_success.health import (
+    assess_account_health,
+)  # reuse the user's deterministic base score
 
 SCHEMA_VERSION = "1.0"
 STALE_THRESHOLD_DAYS = 30
@@ -196,6 +198,7 @@ class OutcomeMemory:
 
 # --------------------------------------------------------------------------- helpers
 
+
 def _parse(ts: str) -> _dt.datetime:
     return _dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
@@ -218,6 +221,7 @@ def _severity_for_signal(value: float) -> str:
 
 # --------------------------------------------------------------------------- diagnosis
 
+
 def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
     ctx = bundle.context
     as_of = bundle.as_of
@@ -233,54 +237,85 @@ def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
     # ---- evidence collection + staleness detection -------------------------
     if account is not None:
         sources.add(account.source.provider)
-        evidence.append(EvidenceItem(
-            provider=account.source.provider, record_id=account.account_id,
-            observed_at=account.source.observed_at, data_mode=bundle.data_mode,
-            detail=f"account lifecycle_stage={account.lifecycle_stage}",
-            source_version=account.source.input_version,
-            ref=_evt_ref(account.source.provider, account.account_id),
-        ))
+        evidence.append(
+            EvidenceItem(
+                provider=account.source.provider,
+                record_id=account.account_id,
+                observed_at=account.source.observed_at,
+                data_mode=bundle.data_mode,
+                detail=f"account lifecycle_stage={account.lifecycle_stage}",
+                source_version=account.source.input_version,
+                ref=_evt_ref(account.source.provider, account.account_id),
+            )
+        )
 
     for t in tickets:
         sources.add(t.source.provider)
         stale = _days_between(t.source.observed_at, as_of) > STALE_THRESHOLD_DAYS
-        evidence.append(EvidenceItem(
-            provider=t.source.provider, record_id=t.ticket_id,
-            observed_at=t.source.observed_at, data_mode=bundle.data_mode,
-            detail=f"support_ticket status={t.status} priority={t.priority} sla_breached={t.sla_breached}",
-            source_version=t.source.input_version, ref=_evt_ref(t.source.provider, t.ticket_id),
-        ))
+        evidence.append(
+            EvidenceItem(
+                provider=t.source.provider,
+                record_id=t.ticket_id,
+                observed_at=t.source.observed_at,
+                data_mode=bundle.data_mode,
+                detail=f"support_ticket status={t.status} priority={t.priority} sla_breached={t.sla_breached}",
+                source_version=t.source.input_version,
+                ref=_evt_ref(t.source.provider, t.ticket_id),
+            )
+        )
         if stale:
-            risk_factors.append(RiskFactor("stale_data", RiskSeverity.MEDIUM.value,
-                                            (_evt_ref(t.source.provider, t.ticket_id),)))
+            risk_factors.append(
+                RiskFactor(
+                    "stale_data",
+                    RiskSeverity.MEDIUM.value,
+                    (_evt_ref(t.source.provider, t.ticket_id),),
+                )
+            )
 
     if enrichment is not None:
         sources.add(enrichment.source.provider)
         stale = _days_between(enrichment.source.observed_at, as_of) > STALE_THRESHOLD_DAYS
-        evidence.append(EvidenceItem(
-            provider=enrichment.source.provider, record_id=enrichment.account_id,
-            observed_at=enrichment.source.observed_at, data_mode=bundle.data_mode,
-            detail=f"enrichment fields={json.dumps(enrichment.fields, sort_keys=True)}",
-            source_version=enrichment.source.input_version,
-            ref=_evt_ref(enrichment.source.provider, enrichment.account_id),
-        ))
+        evidence.append(
+            EvidenceItem(
+                provider=enrichment.source.provider,
+                record_id=enrichment.account_id,
+                observed_at=enrichment.source.observed_at,
+                data_mode=bundle.data_mode,
+                detail=f"enrichment fields={json.dumps(enrichment.fields, sort_keys=True)}",
+                source_version=enrichment.source.input_version,
+                ref=_evt_ref(enrichment.source.provider, enrichment.account_id),
+            )
+        )
         if stale:
-            risk_factors.append(RiskFactor("stale_data", RiskSeverity.MEDIUM.value,
-                                            (_evt_ref(enrichment.source.provider, enrichment.account_id),)))
+            risk_factors.append(
+                RiskFactor(
+                    "stale_data",
+                    RiskSeverity.MEDIUM.value,
+                    (_evt_ref(enrichment.source.provider, enrichment.account_id),),
+                )
+            )
 
     for s in signals:
         sources.add(s.source.provider)
         stale = _days_between(s.source.observed_at, as_of) > STALE_THRESHOLD_DAYS
         eid = _evt_ref(s.source.provider, s.signal_id)
-        evidence.append(EvidenceItem(
-            provider=s.source.provider, record_id=s.signal_id,
-            observed_at=s.source.observed_at, data_mode=bundle.data_mode,
-            detail=f"signal {s.signal_type}={s.value}",
-            source_version=s.source.input_version, ref=eid,
-        ))
+        evidence.append(
+            EvidenceItem(
+                provider=s.source.provider,
+                record_id=s.signal_id,
+                observed_at=s.source.observed_at,
+                data_mode=bundle.data_mode,
+                detail=f"signal {s.signal_type}={s.value}",
+                source_version=s.source.input_version,
+                ref=eid,
+            )
+        )
         if s.value < 0:
-            risk_factors.append(RiskFactor(
-                f"negative_signal:{s.signal_type}", _severity_for_signal(s.value), (eid,)))
+            risk_factors.append(
+                RiskFactor(
+                    f"negative_signal:{s.signal_type}", _severity_for_signal(s.value), (eid,)
+                )
+            )
         if stale:
             risk_factors.append(RiskFactor("stale_data", RiskSeverity.MEDIUM.value, (eid,)))
 
@@ -305,10 +340,16 @@ def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
 
     conflicts = [a for a, vals in attr_values.items() if len({v for _, v in vals}) > 1]
     if conflicts:
-        risk_factors.append(RiskFactor(
-            "conflicting_source_data", RiskSeverity.CRITICAL.value,
-            tuple(_evt_ref(p, account.account_id) for p in {p for a in conflicts for p, _ in attr_values[a]}),
-        ))
+        risk_factors.append(
+            RiskFactor(
+                "conflicting_source_data",
+                RiskSeverity.CRITICAL.value,
+                tuple(
+                    _evt_ref(p, account.account_id)
+                    for p in {p for a in conflicts for p, _ in attr_values[a]}
+                ),
+            )
+        )
 
     # ---- base score (reuse the user's deterministic assessment) -----------
     if account is None:
@@ -326,8 +367,12 @@ def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
         base_actions = base.recommended_actions
         # promote base string risks into structured factors (severity heuristic)
         for r in base_risks:
-            sev = RiskSeverity.HIGH.value if r.startswith("sla_breach") else RiskSeverity.MEDIUM.value
-            ev_refs = tuple(e.ref for e in evidence if r.split(":")[1] in e.record_id) if ":" in r else ()
+            sev = (
+                RiskSeverity.HIGH.value if r.startswith("sla_breach") else RiskSeverity.MEDIUM.value
+            )
+            ev_refs = (
+                tuple(e.ref for e in evidence if r.split(":")[1] in e.record_id) if ":" in r else ()
+            )
             risk_factors.append(RiskFactor(r, sev, ev_refs))
         # operational/customer signals also move the score deterministically
         for s in signals:
@@ -363,7 +408,9 @@ def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
 
     # ---- recommended action / role / approval / outcome -------------------
     if health_state == HealthState.CONTRADICTORY:
-        recommended_action = "Resolve conflicting source data via human-in-the-loop review before any action"
+        recommended_action = (
+            "Resolve conflicting source data via human-in-the-loop review before any action"
+        )
         expected_outcome = "Pending source reconciliation; no automated action is taken"
         responsible_role = "customer_success_gm"
     elif health_state == HealthState.UNKNOWN:
@@ -371,8 +418,14 @@ def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
         expected_outcome = "Deferred; diagnosis confidence too low to act"
         responsible_role = "customer_success_gm"
     elif health_state == HealthState.AT_RISK:
-        recommended_action = base_actions[0] if base_actions else "Prioritize SLA recovery and assign an accountable owner"
-        expected_outcome = "Risk mitigated if SLA/adoption actions are completed within the SLA window"
+        recommended_action = (
+            base_actions[0]
+            if base_actions
+            else "Prioritize SLA recovery and assign an accountable owner"
+        )
+        expected_outcome = (
+            "Risk mitigated if SLA/adoption actions are completed within the SLA window"
+        )
         responsible_role = "customer_success_gm"
     else:  # HEALTHY
         recommended_action = "Maintain cadence; continue monitoring"
@@ -421,13 +474,16 @@ def diagnose(bundle: AccountContextBundle) -> AccountHealthDiagnosis:
 
 # --------------------------------------------------------------------------- workflow glue
 
+
 def build_approval_preview(diagnosis: AccountHealthDiagnosis) -> ApprovalPreview:
     is_committal = any(h in diagnosis.recommended_action.lower() for h in COMMITTAL_ACTION_HINTS)
     required = diagnosis.approval_requirement or is_committal
     if required:
         reason = (
             "Conflicting sources or low-confidence/committal action requires cross-role approval"
-            if diagnosis.health_state == HealthState.CONTRADICTORY.value or diagnosis.confidence < 0.4 or is_committal
+            if diagnosis.health_state == HealthState.CONTRADICTORY.value
+            or diagnosis.confidence < 0.4
+            or is_committal
             else "Recommended action commits the business and requires cross-role approval"
         )
         policy = "cross_role_approval_required"

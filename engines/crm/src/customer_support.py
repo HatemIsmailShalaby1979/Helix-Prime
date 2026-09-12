@@ -53,9 +53,7 @@ class Ticket:
             "status": self.status,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
-            "resolution_time": self.resolution_time.isoformat()
-            if self.resolution_time
-            else None,
+            "resolution_time": self.resolution_time.isoformat() if self.resolution_time else None,
         }
 
 
@@ -110,9 +108,7 @@ class CustomerSupport:
     def add_ticket(self, ticket: Ticket) -> None:
         """Add a new ticket."""
         self.tickets[ticket.ticket_id] = ticket
-        self.logger.info(
-            f"Added ticket: {ticket.subject} (Priority: {ticket.priority})"
-        )
+        self.logger.info(f"Added ticket: {ticket.subject} (Priority: {ticket.priority})")
 
     def create_customer(
         self,
@@ -207,35 +203,21 @@ class CustomerSupport:
 
     def get_open_tickets(self) -> list[dict[str, Any]]:
         """Get all open tickets."""
-        return [
-            ticket.to_dict()
-            for ticket in self.tickets.values()
-            if ticket.status == "open"
-        ]
+        return [ticket.to_dict() for ticket in self.tickets.values() if ticket.status == "open"]
 
     def get_tickets_by_priority(self, priority: str) -> list[dict[str, Any]]:
         """Get tickets by priority."""
-        return [
-            ticket.to_dict()
-            for ticket in self.tickets.values()
-            if ticket.priority == priority
-        ]
+        return [ticket.to_dict() for ticket in self.tickets.values() if ticket.priority == priority]
 
     def get_tickets_by_category(self, category: str) -> list[dict[str, Any]]:
         """Get tickets by category."""
-        return [
-            ticket.to_dict()
-            for ticket in self.tickets.values()
-            if ticket.category == category
-        ]
+        return [ticket.to_dict() for ticket in self.tickets.values() if ticket.category == category]
 
     def get_support_analytics(self) -> dict[str, Any]:
         """Get support analytics."""
         total_tickets = len(self.tickets)
         open_tickets = len([t for t in self.tickets.values() if t.status == "open"])
-        resolved_tickets = len(
-            [t for t in self.tickets.values() if t.status == "resolved"]
-        )
+        resolved_tickets = len([t for t in self.tickets.values() if t.status == "resolved"])
 
         # Priority distribution
         priority_distribution = {}
@@ -377,12 +359,8 @@ if __name__ == "__main__":
     customer_support.resolve_ticket(
         "ticket_001", "Software reinstalled successfully", 2, "agent_001"
     )
-    customer_support.resolve_ticket(
-        "ticket_002", "Billing explanation provided", 4, "agent_002"
-    )
-    customer_support.resolve_ticket(
-        "ticket_003", "Password reset completed", 1, "agent_003"
-    )
+    customer_support.resolve_ticket("ticket_002", "Billing explanation provided", 4, "agent_002")
+    customer_support.resolve_ticket("ticket_003", "Password reset completed", 1, "agent_003")
 
     # Get ticket status
     print("\n=== Ticket Status ===")

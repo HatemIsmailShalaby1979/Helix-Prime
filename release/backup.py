@@ -44,11 +44,7 @@ SUPPORTED_STORE_SCHEMA = "1.0"
 
 
 def _now() -> str:
-    return (
-        datetime.datetime.now(datetime.timezone.utc)
-        .isoformat()
-        .replace("+00:00", "Z")
-    )
+    return datetime.datetime.now(datetime.timezone.utc).isoformat().replace("+00:00", "Z")
 
 
 class BackupError(Exception):
@@ -205,6 +201,7 @@ def verify_restored_dbs(
     # Audit chain
     audit_db = target / "security" / "audit.db"
     from security.audit import AuditTrail
+
     valid, msg = True, "no audit db"
     if audit_db.exists():
         trail = AuditTrail(db_path=str(audit_db))
@@ -217,6 +214,7 @@ def verify_restored_dbs(
 
     # Workflow replay
     from control_plane.store import Store
+
     wf_db = target / "control_plane" / "workflow.db"
     replay_ok = False
     event_count = 0
@@ -232,9 +230,7 @@ def verify_restored_dbs(
     results["replay_in_order"] = bool(replay_ok)
     results["event_count"] = event_count
 
-    results["verified"] = bool(results["audit_chain_valid"]) and bool(
-        results["replay_in_order"]
-    )
+    results["verified"] = bool(results["audit_chain_valid"]) and bool(results["replay_in_order"])
     return results
 
 

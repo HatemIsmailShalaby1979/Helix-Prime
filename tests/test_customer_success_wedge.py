@@ -32,6 +32,7 @@ def _ctx(tenant="tenant-1", client="client-1", corr="corr-cs"):
 
 # ── fixtures map to expected health states ──────────────────────────────────
 
+
 def test_healthy_fixture():
     diag, _ = run_wedge(healthy_account(_ctx()), OutcomeMemory())
     assert diag.health_state == "healthy"
@@ -64,10 +65,16 @@ def test_contradictory_fixture():
 
 # ── missing data ────────────────────────────────────────────────────────────
 
+
 def test_missing_account_context():
     bundle = AccountContextBundle(
-        context=_ctx(), account=None, tickets=(), enrichment=None, signals=(),
-        data_mode="simulated_realistic", as_of="2026-08-29T12:00:00Z",
+        context=_ctx(),
+        account=None,
+        tickets=(),
+        enrichment=None,
+        signals=(),
+        data_mode="simulated_realistic",
+        as_of="2026-08-29T12:00:00Z",
     )
     diag = diagnose(bundle)
     assert diag.health_state == "unknown"
@@ -83,6 +90,7 @@ def test_unknown_fixture_is_missing_data_safe():
 
 # ── stale data ──────────────────────────────────────────────────────────────
 
+
 def test_stale_data_reduces_confidence_and_flags_risk():
     fresh = diagnose(at_risk_account(_ctx(), stale=False))
     stale = diagnose(at_risk_account(_ctx(), stale=True))
@@ -91,6 +99,7 @@ def test_stale_data_reduces_confidence_and_flags_risk():
 
 
 # ── conflicting source data ─────────────────────────────────────────────────
+
 
 def test_conflicting_source_data_detected():
     diag = diagnose(contradictory_account(_ctx()))
@@ -101,13 +110,18 @@ def test_conflicting_source_data_detected():
 
 # ── recommendation rejection ────────────────────────────────────────────────
 
+
 def test_recommendation_rejection_recorded_and_diagnosis_unchanged():
     mem = OutcomeMemory()
     bundle = at_risk_account(_ctx())
     diag, _ = run_wedge(bundle, mem)
     fingerprint_before = diag.fingerprint()
     rejected = record_outcome(
-        mem, diag, "rejected", actor="alice", role_id="customer_success_gm",
+        mem,
+        diag,
+        "rejected",
+        actor="alice",
+        role_id="customer_success_gm",
         rationale="Deferred pending QBR",
     )
     assert rejected.decision == "rejected"
@@ -118,6 +132,7 @@ def test_recommendation_rejection_recorded_and_diagnosis_unchanged():
 
 
 # ── outcome recording ───────────────────────────────────────────────────────
+
 
 def test_outcome_recording():
     mem = OutcomeMemory()
@@ -136,11 +151,13 @@ def test_outcome_recording_with_audit_trail(tmp_path):
     rec = record_outcome(mem, diag, "accepted", actor="alice", role_id="customer_success_gm")
     assert rec in mem.all()
     from security.audit import AuditTrail
+
     ok, msg = AuditTrail(db_path=str(tmp_path / "audit.db")).verify_chain()
     assert ok, msg
 
 
 # ── determinism ─────────────────────────────────────────────────────────────
+
 
 def test_diagnosis_is_deterministic():
     bundle = at_risk_account(_ctx())
@@ -152,6 +169,7 @@ def test_diagnosis_is_deterministic():
 
 
 # ── provenance + visible data-mode labelling ───────────────────────────────
+
 
 def test_provenance_carries_correlation_and_sources():
     ctx = _ctx(corr="corr-prov-cs")
@@ -175,6 +193,7 @@ def test_historical_and_simulated_labelled_distinctly():
 
 # ── approval preview ─────────────────────────────────────────────────────────
 
+
 def test_approval_preview_reflects_requirement():
     contra = build_approval_preview(diagnose(contradictory_account(_ctx())))
     assert contra.required is True
@@ -192,13 +211,20 @@ def test_approval_preview_for_committal_action():
     diag = diagnose(bundle)
     # Simulate a committal next-best-action (e.g. issuing a concession)
     committal = types.SimpleNamespace(
-        account_id=diag.account_id, tenant_id=diag.tenant_id, client_id=diag.client_id,
-        health_state=diag.health_state, score=diag.score, confidence=diag.confidence,
-        risk_factors=diag.risk_factors, evidence=diag.evidence,
+        account_id=diag.account_id,
+        tenant_id=diag.tenant_id,
+        client_id=diag.client_id,
+        health_state=diag.health_state,
+        score=diag.score,
+        confidence=diag.confidence,
+        risk_factors=diag.risk_factors,
+        evidence=diag.evidence,
         recommended_action="Issue a goodwill concession to retain the account",
         recommended_actions=diag.recommended_actions,
-        responsible_role="sales_gm", approval_requirement=False,
-        expected_outcome=diag.expected_outcome, data_mode=diag.data_mode,
+        responsible_role="sales_gm",
+        approval_requirement=False,
+        expected_outcome=diag.expected_outcome,
+        data_mode=diag.data_mode,
         provenance=diag.provenance,
     )
     preview = build_approval_preview(committal)

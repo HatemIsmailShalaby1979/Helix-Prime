@@ -31,6 +31,7 @@ from typing import Any, Dict, List, Optional
 
 # Ensure project root on path
 import sys
+
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
@@ -61,8 +62,15 @@ STEP_CX = "cx_impact"
 STEP_CRM = "crm_impact"
 STEP_SAMI = "sami_summary"
 STEP_ORDER = [
-    STEP_WFM, STEP_RTA, STEP_OPS, STEP_COMPLIANCE,
-    STEP_HR, STEP_LD, STEP_CX, STEP_CRM, STEP_SAMI,
+    STEP_WFM,
+    STEP_RTA,
+    STEP_OPS,
+    STEP_COMPLIANCE,
+    STEP_HR,
+    STEP_LD,
+    STEP_CX,
+    STEP_CRM,
+    STEP_SAMI,
 ]
 
 DEFAULT_DEADLINE_SECONDS = 30
@@ -71,6 +79,7 @@ DEFAULT_DEADLINE_SECONDS = 30
 @dataclass
 class VerticalSliceRequest:
     """Input to the vertical slice controller."""
+
     tenant_id: str
     client_id: str
     actor_suby: str = "suby"
@@ -92,6 +101,7 @@ class VerticalSliceRequest:
 @dataclass
 class VerticalSliceStep:
     """A single step result in the vertical slice."""
+
     name: str
     workflow_id: str
     task_id: Optional[str]
@@ -152,6 +162,7 @@ class VerticalSliceStep:
 @dataclass
 class VerticalSliceEvidence:
     """Final evidence package produced by the controller."""
+
     workflow_id: str
     correlation_id: str
     tenant_id: str
@@ -200,7 +211,12 @@ class VerticalSliceController:
     state machine, C3 policy/audit/secrets, and C4 engine adapters are all reused.
     """
 
-    def __init__(self, engine_or_store, audit_db_path: str = "security/audit.db", log_path: str = "observability/logs.jsonl"):
+    def __init__(
+        self,
+        engine_or_store,
+        audit_db_path: str = "security/audit.db",
+        log_path: str = "observability/logs.jsonl",
+    ):
         # Accept either an Engine (with registered handlers) or a Store
         # If Engine is passed, extract its store and use the engine directly
         if isinstance(engine_or_store, Engine):
@@ -359,13 +375,18 @@ class VerticalSliceController:
                 actor_type="agent",
                 correlation_id=correlation_id,
                 causation_id=prev_causation,
-                metrics={"competency_gap": "customer_service_adherence", "training_recommendation": "Adherence Coaching 101"},
-                recommendations=[{
-                    "type": "training",
-                    "value": "Adherence Coaching 101 (synthetic)",
-                    "source": "calculated",
-                    "is_sample": is_sample,
-                }],
+                metrics={
+                    "competency_gap": "customer_service_adherence",
+                    "training_recommendation": "Adherence Coaching 101",
+                },
+                recommendations=[
+                    {
+                        "type": "training",
+                        "value": "Adherence Coaching 101 (synthetic)",
+                        "source": "calculated",
+                        "is_sample": is_sample,
+                    }
+                ],
                 tenant_id=request.tenant_id,
                 client_id=request.client_id,
                 data_classification="internal",
@@ -429,7 +450,7 @@ class VerticalSliceController:
                 "decisions": self._build_decisions(steps),
                 "kpi_summary": kpi_summary,
                 "is_sample": is_sample,
-"data_classification": "internal",
+                "data_classification": "internal",
             }
             if not terminated:
                 step9 = self._run_derived_step(
@@ -533,8 +554,31 @@ class VerticalSliceController:
             )
             self.engine.store.create_workflow(wf)
             self._emit_step_event(wf, "workflow_dead_letter", actor, {"reason": err["message"]})
-            self._audit_step(step_name, wf, correlation_id, actor, actor_type, decision="dead_letter", tenant_id=tenant_id, client_id=client_id, role_id=owning_role_id)
-            self._log_step(step_name, wf, correlation_id, actor, actor_type, capability, tool, "dead_letter", err, duration, data_classification, is_sample)
+            self._audit_step(
+                step_name,
+                wf,
+                correlation_id,
+                actor,
+                actor_type,
+                decision="dead_letter",
+                tenant_id=tenant_id,
+                client_id=client_id,
+                role_id=owning_role_id,
+            )
+            self._log_step(
+                step_name,
+                wf,
+                correlation_id,
+                actor,
+                actor_type,
+                capability,
+                tool,
+                "dead_letter",
+                err,
+                duration,
+                data_classification,
+                is_sample,
+            )
             return VerticalSliceStep(
                 name=step_name,
                 workflow_id=workflow_id,
@@ -628,9 +672,34 @@ class VerticalSliceController:
             )
             wf.output_payload = result.metrics
             self.engine.store.create_workflow(wf)
-            self._emit_step_event(wf, "workflow_dead_letter", actor, {"reason": result.error["message"]})
-            self._audit_step(step_name, wf, correlation_id, actor, actor_type, decision="dead_letter", tenant_id=tenant_id, client_id=client_id, role_id=owning_role_id)
-            self._log_step(step_name, wf, correlation_id, actor, actor_type, capability, tool, "dead_letter", result.error, duration, data_classification, is_sample)
+            self._emit_step_event(
+                wf, "workflow_dead_letter", actor, {"reason": result.error["message"]}
+            )
+            self._audit_step(
+                step_name,
+                wf,
+                correlation_id,
+                actor,
+                actor_type,
+                decision="dead_letter",
+                tenant_id=tenant_id,
+                client_id=client_id,
+                role_id=owning_role_id,
+            )
+            self._log_step(
+                step_name,
+                wf,
+                correlation_id,
+                actor,
+                actor_type,
+                capability,
+                tool,
+                "dead_letter",
+                result.error,
+                duration,
+                data_classification,
+                is_sample,
+            )
             return VerticalSliceStep(
                 name=step_name,
                 workflow_id=workflow_id,
@@ -676,8 +745,31 @@ class VerticalSliceController:
         )
         self.engine.store.create_workflow(wf)
         self._emit_step_event(wf, "workflow_succeeded", actor, {"capability": capability})
-        self._audit_step(step_name, wf, correlation_id, actor, actor_type, decision="succeeded", tenant_id=tenant_id, client_id=client_id, role_id=owning_role_id)
-        self._log_step(step_name, wf, correlation_id, actor, actor_type, capability, tool, "succeeded", None, duration, data_classification, is_sample)
+        self._audit_step(
+            step_name,
+            wf,
+            correlation_id,
+            actor,
+            actor_type,
+            decision="succeeded",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id=owning_role_id,
+        )
+        self._log_step(
+            step_name,
+            wf,
+            correlation_id,
+            actor,
+            actor_type,
+            capability,
+            tool,
+            "succeeded",
+            None,
+            duration,
+            data_classification,
+            is_sample,
+        )
         return VerticalSliceStep(
             name=step_name,
             workflow_id=workflow_id,
@@ -749,8 +841,31 @@ class VerticalSliceController:
         )
         self.engine.store.create_workflow(wf)
         self._emit_step_event(wf, "workflow_succeeded", actor, {"step": step_name})
-        self._audit_step(step_name, wf, correlation_id, actor, actor_type, decision="succeeded", tenant_id=tenant_id, client_id=client_id, role_id=owning_role_id)
-        self._log_step(step_name, wf, correlation_id, actor, actor_type, "derived", None, "succeeded", None, 0, data_classification, is_sample)
+        self._audit_step(
+            step_name,
+            wf,
+            correlation_id,
+            actor,
+            actor_type,
+            decision="succeeded",
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id=owning_role_id,
+        )
+        self._log_step(
+            step_name,
+            wf,
+            correlation_id,
+            actor,
+            actor_type,
+            "derived",
+            None,
+            "succeeded",
+            None,
+            0,
+            data_classification,
+            is_sample,
+        )
         return VerticalSliceStep(
             name=step_name,
             workflow_id=workflow_id,
@@ -831,8 +946,31 @@ class VerticalSliceController:
         wf.approval = approval_obj
         self.engine.store.create_workflow(wf)
         self._emit_step_event(wf, "workflow_succeeded", actor, {"decision": decision})
-        self._audit_step(step_name, wf, correlation_id, actor, "human", decision=("approved" if approve else "denied"), tenant_id=tenant_id, client_id=client_id, role_id="compliance_quality_gm")
-        self._log_step(step_name, wf, correlation_id, actor, "human", "policy_enforcement", None, decision, None, 0, "internal", is_sample)
+        self._audit_step(
+            step_name,
+            wf,
+            correlation_id,
+            actor,
+            "human",
+            decision=("approved" if approve else "denied"),
+            tenant_id=tenant_id,
+            client_id=client_id,
+            role_id="compliance_quality_gm",
+        )
+        self._log_step(
+            step_name,
+            wf,
+            correlation_id,
+            actor,
+            "human",
+            "policy_enforcement",
+            None,
+            decision,
+            None,
+            0,
+            "internal",
+            is_sample,
+        )
         return VerticalSliceStep(
             name=step_name,
             workflow_id=workflow_id,
@@ -860,7 +998,9 @@ class VerticalSliceController:
             timestamp=ts,
         )
 
-    def _emit_step_event(self, wf: Workflow, event_type: str, actor: str, payload: Dict[str, Any]) -> None:
+    def _emit_step_event(
+        self, wf: Workflow, event_type: str, actor: str, payload: Dict[str, Any]
+    ) -> None:
         try:
             seq = self.engine.store.get_next_sequence(wf.workflow_id)
             ev = Event.new(
@@ -876,7 +1016,18 @@ class VerticalSliceController:
         except Exception:
             pass
 
-    def _audit_step(self, step_name, wf, correlation_id, actor, actor_type, decision, tenant_id, client_id, role_id) -> None:
+    def _audit_step(
+        self,
+        step_name,
+        wf,
+        correlation_id,
+        actor,
+        actor_type,
+        decision,
+        tenant_id,
+        client_id,
+        role_id,
+    ) -> None:
         try:
             trail = AuditTrail(db_path=self.audit_db_path)
             last = trail.list_records(limit=10000)
@@ -899,7 +1050,21 @@ class VerticalSliceController:
         except Exception:
             pass
 
-    def _log_step(self, step_name, wf, correlation_id, actor, actor_type, capability, tool, state, err, duration, data_classification, is_sample) -> None:
+    def _log_step(
+        self,
+        step_name,
+        wf,
+        correlation_id,
+        actor,
+        actor_type,
+        capability,
+        tool,
+        state,
+        err,
+        duration,
+        data_classification,
+        is_sample,
+    ) -> None:
         try:
             err_code = err.get("code") if err else None
             log_structured(
@@ -917,7 +1082,11 @@ class VerticalSliceController:
                 duration_ms=duration,
                 result_status=state,
                 error_code=err_code,
-                payload={"step": step_name, "is_sample": is_sample, "data_classification": data_classification},
+                payload={
+                    "step": step_name,
+                    "is_sample": is_sample,
+                    "data_classification": data_classification,
+                },
                 log_path=self.log_path,
             )
         except Exception:
@@ -969,7 +1138,9 @@ class VerticalSliceController:
             "correlation_ids": list({s.correlation_id for s in steps}),
             "workflow_ids": [s.workflow_id for s in steps],
             "causation_chain": [s.causation_id for s in steps if s.causation_id],
-            "engines_invoked": sorted({s.capability for s in steps if s.capability and s.capability != "derived"}),
+            "engines_invoked": sorted(
+                {s.capability for s in steps if s.capability and s.capability != "derived"}
+            ),
             "roles_involved": sorted({s.owning_role_id for s in steps}),
         }
 
@@ -997,9 +1168,13 @@ class VerticalSliceController:
     # ---- default synthetic inputs (sample data) ----
     def _default_wfm_input(self) -> Dict[str, Any]:
         return {
-            "contacts": 200, "interval_minutes": 60, "aht_seconds": 480,
-            "service_level_target": 0.80, "average_calls_per_period": 17,
-            "is_sample": True, "data_classification": "internal",
+            "contacts": 200,
+            "interval_minutes": 60,
+            "aht_seconds": 480,
+            "service_level_target": 0.80,
+            "average_calls_per_period": 17,
+            "is_sample": True,
+            "data_classification": "internal",
         }
 
     def _default_rta_input(self) -> Dict[str, Any]:
@@ -1008,23 +1183,27 @@ class VerticalSliceController:
                 "agent_id": ["A1", "A2", "A3"],
                 "scheduled_min": [480, 480, 480],
                 "date": ["2026-08-27", "2026-08-27", "2026-08-27"],
-                "hour": [9, 9, 9], "scheduled_hours": [8.0, 8.0, 8.0],
+                "hour": [9, 9, 9],
+                "scheduled_hours": [8.0, 8.0, 8.0],
             },
             "actual": {
                 "agent_id": ["A1", "A2", "A3"],
                 "logged_min": [470, 460, 480],
                 "productive_min": [460, 450, 470],
                 "date": ["2026-08-27", "2026-08-27", "2026-08-27"],
-                "hour": [9, 9, 9], "actual_hours": [7.83, 7.67, 8.0],
+                "hour": [9, 9, 9],
+                "actual_hours": [7.83, 7.67, 8.0],
             },
-            "is_sample": True, "data_classification": "internal",
+            "is_sample": True,
+            "data_classification": "internal",
         }
 
     def _default_personnel_input(self) -> Dict[str, Any]:
         return {
             "candidate": {"name": "Alice Smith", "role": "Agent", "skills": ["CS", "Sales"]},
             "workforce": {"headcount": 420, "open_positions": 5},
-            "is_sample": True, "data_classification": "personnel_sensitive",
+            "is_sample": True,
+            "data_classification": "personnel_sensitive",
         }
 
     def _default_cx_input(self) -> Dict[str, Any]:
@@ -1034,14 +1213,16 @@ class VerticalSliceController:
                 {"csat": 0.75, "sla": 0.82, "fcr": 0.80, "aht": 0.32},
                 {"csat": 0.90, "sla": 0.95, "fcr": 0.92, "aht": 0.28},
             ],
-            "is_sample": True, "data_classification": "client_confidential",
+            "is_sample": True,
+            "data_classification": "client_confidential",
         }
 
     def _default_crm_input(self) -> Dict[str, Any]:
         return {
             "client": {"name": "Client Alpha", "id": "client_alpha"},
             "deal": {"id": "deal_alpha_001", "value": 50000, "stage": "proposal"},
-            "is_sample": True, "data_classification": "client_confidential",
+            "is_sample": True,
+            "data_classification": "client_confidential",
         }
 
     def write_evidence(self, evidence: VerticalSliceEvidence, run_dir: str) -> str:

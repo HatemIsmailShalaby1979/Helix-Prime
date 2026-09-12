@@ -185,9 +185,7 @@ class KillSwitch:
         except Exception:
             return True
 
-    def engage(
-        self, reason: str, actor: str, tenant_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def engage(self, reason: str, actor: str, tenant_id: Optional[str] = None) -> Dict[str, Any]:
         reason = _require_non_empty(reason, "KillSwitch.engage: reason")
         actor = _require_non_empty(actor, "KillSwitch.engage: actor")
         scope = _scope_for(tenant_id)

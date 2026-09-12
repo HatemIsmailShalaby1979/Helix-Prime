@@ -22,12 +22,11 @@ class TestGovernanceFailClosed:
 
     def test_engine_uses_governance_control_unavailable(self):
         """Engine imports GovernanceControlUnavailable for startup validation."""
-        from control_plane.engine import GovernanceControlUnavailable
         from control_plane.engine import Engine
 
         # Verify Engine class can be imported
         assert Engine is not None
-        assert hasattr(Engine, 'submit')
-        assert hasattr(Engine, 'execute')
-        assert hasattr(Engine, 'approve')
-        assert hasattr(Engine, 'cancel')
+        assert hasattr(Engine, "submit")
+        assert hasattr(Engine, "execute")
+        assert hasattr(Engine, "approve")
+        assert hasattr(Engine, "cancel")

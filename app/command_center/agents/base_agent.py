@@ -77,7 +77,9 @@ class AgentRegistry:
 
     @classmethod
     def list_available(cls) -> list[str]:
-        return list(set(cls._instances.keys()) | set(cls._factories.keys()) | set(cls._aliases.keys()))
+        return list(
+            set(cls._instances.keys()) | set(cls._factories.keys()) | set(cls._aliases.keys())
+        )
 
 
 class BaseAgent:
@@ -95,9 +97,7 @@ class BaseAgent:
     timeout: int = 120
     system_prompt: str = ""
 
-    def __init__(
-        self, session_id: str | None = None, client_context: str | None = None
-    ):
+    def __init__(self, session_id: str | None = None, client_context: str | None = None):
         self.session_id = session_id or datetime.now().strftime("%Y%m%d-%H%M%S")
         self.client_context = client_context
         self._inter_agent_calls: list[dict[str, Any]] = []
@@ -139,9 +139,7 @@ class BaseAgent:
             "options": {"temperature": 0.3, "top_p": 0.9},
         }
         try:
-            resp = LLM_SESSION.post(
-                url, headers=headers, json=data, timeout=self.timeout
-            )
+            resp = LLM_SESSION.post(url, headers=headers, json=data, timeout=self.timeout)
             resp.raise_for_status()
             return resp.json().get("response", "")
         except requests.exceptions.RequestException:
@@ -251,12 +249,12 @@ class BaseAgent:
                 cleaned = re.sub(call_pattern, _execute_call, cleaned, flags=re.DOTALL)
 
         # Log this interaction including all inter-agent calls made
-        inter_agent_calls_data = (
-            self._inter_agent_calls if self._inter_agent_calls else None
-        )
+        inter_agent_calls_data = self._inter_agent_calls if self._inter_agent_calls else None
         # Preserve the calls on a non-resetting attribute so callers (cockpit UI,
         # consult_agent) can read them AFTER process_request resets the buffer.
-        self._last_inter_agent_calls = list(self._inter_agent_calls) if self._inter_agent_calls else []
+        self._last_inter_agent_calls = (
+            list(self._inter_agent_calls) if self._inter_agent_calls else []
+        )
         if inter_agent_calls_data:
             for call in inter_agent_calls_data:
                 call_entry = LogEntry(

@@ -13,12 +13,24 @@ from typing import Any, Callable, Optional
 from .config import CloudConfig, demo_profile
 from .errors import SafeFailure
 from .interfaces import (
-    Database, ObjectStorage, EventTransport, SecretsStore, IdentityProvider,
-    Observability, Scheduler, ModelProvider,
+    Database,
+    ObjectStorage,
+    EventTransport,
+    SecretsStore,
+    IdentityProvider,
+    Observability,
+    Scheduler,
+    ModelProvider,
 )
 from .local_adapters import (
-    LocalDatabase, LocalObjectStorage, LocalQueue, LocalSecrets, LocalIdentity,
-    LocalObservability, LocalScheduler, LocalModel,
+    LocalDatabase,
+    LocalObjectStorage,
+    LocalQueue,
+    LocalSecrets,
+    LocalIdentity,
+    LocalObservability,
+    LocalScheduler,
+    LocalModel,
 )
 
 
@@ -46,22 +58,46 @@ real, measured limit -- see `optional_cloud_services()` for per-service triggers
 def optional_cloud_services() -> list:
     """Document which cloud services are optional and when they become justified."""
     return [
-        {"service": "database", "optional": True,
-         "justified_when": "durability/multi-tenant scale exceeds the local store; production data retention"},
-        {"service": "object_storage", "optional": True,
-         "justified_when": "synthetic datasets/artifacts grow beyond local memory or need shared access"},
-        {"service": "queue_event_transport", "optional": True,
-         "justified_when": "distributed eventing across services / async workloads"},
-        {"service": "secrets", "optional": True,
-         "justified_when": "real credential management is required (never in a demo profile)"},
-        {"service": "identity", "optional": True,
-         "justified_when": "SSO / enterprise IdP integration replaces the local identity stub"},
-        {"service": "observability", "optional": True,
-         "justified_when": "centralized metrics/tracing/log aggregation at scale"},
-        {"service": "scheduled_jobs", "optional": True,
-         "justified_when": "production cron/orchestration beyond the in-memory scheduler"},
-        {"service": "model_providers", "optional": True,
-         "justified_when": "production LLM throughput, latency, or cost needs exceed the local stub"},
+        {
+            "service": "database",
+            "optional": True,
+            "justified_when": "durability/multi-tenant scale exceeds the local store; production data retention",
+        },
+        {
+            "service": "object_storage",
+            "optional": True,
+            "justified_when": "synthetic datasets/artifacts grow beyond local memory or need shared access",
+        },
+        {
+            "service": "queue_event_transport",
+            "optional": True,
+            "justified_when": "distributed eventing across services / async workloads",
+        },
+        {
+            "service": "secrets",
+            "optional": True,
+            "justified_when": "real credential management is required (never in a demo profile)",
+        },
+        {
+            "service": "identity",
+            "optional": True,
+            "justified_when": "SSO / enterprise IdP integration replaces the local identity stub",
+        },
+        {
+            "service": "observability",
+            "optional": True,
+            "justified_when": "centralized metrics/tracing/log aggregation at scale",
+        },
+        {
+            "service": "scheduled_jobs",
+            "optional": True,
+            "justified_when": "production cron/orchestration beyond the in-memory scheduler",
+        },
+        {
+            "service": "model_providers",
+            "optional": True,
+            "justified_when": "production LLM throughput, latency, or cost needs exceed the local stub",
+        },
     ]
 
 
@@ -134,7 +170,9 @@ class CloudProvider:
         self.scheduler = scheduler
         self.models = models
         self.spend = spend
-        self.controller = DemoController(self, [db, storage, queue, secrets, identity, scheduler, models])
+        self.controller = DemoController(
+            self, [db, storage, queue, secrets, identity, scheduler, models]
+        )
 
     # ---- guarded entrypoint: restricted API + spend + safe failure ----
     def guarded_call(
@@ -149,9 +187,7 @@ class CloudProvider:
             raise SafeFailure("cloud provider is shut down")
         allowed = self.config.allowed_operations
         if operation not in allowed and "*" not in allowed:
-            raise SafeFailure(
-                f"operation {operation!r} not permitted in restricted demo API"
-            )
+            raise SafeFailure(f"operation {operation!r} not permitted in restricted demo API")
         self.spend.charge(cost)
         self.observability.record_metric("requests", 1.0, {"operation": operation})
         if func is None:

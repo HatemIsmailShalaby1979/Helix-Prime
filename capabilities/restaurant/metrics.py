@@ -20,7 +20,9 @@ def _gather(mem: GovernedMemory, tenant_ids: Sequence[str]):
     return recs
 
 
-def compute_restaurant_metrics(mem: GovernedMemory, tenant_ids: Sequence[str], baseline: Optional[dict] = None) -> dict:
+def compute_restaurant_metrics(
+    mem: GovernedMemory, tenant_ids: Sequence[str], baseline: Optional[dict] = None
+) -> dict:
     recs = _gather(mem, tenant_ids)
     recommendations = [r for r in recs if r.kind == "recommendation"]
     diagnoses = [r for r in recs if r.kind == "customer_context"]

@@ -1,8 +1,9 @@
 # Helix Prime — C3 Threat Model (Local-First)
 
 **Status:** C3 implementation — threat model for security governance and observability foundations.
-**Scope:** Control plane, capability registry, audit, secrets, prompt/tool, tenant isolation, DB.
+**Scope:** Control plane, capability registry, audit, secrets, prompt/tool, tenant isolation, DB, `server/` FastAPI spine, `engines/rta` Flask service.
 **Not production-ready:** Audit is tamper-evident, not immutable ledger; backup/restore, deletion, access-control guarantees separately proven.
+**Last reviewed:** 2026-09-12 (extended to cover `server/` and `engines/rta`).
 
 ## Assets & Trust Boundary
 
@@ -88,10 +89,25 @@
 - **Response:** `health` `ok=False` → operator runbook, restore from backup (backup verification separately proven).
 - **Residual:** File deletion not recoverable without backup; tamper-evidence detects but does not prevent — document as tamper-evident, not immutable.
 
+### 12. Unauthenticated/Exposed Server API (FastAPI spine)
+
+- **Prevention:** `server/config.py` binds `127.0.0.1` by default (`host: str = "127.0.0.1"`, port `8000`); every router except `/healthz` is mounted with `dependencies=[Depends(current_identity)]` forcing bearer-token auth (`server/auth.py`); token/role come from `HELIX_API_TOKEN`/`HELIX_API_TOKEN_ROLE` env vars; `/metrics` is behind the same auth boundary.
+- **Detection:** per-request structured log (`http_request`) with route, status, duration; `helix_http_requests_total` counter; 401/403 are auditable via auth failures.
+- **Response:** `HTTPException` 401 for missing/invalid token, 403 for unauthorized role; fail-closed (no anonymous route).
+- **Residual:** No external IdP — bearer token is a shared static secret; lacks per-user rotation/expiry. If exposed beyond loopback, token secrecy is the only gate.
+
+### 13. Debug/Open RTA Flask Service Exposure
+
+- **Prevention:** `engines/rta/src/app.py` binds `127.0.0.1:5000` (`app.run(host="127.0.0.1", port=5000)`), `debug=True` removed; CORS deny-by-default — `CORS(app, origins=...)` only applied when `RTA_CORS_ORIGINS` is set.
+- **Detection:** process/tooling visibility on the local profiles; loopback bind verified in code review.
+- **Response:** diagnostics only on loopback; no cross-origin data exposure by default.
+- **Residual:** No authentication on RTA endpoints (local-first design); if ever bound beyond loopback, must add auth — do not rely on CORS for access control.
+
 ## Residual Risk Summary
 
-C3 provides **tamper-evident, append-oriented, deny-by-default, local-first** foundations. Not yet: backup/restore verification, row-level DB ACL, NER PII, LLM-based injection detection, distributed idempotency, full observability metrics. These are C4/C5/C8.
+C3 provides **tamper-evident, append-oriented, deny-by-default, local-first** foundations. Not yet: backup/restore verification, row-level DB ACL, NER PII, LLM-based injection detection, distributed idempotency, full observability metrics, IdP-backed server auth, RTA endpoint auth. These are C4/C5/C8.
 
 ## References
 
 - `security/classification.py` (6 canonical), `security/policy.py` (deny-by-default), `security/secrets.py` (redaction), `security/audit.py` (hash chain), `security/injection.py`, `observability/logging.py`, `observability/health.py`, `control_plane/store.py` (WAL+UNIQUE+BEGIN IMMEDIATE).
+- `server/config.py` (loopback bind), `server/auth.py` (bearer + RBAC), `server/app.py` (router-level auth dependency), `engines/rta/src/app.py` (loopback bind + deny-by-default CORS).

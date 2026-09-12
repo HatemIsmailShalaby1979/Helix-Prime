@@ -1,11 +1,11 @@
 """Customer consent record + validation (Prompt 10)."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple
 
 from .exceptions import PilotError
-from .scope import HISTORICAL_CONSENTED, SIMULATED_REALISTIC, LIVE_CUSTOMER
+from .scope import LIVE_CUSTOMER
 
 
 @dataclass

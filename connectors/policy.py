@@ -5,8 +5,7 @@ capabilities to risk tiers and enforces the approval workflow.
 """
 from __future__ import annotations
 
-from typing import Any, Mapping
-
+from typing import Any
 
 # Risk tier mapping by capability type
 RISK_TIERS: dict[str, int] = {

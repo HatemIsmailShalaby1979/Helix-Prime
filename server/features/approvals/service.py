@@ -16,7 +16,6 @@ from typing import Any, Dict, List
 from contracts.task import Approval
 from control_plane.engine import Engine
 from control_plane.workflow import Workflow, WorkflowState
-
 from server.errors import NotFound
 from server.features.approvals.schemas import ApprovalRequest
 from server.features.workflows.repository import WorkflowRepository

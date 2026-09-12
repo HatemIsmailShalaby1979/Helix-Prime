@@ -8,12 +8,12 @@ import time
 from typing import Any, Dict
 
 from engines.contracts import EngineResult
-from security.classification import DataClassification, validate_payload_classification
-from security.policy import AuthorizationRequest, authorize
-from security.identity import Identity, ActorType
-from security.secrets import validate_no_secrets
-from security.audit import AuditTrail, AuditRecord
 from observability.logging import log_structured
+from security.audit import AuditRecord, AuditTrail
+from security.classification import DataClassification, validate_payload_classification
+from security.identity import ActorType, Identity
+from security.policy import AuthorizationRequest, authorize
+from security.secrets import validate_no_secrets
 
 ENGINE_ID = "b2b"
 DISPLAY_NAME = "B2B Onboarding"
@@ -292,7 +292,7 @@ def adapt(
         )
 
     try:
-        from engines.b2b.src.automator import OnboardingAutomator, ClientProfile
+        from engines.b2b.src.automator import ClientProfile, OnboardingAutomator
 
         automator = OnboardingAutomator()
         # Create a client profile - the engine expects specific fields

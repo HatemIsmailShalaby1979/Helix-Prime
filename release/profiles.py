@@ -15,8 +15,9 @@ Profiles (never conflated with production readiness):
 from __future__ import annotations
 
 import pathlib
-import yaml
 from typing import Any, Dict, List, Optional
+
+import yaml
 
 PROFILE_ORDER = [
     "alpha",

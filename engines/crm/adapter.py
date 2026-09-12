@@ -9,12 +9,12 @@ import time
 from typing import Any, Dict
 
 from engines.contracts import EngineResult
-from security.classification import DataClassification, validate_payload_classification
-from security.policy import AuthorizationRequest, authorize
-from security.identity import Identity, ActorType
-from security.secrets import validate_no_secrets
-from security.audit import AuditTrail, AuditRecord
 from observability.logging import log_structured
+from security.audit import AuditRecord, AuditTrail
+from security.classification import DataClassification, validate_payload_classification
+from security.identity import ActorType, Identity
+from security.policy import AuthorizationRequest, authorize
+from security.secrets import validate_no_secrets
 
 ENGINE_ID = "crm"
 DISPLAY_NAME = "CRM Engine"
@@ -296,7 +296,7 @@ def adapt(
     try:
         from engines.crm.src.sales_pipeline import SalesPipeline
 
-        pipeline = SalesPipeline() if hasattr(SalesPipeline, "__call__") else SalesPipeline
+        pipeline = SalesPipeline() if callable(SalesPipeline) else SalesPipeline
         # Try to create pipeline instance; the engine may have different API
         try:
             # The engine's SalesPipeline might need no args or specific

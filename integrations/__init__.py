@@ -29,57 +29,53 @@ Integration Principles:
 """
 
 from integrations.contracts import (
-    IntegrationEvent,
-    CompetencyGapDetected,
-    LearningPlanRequested,
-    LearningArtifactReady,
-    AssessmentCompleted,
-    CompetencyUpdated,
-    ContentGenerationRequested,
-    ContentGenerationCompleted,
-    MediaArtifactRequested,
-    MediaArtifactReady,
-    CareerLearningSignal,
-    IntegrationError,
-    create_integration_event,
-    build_event_from_dict,
     SCHEMA_VERSION,
+    VALID_ARTIFACT_TYPES,
+    VALID_CONTENT_TYPES,
+    VALID_DATA_CLASSIFICATIONS,
+    VALID_ERROR_CODES,
+    VALID_EVENT_TYPES,
+    VALID_INTEGRATION_STATUSES,
+    VALID_SIGNAL_TYPES,
     VALID_SOURCE_SYSTEMS,
     VALID_TARGET_SYSTEMS,
-    VALID_EVENT_TYPES,
-    VALID_DATA_CLASSIFICATIONS,
-    VALID_INTEGRATION_STATUSES,
-    VALID_ERROR_CODES,
-    VALID_CONTENT_TYPES,
-    VALID_ARTIFACT_TYPES,
-    VALID_SIGNAL_TYPES,
+    AssessmentCompleted,
+    CareerLearningSignal,
+    CompetencyGapDetected,
+    CompetencyUpdated,
+    ContentGenerationCompleted,
+    ContentGenerationRequested,
+    IntegrationError,
+    IntegrationEvent,
+    LearningArtifactReady,
+    LearningPlanRequested,
+    MediaArtifactReady,
+    MediaArtifactRequested,
+    build_event_from_dict,
+    create_integration_event,
 )
-
-from integrations.transport import (
-    Transport,
-    TransportResult,
-    TransportConfig,
-    InMemoryTransport,
-    FileTransport,
-    create_transport,
-)
-
 from integrations.helix_education import (
+    FakeHelixEducation,
     HelixEducationAdapter,
     HelixEducationResponse,
-    FakeHelixEducation,
 )
-
-from integrations.study_studio import (
-    StudyStudioAdapter,
-    StudyStudioResponse,
-    FakeStudyStudio,
-)
-
 from integrations.ld_command_center import (
+    FakeLDCommandCenter,
     LDCommandCenterAdapter,
     LDCommandCenterResponse,
-    FakeLDCommandCenter,
+)
+from integrations.study_studio import (
+    FakeStudyStudio,
+    StudyStudioAdapter,
+    StudyStudioResponse,
+)
+from integrations.transport import (
+    FileTransport,
+    InMemoryTransport,
+    Transport,
+    TransportConfig,
+    TransportResult,
+    create_transport,
 )
 
 __all__ = [

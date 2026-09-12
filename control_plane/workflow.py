@@ -6,14 +6,13 @@ Invalid transitions fail deterministically (ValueError).
 """
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import re
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from contracts.task import CorrelationContext, EvidenceRef, AgentError, Approval
+from contracts.task import AgentError, Approval, CorrelationContext, EvidenceRef
 
 SCHEMA_VERSION = "1.0"
 

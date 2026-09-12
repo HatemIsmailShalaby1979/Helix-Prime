@@ -13,7 +13,6 @@ import os
 import re
 from typing import Any, Dict
 
-
 # Patterns for redaction (deterministic, no network)
 REDACTION_PATTERNS = [
     (re.compile(r"(?i)(api[_-]?key\s*[:=]\s*)([^\s\"',;]+)"), r"\1[REDACTED]"),

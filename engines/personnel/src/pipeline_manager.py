@@ -262,7 +262,7 @@ class PipelineManager:
 
         # Calculate weighted average
         weights = [0.3, 0.4, 0.3]  # Experience, Skills, Base
-        total_score = sum(w * s for w, s in zip(weights, scores))
+        total_score = sum(w * s for w, s in zip(weights, scores, strict=False))
 
         return total_score
 

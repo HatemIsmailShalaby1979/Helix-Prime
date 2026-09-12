@@ -15,16 +15,16 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from integrations.contracts import (
-    IntegrationEvent,
-    LearningArtifactReady,
+    SOURCE_SYSTEM_HELIX_EDUCATION,
+    SOURCE_SYSTEM_HELIX_PRIME,
     AssessmentCompleted,
     CompetencyUpdated,
     IntegrationError,
+    IntegrationEvent,
+    LearningArtifactReady,
     create_integration_event,
-    SOURCE_SYSTEM_HELIX_PRIME,
-    SOURCE_SYSTEM_HELIX_EDUCATION,
 )
-from integrations.transport import Transport, TransportResult, InMemoryTransport
+from integrations.transport import InMemoryTransport, Transport, TransportResult
 
 
 @dataclass

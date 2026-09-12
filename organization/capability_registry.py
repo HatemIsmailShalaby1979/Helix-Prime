@@ -24,7 +24,7 @@ Preserves all C1a APIs: get_agent_for_capability, get_engine_for_capability, etc
 from __future__ import annotations
 
 import pathlib
-from typing import Any, Dict, List, Set, Optional
+from typing import Any, Dict, List, Optional, Set
 
 try:
     import yaml  # type: ignore

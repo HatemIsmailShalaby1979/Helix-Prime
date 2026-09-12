@@ -1,23 +1,16 @@
 """TDD for Codex C4 — six-engine productization."""
-import pathlib
-import tempfile
 
 import pytest
 
-from engines.contracts import EngineResult, SCHEMA_VERSION, CONTRACT_VERSION
-from engines.registry import (
-    register_all,
-    list_registered_capabilities,
-    get_adapter_for_capability,
-    list_engines,
-)
-from control_plane.store import Store
+from contracts.task import CorrelationContext, TaskRequest
 from control_plane.engine import Engine
-from contracts.task import TaskRequest, CorrelationContext
-from security.audit import AuditTrail
-from observability.logging import log_structured
-import json
-
+from control_plane.store import Store
+from engines.contracts import CONTRACT_VERSION, SCHEMA_VERSION, EngineResult
+from engines.registry import (
+    list_engines,
+    list_registered_capabilities,
+    register_all,
+)
 
 FIXED_TS = "2026-08-27T18:00:00Z"
 
@@ -251,8 +244,9 @@ def test_valid_input_output_wfm(tmp_path):
 
 
 def test_valid_input_output_rta(tmp_path):
-    from engines.rta.adapter import adapt
     import pandas as pd
+
+    from engines.rta.adapter import adapt
 
     schedule = pd.DataFrame(
         {
@@ -515,7 +509,7 @@ def test_calculated_vs_recommended_distinction(tmp_path):
 
 
 def test_capability_to_engine_resolution():
-    from organization.capability_registry import get_engine_for_capability, get_agent_for_capability
+    from organization.capability_registry import get_agent_for_capability, get_engine_for_capability
 
     assert get_engine_for_capability("erlang_c") == "WFM Forecasting"
     assert get_engine_for_capability("rta_adherence") == "RTA Command Center"
@@ -588,7 +582,7 @@ def test_tenant_client_isolation(tmp_path):
     assert wf.tenant_id == "tenant_A"
     assert wf.client_id == "client_X"
     # Try to access with different tenant should be denied via policy
-    from security.identity import Identity, ActorType
+    from security.identity import ActorType, Identity
     from security.policy import AuthorizationRequest, authorize
 
     ident = Identity(
@@ -681,8 +675,8 @@ def test_secret_pii_redaction():
 
 
 def test_audit_record_creation(tmp_path):
+
     from security.audit import AuditTrail
-    import pathlib
 
     # Use isolated audit database
     audit_db = str(tmp_path / "test_audit.db")
@@ -723,7 +717,7 @@ def test_audit_record_creation(tmp_path):
 
 
 def test_structured_log_fields(tmp_path):
-    import pathlib, json
+    import json
 
     # Use isolated log file
     log_path = tmp_path / "test_logs.jsonl"
@@ -773,13 +767,13 @@ def test_structured_log_fields(tmp_path):
 
 
 def test_timeout_dependency_failure():
-    from engines.wfm.adapter import adapt
+    import pathlib
+    import tempfile
 
     # Missing dependency: simulate by passing invalid data that causes dependency error
     # For timeout, we test via control_plane engine deadline
     from control_plane.engine import Engine
     from control_plane.store import Store
-    import tempfile, pathlib
 
     with tempfile.TemporaryDirectory() as tmp:
         db = str(pathlib.Path(tmp) / "timeout.db")
@@ -984,7 +978,7 @@ def test_no_duplicate_execution(tmp_path):
 
 def test_direct_legacy_engine_entrypoints():
     # Direct engine calls should still work (backward compatibility)
-    from engines.wfm.src.erlang_c import ErlangCParameters, ErlangCEngine
+    from engines.wfm.src.erlang_c import ErlangCEngine, ErlangCParameters
 
     params = ErlangCParameters(
         arrival_rate=20,
@@ -997,8 +991,9 @@ def test_direct_legacy_engine_entrypoints():
     assert hasattr(result, "optimal_agents")
     assert result.optimal_agents > 0
 
-    from engines.rta.src.calculations import RTACalculator
     import pandas as pd
+
+    from engines.rta.src.calculations import RTACalculator
 
     calc = RTACalculator()
     schedule = pd.DataFrame(
@@ -1023,7 +1018,7 @@ def test_direct_legacy_engine_entrypoints():
     result = calc.calculate_adherence(schedule, actual)
     assert isinstance(result, dict) or hasattr(result, "__dict__")
 
-    from engines.cx.src.risk_scorer import RiskScorerEngine, create_risk_scorer, RiskScorer
+    from engines.cx.src.risk_scorer import RiskScorer, RiskScorerEngine, create_risk_scorer
 
     # Prefer RiskScorerEngine which has score_customers; fallback to create_risk_scorer or RiskScorer
     try:
@@ -1045,7 +1040,7 @@ def test_direct_legacy_engine_entrypoints():
         )
     assert hasattr(res, "overall_risk_score") or isinstance(res, dict)
 
-    from engines.b2b.src.automator import OnboardingAutomator, ClientProfile
+    from engines.b2b.src.automator import ClientProfile, OnboardingAutomator
 
     automator = OnboardingAutomator()
     profile = ClientProfile(
@@ -1080,9 +1075,9 @@ def test_direct_legacy_engine_entrypoints():
 
 def test_existing_c0_c3_regression():
     # Ensure C0-C3 still pass
-    from organization.role_catalog import load_role_catalog
-    from organization.capability_registry import get_agent_for_capability
     from control_plane.workflow import Workflow, WorkflowState
+    from organization.capability_registry import get_agent_for_capability
+    from organization.role_catalog import load_role_catalog
 
     catalog = load_role_catalog("organization/role-catalog.yaml")
     assert len(catalog["roles"]) == 9

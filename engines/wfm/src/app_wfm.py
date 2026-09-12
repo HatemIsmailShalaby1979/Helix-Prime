@@ -346,7 +346,7 @@ class WFMForecastingApp:
         service_levels = []
         probabilities = []
 
-        for agents in agents_range:
+        for _ in agents_range:
             engine = create_erlang_c_engine(
                 arrival_rate=forecast["parameters"]["arrival_rate"],
                 average_handling_time=forecast["parameters"]["average_handling_time_minutes"],
@@ -381,7 +381,7 @@ class WFMForecastingApp:
 
         # Plot 3: Utilization
         utilizations = []
-        for agents in agents_range:
+        for _ in agents_range:
             engine = create_erlang_c_engine(
                 arrival_rate=forecast["parameters"]["arrival_rate"],
                 average_handling_time=forecast["parameters"]["average_handling_time_minutes"],

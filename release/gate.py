@@ -24,9 +24,9 @@ import sys
 import tempfile
 from typing import Any, Dict, List, Optional
 
+from release import harness as harness_mod
 from release import manifest as manifest_mod
 from release import observability, profiles, security_gate
-from release import harness as harness_mod
 
 ROOT = manifest_mod.ROOT
 
@@ -102,7 +102,7 @@ def _gate_backup_restore() -> tuple[bool, str]:
     work = tempfile.mkdtemp(prefix="hp_gate_br_")
     try:
         from control_plane.store import Store
-        from security.audit import AuditTrail, AuditRecord
+        from security.audit import AuditRecord, AuditTrail
 
         db = os.path.join(work, "control_plane", "workflow.db")
         store = Store(db_path=db)
@@ -110,7 +110,7 @@ def _gate_backup_restore() -> tuple[bool, str]:
         audit_db = os.path.join(work, "security", "audit.db")
         trail = AuditTrail(db_path=audit_db)
         prev = None
-        for i in range(2):
+        for _ in range(2):
             rec = AuditRecord.new(
                 event_type="br",
                 actor="gate",
@@ -142,8 +142,8 @@ def _gate_rollback() -> tuple[bool, str]:
 
     prev = {"git_commit": "AAAA", "classification": "PRODUCTION_CANDIDATE", "version": "0.9.0-c8"}
     cur = {"git_commit": "BBBB", "classification": "PRODUCTION_CANDIDATE", "version": "0.9.0-c8"}
-    import tempfile
     import os
+    import tempfile
 
     work = tempfile.mkdtemp(prefix="hp_gate_rb_")
     path = os.path.join(work, "release-manifest.json")

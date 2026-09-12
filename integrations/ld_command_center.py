@@ -16,15 +16,15 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from integrations.contracts import (
-    IntegrationEvent,
-    MediaArtifactReady,
-    CareerLearningSignal,
-    IntegrationError,
-    create_integration_event,
     SOURCE_SYSTEM_HELIX_PRIME,
     SOURCE_SYSTEM_LD_COMMAND_CENTER,
+    CareerLearningSignal,
+    IntegrationError,
+    IntegrationEvent,
+    MediaArtifactReady,
+    create_integration_event,
 )
-from integrations.transport import Transport, TransportResult, InMemoryTransport
+from integrations.transport import InMemoryTransport, Transport, TransportResult
 
 
 @dataclass

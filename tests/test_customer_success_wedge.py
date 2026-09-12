@@ -9,7 +9,6 @@ from __future__ import annotations
 import types
 
 from connectors.contracts import ConnectorContext
-from customer_success import wedge
 from customer_success.fixtures import (
     at_risk_account,
     contradictory_account,

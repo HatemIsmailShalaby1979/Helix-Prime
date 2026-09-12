@@ -6,40 +6,36 @@ import time
 
 from integrations.contracts import (
     SCHEMA_VERSION,
+    SOURCE_SYSTEM_HELIX_EDUCATION,
+    SOURCE_SYSTEM_HELIX_PRIME,
+    SOURCE_SYSTEM_LD_COMMAND_CENTER,
+    SOURCE_SYSTEM_STUDY_STUDIO,
+    VALID_DATA_CLASSIFICATIONS,
+    VALID_ERROR_CODES,
+    VALID_EVENT_TYPES,
+    VALID_INTEGRATION_STATUSES,
     VALID_SOURCE_SYSTEMS,
     VALID_TARGET_SYSTEMS,
-    VALID_EVENT_TYPES,
-    VALID_DATA_CLASSIFICATIONS,
-    VALID_INTEGRATION_STATUSES,
-    VALID_ERROR_CODES,
-    SOURCE_SYSTEM_HELIX_PRIME,
-    SOURCE_SYSTEM_HELIX_EDUCATION,
-    SOURCE_SYSTEM_STUDY_STUDIO,
-    SOURCE_SYSTEM_LD_COMMAND_CENTER,
-    create_integration_event,
     build_event_from_dict,
+    create_integration_event,
 )
-
-from integrations.transport import (
-    TransportConfig,
-    InMemoryTransport,
-    FileTransport,
-    create_transport,
-)
-
 from integrations.helix_education import (
-    HelixEducationAdapter,
     FakeHelixEducation,
+    HelixEducationAdapter,
 )
-
-from integrations.study_studio import (
-    StudyStudioAdapter,
-    FakeStudyStudio,
-)
-
 from integrations.ld_command_center import (
-    LDCommandCenterAdapter,
     FakeLDCommandCenter,
+    LDCommandCenterAdapter,
+)
+from integrations.study_studio import (
+    FakeStudyStudio,
+    StudyStudioAdapter,
+)
+from integrations.transport import (
+    FileTransport,
+    InMemoryTransport,
+    TransportConfig,
+    create_transport,
 )
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -655,7 +651,8 @@ class TestC7Regression:
     """Verify C7 changes don't break C0-C6 functionality."""
 
     def test_c1_contracts_still_work(self):
-        from contracts.task import CorrelationContext, SCHEMA_VERSION as C1_SCHEMA
+        from contracts.task import SCHEMA_VERSION as C1_SCHEMA
+        from contracts.task import CorrelationContext
 
         assert C1_SCHEMA == "1.0"
         corr = CorrelationContext(

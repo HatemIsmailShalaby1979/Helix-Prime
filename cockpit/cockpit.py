@@ -1171,9 +1171,7 @@ def main():
     elif page == "Sports Academy":
         from datetime import datetime as _dt
 
-        from connectors.contracts import ConnectorContext as _Ctx
         from capabilities.sports_academy import build_synthetic_academy as _bld
-        from capabilities.sports_academy.contracts import build_academy_connectors as _bc
         from capabilities.sports_academy.cockpit_views.coach_dashboard import (
             render_coach_dashboard as _render_coach,
         )
@@ -1183,6 +1181,8 @@ def main():
         from capabilities.sports_academy.cockpit_views.parent_portal import (
             render_parent_view as _render_parent,
         )
+        from capabilities.sports_academy.contracts import build_academy_connectors as _bc
+        from connectors.contracts import ConnectorContext as _Ctx
 
         _as_of = _dt.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         _fx = _bld("academy-1", "scoach", _as_of)

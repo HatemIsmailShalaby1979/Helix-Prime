@@ -25,7 +25,6 @@ than an absent one, because it looks like it is enforcing something.
 """
 from __future__ import annotations
 
-import pathlib
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -338,9 +337,7 @@ def active_engines() -> Dict[str, Tuple[str, ...]]:
 def main() -> int:
     report = activation_report()
     print(f"GM activation — {len(report['active'])}/{report['total']} active")
-    for role_id, res in sorted(
-        (r, res) for r, res in ((k, v) for k, v in report["results"].items())
-    ):
+    for _, _ in sorted((r, res) for r, res in ((k, v) for k, v in report["results"].items())):
         pass
     for role_id in sorted(ACTIVATIONS):
         result = activate_all()[role_id]

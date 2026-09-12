@@ -30,7 +30,7 @@ from control_plane.control_seam import (
 )
 from control_plane.ports import EngineInvocation, EnginePort
 from control_plane.workflow import WorkflowState
-from engines.contracts import ComputationEvidence, EngineResult, ENGINE_BASELINE_PAYLOADS
+from engines.contracts import ENGINE_BASELINE_PAYLOADS, ComputationEvidence, EngineResult
 
 TENANT = "tenant-seam"
 CLIENT = "client-seam"

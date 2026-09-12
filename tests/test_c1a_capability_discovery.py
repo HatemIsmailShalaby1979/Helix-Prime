@@ -13,12 +13,9 @@ Tests per C1a ticket:
 """
 from __future__ import annotations
 
-import pathlib
-
 import pytest
 
 from organization.role_catalog import load_role_catalog
-
 
 # ── agent capability discovery ────────────────────────────────────────────
 
@@ -117,8 +114,6 @@ def test_unknown_capability_discovery_via_unified_api():
 
 
 def test_ambiguous_capability_fails_closed():
-    from organization.capability_registry import discover
-    from organization.role_catalog import validate_role_catalog
 
     # Build a synthetic catalog with duplicate capability to simulate ambiguous ownership
     catalog = load_role_catalog("organization/role-catalog.yaml")
@@ -149,9 +144,9 @@ def test_ambiguous_capability_fails_closed():
 
 def test_legacy_name_based_compatibility():
     # Legacy orchestrator keyword routing must still work
+    from contracts.adapter import parse_legacy_calls
     from orchestration.orchestrator import Orchestrator
     from organization.capability_registry import get_agent_for_capability
-    from contracts.adapter import parse_legacy_calls
 
     o = Orchestrator()
     # legacy keyword routing
@@ -181,9 +176,9 @@ def test_legacy_engine_paths_preserved():
 
 
 def test_deterministic_routing():
-    from organization.capability_registry import get_agent_for_capability, discover
+    from contracts.adapter import to_task_request
     from contracts.task import CorrelationContext
-    from contracts.adapter import to_task_request, validate_request_against_catalog
+    from organization.capability_registry import get_agent_for_capability
     from organization.role_catalog import load_role_catalog
 
     catalog = load_role_catalog("organization/role-catalog.yaml")
@@ -260,7 +255,7 @@ def test_no_regression_orchestrator_keyword_routing():
 
 def test_no_regression_c1_contracts_still_green():
     # Spot-check that C1 contracts still validate and catalog loads
-    from contracts.task import TaskRequest, CorrelationContext, EvidenceRef
+    from contracts.task import CorrelationContext, TaskRequest
     from organization.role_catalog import load_role_catalog
 
     catalog = load_role_catalog("organization/role-catalog.yaml")

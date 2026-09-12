@@ -267,7 +267,7 @@ class MetricsRegistry:
 
     def _render_histogram(self, metric: Histogram, lines: List[str]) -> None:
         for key in sorted(metric.sums):
-            label_pairs = list(zip(metric.label_keys, key))
+            label_pairs = list(zip(metric.label_keys, key, strict=False))
             for idx, bound in enumerate(metric.buckets):
                 count = metric.bucket_counts.get((key, idx), 0.0)
                 self._emit_histogram_line(
@@ -284,7 +284,7 @@ class MetricsRegistry:
     def _emit_sample(
         self, metric: _Metric, key: Tuple[str, ...], value: float, lines: List[str]
     ) -> None:
-        label_pairs = list(zip(metric.label_keys, key))
+        label_pairs = list(zip(metric.label_keys, key, strict=False))
         self._emit_named(metric.name, label_pairs, value, lines)
 
     def _emit_histogram_line(

@@ -15,7 +15,6 @@ No dependency on organization catalog (avoid circular import); role-id format va
 """
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import re
 import uuid

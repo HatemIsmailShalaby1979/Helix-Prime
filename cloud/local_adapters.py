@@ -10,13 +10,13 @@ from typing import Any, Callable, Optional
 
 from .interfaces import (
     Database,
-    ObjectStorage,
     EventTransport,
-    SecretsStore,
     IdentityProvider,
+    ModelProvider,
+    ObjectStorage,
     Observability,
     Scheduler,
-    ModelProvider,
+    SecretsStore,
 )
 
 

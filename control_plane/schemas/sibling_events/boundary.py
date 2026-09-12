@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import ast
 import json
-import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Set, Tuple
 

@@ -203,7 +203,7 @@ class ManagedStores:
         self._objects.append((obj, str(db_path) if db_path else None))
 
     def close_all(self) -> None:
-        for obj, db_path in reversed(self._objects):
+        for obj, _ in reversed(self._objects):
             try:
                 closer = getattr(obj, "close", None)
                 if callable(closer):

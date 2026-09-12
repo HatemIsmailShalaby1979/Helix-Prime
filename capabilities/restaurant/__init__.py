@@ -5,33 +5,33 @@ activates live connectors or external writes, and never auto-improves.
 """
 from __future__ import annotations
 
+from .classifications import DATA_CLASSIFICATIONS  # noqa: F401
+from .contracts import RestaurantConnector, build_restaurant_connectors  # noqa: F401
+from .fixtures import build_synthetic_restaurant  # noqa: F401
+from .metrics import compute_restaurant_metrics  # noqa: F401
 from .ontology import (  # noqa: F401
-    Employee,
-    Shift,
-    InventoryItem,
-    Supplier,
     Complaint,
     DailySummary,
+    Employee,
+    InventoryItem,
+    Shift,
+    Supplier,
 )
+from .policies import POLICIES, authority_for  # noqa: F401
+from .register import REGISTRY, get_capability, register_capability  # noqa: F401
 from .roles import (  # noqa: F401
-    ROLES,
-    RESPONSIBILITIES,
     AUTHORITY_BOUNDARIES,
+    RESPONSIBILITIES,
+    ROLES,
     required_approver_role,
 )
-from .contracts import RestaurantConnector, build_restaurant_connectors  # noqa: F401
+from .runtime import RestaurantCapabilityPack  # noqa: F401
 from .workflows import (  # noqa: F401
+    WORKFLOW_CATEGORIES,
     RestaurantDiagnosis,
     RiskFinding,
     run_all_workflows,
-    WORKFLOW_CATEGORIES,
 )
-from .policies import POLICIES, authority_for  # noqa: F401
-from .classifications import DATA_CLASSIFICATIONS  # noqa: F401
-from .metrics import compute_restaurant_metrics  # noqa: F401
-from .fixtures import build_synthetic_restaurant  # noqa: F401
-from .runtime import RestaurantCapabilityPack  # noqa: F401
-from .register import REGISTRY, register_capability, get_capability  # noqa: F401
 
 DATA_MODE = "simulated_realistic"
 

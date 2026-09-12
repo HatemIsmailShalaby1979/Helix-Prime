@@ -16,7 +16,6 @@ from connectors.contracts import (
     ConnectorContext,
     ConnectorResult,
     ConnectorStatus,
-    _now,
 )
 
 

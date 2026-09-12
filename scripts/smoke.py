@@ -6,12 +6,13 @@ and cognitive_log. Writes evidence/baseline/smoke.log (gitignored) and prints su
 Exit 0 = baseline green, non-zero = failure.
 """
 from __future__ import annotations
+
+import datetime
 import importlib.util
+import json
 import py_compile
 import sys
 from pathlib import Path
-import datetime
-import json
 
 ROOT = Path(__file__).resolve().parent.parent
 evidence_dir = ROOT / "evidence" / "baseline"

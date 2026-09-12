@@ -40,10 +40,11 @@ def measure_startup() -> Dict[str, Any]:
     """Measure import + instantiation time of the control plane Engine and Store."""
     start = time.monotonic()
     try:
+        import os
+        import tempfile
+
         from control_plane.engine import Engine
         from control_plane.store import Store
-        import tempfile
-        import os
 
         tmp = tempfile.mkdtemp(prefix="hp_startup_")
         db = os.path.join(tmp, "wf.db")
@@ -100,8 +101,8 @@ def health_report(db_path: Optional[str] = None) -> Dict[str, Any]:
 
 def storage_writable() -> Dict[str, Any]:
     """Check control-plane + audit DBs are writable in a throwaway temp location."""
-    import tempfile
     import os
+    import tempfile
 
     results: Dict[str, Any] = {}
     try:
@@ -115,7 +116,7 @@ def storage_writable() -> Dict[str, Any]:
         results["control_plane_db"] = False
         results["control_plane_error"] = f"{type(e).__name__}: {e}"
     try:
-        from security.audit import AuditTrail, AuditRecord
+        from security.audit import AuditRecord, AuditTrail
 
         trail = AuditTrail(db_path=os.path.join(tmp, "audit.db"))
         rec = AuditRecord.new(

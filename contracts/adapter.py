@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import datetime
 import re
-from typing import List, Tuple, Dict, Any
+from typing import Any, Dict, List, Tuple
 
 from contracts.task import CorrelationContext, TaskRequest
 

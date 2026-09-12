@@ -7,8 +7,7 @@ Detects suspicious prompt/tool requests that could be injection attempts.
 from __future__ import annotations
 
 import re
-from typing import Dict, Any, List
-
+from typing import Any, Dict, List
 
 # Patterns for suspicious injection
 INJECTION_PATTERNS = [

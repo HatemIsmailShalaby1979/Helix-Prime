@@ -18,8 +18,8 @@ Tests cover:
 """
 from __future__ import annotations
 
-import sys
 import pathlib
+import sys
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
@@ -27,22 +27,16 @@ if str(_ROOT) not in sys.path:
 
 import pytest
 
-from organization.role_catalog import load_role_catalog
+from app.command_center.agents.base_agent import AgentRegistry
+from control_plane.engine import Engine
+from engines.registry import register_all
 from organization.capability_registry import (
     get_agent_for_capability,
-    get_capabilities_for_role,
-    is_capability_owned_by_role,
-    is_tool_allowed,
-    discover,
     get_default_registry,
+    is_tool_allowed,
     validate_mirror_drift,
 )
-from app.command_center.agents.base_agent import AgentRegistry
-from contracts.task import CorrelationContext, TaskRequest
-from control_plane.engine import Engine
-from control_plane.store import Store
-from engines.registry import register_all
-
+from organization.role_catalog import load_role_catalog
 
 # ── Role Catalog Tests ──
 
@@ -504,21 +498,22 @@ def test_existing_four_agent_regression():
 def test_existing_c0_c5_regression():
     """Run C5 vertical slice to ensure no regression."""
     import tempfile
+
     from tests.fixtures.c5.fixtures import (
-        TENANT_ID,
-        CLIENT_ID,
-        ACTOR_SUBY,
-        ACTOR_SAMI,
-        ACTOR_PHILI,
-        ACTOR_WILI,
         ACTOR_COMPLIANCE,
+        ACTOR_PHILI,
         ACTOR_SALES,
-        WFM_INPUT,
-        RTA_INPUT,
-        PERSONNEL_INPUT,
-        LD_INPUT,
-        CX_INPUT,
+        ACTOR_SAMI,
+        ACTOR_SUBY,
+        ACTOR_WILI,
+        CLIENT_ID,
         CRM_INPUT,
+        CX_INPUT,
+        LD_INPUT,
+        PERSONNEL_INPUT,
+        RTA_INPUT,
+        TENANT_ID,
+        WFM_INPUT,
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:

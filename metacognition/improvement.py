@@ -29,7 +29,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass
 from typing import Any, Callable, Mapping, Optional, Sequence
 
 GENESIS_HASH = "0" * 64

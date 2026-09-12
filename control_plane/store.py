@@ -606,7 +606,7 @@ class Store:
         cols = [c[0] for c in cur.description]
         out: List[Dict[str, Any]] = []
         for r in cur.fetchall():
-            d = dict(zip(cols, r))
+            d = dict(zip(cols, r, strict=False))
             d["payload"] = json.loads(d.get("payload") or "{}")
             out.append(d)
         return out

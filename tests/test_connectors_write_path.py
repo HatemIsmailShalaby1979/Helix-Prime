@@ -9,14 +9,9 @@ Tests cover:
 """
 from __future__ import annotations
 
-import asyncio
-import json
-import pytest
-
 from connectors.contracts import ConnectorContext
-from connectors.gateway import ConnectorGateway
 from connectors.fakes import FakeConnector
-from contracts.toolcall import ToolCall, ToolCallEnvelope, ToolResult
+from connectors.gateway import ConnectorGateway
 
 
 def test_cross_tenant_write_raises():

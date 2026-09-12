@@ -8,7 +8,7 @@ permissions are read-only by construction.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Tuple
 
 from .exceptions import PilotError
 

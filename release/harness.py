@@ -97,7 +97,7 @@ def _check_components() -> Dict[str, Any]:
 
 
 def _check_c7_contracts() -> Dict[str, Any]:
-    from integrations.contracts import IntegrationEvent, SCHEMA_VERSION
+    from integrations.contracts import SCHEMA_VERSION, IntegrationEvent
 
     ev = IntegrationEvent(
         event_id=uuid.uuid4().hex,
@@ -122,8 +122,8 @@ def _check_c7_contracts() -> Dict[str, Any]:
 
 
 def _check_transport_retry_deadletter() -> Dict[str, Any]:
+    from integrations.contracts import SCHEMA_VERSION, IntegrationEvent
     from integrations.transport import InMemoryTransport, TransportConfig
-    from integrations.contracts import IntegrationEvent, SCHEMA_VERSION
 
     t = InMemoryTransport(config=TransportConfig(max_retries=2))
     ev = IntegrationEvent(
@@ -214,9 +214,9 @@ def _fresh_store():
 
 
 def _write_workflow(store, eid: str = "wf-1", key: str = "k-1", aggregate: str = "agg-1"):
+    from contracts.task import CorrelationContext
     from control_plane.events import Event
     from control_plane.workflow import Workflow
-    from contracts.task import CorrelationContext
 
     corr = CorrelationContext(
         correlation_id="corr-" + key,
@@ -307,7 +307,8 @@ def _check_corrupted_event() -> Dict[str, Any]:
     try:
         _write_workflow(store, eid="wf-c", key="k-c", aggregate="agg-c")
         # out-of-order append must be rejected deterministically
-        from control_plane.events import Event, SCHEMA_VERSION as EV_SCHEMA
+        from control_plane.events import SCHEMA_VERSION as EV_SCHEMA
+        from control_plane.events import Event
 
         bad = Event(
             event_id="wf-c-bad",
@@ -366,13 +367,13 @@ def _check_corrupted_db() -> Dict[str, Any]:
 
 
 def _check_audit_integrity() -> Dict[str, Any]:
-    from security.audit import AuditTrail, AuditRecord
+    from security.audit import AuditRecord, AuditTrail
 
     d = tempfile.mkdtemp(prefix="hp_audit_")
     db = os.path.join(d, "audit.db")
     trail = AuditTrail(db_path=db)
     prev = None
-    for i in range(3):
+    for _ in range(3):
         rec = AuditRecord.new(
             event_type="harness",
             actor="suby",
@@ -389,7 +390,7 @@ def _check_audit_integrity() -> Dict[str, Any]:
 
 def _check_tenant_isolation() -> Dict[str, Any]:
     from security.identity import Identity
-    from security.policy import authorize, AuthorizationRequest
+    from security.policy import AuthorizationRequest, authorize
 
     idn = Identity(
         actor="suby_a",

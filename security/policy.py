@@ -24,8 +24,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
-from organization.role_catalog import load_role_catalog
 from organization.capability_registry import get_agent_for_capability, is_tool_allowed
+from organization.role_catalog import load_role_catalog
 from security.identity import Identity
 
 

@@ -6,7 +6,6 @@ execution; a demo profile forbids live credentials and non-synthetic data.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from .errors import SafeFailure
 

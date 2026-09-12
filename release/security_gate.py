@@ -220,8 +220,7 @@ def check_audit_integrity(audit_db: Optional[str] = None) -> Dict[str, Any]:
     self-contained audit trail so the release check exercises the real chain
     implementation without depending on mutable local runtime state.
     """
-    from security.audit import AuditTrail
-    from security.audit import AuditRecord
+    from security.audit import AuditRecord, AuditTrail
 
     if audit_db:
         db_path = pathlib.Path(audit_db)

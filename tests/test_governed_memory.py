@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cockpit"))  # for command_center_integration
 sys.path.insert(0, str(ROOT))  # for memory package
 
-from memory.governed_memory import GovernedMemory, MemoryTamperError
+from memory.governed_memory import GovernedMemory
 
 
 def _add(m, **kw):

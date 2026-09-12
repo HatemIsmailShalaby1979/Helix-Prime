@@ -168,7 +168,7 @@ class TalentAcquisition:
                 continue
 
             # Generate candidate profiles
-            for i in range(source_candidates):
+            for _ in range(source_candidates):
                 candidate = self._generate_candidate_profile(job, source)
                 sourced_candidates.append(candidate)
 

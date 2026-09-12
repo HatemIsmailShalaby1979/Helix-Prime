@@ -11,8 +11,8 @@ Ollama optional) and exits 0 when the required components are ready.
 from __future__ import annotations
 
 import json
-import sys
 import pathlib
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:

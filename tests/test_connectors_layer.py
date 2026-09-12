@@ -23,7 +23,7 @@ from connectors.contracts import (
     RetryPolicy,
 )
 from connectors.fakes import FakeConnector, build_demo_connectors
-from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
+from connectors.registry import KNOWN_PROVIDERS, ConnectorRegistry
 
 
 def _ctx(tenant="tenant-1", org="org-1", client="client-1", corr="corr-1"):

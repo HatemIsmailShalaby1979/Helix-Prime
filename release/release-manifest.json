@@ -5,9 +5,9 @@
   "classification": "NOT_READY",
   "release_approved": true,
   "version": "0.9.0-c8",
-  "git_commit": "f93370092734dee0ae1098c228b96732996a92fd",
+  "git_commit": "950bead1a8095173316a5d70806baee60bcaabfa",
   "git_branch": "h02-server-bind",
-  "build_timestamp": "2026-09-12T15:15:21.017023Z",
+  "build_timestamp": "2026-09-12T16:30:34.680764Z",
   "python_version": "3.12.10",
   "platform": "win32",
   "supported_python": ">=3.12,<3.13",
@@ -45,6 +45,6 @@
     "Production label not claimed without every production gate passing."
   ],
   "evidence_refs": [
-    "evidence\\releases\\20260912T151521Z"
+    "evidence\\releases\\20260912T163034Z"
   ]
 }

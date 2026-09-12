@@ -9,8 +9,8 @@ from typing import Any, Dict, Optional
 
 from connectors.contracts import ConnectorContext
 
-from ..adapters.attendance_adapter import compute_attendance
 from .. import kpis as academy_kpis
+from ..adapters.attendance_adapter import compute_attendance
 
 DATA_MODE = "simulated_realistic"
 

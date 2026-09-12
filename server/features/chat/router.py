@@ -1,11 +1,10 @@
 """Chat feature — real-time messaging with SSE streaming."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
-from server.models.node import ChatMessage, NodeEnvelope, Nature, Classification, Provenance
-from server.models.store import NodeStore
 from server import deps
+from server.models.node import ChatMessage, Classification, Nature, NodeEnvelope, Provenance
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -18,7 +17,6 @@ async def create_message(
 ) -> dict:
     """Create a new chat message."""
     store = deps.get_store()
-    engine = deps.get_engine()
 
     # Create node
     node = ChatMessage(

@@ -22,11 +22,11 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from integrations.contracts import (
-    IntegrationEvent,
+    SCHEMA_VERSION,
+    VALID_EVENT_TYPES,
     VALID_SOURCE_SYSTEMS,
     VALID_TARGET_SYSTEMS,
-    VALID_EVENT_TYPES,
-    SCHEMA_VERSION,
+    IntegrationEvent,
 )
 
 
@@ -168,7 +168,7 @@ class InMemoryTransport(Transport):
         """Receive pending events for this system (Helix Prime)."""
         # In local mode, Helix Prime receives from all sibling systems
         events: List[IntegrationEvent] = []
-        for system, queue in self._inbound.items():
+        for _, queue in self._inbound.items():
             events.extend(queue)
         # Move to processing
         for event in events:
@@ -273,9 +273,9 @@ class FileTransport(Transport):
     def send(self, event: IntegrationEvent) -> TransportResult:
         if self.config.validate_on_send:
             from integrations.contracts import (
+                VALID_EVENT_TYPES,
                 VALID_SOURCE_SYSTEMS,
                 VALID_TARGET_SYSTEMS,
-                VALID_EVENT_TYPES,
             )
 
             if event.schema_version != SCHEMA_VERSION:

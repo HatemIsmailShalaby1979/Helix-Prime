@@ -25,17 +25,17 @@ sys.path.insert(0, str(ROOT))
 
 import pytest  # noqa: E402
 import requests  # noqa: E402
+from base_agent import AgentRegistry  # noqa: E402
 
-from base_agent import AgentRegistry, BaseAgent  # noqa: E402
-from orchestration.orchestrator import Orchestrator  # noqa: E402
 import cockpit  # noqa: E402
+from contracts.task import Approval, CorrelationContext, TaskRequest  # noqa: E402
 from control_plane.engine import Engine  # noqa: E402
 from control_plane.store import Store  # noqa: E402
-from contracts.task import TaskRequest, CorrelationContext, Approval  # noqa: E402
 from engines.registry import register_all  # noqa: E402
-from security.audit import AuditTrail, AuditRecord  # noqa: E402
-from security.identity import Identity, ActorType  # noqa: E402
-from security.policy import authorize, AuthorizationRequest  # noqa: E402
+from orchestration.orchestrator import Orchestrator  # noqa: E402
+from security.audit import AuditRecord, AuditTrail  # noqa: E402
+from security.identity import ActorType, Identity  # noqa: E402
+from security.policy import AuthorizationRequest, authorize  # noqa: E402
 
 CANONICAL = ["SAMI", "SUBY", "PHILI", "WILI", "ANDY", "NONO", "MAYA", "LIZA", "TOMY"]
 TS = "2026-08-27T18:00:00Z"

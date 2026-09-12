@@ -30,6 +30,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, Mapping
 
+from control_plane.schemas.sibling_events import boundary, registry
 from control_plane.schemas.sibling_events.envelope import (
     EVENT_DIRECTIONS,
     EVENT_OWNERS,
@@ -47,8 +48,6 @@ from control_plane.schemas.sibling_events.v1 import (
     LearningPlanRequested,
     build_payload,
 )
-from control_plane.schemas.sibling_events import boundary
-from control_plane.schemas.sibling_events import registry
 
 SCHEMA_DIR = "control_plane/schemas/sibling_events/schemas"
 CONTRACT_VERSION = "1.0"

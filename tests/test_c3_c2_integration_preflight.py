@@ -10,13 +10,10 @@ Gaps checked:
 - failed engine execution produces a visible typed error
 """
 import pathlib
-import tempfile
 
-import pytest
-
-from contracts.task import TaskRequest, CorrelationContext
-from control_plane.store import Store
+from contracts.task import CorrelationContext, TaskRequest
 from control_plane.engine import Engine
+from control_plane.store import Store
 
 
 def _engine(tmp_path=None):
@@ -263,7 +260,7 @@ def test_structured_logs_contain_identifiers(tmp_path):
     # Check that structured logs were written with required identifiers
     # Before fix, no logs with workflow/task/correlation will exist (gap)
     if not log_path.exists():
-        assert False, "structured logs should contain workflow/task/correlation identifiers"
+        raise AssertionError("structured logs should contain workflow/task/correlation identifiers")
     import json
 
     logs = [json.loads(line) for line in log_path.read_text().splitlines() if line.strip()]

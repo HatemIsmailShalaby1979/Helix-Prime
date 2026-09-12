@@ -14,11 +14,8 @@ from __future__ import annotations
 import pathlib
 import tempfile
 
-from release import gate, profiles, security_gate
-from release import pilot_metrics
-from release import signoff
+from release import gate, pilot_metrics, profiles, security_gate, signoff
 from scripts import pilot_dry_run
-
 
 # ── profile correctness ─────────────────────────────────────────────────────
 

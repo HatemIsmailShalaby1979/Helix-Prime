@@ -18,17 +18,18 @@ _COCKPIT = str(Path(_ROOT) / "cockpit")
 if _COCKPIT not in sys.path:
     sys.path.insert(0, _COCKPIT)
 
-from connectors.contracts import ConnectorContext, CustomerSignal, SourceRef  # noqa: E402
-from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS  # noqa: E402
-from customer_success.wedge import diagnose, AccountContextBundle  # noqa: E402
 from command_center_integration import assemble_command_center  # noqa: E402
+
+from connectors.contracts import ConnectorContext, CustomerSignal, SourceRef  # noqa: E402
+from connectors.registry import KNOWN_PROVIDERS, ConnectorRegistry  # noqa: E402
+from customer_success.wedge import AccountContextBundle, diagnose  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 
 from .approval import (  # noqa: E402
-    create_recommendation,
     create_approval_draft,
-    transition_approval,
+    create_recommendation,
     evaluate_approval_decision,
+    transition_approval,
 )
 from .config import PilotConfig  # noqa: E402
 from .consent import ConsentRecord, validate_consent  # noqa: E402
@@ -37,16 +38,14 @@ from .metrics import compute_pilot_metrics  # noqa: E402
 from .phases import (  # noqa: E402
     READ_ONLY,
     SUPERVISED,
-    CLOSED,
-    ReadOnlyPeriod,
     ConnectorPermissions,
+    ReadOnlyPeriod,
 )
 from .scope import (  # noqa: E402
-    PilotScope,
-    default_scope,
     HISTORICAL_CONSENTED,
     SIMULATED_REALISTIC,
-    LIVE_CUSTOMER,
+    PilotScope,
+    default_scope,
 )
 
 DEFAULT_AS_OF = "2026-08-29T12:00:00Z"
@@ -96,8 +95,8 @@ class PilotRuntime:
         consent: ConsentRecord = None,
         *,
         phase: str = SUPERVISED,
-        read_only_period: Optional[ReadOnlyPeriod] = None,
-        connector_permissions: Optional[ConnectorPermissions] = None,
+        read_only_period: ReadOnlyPeriod | None = None,
+        connector_permissions: ConnectorPermissions | None = None,
     ) -> None:
         config.validate()
         self.config = config

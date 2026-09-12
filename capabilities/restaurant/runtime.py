@@ -20,31 +20,30 @@ if _ROOT not in sys.path:
 
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
+from metacognition.improvement import MetacognitionEngine  # noqa: E402
 from pilot.approval import (  # noqa: E402
-    create_recommendation,
     create_approval_draft,
-    transition_approval,
+    create_recommendation,
     evaluate_approval_decision,
+    transition_approval,
 )
-from pilot.consent import ConsentRecord, validate_consent  # noqa: E402
 from pilot.config import PilotConfig  # noqa: E402
+from pilot.consent import ConsentRecord, validate_consent  # noqa: E402
+from pilot.exceptions import PilotError  # noqa: E402
 from pilot.phases import (  # noqa: E402
     READ_ONLY,
     SUPERVISED,
-    ReadOnlyPeriod,
     ConnectorPermissions,
+    ReadOnlyPeriod,
 )
-from pilot.exceptions import PilotError  # noqa: E402
 from security.identity import Identity  # noqa: E402
-from control_plane.workflow import Workflow, WorkflowState, CorrelationContext  # noqa: E402
-from metacognition.improvement import MetacognitionEngine  # noqa: E402
 
 from .contracts import build_restaurant_connectors  # noqa: E402
-from .workflows import run_all_workflows  # noqa: E402
 from .metrics import compute_restaurant_metrics  # noqa: E402
-from .roles import required_approver_role  # noqa: E402
 from .policies import authority_for  # noqa: E402
 from .register import get_restaurant_metadata  # noqa: E402
+from .roles import required_approver_role  # noqa: E402
+from .workflows import run_all_workflows  # noqa: E402
 
 DATA_MODE = "simulated_realistic"
 DEFAULT_AS_OF = "2026-08-29T12:00:00Z"
@@ -201,7 +200,7 @@ class RestaurantCapabilityPack:
         )
 
         diags = run_all_workflows(shifts, inventory, suppliers, complaints, summary, ctx, as_of)
-        for label, err in failures:
+        for _, err in failures:
             self.mem.add(
                 kind="workflow_history",
                 nature="historical_event",

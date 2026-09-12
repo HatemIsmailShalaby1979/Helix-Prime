@@ -165,10 +165,10 @@ class NodeStore:
     def _row_to_node(self, row: sqlite3.Row) -> Node:
         """Convert a database row to a Node."""
         from server.models.node import (
+            Classification,
+            Nature,
             NodeEnvelope,
             NodeKind,
-            Nature,
-            Classification,
             Provenance,
         )
 

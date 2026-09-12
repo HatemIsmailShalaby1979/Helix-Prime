@@ -29,7 +29,12 @@ sys.path.insert(0, str(ROOT / "cockpit"))
 # repo root so `memory.governed_memory` imports as a package
 sys.path.insert(0, str(ROOT))
 
-import types  # noqa: E402
+
+from command_center_integration import (  # noqa: E402
+    assemble_command_center,
+    evaluate_approval,
+    reset_demo,
+)
 
 from connectors.contracts import ConnectorContext, ConnectorStatus  # noqa: E402
 from connectors.fakes import FakeConnector  # noqa: E402
@@ -41,12 +46,6 @@ from customer_success.fixtures import (  # noqa: E402
     unknown_account,
 )
 from memory.governed_memory import GovernedMemory  # noqa: E402
-
-from command_center_integration import (  # noqa: E402
-    assemble_command_center,
-    evaluate_approval,
-    reset_demo,
-)
 
 TENANT = "tenant-1"
 CLIENT = "Demo Account"

@@ -7,11 +7,10 @@ rest of the system discovers what a pack provides.
 """
 from __future__ import annotations
 
-from .roles import ROLES, RESPONSIBILITIES, AUTHORITY_BOUNDARIES
-from .workflows import WORKFLOW_CATEGORIES
-from .policies import POLICIES
 from .classifications import DATA_CLASSIFICATIONS
-from .contracts import RestaurantConnector
+from .policies import POLICIES
+from .roles import AUTHORITY_BOUNDARIES, RESPONSIBILITIES, ROLES
+from .workflows import WORKFLOW_CATEGORIES
 
 REGISTRY: dict = {}
 

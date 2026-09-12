@@ -9,7 +9,6 @@ import json
 import pathlib
 
 import yaml
-import pytest
 
 from organization.capability_registry import validate_mirror_drift
 

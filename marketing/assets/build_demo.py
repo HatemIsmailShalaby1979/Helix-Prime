@@ -569,7 +569,10 @@ def main() -> int:
 
     # 3. Mux audio
     print("\n[3/4] Muxing narration audio...")
-    muxed = [mux_audio(ch, sv, au) for ch, sv, au in zip(chapters, silent_videos, audio_files)]
+    muxed = [
+        mux_audio(ch, sv, au)
+        for ch, sv, au in zip(chapters, silent_videos, audio_files, strict=False)
+    ]
 
     # 4. Concatenate
     print("\n[4/4] Concatenating final video...")

@@ -8,9 +8,9 @@ provides. Mirrors capabilities/restaurant/register.py.
 """
 from __future__ import annotations
 
-from .roles import ROLES, RESPONSIBILITIES, AUTHORITY_BOUNDARIES, MAPS_TO_AGENT
-from .workflows import WORKFLOW_CATEGORIES
 from .classifications import DATA_CLASSIFICATIONS
+from .roles import AUTHORITY_BOUNDARIES, MAPS_TO_AGENT, RESPONSIBILITIES, ROLES
+from .workflows import WORKFLOW_CATEGORIES
 
 REGISTRY: dict = {}
 

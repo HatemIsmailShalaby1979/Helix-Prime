@@ -12,7 +12,7 @@ from typing import Sequence, Tuple
 
 from connectors.contracts import ConnectorContext
 
-from .ontology import Shift, InventoryItem, Supplier, Complaint, DailySummary
+from .ontology import Complaint, DailySummary, InventoryItem, Shift, Supplier
 
 WORKFLOW_CATEGORIES = (
     "staffing_risk",

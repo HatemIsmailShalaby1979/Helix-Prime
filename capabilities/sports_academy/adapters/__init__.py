@@ -7,15 +7,15 @@ Each adapter maps pack-local data onto reused core engines where applicable:
 """
 from __future__ import annotations
 
-from .attendance_adapter import (  # noqa: F401
-    compute_attendance,
-    daily_adherence_report,
-    record_attendance_outcome,
-)
 from .athlete_profile_adapter import (  # noqa: F401
     athlete_profile,
     churn_risk_scores,
     record_churn_flags,
+)
+from .attendance_adapter import (  # noqa: F401
+    compute_attendance,
+    daily_adherence_report,
+    record_attendance_outcome,
 )
 from .facility_adapter import (  # noqa: F401
     detect_booking_conflicts,

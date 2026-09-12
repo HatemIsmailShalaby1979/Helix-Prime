@@ -205,11 +205,12 @@ def step_scenarios(state: str) -> Dict[str, Any]:
 
 def step_backup_restore(state: str) -> Dict[str, Any]:
     """Backup + restore the pilot's isolated synthetic state and verify the audit chain."""
-    from release import backup
-    from security.audit import AuditTrail, AuditRecord as AR
-    from control_plane.store import Store
     from contracts.task import CorrelationContext
+    from control_plane.store import Store
     from control_plane.workflow import Workflow
+    from release import backup
+    from security.audit import AuditRecord as AR
+    from security.audit import AuditTrail
 
     # Build synthetic state at repo-relative paths under the isolated dir so
     # backup_state/restore_state (which use DEFAULT_STATE_RELS) can capture them.
@@ -279,11 +280,12 @@ def step_security_audit_redaction(state: str) -> Dict[str, Any]:
     # Create an isolated audit database for this check
     isolated_audit = os.path.join(state, "security", "audit-isolated.db")
     os.makedirs(os.path.dirname(isolated_audit), exist_ok=True)
-    from security.audit import AuditTrail, AuditRecord as AR
+    from security.audit import AuditRecord as AR
+    from security.audit import AuditTrail
 
     trail = AuditTrail(db_path=isolated_audit)
     prev = None
-    for i in range(3):
+    for _ in range(3):
         rec = AR.new(
             event_type="pilot.security",
             actor="suby",

@@ -22,47 +22,47 @@ if _ROOT not in sys.path:
 
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
+from metacognition.improvement import MetacognitionEngine  # noqa: E402
 from pilot.approval import (  # noqa: E402
-    create_recommendation,
     create_approval_draft,
-    transition_approval,
+    create_recommendation,
     evaluate_approval_decision,
+    transition_approval,
 )
-from pilot.consent import ConsentRecord, validate_consent  # noqa: E402
 from pilot.config import PilotConfig  # noqa: E402
+from pilot.consent import ConsentRecord, validate_consent  # noqa: E402
+from pilot.exceptions import PilotError  # noqa: E402
 from pilot.phases import (  # noqa: E402
     READ_ONLY,
     SUPERVISED,
-    ReadOnlyPeriod,
     ConnectorPermissions,
+    ReadOnlyPeriod,
 )
-from pilot.exceptions import PilotError  # noqa: E402
 from security.identity import Identity  # noqa: E402
-from metacognition.improvement import MetacognitionEngine  # noqa: E402
 
-from .contracts import build_academy_connectors  # noqa: E402
-from .adapters.attendance_adapter import (  # noqa: E402
-    daily_adherence_report,
-    record_attendance_outcome,
-)
 from .adapters.athlete_profile_adapter import (  # noqa: E402
     churn_risk_scores,
     enrollment_pipeline,
     record_churn_flags,
+)
+from .adapters.attendance_adapter import (  # noqa: E402
+    daily_adherence_report,
+    record_attendance_outcome,
 )
 from .adapters.facility_adapter import facility_overview  # noqa: E402
 from .adapters.payment_adapter import (  # noqa: E402
     fee_status_overview,
     record_manual_payment,
 )
+from .contracts import build_academy_connectors  # noqa: E402
+from .kpis import compute_academy_metrics, compute_all_coach_metrics  # noqa: E402
+from .register import get_academy_metadata  # noqa: E402
+from .roles import required_approver_role  # noqa: E402
 from .workflows import (  # noqa: E402
     attendance_flow,
     enrollment_flow,
     renewal_flow,
 )
-from .kpis import compute_academy_metrics, compute_all_coach_metrics  # noqa: E402
-from .roles import required_approver_role  # noqa: E402
-from .register import get_academy_metadata  # noqa: E402
 
 DATA_MODE = "simulated_realistic"
 DEFAULT_AS_OF = "2026-09-07T20:00:00Z"

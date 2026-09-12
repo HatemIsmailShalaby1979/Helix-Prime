@@ -8,11 +8,11 @@ from __future__ import annotations
 import datetime
 from typing import Any, Callable, Dict, Optional
 
-from contracts.task import TaskRequest, TaskResult, AgentError, Approval
-from control_plane.kill_switch import KillSwitch, KillSwitchEngaged
-from control_plane.workflow import Workflow, WorkflowState
+from contracts.task import AgentError, Approval, TaskRequest, TaskResult
 from control_plane.events import Event
+from control_plane.kill_switch import KillSwitch, KillSwitchEngaged
 from control_plane.store import Store
+from control_plane.workflow import Workflow, WorkflowState
 from organization.capability_registry import get_agent_for_capability, is_tool_allowed
 from organization.role_catalog import load_role_catalog
 
@@ -23,14 +23,17 @@ class GovernanceControlUnavailable(RuntimeError):
 
 # C3 integrations (local-first, fail-closed)
 try:
-    from security.classification import validate_payload_classification, DataClassification
-    from security.identity import Identity, ActorType
-    from security.policy import AuthorizationRequest, authorize
-    from security.secrets import validate_no_secrets, redact_dict, is_secret_present
-    from security.audit import AuditTrail, AuditRecord
-    from security.injection import is_suspicious_prompt, scan_for_injection
     from observability.logging import log_structured
     from observability.metrics import REGISTRY as _metrics_registry
+    from security.audit import AuditRecord, AuditTrail
+    from security.classification import (  # noqa: F401
+        DataClassification,
+        validate_payload_classification,
+    )
+    from security.identity import ActorType, Identity
+    from security.injection import is_suspicious_prompt, scan_for_injection
+    from security.policy import AuthorizationRequest, authorize
+    from security.secrets import is_secret_present, redact_dict, validate_no_secrets  # noqa: F401
 except ImportError as _import_err:
     raise GovernanceControlUnavailable(
         f"C3 security stack unavailable on startup: {_import_err}"
@@ -57,7 +60,7 @@ _gov_names = (
 )
 _gov_symbols = tuple(globals()[n] for n in _gov_names)
 if any(s is None for s in _gov_symbols):
-    _missing = tuple(n for n, s in zip(_gov_names, _gov_symbols) if s is None)
+    _missing = tuple(n for n, s in zip(_gov_names, _gov_symbols, strict=False) if s is None)
     raise GovernanceControlUnavailable(
         f"required governance controls not loaded: {', '.join(_missing)}"
     )
@@ -972,7 +975,7 @@ class Engine:
         except (KeyError, GovernanceControlUnavailable):
             raise GovernanceControlUnavailable(
                 f"approve: cannot verify SOD authority for approver {approval.approver_role_id!r} on workflow {workflow.workflow_id!r}"
-            )
+            ) from None
 
         workflow.approval = approval
         if approval.decision == "approved":

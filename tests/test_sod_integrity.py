@@ -8,15 +8,15 @@ Verifies that:
 """
 from __future__ import annotations
 
-import pytest
-import tempfile
 import pathlib
+import tempfile
+
+import pytest
 import yaml
 
-from contracts.task import TaskRequest, CorrelationContext, Approval
-from control_plane.engine import Engine, WorkflowState, GovernanceControlUnavailable
+from contracts.task import Approval, CorrelationContext, TaskRequest
+from control_plane.engine import Engine, GovernanceControlUnavailable, WorkflowState
 from control_plane.store import Store
-
 
 FIXED_TS = "2026-08-27T18:00:00Z"
 
@@ -94,6 +94,7 @@ class TestSodIntegrity:
         """Assert that control_plane/engine.py does not contain hardcoded sami/compliance
         super-role literals in the approve() method's SOD check section."""
         import inspect
+
         from control_plane.engine import Engine
 
         src = inspect.getsource(Engine.approve)

@@ -8,6 +8,6 @@ data mode, approval state, outcome recording, and the audit trail.
 """
 from __future__ import annotations
 
-from .restaurant.register import REGISTRY, register_capability, get_capability
+from .restaurant.register import REGISTRY, get_capability, register_capability
 
 __all__ = ["REGISTRY", "register_capability", "get_capability"]

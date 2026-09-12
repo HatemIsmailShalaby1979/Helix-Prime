@@ -12,9 +12,8 @@ Checks:
 from __future__ import annotations
 
 import pathlib
-import sqlite3
 from dataclasses import dataclass
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 
 @dataclass
@@ -98,8 +97,8 @@ def check_ollama(
     ollama_url: str = "http://localhost:11434/api/tags", timeout: float = 2.0
 ) -> HealthStatus:
     try:
-        import urllib.request
         import json
+        import urllib.request
 
         req = urllib.request.Request(ollama_url, method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as resp:

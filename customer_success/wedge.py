@@ -16,21 +16,20 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Optional, Sequence
 
 from connectors.contracts import (
     Account,
     ConnectorContext,
     CustomerSignal,
     EnrichmentResult,
-    SourceRef,
     SupportTicket,
 )
 from customer_success.health import (
     assess_account_health,
-)  # reuse the user's deterministic base score
+)
 
 SCHEMA_VERSION = "1.0"
 STALE_THRESHOLD_DAYS = 30

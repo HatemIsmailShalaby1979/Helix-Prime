@@ -16,13 +16,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from capabilities.restaurant import (  # noqa: E402
+    DATA_MODE,
     RestaurantCapabilityPack,
+    RestaurantConnector,
     build_synthetic_restaurant,
     get_capability,
-    DATA_MODE,
-    RestaurantConnector,
 )
-from capabilities.restaurant.runtime import DEFAULT_AS_OF  # noqa: E402
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 from pilot.consent import ConsentRecord  # noqa: E402
@@ -289,7 +288,7 @@ def test_release_gates():
 
 # 12. same governed core supports call-centre AND restaurant ------------------
 def test_same_core_supports_call_centre_and_restaurant():
-    from pilot import PilotRuntime, PilotConfig
+    from pilot import PilotConfig, PilotRuntime
 
     mem = GovernedMemory()
     # call-centre pilot (verified core) on one tenant

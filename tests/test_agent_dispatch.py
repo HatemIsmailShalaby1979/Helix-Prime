@@ -12,7 +12,7 @@ import asyncio
 import json
 
 from app.command_center.agents.dispatch import AgentDispatch, parse_legacy_calls
-from contracts.toolcall import ToolCall, ToolCallEnvelope, ToolResult
+from contracts.toolcall import ToolCall
 
 
 def test_structured_round_trip():

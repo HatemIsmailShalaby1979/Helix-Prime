@@ -21,9 +21,7 @@ Covers:
 - C2 aggregate sequence regression
 - repeated submission/idempotency regression
 """
-import json
 import pathlib
-import tempfile
 
 import pytest
 
@@ -34,9 +32,9 @@ from tests.support.sqlite_harness import sqlite_store
 
 def test_all_data_classifications():
     from security.classification import (
+        ClassificationMetadata,
         DataClassification,
         is_valid_classification,
-        ClassificationMetadata,
     )
 
     for cls in [
@@ -56,7 +54,7 @@ def test_all_data_classifications():
 
 
 def test_unknown_classification_rejection():
-    from security.classification import validate_payload_classification, ClassificationMetadata
+    from security.classification import ClassificationMetadata, validate_payload_classification
 
     with pytest.raises(ValueError, match="unknown classification"):
         validate_payload_classification({"x": 1}, "unknown_xyz", "payload")
@@ -71,7 +69,7 @@ def test_unknown_classification_rejection():
 
 
 def test_tenant_isolation():
-    from security.identity import Identity, ActorType
+    from security.identity import ActorType, Identity
     from security.policy import AuthorizationRequest, authorize
 
     # Identity is scoped to tenant_1, tries to access tenant_2 -> denied
@@ -125,7 +123,7 @@ def test_tenant_isolation():
 
 
 def test_deny_by_default_authorization():
-    from security.identity import Identity, ActorType
+    from security.identity import ActorType, Identity
     from security.policy import AuthorizationRequest, authorize
 
     # Empty capability -> denied
@@ -151,7 +149,7 @@ def test_deny_by_default_authorization():
 
 
 def test_allowed_role_capability_tool():
-    from security.identity import Identity, ActorType
+    from security.identity import ActorType, Identity
     from security.policy import AuthorizationRequest, authorize
 
     ident = Identity(
@@ -172,7 +170,7 @@ def test_allowed_role_capability_tool():
 
 
 def test_denied_role_capability_tool():
-    from security.identity import Identity, ActorType
+    from security.identity import ActorType, Identity
     from security.policy import AuthorizationRequest, authorize
 
     # marketing_gm trying to use wfm_forecast (owned by ops_gm) -> denied (unauthorized_role)
@@ -216,10 +214,11 @@ def test_denied_role_capability_tool():
 
 def test_approval_and_sod_enforcement():
     # Use control_plane engine to test SOD: self-approval and same-role should be denied
-    from contracts.task import CorrelationContext, Approval
+    import pathlib
+    import tempfile
+
+    from contracts.task import Approval, CorrelationContext
     from control_plane.engine import Engine
-    from control_plane.store import Store
-    import tempfile, pathlib
 
     with tempfile.TemporaryDirectory() as tmp:
         db = str(pathlib.Path(tmp) / "sod.db")
@@ -341,7 +340,7 @@ def test_get_secret_missing_fails():
 
 
 def test_audit_hash_chain_creation(tmp_path):
-    from security.audit import AuditTrail, AuditRecord
+    from security.audit import AuditRecord, AuditTrail
 
     db = str(tmp_path / "audit_chain.db")
     trail = AuditTrail(db_path=db)
@@ -378,8 +377,10 @@ def test_audit_hash_chain_creation(tmp_path):
 
 
 def test_audit_tamper_detection(tmp_path):
-    from security.audit import AuditTrail, AuditRecord
-    import sqlite3, json
+    import json
+    import sqlite3
+
+    from security.audit import AuditRecord, AuditTrail
 
     db = str(tmp_path / "audit_tamper.db")
     trail = AuditTrail(db_path=db)
@@ -421,7 +422,7 @@ def test_audit_tamper_detection(tmp_path):
 
 
 def test_audit_correlation_preservation(tmp_path):
-    from security.audit import AuditTrail, AuditRecord
+    from security.audit import AuditRecord, AuditTrail
 
     db = str(tmp_path / "audit_corr.db")
     trail = AuditTrail(db_path=db)
@@ -451,8 +452,9 @@ def test_audit_correlation_preservation(tmp_path):
 
 
 def test_structured_logging_fields(tmp_path):
-    from observability.logging import log_structured
     import json
+
+    from observability.logging import log_structured
 
     log_path = str(tmp_path / "test_logs.jsonl")
     entry = log_structured(
@@ -504,8 +506,9 @@ def test_structured_logging_fields(tmp_path):
 
 
 def test_health_check_success(tmp_path):
-    from observability.health import check_health, is_healthy
     import pathlib
+
+    from observability.health import check_health, is_healthy
 
     # Ensure required paths exist for health check
     pathlib.Path("evidence").mkdir(exist_ok=True)
@@ -539,9 +542,9 @@ def test_health_check_failure(tmp_path):
 
 
 def test_authorization_denied_event(tmp_path):
-    from security.audit import AuditTrail, AuditRecord
+    from security.audit import AuditRecord, AuditTrail
+    from security.identity import ActorType, Identity
     from security.policy import AuthorizationRequest, authorize
-    from security.identity import Identity, ActorType
 
     db = str(tmp_path / "auth_denied.db")
     trail = AuditTrail(db_path=db)
@@ -616,9 +619,9 @@ def test_prompt_tool_injection_detection():
 
 
 def test_c2_event_and_workflow_regression(tmp_path):
-    from control_plane.workflow import Workflow, WorkflowState
-    from control_plane.events import Event
     from contracts.task import CorrelationContext
+    from control_plane.events import Event
+    from control_plane.workflow import Workflow, WorkflowState
 
     corr = CorrelationContext(
         correlation_id="corr_c2_reg",
@@ -657,8 +660,8 @@ def test_c2_event_and_workflow_regression(tmp_path):
 
 
 def test_c2_aggregate_sequence_regression():
-    from control_plane.store import Store
     from control_plane.events import Event
+    from control_plane.store import Store
 
     store = Store(db_path=":memory:")
     ev_a0 = Event.new(
@@ -719,10 +722,11 @@ def test_c2_aggregate_sequence_regression():
 
 
 def test_repeated_submission_idempotency_regression(tmp_path):
-    from contracts.task import TaskRequest, CorrelationContext
+    import pathlib
+
+    from contracts.task import CorrelationContext, TaskRequest
     from control_plane.engine import Engine
     from control_plane.store import Store
-    import pathlib
 
     db = str(pathlib.Path(tmp) / "idemp.db") if (tmp := tmp_path) else ":memory:"
     # Use tmp_path fixture already, so above is fine

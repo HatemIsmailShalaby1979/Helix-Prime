@@ -24,32 +24,30 @@ from __future__ import annotations
 import datetime
 import json
 import pathlib
+
+# Ensure project root on path
+import sys
 import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
-
-# Ensure project root on path
-import sys
 
 _ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from contracts.task import (
-    CorrelationContext,
-    EvidenceRef,
     AgentError,
     Approval,
+    CorrelationContext,
 )
-from control_plane.workflow import Workflow, WorkflowState
 from control_plane.engine import Engine
 from control_plane.events import Event
-from control_plane.store import Store
+from control_plane.workflow import Workflow, WorkflowState
 from engines.contracts import EngineResult
 from engines.registry import get_adapter_for_capability
-from security.audit import AuditTrail, AuditRecord
 from observability.logging import log_structured
+from security.audit import AuditRecord, AuditTrail
 
 # Step names (canonical order)
 STEP_WFM = "wfm_forecast"
@@ -439,19 +437,6 @@ class VerticalSliceController:
                     terminal_reason = "crm_failed"
 
             kpi_summary = self._build_kpi_summary(steps)
-            sami_summary = {
-                "executive_summary": (
-                    "Contact-centre vertical slice complete. "
-                    "WFM staffing gap +5; RTA adherence within tolerance; "
-                    "OPS recommendation approved by Compliance; "
-                    "HR/L&D and CX/CRM impact noted. "
-                    "All steps synthetic/sample data."
-                ),
-                "decisions": self._build_decisions(steps),
-                "kpi_summary": kpi_summary,
-                "is_sample": is_sample,
-                "data_classification": "internal",
-            }
             if not terminated:
                 step9 = self._run_derived_step(
                     step_name=STEP_SAMI,

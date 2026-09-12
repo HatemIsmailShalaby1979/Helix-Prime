@@ -7,8 +7,6 @@ separation of duties and a full audit trail.
 """
 from __future__ import annotations
 
-from typing import Optional
-
 from memory.governed_memory import GovernedMemory
 
 

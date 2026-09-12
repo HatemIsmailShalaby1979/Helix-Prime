@@ -19,7 +19,7 @@ import argparse
 import pathlib
 import re
 import sys
-from typing import Dict, Iterable, List
+from typing import Dict, List
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:

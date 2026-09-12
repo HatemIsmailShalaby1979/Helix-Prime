@@ -22,9 +22,6 @@ from __future__ import annotations
 
 import json
 import pathlib
-import re
-import tempfile
-import time
 import sys
 
 import pytest
@@ -37,39 +34,20 @@ if str(_ROOT) not in sys.path:
 from contracts.task import CorrelationContext
 from control_plane.engine import Engine
 from control_plane.vertical_slice import (
+    STEP_ORDER,
     VerticalSliceController,
     VerticalSliceRequest,
-    VerticalSliceStep,
-    VerticalSliceEvidence,
-    STEP_WFM,
-    STEP_RTA,
-    STEP_OPS,
-    STEP_COMPLIANCE,
-    STEP_HR,
-    STEP_LD,
-    STEP_CX,
-    STEP_CRM,
-    STEP_SAMI,
-    STEP_ORDER,
 )
 from engines.registry import register_all
 from tests.fixtures.c5.fixtures import (
-    TENANT_ID,
-    CLIENT_ID,
-    ACTOR_SUBY,
-    ACTOR_SAMI,
-    ACTOR_PHILI,
-    ACTOR_WILI,
     ACTOR_COMPLIANCE,
+    ACTOR_PHILI,
     ACTOR_SALES,
+    ACTOR_SAMI,
+    ACTOR_WILI,
+    CLIENT_ID,
+    TENANT_ID,
     WFM_INPUT,
-    RTA_INPUT,
-    PERSONNEL_INPUT,
-    LD_INPUT,
-    CX_INPUT,
-    CRM_INPUT,
-    OPS_RECOMMENDATION,
-    SAMI_SUMMARY,
 )
 
 
@@ -471,7 +449,7 @@ def test_failure_injection_invalid_wfm(fresh_state):
         # RTA, OPS, etc. should also be dead_letter or absent
         if s.state == "closed":
             # If closed, it means it ran successfully despite upstream failure — that's a bug
-            assert False, f"Step {s.name} ran successfully despite WFM failure"
+            raise AssertionError(f"Step {s.name} ran successfully despite WFM failure")
 
 
 # ── failure injection: RTA dependency failure ───────────────────────

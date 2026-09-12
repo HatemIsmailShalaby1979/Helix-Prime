@@ -15,17 +15,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from memory.governed_memory import GovernedMemory  # noqa: E402
 from pilot import (  # noqa: E402
-    PilotConfig,
-    ConsentRecord,
-    PilotRuntime,
-    PilotError,
-    build_evidence_pack,
     HISTORICAL_CONSENTED,
     SIMULATED_REALISTIC,
+    ConsentRecord,
+    PilotConfig,
+    PilotError,
+    PilotRuntime,
+    build_evidence_pack,
 )
 from pilot.scope import LIVE_CUSTOMER  # noqa: E402
-from memory.governed_memory import GovernedMemory  # noqa: E402
 
 TS = "2026-08-29T12:00:00Z"
 
@@ -70,8 +70,8 @@ def test_synthetic_pilot_dry_run():
     # no live customer data mode anywhere
     assert all(r.data_mode != LIVE_CUSTOMER for r in rt.mem._records)
     # connectors are read-only: request_write never executes
-    from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
     from connectors.contracts import ConnectorContext
+    from connectors.registry import ConnectorRegistry
 
     ctx = ConnectorContext(
         "t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic"
@@ -135,8 +135,8 @@ def test_tenant_isolation():
 # --- connector failure handling ----------------------------------------------
 def test_connector_failure_handling():
     rt = _runtime()
-    from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
     from connectors.contracts import ConnectorContext
+    from connectors.registry import KNOWN_PROVIDERS, ConnectorRegistry
 
     ctx = ConnectorContext(
         "t1", "org-1", "c1", actor="x", correlation_id="c", data_mode="simulated_realistic"
@@ -334,9 +334,9 @@ def test_read_only_period_blocks_approval():
 
 
 def test_connector_permissions():
-    from pilot.phases import ConnectorPermissions
-    from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
     from connectors.contracts import ConnectorContext
+    from connectors.registry import KNOWN_PROVIDERS, ConnectorRegistry
+    from pilot.phases import ConnectorPermissions
 
     perms = ConnectorPermissions()
     assert perms.write_allowed is False

@@ -16,14 +16,14 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from integrations.contracts import (
-    IntegrationEvent,
-    ContentGenerationCompleted,
-    IntegrationError,
-    create_integration_event,
     SOURCE_SYSTEM_HELIX_PRIME,
     SOURCE_SYSTEM_STUDY_STUDIO,
+    ContentGenerationCompleted,
+    IntegrationError,
+    IntegrationEvent,
+    create_integration_event,
 )
-from integrations.transport import Transport, TransportResult, InMemoryTransport
+from integrations.transport import InMemoryTransport, Transport, TransportResult
 
 
 @dataclass

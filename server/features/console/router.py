@@ -10,10 +10,10 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from server import deps
+from server.config import Settings
 from server.features.approvals.service import ApprovalService
 from server.features.workflows.repository import WorkflowRepository
 from server.models.store import NodeStore
-from server.config import Settings
 
 router = APIRouter(tags=["console"])
 
@@ -100,7 +100,7 @@ def approvals_partial(request: Request) -> HTMLResponse:
 @router.get("/console/workflows", response_class=HTMLResponse)
 def workflows_partial(request: Request) -> HTMLResponse:
     """HTMX fragment for the recent-runs list."""
-    repository = _repo()
+    repository = WorkflowRepository(deps.get_engine())
     return _TEMPLATES.TemplateResponse(
         request=request,
         name="partials/workflows.html",

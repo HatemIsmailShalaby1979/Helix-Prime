@@ -45,8 +45,8 @@ from typing import Any, Dict, List, Optional
 
 from contracts.task import CorrelationContext, TaskRequest
 from control_plane.governance import evaluate_gate
-from control_plane.workflow import WorkflowState
 from control_plane.ports import EnginePort
+from control_plane.workflow import WorkflowState
 from security.classification import DataClassification
 
 SEAM_ID = "contact_centre_control_seam"

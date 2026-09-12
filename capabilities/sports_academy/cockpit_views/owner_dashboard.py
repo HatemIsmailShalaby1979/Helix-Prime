@@ -10,9 +10,9 @@ from typing import Any, Dict
 
 from connectors.contracts import ConnectorContext
 
+from .. import kpis as academy_kpis
 from ..adapters.athlete_profile_adapter import churn_risk_signals
 from ..adapters.attendance_adapter import compute_attendance
-from .. import kpis as academy_kpis
 
 DATA_MODE = "simulated_realistic"
 

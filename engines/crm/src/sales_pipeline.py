@@ -264,7 +264,7 @@ class SalesPipeline:
         ]
         scores = [company_size_score, industry_score, budget_score, timeline_score]
 
-        total_score = sum(w * s for w, s in zip(weights, scores))
+        total_score = sum(w * s for w, s in zip(weights, scores, strict=False))
 
         lead.score = total_score
         lead.updated_at = datetime.now()

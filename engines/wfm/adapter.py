@@ -10,12 +10,12 @@ import time
 from typing import Any, Dict
 
 from engines.contracts import EngineResult
-from security.classification import DataClassification, validate_payload_classification
-from security.policy import AuthorizationRequest, authorize
-from security.identity import Identity, ActorType
-from security.secrets import validate_no_secrets
-from security.audit import AuditTrail, AuditRecord
 from observability.logging import log_structured
+from security.audit import AuditRecord, AuditTrail
+from security.classification import DataClassification, validate_payload_classification
+from security.identity import ActorType, Identity
+from security.policy import AuthorizationRequest, authorize
+from security.secrets import validate_no_secrets
 
 ENGINE_ID = "wfm"
 DISPLAY_NAME = "WFM Forecasting / Erlang C"
@@ -343,7 +343,7 @@ def adapt(
 
     # Invoke actual engine code
     try:
-        from engines.wfm.src.erlang_c import ErlangCParameters, ErlangCEngine
+        from engines.wfm.src.erlang_c import ErlangCEngine, ErlangCParameters
 
         params = ErlangCParameters(
             arrival_rate=arrival_rate,

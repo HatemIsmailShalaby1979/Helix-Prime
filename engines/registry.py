@@ -9,11 +9,13 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Any, Callable, Dict, Optional
+from typing import Callable, Dict, Optional
 
+from contracts.task import AgentError, TaskRequest, TaskResult
 from control_plane.engine import Engine
 from control_plane.ports import EngineInvocation
-from contracts.task import AgentError, TaskRequest, TaskResult
+from engines.b2b.adapter import CAPABILITY_IDS as B2B_CAPS
+from engines.b2b.adapter import adapt as b2b_adapt
 from engines.contracts import (
     DATA_MODE_LIVE,
     DATA_MODE_SAMPLE,
@@ -23,14 +25,18 @@ from engines.contracts import (
     freeze_request,
     payload_requests_sample_data,
 )
+from engines.crm.adapter import CAPABILITY_IDS as CRM_CAPS
+from engines.crm.adapter import adapt as crm_adapt
+from engines.cx.adapter import CAPABILITY_IDS as CX_CAPS
+from engines.cx.adapter import adapt as cx_adapt
+from engines.personnel.adapter import CAPABILITY_IDS as PERSONNEL_CAPS
+from engines.personnel.adapter import adapt as personnel_adapt
+from engines.rta.adapter import CAPABILITY_IDS as RTA_CAPS
+from engines.rta.adapter import adapt as rta_adapt
+from engines.wfm.adapter import CAPABILITY_IDS as WFM_CAPS
 
 # Import adapters
-from engines.wfm.adapter import adapt as wfm_adapt, CAPABILITY_IDS as WFM_CAPS
-from engines.rta.adapter import adapt as rta_adapt, CAPABILITY_IDS as RTA_CAPS
-from engines.cx.adapter import adapt as cx_adapt, CAPABILITY_IDS as CX_CAPS
-from engines.b2b.adapter import adapt as b2b_adapt, CAPABILITY_IDS as B2B_CAPS
-from engines.personnel.adapter import adapt as personnel_adapt, CAPABILITY_IDS as PERSONNEL_CAPS
-from engines.crm.adapter import adapt as crm_adapt, CAPABILITY_IDS as CRM_CAPS
+from engines.wfm.adapter import adapt as wfm_adapt
 
 
 def _make_handler(adapter_func, capability: str):
@@ -105,7 +111,6 @@ ADAPTER_MAP = {
     "talent_acquisition_engine": personnel_adapt,
     "workforce_planning_engine": personnel_adapt,
     "hiring_pipeline_engine": personnel_adapt,
-    "customer_support": crm_adapt,
 }
 
 

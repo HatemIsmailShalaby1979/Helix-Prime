@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import pathlib
-import datetime
 
 import pytest
 
+from contracts.adapter import parse_legacy_calls, to_task_request, validate_request_against_catalog
 from contracts.task import (
     SCHEMA_VERSION,
     Action,
@@ -17,7 +17,6 @@ from contracts.task import (
     TaskRequest,
     TaskResult,
 )
-from contracts.adapter import parse_legacy_calls, to_task_request, validate_request_against_catalog
 from organization.role_catalog import load_role_catalog, validate_role_catalog
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -999,14 +998,18 @@ from control_plane.governance import (
     MIN_AUTONOMY_CONFIDENCE,
     ORGANIZATION_CATALOG,
     AccessDeniedError,
-    CorrelationContext as GovernanceCorrelationContext,
     GovernanceStateError,
     GovernedWorkflowManager,
-    TaskRequest as GovernanceTaskRequest,
     detect_catalog_drift,
     evaluate_gate,
     get_role,
     resolve_actor_role,
+)
+from control_plane.governance import (
+    CorrelationContext as GovernanceCorrelationContext,
+)
+from control_plane.governance import (
+    TaskRequest as GovernanceTaskRequest,
 )
 from control_plane.store import Store as GovernanceStore
 from control_plane.workflow import WorkflowState

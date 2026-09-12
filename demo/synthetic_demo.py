@@ -13,13 +13,13 @@ from pathlib import Path
 ROOT = str(Path(__file__).resolve().parent.parent)
 sys.path.insert(0, ROOT)
 
-from memory.governed_memory import GovernedMemory  # noqa: E402
-from pilot import PilotRuntime, PilotConfig, ConsentRecord, build_evidence_pack  # noqa: E402
 from capabilities.restaurant import (  # noqa: E402
     RestaurantCapabilityPack,
     build_synthetic_restaurant,
 )
 from connectors.contracts import ConnectorContext  # noqa: E402
+from memory.governed_memory import GovernedMemory  # noqa: E402
+from pilot import ConsentRecord, PilotConfig, PilotRuntime, build_evidence_pack  # noqa: E402
 
 AS_OF = "2026-08-29T12:00:00Z"
 

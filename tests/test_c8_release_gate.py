@@ -15,7 +15,6 @@ import pytest
 
 from release import backup, harness, manifest, observability, profiles, security_gate
 
-
 # ── profiles / classification ──────────────────────────────────────────────
 
 
@@ -93,9 +92,9 @@ def test_dependency_lock_present():
 
 def _make_synthetic_state():
     work = tempfile.mkdtemp(prefix="hp_test_")
+    from contracts.task import CorrelationContext
     from control_plane.store import Store
     from control_plane.workflow import Workflow
-    from contracts.task import CorrelationContext
 
     db = os.path.join(work, "control_plane", "workflow.db")
     store = Store(db_path=db)
@@ -122,11 +121,11 @@ def _make_synthetic_state():
     )
     store.create_workflow(wf)
     store.close()
-    from security.audit import AuditTrail, AuditRecord
+    from security.audit import AuditRecord, AuditTrail
 
     trail = AuditTrail(db_path=os.path.join(work, "security", "audit.db"))
     prev = None
-    for i in range(3):
+    for _ in range(3):
         rec = AuditRecord.new(
             event_type="test",
             actor="suby",

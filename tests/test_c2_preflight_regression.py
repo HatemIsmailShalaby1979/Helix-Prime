@@ -9,8 +9,8 @@ import pathlib
 
 import pytest
 
-from control_plane.store import Store, DEFAULT_DB_PATH
 from control_plane.events import Event
+from control_plane.store import DEFAULT_DB_PATH, Store
 
 
 def test_per_aggregate_allows_same_sequence_for_multiple_workflows():
@@ -85,7 +85,7 @@ def test_duplicate_aggregate_sequence_rejected():
 
 
 def test_repeated_submission_does_not_duplicate_workflow(tmp_path):
-    from contracts.task import TaskRequest, CorrelationContext
+    from contracts.task import CorrelationContext, TaskRequest
     from control_plane.engine import Engine
 
     db = str(tmp_path / "preflight.db")
@@ -168,9 +168,7 @@ def test_default_db_path_is_ignored():
 
 def test_cognitive_log_db_creates_on_import(tmp_path):
     """Clean-start: importing cognitive_log recreates the SQLite database outside version control."""
-    import importlib
     import sys
-    import os
 
     # Simulate clean environment: add cockpit/memory to path, reload module fresh
     cockpit_memory = str(pathlib.Path("cockpit/memory").resolve())
@@ -256,7 +254,7 @@ def test_runtime_artifacts_not_tracked():
 
 def test_store_preserves_across_restart(tmp_path):
     # Verify persistence across process restart (re-open)
-    from contracts.task import TaskRequest, CorrelationContext
+    from contracts.task import CorrelationContext, TaskRequest
     from control_plane.engine import Engine
 
     db_path = str(tmp_path / "restart.db")

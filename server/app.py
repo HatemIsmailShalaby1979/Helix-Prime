@@ -28,12 +28,12 @@ from fastapi import Depends, FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from control_plane.kill_switch import KillSwitchEngaged
 from observability.logging import log_structured
 from observability.metrics import REGISTRY as metrics_registry
 from security.secrets import redact_dict
-from control_plane.kill_switch import KillSwitchEngaged
-from server.auth import current_identity
 from server import deps
+from server.auth import current_identity
 from server.config import Settings, get_settings
 from server.errors import AppError
 from server.features.approvals.router import router as approvals_router

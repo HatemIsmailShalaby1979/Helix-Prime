@@ -141,7 +141,61 @@ include = [
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "I", "B", "S"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI dependency injection is idiomatic B008: `Depends()` in argument
+# defaults is the framework's declared pattern.
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.ruff.lint.per-file-ignores]
+# S110 (try-except-pass): best-effort wrappers where swallowing is intentional —
+# connection close / ROLLBACK after a failed DB write / structured-log telemetry.
+# The primary error path still raises or logs; these guards exist so a secondary
+# cleanup failure cannot mask the original fault. Tracked as deferred debt; remove
+# entries as each site gains explicit logging.
+"control_plane/engine.py" = ["S110"]
+"control_plane/store.py" = ["S110"]
+"control_plane/vertical_slice/__init__.py" = ["E402", "S110"]
+"security/audit.py" = ["S110"]
+"engines/b2b/adapter.py" = ["S110"]
+"engines/crm/adapter.py" = ["S110"]
+"engines/cx/adapter.py" = ["S110"]
+"engines/personnel/adapter.py" = ["S110"]
+"engines/rta/adapter.py" = ["S110"]
+"engines/wfm/adapter.py" = ["S110"]
+# S113 (request without timeout): legacy Notion adapter — HTTP timeout work is
+# tracked separately; not part of the core governed path.
+"engines/b2b/notion_adapter/notion_adapter.py" = ["S113"]
+# S310 (urlopen): webhook dispatcher uses a fixed HTTPS target with a 5s timeout
+# (same rationale as the documented B310 bandit skip).
+"engines/cx/src/alert_dispatcher.py" = ["S310"]
+
+# --- Legacy files outside the CI ruff scan (server/ connectors/ control_plane/
+# engines/ capabilities/ security/ pilot/). Not governance-core, but pre-commit
+# still lints every staged file, so each documented entry keeps commits usable.
+# Tracked as deferred debt; remove entries as each site is addressed.
+"cloud/interfaces.py" = ["B027"]  # reset() is a deliberate non-abstract hook for local adapters
+"cockpit/cli.py" = ["S603"]  # launcher execs the streamlit entry point
+"cockpit/cockpit.py" = ["S310", "S311", "S603"]  # UI demo launches/util libraries
+"cockpit/memory/cognitive_log.py" = ["S608"]  # legacy templated query on constant schema
+"demo/synthetic_demo.py" = ["S101"]  # standalone demo uses assert checks
+"desktop.py" = ["S110", "S310", "S603"]  # legacy desktop launcher
+"integrations/transport.py" = ["S110"]  # best-effort sibling transport
+"launch.py" = ["S310", "S603"]  # legacy launcher
+"marketing/assets/build_demo.py" = ["S603"]  # demo asset builder
+"memory/governed_memory.py" = ["S101"]  # precondition assert mirrors declared invariant
+"observability/health.py" = ["S101", "S110", "S310"]
+"release/security_gate.py" = ["S105", "S112"]  # scan fixture value + resilient collector
+"release/manifest.py" = ["S603", "S607", "S110"]  # git ref collection shell-outs (fixed argv)
+"scripts/check_migration_drift.py" = ["S110", "S603"]
+"scripts/pilot_dry_run.py" = ["S110"]
+"scripts/smoke.py" = ["S603"]
+# Tests: assert (S101) is the pytest idiom; subprocess-under-test (S603/S607),
+# seeded fixture credentials (S105), best-effort teardown (S110), the deliberate
+# broad-exception probe in C1 (B017), sys.path bootstrap imports (E402), and
+# construct-and-verify locals (F841) are all conventional in tests.
+"tests/*" = ["S101", "S105", "S110", "S603", "S607", "B017", "E402", "F841"]
 
 # ---------------------------------------------------------------------------
 # Mypy (was mypy.ini)

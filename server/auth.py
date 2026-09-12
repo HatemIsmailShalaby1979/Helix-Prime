@@ -14,12 +14,11 @@ from typing import Optional
 from fastapi import Header, HTTPException, status
 from fastapi.requests import Request
 
-from security.identity import Identity, ActorType
-from security.policy import AuthorizationRequest, authorize
+from security.identity import ActorType, Identity
 
 logger = logging.getLogger("helix.server")
 
-TOKEN_VAR = "HELIX_API_TOKEN"
+TOKEN_VAR = "HELIX_API_TOKEN"  # noqa: S105
 ROLE_VAR = "HELIX_API_TOKEN_ROLE"
 
 

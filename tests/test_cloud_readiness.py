@@ -14,9 +14,9 @@ sys.path.insert(0, str(ROOT))
 
 import pytest
 
-from cloud.errors import SafeFailure
 from cloud.config import CloudConfig
-from cloud.profile import CloudProvider, optional_cloud_services, SPEND_CONTROL_DOCS
+from cloud.errors import SafeFailure
+from cloud.profile import SPEND_CONTROL_DOCS, CloudProvider, optional_cloud_services
 
 ALL_SERVICES = {
     "database",

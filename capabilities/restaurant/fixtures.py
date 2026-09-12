@@ -6,13 +6,14 @@ no live customer data and no network access.
 from __future__ import annotations
 
 from connectors.contracts import SourceRef
+
 from .ontology import (
-    Employee,
-    Shift,
-    InventoryItem,
-    Supplier,
     Complaint,
     DailySummary,
+    Employee,
+    InventoryItem,
+    Shift,
+    Supplier,
 )
 
 DATA_MODE = "simulated_realistic"

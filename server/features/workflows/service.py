@@ -9,12 +9,11 @@ nothing more.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from contracts.task import CorrelationContext, TaskRequest
 from control_plane.engine import Engine
 from control_plane.workflow import Workflow, WorkflowState
-
 from server.errors import GateAwaitingApproval, NotFound, UpstreamUnavailable
 from server.features.workflows.repository import WorkflowRepository
 from server.features.workflows.schemas import SubmitWorkflowRequest

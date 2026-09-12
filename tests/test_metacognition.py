@@ -13,13 +13,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from metacognition.improvement import (
-    MetacognitionEngine,
     APPROVED,
     DRAFT,
     EVALUATED,
     EVALUATED_FAILED,
     REJECTED,
     ROLLED_BACK,
+    MetacognitionEngine,
     apply_proposal,
     rollback_proposal,
 )

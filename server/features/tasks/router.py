@@ -3,9 +3,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from server.models.node import TaskNode, NodeEnvelope, Nature, Classification, Provenance, NodeKind
-from server.models.store import NodeStore
 from server import deps
+from server.models.node import Classification, Nature, NodeEnvelope, Provenance, TaskNode
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 

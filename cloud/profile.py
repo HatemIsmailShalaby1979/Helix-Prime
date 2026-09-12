@@ -14,25 +14,24 @@ from .config import CloudConfig, demo_profile
 from .errors import SafeFailure
 from .interfaces import (
     Database,
-    ObjectStorage,
     EventTransport,
-    SecretsStore,
     IdentityProvider,
+    ModelProvider,
+    ObjectStorage,
     Observability,
     Scheduler,
-    ModelProvider,
+    SecretsStore,
 )
 from .local_adapters import (
     LocalDatabase,
-    LocalObjectStorage,
-    LocalQueue,
-    LocalSecrets,
     LocalIdentity,
-    LocalObservability,
-    LocalScheduler,
     LocalModel,
+    LocalObjectStorage,
+    LocalObservability,
+    LocalQueue,
+    LocalScheduler,
+    LocalSecrets,
 )
-
 
 SPEND_CONTROL_DOCS = """
 Spend-control model (synthetic, local-first)

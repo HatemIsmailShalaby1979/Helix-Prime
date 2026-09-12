@@ -11,6 +11,11 @@ cross-role approval (separation of duties), and records outcomes in memory.
 from __future__ import annotations
 
 import streamlit as st
+from command_center_integration import (
+    assemble_command_center,
+    evaluate_approval,
+    reset_demo,
+)
 
 from connectors.contracts import ConnectorContext, ConnectorStatus
 from connectors.fakes import FakeConnector
@@ -21,11 +26,6 @@ from customer_success.fixtures import (
     unknown_account,
 )
 from memory.governed_memory import GovernedMemory
-from command_center_integration import (
-    assemble_command_center,
-    evaluate_approval,
-    reset_demo,
-)
 
 DEFAULT_MEMORY_PATH = "memory/governed_memory.jsonl"
 

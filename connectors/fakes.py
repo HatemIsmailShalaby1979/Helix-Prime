@@ -16,7 +16,6 @@ from .contracts import (
     ConnectorCapability,
     ConnectorContext,
     ConnectorStatus,
-    CustomerSignal,
     EnrichmentResult,
     SourceRef,
     SupportTicket,

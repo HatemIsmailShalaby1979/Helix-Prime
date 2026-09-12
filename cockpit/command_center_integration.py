@@ -17,14 +17,14 @@ client_id, role, classification, correlation_id, and data mode.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
-from typing import Any, Mapping, Optional, Sequence
+from dataclasses import dataclass
+from typing import Any, Mapping, Optional
 
 from connectors.contracts import ConnectorContext, CustomerSignal, SourceRef
 from customer_success.wedge import (
     AccountContextBundle,
-    ApprovalPreview,
     AccountHealthDiagnosis,
+    ApprovalPreview,
     build_approval_preview,
     diagnose,
 )
@@ -219,7 +219,7 @@ def assemble_command_center(
 
     # --- connectors (Prompt 4) ---------------------------------------------
     if connectors is None:
-        from connectors.registry import ConnectorRegistry, KNOWN_PROVIDERS
+        from connectors.registry import KNOWN_PROVIDERS, ConnectorRegistry
 
         reg = ConnectorRegistry(mode="fake")
         connectors = {p: reg.get_connector(p, ctx) for p in KNOWN_PROVIDERS}

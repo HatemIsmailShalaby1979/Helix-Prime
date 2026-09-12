@@ -14,23 +14,24 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from capabilities.sports_academy import (  # noqa: E402
+    DATA_MODE,
     AcademyCapabilityPack,
     build_academy_connectors,
     build_synthetic_academy,
     compute_attendance,
     daily_adherence_report,
-    record_attendance_outcome,
     get_capability,
-    DATA_MODE,
-)
-from capabilities.sports_academy.adapters.attendance_adapter import (  # noqa: E402
-    rta_attendance_adherence,
+    record_attendance_outcome,
 )
 from capabilities.sports_academy import kpis as academy_kpis  # noqa: E402
+from capabilities.sports_academy import roles as academy_roles  # noqa: E402
 from capabilities.sports_academy.adapters.athlete_profile_adapter import (  # noqa: E402
     athlete_profile,
     churn_risk_scores,
     record_churn_flags,
+)
+from capabilities.sports_academy.adapters.attendance_adapter import (  # noqa: E402
+    rta_attendance_adherence,
 )
 from capabilities.sports_academy.workflows import (  # noqa: E402
     AcademyDiagnosis,
@@ -39,7 +40,6 @@ from capabilities.sports_academy.workflows import (  # noqa: E402
     load_flow_declaration,
     renewal_flow,
 )
-from capabilities.sports_academy import roles as academy_roles  # noqa: E402
 from connectors.contracts import ConnectorContext  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 from pilot.consent import ConsentRecord  # noqa: E402
@@ -123,7 +123,7 @@ def test_attendance_per_session_math():
     att = compute_attendance(
         conns["academy_ops"].list_sessions(ctx), conns["academy_ops"].list_checkins(ctx)
     )
-    for sid, row in att["by_session"].items():
+    for _, row in att["by_session"].items():
         assert row["present"] + row["absent"] == row["roster_size"]
         if row["roster_size"]:
             assert 0.0 <= row["attendance_rate"] <= 1.0

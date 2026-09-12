@@ -19,12 +19,12 @@ from connectors.contracts import SourceRef
 
 from .ontology import (
     Athlete,
-    Coach,
     CheckIn,
+    Coach,
     EnrollmentRecord,
+    FacilitySlot,
     Family,
     FeePayment,
-    FacilitySlot,
     Program,
     Session,
 )

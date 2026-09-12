@@ -8,12 +8,12 @@ import time
 from typing import Any, Dict
 
 from engines.contracts import EngineResult
-from security.classification import DataClassification, validate_payload_classification
-from security.policy import AuthorizationRequest, authorize
-from security.identity import Identity, ActorType
-from security.secrets import validate_no_secrets
-from security.audit import AuditTrail, AuditRecord
 from observability.logging import log_structured
+from security.audit import AuditRecord, AuditTrail
+from security.classification import DataClassification, validate_payload_classification
+from security.identity import ActorType, Identity
+from security.policy import AuthorizationRequest, authorize
+from security.secrets import validate_no_secrets
 
 ENGINE_ID = "rta"
 DISPLAY_NAME = "RTA Command Center"
@@ -248,8 +248,8 @@ def adapt(
                 warnings.append("using sample schedule/actual data — not live operational data")
                 is_sample = True
                 # Create minimal sample DataFrames
-                import pandas as pd
                 import numpy as np
+                import pandas as pd
 
                 np.random.seed(42)
                 n = 5
@@ -325,8 +325,9 @@ def adapt(
 
     # Invoke actual engine code
     try:
-        from engines.rta.src.calculations import RTACalculator
         import pandas as pd
+
+        from engines.rta.src.calculations import RTACalculator
 
         calc = RTACalculator(adherence_threshold=0.85, variance_threshold=2.0)
         # The engine expects DataFrames with specific columns

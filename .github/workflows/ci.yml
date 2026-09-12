@@ -47,7 +47,7 @@ jobs:
 
       - name: Run security scans
         run: |
-          bandit -r server/ connectors/ control_plane/ engines/ capabilities/ security/ -ll
+          bandit -c bandit.yaml -r server/ connectors/ control_plane/ engines/ capabilities/ security/ -ll
           pip-audit -r release/requirements.lock.txt
 
       - name: Check dependencies

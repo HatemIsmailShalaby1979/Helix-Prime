@@ -1,5 +1,10 @@
 # Helix Prime — Architecture Compliance Gap Analysis
 
+> **📦 ARCHIVED — Historical Reference Only**
+> Moved from `docs/GAP_ANALYSIS.md` on 2026-09-12 per the single-authority-chain
+> cleanup. Its own header declares "ALL GAPS RESOLVED"; current status is governed
+> by `00_CONSTITUTION.md` → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md`.
+
 **Date:** 2026-07-16 (archived 2026-07-20)
 **Status:** 🟢 ALL GAPS RESOLVED — see Resolution Note below
 **Constitution 000:** *Architecture serves as the expression of truth.*

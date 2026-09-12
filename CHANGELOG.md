@@ -108,3 +108,35 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Patch (0.0.X):** Bug fixes, security updates
 
 Entries are ordered newest to oldest. Breaking changes are marked.
+
+---
+
+## Governance session log appendix
+
+Folded in from the former `GOVERNANCE/CHANGE_LOG.md` (single changelog policy,
+2026-09-12). These are the dated session records predating `0.9.0-c8`; the
+relevant fixes are also recorded under the versioned entries above.
+
+### 2026-07-28 — Cockpit Phase 1 complete
+
+- `cockpit/cockpit.py` — central Streamlit dashboard (Dashboard, Agents, Engines, System Status pages)
+- Engine/agent probes via `probe_engine()` / `probe_agent_connection()` (compile + import checks)
+- 6 engine generators with sample data; SAMI chat interface; System Status page with audit report
+- **2nd pass:** fixed `KeyError 'loc'`, sibling-import resolution in probes, missing pip deps
+  (`scipy`, `scikit-learn`, `dash`); created SUBY/PHILI/WILI stubs and `orchestration/orchestrator.py`
+
+### 2026-07-29 — Session SES-20260729014911
+
+- Rewrote SUBY, PHILI, WILI from stubs to real Ollama agents; SAMI switched to `llama3.2:3b` (60s timeout)
+- Created `governance_check.py` enforcement; wired into cockpit.py and start.ps1
+- Recorded DEC-2026-0014 (hard-blocking governance enforcement); updated WORKSPACE_MAP.md
+
+### 2026-07-30 — Sessions SES-2026073004/0710/1530/1155
+
+- Created `app/command_center/agents/base_agent.py` (AgentRegistry, inter-agent `call_agent`,
+  qwen reasoning-traces, auto memory logging); SAMI/SUBY/PHILI/WILI → thin wrappers on BaseAgent
+- Rewrote cockpit.py as Operations Control Room (persistent Ask Any Agent bar, reasoning traces,
+  Memory tab, Client Simulation Mode); created `cockpit/memory/cognitive_log.py` (JSONL + SQLite)
+- Fixed critical `RecursionError` — recursion depth passed across agent calls via `_recursion_depth`
+- Fixed WFM Account Beta parameter (cockpit.py) and model reference `qwen3:4b` → `qwen3:8b`
+- End-to-end tests passed; dashboard redeployed on port 8501

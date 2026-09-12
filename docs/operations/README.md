@@ -37,7 +37,7 @@ has its own README. See `docs/ENGINEERING_SPECIFICATION.md` for per-engine notes
 No presentation decks are tracked in this repository as of 2026-08-04. The
 `docs/presentations/` decks were removed because they contained fabricated claims
 (an invented "proof ledger," "57 auditable entries," and enterprise positioning).
-See `GOVERNANCE/CHANGE_LOG.md` for the audit trail.
+See `CHANGELOG.md` for the audit trail.
 
 ## Monitoring & Alerting
 

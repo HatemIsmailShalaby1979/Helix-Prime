@@ -6,6 +6,8 @@
 
 > **The operations core of Helix Codex.**
 
+> **Authority chain:** `00_CONSTITUTION.md` (authority) → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (architecture + commercial record) → implementation. On conflict, the earlier link in the chain wins — the constitution outranks the blueprint, and both outrank status summaries, roadmaps, and release docs.
+
 Helix Prime is a local-first platform that runs six business engines (WFM, RTA, CX, B2B, Personnel, CRM) with nine AI agents routing requests by content. It includes a Streamlit cockpit, governed memory, and evidence-based approval workflows — all running on your machine with no cloud dependency.
 
 This is the first product for **Helix Codex**: an accountable AI operating organization that helps businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.

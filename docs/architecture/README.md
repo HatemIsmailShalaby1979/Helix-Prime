@@ -10,7 +10,7 @@ This directory contains architecture and design documentation for the Helix Prim
 | `ENGINEERING_SPECIFICATION.md` | Developers | Technical spec — repo structure, engine specs, API contracts, security posture |
 | `PRODUCT_DEFINITION.md` | Product | Product requirements, buyer personas, capabilities, pricing, deployment phases |
 | `COMMERCIAL_STORY.md` | Business | Business narrative — ROI, competitive positioning, churn prevention scenarios |
-| `GAP_ANALYSIS.md` | Engineering | Architecture compliance gap analysis — tracks recovery of lost engine code |
+| `archive/GAP_ANALYSIS.md` | Engineering | Architecture compliance gap analysis — archived 2026-09-12 ("ALL GAPS RESOLVED"); superseded by the master blueprint |
 
 ## Deep-Dive Architecture References
 

@@ -1,5 +1,10 @@
 # Helix Prime — Codex Upgrade Plan
 
+> **📦 ARCHIVED — Historical Reference Only**
+> Moved from `docs/HELIX_CODEX_UPGRADE_PLAN.md` on 2026-09-12 per the
+> single-authority-chain cleanup. Marked "Proposed"; superseded by
+> `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (the current execution blueprint).
+
 **Status:** Proposed execution plan  
 **Date:** 2026-08-27  
 **Scope:** Additive expansion of the existing Helix Prime project  

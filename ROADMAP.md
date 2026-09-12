@@ -1,7 +1,7 @@
 # Helix Prime — Roadmap
 
 > **Classification:** PROJECT DOCUMENT
-> **Rule:** No claim in this document may exceed what is verified in `MASTER_STORY.md`. This roadmap is replaced by this file when the previous draft is found to contradict verified reality. See `CHANGE_LOG.md` for the audit trail.
+> **Rule:** No claim in this document may exceed what is verified in `MASTER_STORY.md`. This roadmap is replaced by this file when the previous draft is found to contradict verified reality. See `CHANGELOG.md` for the audit trail.
 
 ---
 

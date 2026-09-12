@@ -8,6 +8,12 @@
 
 ## 0. Project context (read first)
 
+> **Authority chain:** `00_CONSTITUTION.md` (authority) →
+> `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (architecture + commercial record) →
+> implementation. `MASTER_STORY.md`, `ROADMAP.md`, `CHANGELOG.md`, and `docs/`
+> status summaries are subordinate records — they never outrank the constitution
+> or the blueprint, and they are replaced/archived as they stale.
+
 - **Repo:** `E:\Helix-Prime` (Helix Prime → being commercialized as "Helix Codex OS")
 - **Mission:** Build `capabilities/sports_academy/` — the first vertical capability
   pack for Helix Codex OS, for the first client (Scoach Academy Hub, a private
@@ -83,11 +89,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H2.4 (CI quality) + H2.5 (data retention) COMPLETE — all of G26–G30 done; only H1.3 (drift AST) remains open** |
+| Current step | **H3.1 (single authority chain, G31/G39) IN PROGRESS — chain declared + 8 docs archived/merged; H1.3 + H3.2–H3.4 open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified AFTER the G26–G30 lint/version work) |
-| Last commit | G30: fix(release): source manifest version from pyproject.toml |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, **H2.4 ✅, H2.5 ✅** |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified after the H3.1 docs cleanup) |
+| Last commit | H3.1: docs: establish single authority chain, archive superseded status docs |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, **H3.1 ✅ (G31 + G39)** |
 
 ### 1.2 Step ledger
 
@@ -301,7 +307,28 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 
 #### H3 — P3: Make it sellable (target: 1 week)
 
-- [ ] **H3.1** Single authority chain (G31, G39)
+- [x] **H3.1** Single authority chain (G31, G39) — **Completed 2026-09-12.**
+      Declared the chain at the top of `README.md` + AGENTS.md §0:
+      `00_CONSTITUTION.md` (authority) → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md`
+      (architecture + commercial record) → implementation; status summaries are
+      subordinate and never outrank the chain. Archived (git mv, NOT deleted) to
+      `docs/archive/`: `GAP_ANALYSIS.md` (header says "ALL GAPS RESOLVED") +
+      `HELIX_CODEX_UPGRADE_PLAN.md` (marked "Proposed"), each with an
+      archive banner. Deleted the 4 `docs/archive/MAP_{B2B,CX,RTA,WFM}.md` slices
+      AFTER programmatic proof all four are strict subsets of
+      `docs/archive/PROJECT_MAP.md` (0 unique lines after stripping per-file
+      banners/BOMs). Merged two duplicate pairs into single sources with a
+      pointer left at the old path: `GOVERNANCE/CHANGE_LOG.md` →
+      `CHANGELOG.md` (date-d session history now an appendix of the root
+      changelog), and `GOVERNANCE/wayfinder/map.md` →
+      `GOVERNANCE/WORKSPACE_MAP.md` (Wayfinder tracker section; ticket links
+      re-based to `wayfinder/tickets/...`). Updated stale pointer rows in
+      `docs/architecture/README.md`, `docs/operations/README.md`, `ROADMAP.md`.
+      **Link crawler: 0 broken relative links across 108 tracked .md files.**
+      Stale-fact ("no 445-tests claim") test SKIPPED — all remaining
+      `445 tests` claims are owned by the next step H3.2 (G32–G35) which has
+      their fixes; a red-light assertion now would fail the suite on files not
+      touched this step. Full suite 620 passed/0 failed; ruff N/A (docs-only).
 - [ ] **H3.2** Stale facts (G32–G35)
 - [ ] **H3.3** Security docs (G36, G37)
 - [ ] **H3.4** CHANGELOG + hygiene (G38, G40, G41)

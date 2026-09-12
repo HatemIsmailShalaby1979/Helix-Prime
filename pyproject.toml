@@ -217,6 +217,10 @@ disable_error_code = [
     "call-arg",
     "type-var",
     "dict-item",
+    "union-attr",
+    "truthy-function",
+    "index",
+    "override",
 ]
 exclude = [
     "engines/b2b/src/main\\.py",

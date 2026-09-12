@@ -105,7 +105,7 @@
 
 ## Residual Risk Summary
 
-C3 provides **tamper-evident, append-oriented, deny-by-default, local-first** foundations. Not yet: backup/restore verification, row-level DB ACL, NER PII, LLM-based injection detection, distributed idempotency, full observability metrics, IdP-backed server auth, RTA endpoint auth. These are C4/C5/C8.
+C3 provides **tamper-evident, append-oriented, deny-by-default, local-first** foundations. Metrics/alerting established (H2.2: `observability/metrics.py`, `/metrics` behind auth, `infra/monitoring/alerts.yml`). Not yet: backup/restore verification, row-level DB ACL, NER PII, LLM-based injection detection, distributed idempotency, IdP-backed server auth, RTA endpoint auth. These are C4/C5/C8.
 
 ## References
 

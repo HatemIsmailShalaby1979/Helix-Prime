@@ -16,10 +16,15 @@
 ```mermaid
 graph TB
     subgraph "HELIX PRIME - AI Organization"
-        SAMI["SAMI - CEO / Strategist"]
-        WILI["WILI - Learning & Development"]
-        PHILI["PHILI - Personnel Director"]
-        SUBY["SUBY - Operations Executive"]
+        SAMI["SAMI - Executive Coordinator / CEO"]
+        SUBY["SUBY - Operations GM"]
+        PHILI["PHILI - HR & Personnel GM"]
+        WILI["WILI - L&D GM"]
+        MAYA["MAYA - Marketing GM"]
+        LIZA["LIZA - Sales GM"]
+        ANDY["ANDY - Compliance & Quality GM"]
+        TOMY["TOMY - ICT GM"]
+        NONO["NONO - Fraud Analysis & Revenue Assurance GM"]
     end
 
     subgraph "Business Engines"
@@ -50,6 +55,11 @@ graph TB
     SUBY -->|manages| B2B
     SUBY -->|directs CRM| CRM
     PHILI -->|drives hiring| PERS
+    MAYA -->|markets| ORCH
+    LIZA -->|sales pipeline| CRM
+    ANDY -->|reviews & qualifies| MEM
+    TOMY -->|platform stability| LOCAL
+    NONO -->|revenue assurance| CX
     WILI -->|generates training| MEM
 
     WFM -->|forecasts| MEM
@@ -69,13 +79,18 @@ graph TB
 
 ## How It Works — Plain Language
 
-**Helix Prime** is a four-member AI leadership team that directs six operational engines, running on shared infrastructure that learns over time.
+**Helix Prime** is a nine-member AI leadership team that directs six operational engines, running on shared infrastructure that learns over time.
 
 ### The Leadership Team
 - **SAMI** — The CEO. Sets strategy, approves staffing decisions, owns the system's north star. Reviews churn risks and directs the personnel strategy.
-- **SUBY** — The Operations Executive. Runs real-time operations, monitors adherence, and manages client onboarding workflows.
-- **PHILI** — The Personnel Director. Owns talent acquisition, candidate scoring, and hiring pipeline management.
-- **WILI** — The Learning & Development Director. Creates training content and feeds lessons back into the system's memory.
+- **SUBY** — The Operations GM. Runs real-time operations, monitors adherence, and manages client onboarding workflows.
+- **PHILI** — The HR & Personnel GM. Owns talent acquisition, candidate scoring, and hiring pipeline management.
+- **WILI** — The L&D GM. Creates training content and feeds lessons back into the system's memory.
+- **MAYA** — The Marketing GM. Owns demand generation, market intelligence, and campaign management.
+- **LIZA** — The Sales GM. Owns the sales pipeline, CRM operations, and proposal generation.
+- **ANDY** — The Compliance & Quality GM. Reviews actions, qualifies results, and enforces segregation-of-duties rules.
+- **TOMY** — The ICT GM. Owns platform operations, integration management, and reliability.
+- **NONO** — The Fraud Analysis & Revenue Assurance GM. Detects anomalies, enforces revenue assurance, and performs leakage analysis.
 
 ### The Six Engines
 Each engine is a specialized module that solves one operational domain. They are integrated but independently runnable.
@@ -91,9 +106,9 @@ Each engine is a specialized module that solves one operational domain. They are
 - **Security**: No secrets on disk, environment-var based configuration, hardened .gitignore.
 
 ### What is NOT running or proven
-- No "proof ledger" and no "immutable audit trail" exists in the codebase.
-- No Flask webapp at port 5000 is a current, verified service.
-- No client deployments, no production enterprise usage, no customer accounts.
+- No "proof ledger" of 57 fabricated entries exists. (The append-only, hash-chained **governed memory** and the **audit chain** in `security/audit.py` are real and verified; they are not the invented "proof ledger" of earlier drafts.)
+- No live client deployments, no production enterprise usage, no paying customer accounts. The Scoach Academy Hub sports-academy pack runs on simulated data only.
+- No hosted cloud service. Render/Azure configs in `marketing/` serve the standalone marketing site only.
 
 ---
 

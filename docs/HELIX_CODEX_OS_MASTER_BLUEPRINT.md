@@ -1,7 +1,7 @@
 # Helix Codex OS — Master Execution & Commercial Blueprint
 
 **Subject:** Refactor + commercialize **Helix Prime** into **Helix Codex OS**
-**Baseline audited:** 2026-09-07 · 174 `.py` files · 47,244 LOC · 26 test modules · ~620 tests
+**Baseline audited:** 2026-09-07 · 174 `.py` files · 47,244 LOC · 26 test modules · ~621 tests (recounted 2026-09-12)
 **Status of baseline:** `CONTROLLED_PILOT_READY` (production profile fails closed on 9 external gates — by design)
 **Authority:** Sections 1–6 are the architectural + commercial record. Section 7 is the executable Phase 1 plan.
 
@@ -533,7 +533,7 @@ curl -fsSL https://get.helixcodex.os/install.sh | bash
 
 ### 5.6 P0 blocker
 
-**There is no LICENSE file.** No commercialization is possible until this is resolved. Recommended: **BSL 1.1** (source-available, converts to Apache-2.0 after 4 years) for the core — it permits self-hosting while protecting the managed-cloud tier from a competitor. Community sentiment will prefer AGPL-3.0, but BSL protects the revenue model. Resolve before Phase 4.
+**LICENSE is resolved (2026-09-12).** `LICENSE.md` exists at the repo root (MIT text, mirroring `pyproject.toml` `license = { text = "MIT" }`). The prior "no LICENSE" gap was a stale claim — fixed in H0.6/G35. The open licensing question (whether to migrate the core from MIT to a source-available license like BSL 1.1 / AGPL-3.0 to protect the managed-cloud tier) remains a Phase 4 business decision, not a blocker.
 
 ---
 
@@ -555,7 +555,7 @@ curl -fsSL https://get.helixcodex.os/install.sh | bash
 
 ### W0 — Pre-flight (blocking)
 
-**Do not start W1 until `git status` is clean.** 15 modified + 21 untracked paths carry the newest load-bearing code (`control_plane/{control_seam,governance,tenancy}.py`, `control_plane/schemas/`, `engines/{adapters,base_adapter}.py`, `requirements*.txt`, `tests/conftest.py`, `tests/support/`, `scripts/`, `infra/`, `organization/gm_activation.py`). Refactoring with half the system uncommitted means no diff and no revert.
+**Do not start W1 until `git status` is clean.** Load-bearing code lives in `control_plane/{control_seam,governance}.py` (note: `control_plane/tenancy.py` was **deleted 2026-09-11** — tenant isolation is enforced at the single policy seam `security/policy.py::authorize`, per H1.4 Decision B), `control_plane/schemas/`, `engines/{adapters,base_adapter}.py`, `requirements*.txt`, `tests/conftest.py`, `tests/support/`, `scripts/`, `infra/`, `organization/gm_activation.py`. Refactoring with half the system uncommitted means no diff and no revert.
 
 1. Commit untracked work: `chore: land untracked C5/C8 work before Phase 1`
 2. `git rm --cached control_plane/workflow.db`; add to `.gitignore`: `.venv/`, `.venv-win/`, `__pycache__/`, `*.db*`, `.pytest-tmp/`, `.tmp/`
@@ -654,7 +654,7 @@ server/templates/  server/static/
 - **Config:** reuse env names the Dockerfile already sets (`HELIX_ENV`, `HELIX_DB_PATH`, `HELIX_AUDIT_DB_PATH`, `HELIX_SAMPLE_DATA_MODE`, `OLLAMA_HOST`). `profile ∈ {local,pilot,production}`; **`production` refuses to start** unless external gates are satisfiable. No default for any secret.
 - **Errors:** `AppError(code, http_status, retryable)` → `ValidationAppError(422)`, `NotFound(404)`, `AuthorizationRefused(403)`, `GateAwaitingApproval(409, payload=decision.to_dict())`, `UpstreamUnavailable(503)`. Substring matching banned at this boundary.
 - **Request-ID middleware:** read/generate `X-Request-ID` → bind to `CorrelationContext.correlation_id` → emit in every log line and response header. Enforces "context survives every boundary" in one place.
-- **SSE:** `asyncio.Queue` per `correlation_id`, fed by sync workers via `anyio.to_thread.run_sync(engine.submit, ...)`. **Do not async-ify `Engine`** (620 sync tests).
+- **SSE:** `asyncio.Queue` per `correlation_id`, fed by sync workers via `anyio.to_thread.run_sync(engine.submit, ...)`. **Do not async-ify `Engine`** (621 sync tests).
 - **Endpoints:** `GET /healthz`, `GET /readyz`, `POST /api/workflows`, `GET /api/workflows/{id}`, `POST /api/workflows/{id}/approve`, `GET /api/stream/{id}`, `GET /`.
 - **Compose:** `EXPOSE 8000`; `CMD uvicorn server.app:create_app --factory`. Keep the Streamlit cockpit as a second service for one release.
 
@@ -700,7 +700,7 @@ Today `request_write` returns a constant `executed=False` ("read_only_first_vers
 ### W7 — Testing & CI baseline (the Phase 2 gate)
 
 - **One** `.github/workflows/ci.yml`, Python **3.12 only**: ruff (real exit code) → `mypy server connectors control_plane` → `pytest -m "not smoke" --cov=server --cov=connectors --cov-fail-under=80` → `check_dependencies.py` → `python -m build`
-- **No repo-wide coverage target** — 47 K LOC against 620 tests makes a global percentage a gaming target. Gate **new** code (`server/`, `connectors/`) at 80%; `control_plane/` advisory.
+- **No repo-wide coverage target** — 47 K LOC against 621 tests makes a global percentage a gaming target. Gate **new** code (`server/`, `connectors/`) at 80%; `control_plane/` advisory.
 - `pytest.ini` → `[tool.pytest.ini_options]`: add `timeout = 120`, `--durations=20`; CI runs `-m "not smoke"`, a nightly job runs smoke against Compose + Ollama.
 
 **Phase 2 gate:** 0 failures on the full non-smoke suite (count ≥ W0 baseline) · ruff clean · mypy clean on `server/`+`connectors/` · `python -m build` green · `docker compose up` → `/readyz` 200.
@@ -712,7 +712,7 @@ Today `request_write` returns a constant `executed=False` ("read_only_first_vers
 | Deferred | Why |
 | --- | --- |
 | `src/` layout migration | Invalidates `pythonpath`, 26 test modules, 3 Dockerfiles — zero functional gain |
-| Async-ifying `Engine` | 620 sync tests are the only safety net; async confined to `server/sse.py` |
+| Async-ifying `Engine` | 621 sync tests are the only safety net; async confined to `server/sse.py` |
 | Resolving the role authority conflict by picking a number | ops_gm 20 000 vs 500 is a **policy** decision needing a signed record. Phase 1 does: YAML as single source → `sync_role_metadata.py` generates `ORGANIZATION_CATALOG` → drift test fails on divergence. **Numbers unchanged.** |
 | Encryption at rest | Not constitutionally required; fights keyless self-hosted start. Logged in `docs/SECURITY-DEBT.md` |
 | "Fixing" the production gate | It **must** fail closed. Add a test asserting the service refuses writes on `production` so nobody "fixes" it later |
@@ -722,7 +722,7 @@ Today `request_write` returns a constant `executed=False` ("read_only_first_vers
 ## Appendix B — Top risks
 
 1. **W0 is the biggest risk, not the code.** Half the newest system is uncommitted. Do not start W1 until `git status` is clean.
-2. **No LICENSE** — blocks all commercialization. Resolve before Phase 4.
+2. **LICENSE resolved (H0.6/G35)** — `LICENSE.md` (MIT) exists and matches `pyproject.toml`. Open question is only whether to migrate to a source-available license to protect the managed-cloud tier — a Phase 4 business decision.
 3. **Convenience penalty** (PCV: self-hosting is *less* convenient). Installer must be <10 minutes or the ICP won't convert.
 4. **Solo-dev throughput.** Phase 2 (10–14 wks) is the real crunch; consider cutting Docs editing to a block-based MVP.
 5. **Local LLM quality.** `qwen3:8b` regex-tool-calling is being replaced by structured output — verify JSON-schema adherence on the target hardware early, or the whole agent rail stalls.

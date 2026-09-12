@@ -1,5 +1,13 @@
 # Helix Prime Codex — Controlled Pilot Handoff Dossier
 
+> **STATUS: DATED SNAPSHOT (2026-08-28, HEAD `4eed5b4`).** This dossier records the
+> build state at that date (307 tests, Python 3.14.4, manifest `99f9bd37`,
+> `PRODUCTION_CANDIDATE`). It is preserved as a historical handoff record and is **not**
+> the current repo state. Current status (2026-09-12): full suite **621 passed / 0 failed**,
+> core version **0.9.0-c8**, all production-hardening steps (H0–H3) complete, and the
+> controlled-pilot boundary described below is still in force. Re-verify against
+> `release/release-manifest.json` and `scripts/release_gate.py` before operational use.
+
 Status: **Controlled pilot / production candidate** handoff dossier. This document is
 the additive, human-reviewable operating handoff for the C8 controlled pilot. It does
 not claim production readiness and records no fabricated approvals.

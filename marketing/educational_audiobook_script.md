@@ -39,12 +39,17 @@ This scenario is all too common. For nearly three decades, Hatem Shalaby, the fo
 
 ## Chapter 2: What is Helix Prime?
 
-**Narrator:** Helix Prime is not just another software tool or dashboard. It is a **digital operations team** designed to handle the complexities of modern business operations. This team consists of four specialized roles:
+**Narrator:** Helix Prime is not just another software tool or dashboard. It is a **digital operations team** designed to handle the complexities of modern business operations. This team consists of nine specialized roles:
 
 1. **Strategist:** Ensures every action aligns with the business goals.
 2. **Operations Manager:** Monitors real-time performance and prevents crises.
 3. **Talent Director:** Connects the dots between staffing needs and available talent.
 4. **Learning Coach:** Turns every decision into a lesson for continuous improvement.
+5. **Sales & Growth:** Keeps the sales pipeline and client relationships moving.
+6. **Workforce Planner:** Turns forecasts into the right people at the right time.
+7. **Marketing & Demand:** Generates pipeline and markets the brand.
+8. **Compliance & Quality:** Reviews results and enforces standards.
+9. **Platform Engineer:** Keeps the systems, integrations, and reliability running.
 
 These roles work together to support operational excellence.
 

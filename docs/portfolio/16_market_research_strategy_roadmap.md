@@ -132,7 +132,7 @@ Every credible 2025–2026 source converges on the same bottleneck:
 
 The market is explicitly asking for **the governed, read-only-first, human-approved operating
 layer** — which is precisely what this repository demonstrates end-to-end (see
-[`01_architecture_overview.md`](01_architecture_overview.md) and the 620-test baseline in
+[`01_architecture_overview.md`](01_architecture_overview.md) and the 621-test baseline in
 [`15_verified_test_results.md`](15_verified_test_results.md)). Big-tech platforms will own the
 general-purpose agent runtime (CB Insights); independents win by solving **accountability that
 cuts across platforms** — a neutral governance/orchestration substrate with an immutable
@@ -286,7 +286,7 @@ leverage**. No branch is "failure"; each is a deliberate, evidenced choice.
 
 ### Path C — Portfolio-as-leverage (employment/senior role)
 - **Use case:** if a multi-year solo build is not the right risk profile yet.
-- The 15-document portfolio (620 tests, `governance=PASS`, security `all_ok=True`, published
+- The 15-document portfolio (621 tests, `governance=PASS`, security `all_ok=True`, published
   demo) is direct, verifiable evidence for **AI governance / agent-infrastructure leadership**
   roles: CTO/Staff-IC at agent platforms, AI-governance product owner at TRiSM vendors
   (OneTrust, Credo AI, Fiddler), or "head of AI governance" at a regulated enterprise.

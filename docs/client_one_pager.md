@@ -36,7 +36,7 @@ This is not another booking app. This is an **operating system** — it runs you
 
 ## Who am I
 
-I'm a solo builder. This is my first client in the sports academy world — which is why I'm offering it free for 60 days and building it specifically for your academy. You get a system tailored to you, not a generic tool sold to thousands.
+I'm a solo builder. This is my first client in the sports academy world — which is why I'm offering it free for 60 days and tailoring it specifically to your academy. The sports-academy system is already built and running; the pilot is about tuning it to your roster, your coaches, and your KPIs. You get a system tailored to you, not a generic tool sold to thousands.
 
 ## Next step
 

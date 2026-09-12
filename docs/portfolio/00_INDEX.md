@@ -25,7 +25,7 @@ been demonstrated; unfinished items are listed separately in
   **one governed memory** with tenant isolation and an intact audit chain.
 
 ## Verification summary (reproducible)
-- **Tests:** 620 passed (`pytest tests/ -q`; recounted 2026-09-12). See [`15_verified_test_results.md`](15_verified_test_results.md).
+- **Tests:** 621 passed (`pytest tests/ -q`; recounted 2026-09-12). See [`15_verified_test_results.md`](15_verified_test_results.md).
 - **Governance:** `python3 -m GOVERNANCE.governance_check check` → `governance=PASS`.
 - **Security:** `release.security_gate.run_security_gate()` → `all_ok=True` (0 secret findings, deny-by-default, redaction, audit integrity).
 - **Synthetic demo (clean setup):** `python3 demo/synthetic_demo.py` → exits 0, audit chain intact, 0 live-customer records, no external writes.

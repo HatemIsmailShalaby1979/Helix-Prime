@@ -1,8 +1,16 @@
 # Repository Graph — Helix Prime Ecosystem
 
-> **Single source of truth for the workspace's physical structure and dependency topology.**
-> Generated 2026-07-20 from live filesystem inspection. Author: **Hatem Shalaby**.
-> Maintained alongside `ROOT_BOOT.md` (the constitution). When you move code, update both.
+> **STATUS: SUPERSEDED (2026-09-12).** This graph was generated 2026-07-20 from a
+> workspace layout — `AI OPS Engineering/`, `app/command_center/`, a Go daemon, and a
+> ChromaDB RAG chain — that has since been refactored. The current layout is
+> `control_plane/` (governed core), `server/` (FastAPI spine), `connectors/`
+> (read-only adapters), `capabilities/{restaurant,sports_academy}/` (vertical packs),
+> `organization/` (catalog + YAML), `security/`, `observability/`, `pilot/`, and
+> `release/`. The authoritative structure for the live repo is `docs/ENGINEERING_SPECIFICATION.md`
+> and `DEVELOPMENT.md`; the authority chain is `00_CONSTITUTION.md` → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md`
+> → implementation. The graph below is retained as a historical record of the
+> 2026-07-20 topology, not as the current physical structure.
+> Author: **Hatem Shalaby**.
 
 ---
 
@@ -11,7 +19,7 @@
 - **Solid arrows** = hard dependency (import, subprocess, registry path, config load).
 - **Dashed arrows** = soft dependency (shared memory, deployment artifact, narrative link).
 - LOC counts are Python only (`*.py`), excluding `__pycache__`, `.venv`, and tests unless noted.
-- Constitution rule (from `ROOT_BOOT.md`): **kebab-case directories, no spaces in paths, single `.git` at root.**
+- Constitution rule (from `00_CONSTITUTION.md`): **kebab-case directories, no spaces in paths, single `.git` at root.**
 
 ---
 
@@ -52,7 +60,7 @@ flowchart TD
     Root --> ENGINES
     Root --> Docs["docs/{architecture,operations,archive,presentations}"]
     Root --> Mktg["marketing/ · portfolio site + demo"]
-    Root --> Toplevel["README · ROOT_BOOT · SESSION_LOG · SECURITY<br/>WORKSPACE_AUDIT_REPORT"]
+    Root --> Toplevel["README · 00_CONSTITUTION · CHANGELOG · SECURITY<br/>LICENSE · AGENTS"]
 
     %% Narrative / soft links (engines are independently runnable)
     CCAgents -.->|"narrative: AI org directs ops"| ENGINES
@@ -229,37 +237,32 @@ No live code, CI, Docker, or config referenced the old paths — the relocation 
 
 ```mermaid
 flowchart TD
-    ROOT_BOOT["ROOT_BOOT.md<br/>🔴 CONSTITUTION — mandatory first read"]
-    SESS["SESSION_LOG.md<br/>append-only audit trail"]
-    AUDIT["WORKSPACE_AUDIT_REPORT.md<br/>full audit + fix commands"]
+    CONST["00_CONSTITUTION.md<br/>🔴 AUTHORITY — mandatory first read"]
+    BLUEP["docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md<br/>architecture + commercial record"]
+    AGENTS["AGENTS.md<br/>build ledger + current step"]
     README["README.md<br/>GitHub landing page"]
+    CHANGES["CHANGELOG.md<br/>dated session history"]
 
     subgraph DOCS["docs/"]
         Arch["architecture/{REPO_GRAPH.md (this file),<br/>README.md}"]
         Ops["operations/"]
+        Audit["audits/<br/>read-only dated audit records"]
         Archive["archive/<br/>read-only historical MAPs + audits"]
-        Pres["presentations/ · pptx"]
-        Assets["assets/"]
+        Port["portfolio/ · client-facing docs"]
     end
 
-    subgraph HELIXDOCS["helix-prime-ecosystem/docs/"]
-        Const["constitution.md · constitution_v0.md"]
-        Runbook["runbook.md"]
-        MemSys["memory_system.md"]
-        Status["status.md"]
-    end
-
-    ROOT_BOOT -->|"authority"| README
-    ROOT_BOOT -->|"authority"| SESS
-    ROOT_BOOT -->|"authority"| AUDIT
-    Arch -->|"graphs"| ROOT_BOOT
-    Archive -.->|"historical"| AUDIT
-    Helix -.-> HELIXDOCS
+    CONST -->|"authority"| BLUEP
+    BLUEP -->|"governs"| AGENTS
+    AGENTS -->|"tracks"| CHANGES
+    BLUEP --> README
+    Arch -->|"graphs"| CONST
+    Ops -.->|"operational"| AGENTS
+    Archive -.->|"historical"| Audit
 
     classDef auth fill:#1a1a2e,stroke:#e94560,color:#fff,stroke-width:2px
     classDef doc fill:#222,stroke:#888,color:#fff
-    class ROOT_BOOT,SESS,AUDIT auth
-    class README,Arch,Ops,Archive,Pres,Assets,Const,Runbook,MemSys,Status doc
+    class CONST,BLUEP,AGENTS auth
+    class README,CHANGES,Arch,Ops,Audit,Archive,Port doc
 ```
 
 ---

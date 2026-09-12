@@ -30,15 +30,17 @@ So he decided to build something different."
 
 ## 🎬 1:00 – 2:00 — What Helix Actually Is
 
-> [Visual: Clean, simple animations showing four "roles" appearing on screen — like a leadership team taking their seats at a table.]
+> [Visual: Clean, simple animations showing nine "roles" appearing on screen — like a leadership team taking their seats at a table.]
 
 "Helix Prime isn't another dashboard or a chatbot.
-It's a digital operations team — four specialized roles that work together, around the clock.
+It's a digital operations team — nine specialized roles that work together, around the clock.
 
 There's the strategist — looking at the big picture, making sure every action aligns with the business goal.
 The operations manager — watching the floor in real time, catching problems before they become crises.
 The talent director — connecting the dots between who you need and who's available.
 And the learning coach — turning every decision into a lesson that makes the whole team smarter.
+
+Then the specialists who round out the team: sales and account growth, workforce planning, marketing, compliance and quality, and platform engineering.
 
 They don't just talk. They coordinate. They act. They learn."
 

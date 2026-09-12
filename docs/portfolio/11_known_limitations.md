@@ -14,8 +14,8 @@ gate or an explicit out-of-scope decision.
 - **Durable memory persistence in the pilot runtime** — `GovernedMemory` is in-memory by default
   (`in_memory_not_persisted`). A hardened store exists at the release-gate level but is not wired
   into the pilot/capability runtime.
-- **Universal business coverage** — only call-centre and one small-restaurant workflow are
-  demonstrated. Helix Codex is **not** claimed to work for every business.
+- **Universal business coverage** — only call-centre, one small-restaurant, and one sports-academy
+  workflow family are demonstrated. Helix Codex is **not** claimed to work for every business.
 - **Real cloud deployment** — the cloud boundary is synthetic-only; no production infrastructure.
 - **External audits/reviews** — certified tenant/data isolation, external observer audit, signed
   production evidence, security review, legal/privacy review, operational/on-call ownership, and
@@ -31,5 +31,5 @@ gate or an explicit out-of-scope decision.
 
 ## What IS completed (for contrast)
 See [`00_INDEX.md`](00_INDEX.md) and [`15_verified_test_results.md`](15_verified_test_results.md):
-the governed core, the controlled pilot, the restaurant capability pack, the synthetic demo, 620
+the governed core, the controlled pilot, the restaurant capability pack, the sports-academy capability pack, the synthetic demo, 621
 passing tests, `governance=PASS`, security `all_ok=True`, and the release gates.

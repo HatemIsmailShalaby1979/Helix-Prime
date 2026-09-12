@@ -61,8 +61,10 @@ fact.
 ## Verification notes
 
 - Python compilation passed for the new C4–C8 modules and the cockpit panel.
-- The C0 dependency drift check passes with only empty historical compatibility
-  shims in `cockpit/requirements.txt` and `engines/*/requirements.txt`.
+- The C0 dependency drift check passes against the canonical single manifest
+  (`requirements.txt` + `requirements-dev.txt`; CI lock in `release/requirements.lock.txt`).
+  The historical per-package `cockpit/requirements.txt` and `engines/*/requirements.txt`
+  shims are gone — dependency declarations are consolidated at the repo root.
 - The RTA/WFM seam smoke path passes for no-breach, awaiting-approval,
   approved/recalculated and denied branches.
 - A full historical suite run exposed unrelated legacy teardown assumptions; the

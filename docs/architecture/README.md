@@ -16,9 +16,9 @@ This directory contains architecture and design documentation for the Helix Prim
 
 | Document | Path | Description |
 |----------|------|-------------|
-| System Analysis & Design | `AI OPS Engineering/HELIX_ECOSYSTEM_SYSTEM_ANALYSIS_AND_DESIGN.md` | Deep system analysis (v2.0) |
-| Wiki Architecture | `AI OPS Engineering/Wiki/SYSTEM_ANALYSIS.md` | Architecture deep-dive |
-| Repository Graph | `architecture/REPO_GRAPH.md` | Live filesystem dependency topology (generated 2026-07-20) |
+| System Analysis & Design | `docs/archive/SYSTEM_AUDIT_2026-07-16.md` | Historical deep system analysis (archived) |
+| Master Blueprint | `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` | Architectural + commercial record; governs implementation |
+| Repository Graph | `architecture/REPO_GRAPH.md` | Live filesystem dependency topology |
 
 ## Supporting Documentation
 
@@ -26,16 +26,17 @@ This directory contains architecture and design documentation for the Helix Prim
 |--------|----------|
 | `archive/` | Historical analysis, MAP files, system audits, technical handoffs (read-only) |
 | `operations/` | Runbooks, deployment guides, monitoring/alerting reference |
-| `presentations/` | Stakeholder decks (Helix_Operators_Deck.pptx, Helix_Stakeholder_Deck.pptx) |
-| `assets/` | Diagrams, images, and media assets (for embedding in architecture docs) |
+| `audits/` | Audit records and production-hardening plans (read-only, dated) |
+| `portfolio/` | Client-facing architecture/security/evidence documents |
 
 ## Workspace Structure Reference
 
-The authoritative source of truth for the workspace physical structure is:
+The authoritative source of truth for the workspace physical structure:
 
-- **`ROOT_BOOT.md`** (repo root) — Constitution, check-in/out protocol, project registry, naming rules
-- **`architecture/REPO_GRAPH.md`** — Mermaid dependency graph with LOC counts
-- **`WORKSPACE_AUDIT_REPORT.md`** (repo root) — Full workspace audit
+- **`00_CONSTITUTION.md`** (repo root) — governs authority; wins over any doc on conflict
+- **`docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md`** — architecture + commercial record (implementation authority below the constitution)
+- **`architecture/REPO_GRAPH.md`** — dependency graph with LOC counts
+- **`AGENTS.md`** — build ledger: current step, completed steps, environment facts, git protocol
 
 ## ADRs (Architecture Decision Records)
 
@@ -49,4 +50,4 @@ Example: `adr-0001-use-chromadb-for-vector-store.md`
 
 ### Existing ADRs
 
-*(No ADRs recorded yet. The architecture decisions are documented in `ROOT_BOOT.md` (Constitution) and the system analysis documents.)*
+*(No ADRs recorded yet. The architecture decisions are documented in `00_CONSTITUTION.md` and the master blueprint.)*

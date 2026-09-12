@@ -30,7 +30,7 @@ It is built by one person, Hatem Shalaby, after 28 years working on the operatio
 | B2B Onboarding | Present |
 | Personnel engine | Present |
 | CRM engine | Present |
-| 4 AI agents (SAMI, SUBY, PHILI, WILI) | Present, connected to local Ollama |
+| 9 AI agents (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY) | Present, connected to local Ollama |
 | Orchestrator | Content-based routing |
 | Operations Cockpit | Streamlit dashboard |
 | CI pipeline | Live with pre-commit linting |
@@ -47,10 +47,10 @@ It is built by one person, Hatem Shalaby, after 28 years working on the operatio
 
 ## Deployment
 
-Alpha, run locally. See the repository README for how to launch the cockpit. There is no supported deployment model beyond running the code yourself; the cloud configuration files in this repo (`render.yaml`, `azure.yaml`, `Dockerfile`) are scaffolding, not proof of a hosted service.
+Alpha, run locally. `helix-api` (FastAPI spine, loopback-bound) is the canonical entry point; the Streamlit cockpit (`helix-cockpit`) is explicitly secondary. There is no supported hosted deployment — the cloud configuration files in this repo (`render.yaml`, `azure.yaml`, `Dockerfile`) are scaffolding, not proof of a hosted service.
 
 ## Contact
 
-Built and maintained by Hatem Shalaby. Public contact is via `github.com/HatemShelby/HatemShelby`.
+Built and maintained by Hatem Shalaby. Public contact is via `github.com/HatemIsmailShalaby1979/Helix-Prime`.
 
 *Built from 28 years on the operations floor, encoded into software — honestly, one verified increment at a time.*

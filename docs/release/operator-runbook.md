@@ -15,16 +15,16 @@ candidate. It is part of the C8 `operator_readiness` release gate.
 
 ## 2. Prerequisites
 
-- Python 3.10+ on PATH (`python3 --version`).
+- Python **3.12** (`python3 --version`) — the repo requires `>=3.12,<3.13`.
 - A clean checkout of the `main` branch (see `docs/release/setup-guide.md`).
 
 ## 3. Reproducible setup (one-time)
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r release/requirements.lock.txt
+.venv/bin/pip install -r requirements.txt -r requirements-dev.txt
 python3 -m pytest -q          # full suite (expect all green from clean tree)
-python3 scripts/smoke.py       # engines 6/6, agents 4/4
+python3 scripts/smoke.py       # engines 6/6, agents 4/4 (registry probes; full 9-agent catalog in organization/role-catalog.yaml)
 ```
 
 See `docs/release/setup-guide.md` for the full one-doc install path.
@@ -49,11 +49,14 @@ python3 scripts/release_gate.py --profile controlled_pilot
 Expected result: `PRODUCTION_CANDIDATE` or `CONTROLLED_PILOT_READY`.
 An unqualified `PRODUCTION` label is **never** emitted by this gate.
 
-## 6. Starting the cockpit
+## 6. Starting the API / cockpit
 
 ```bash
-python3 launch.py --port 8501
+helix-api                      # canonical FastAPI spine (loopback 127.0.0.1:8000)
+helix-cockpit                  # Streamlit dashboard (secondary)
 ```
+
+`launch.py` / `launch.bat` remain as a legacy path.
 
 ## 7. Operational limits
 

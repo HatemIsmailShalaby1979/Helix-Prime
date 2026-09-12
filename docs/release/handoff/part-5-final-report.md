@@ -1,5 +1,12 @@
 # Part 5 — Final Audit Report
 
+> **STATUS: DATED AUDIT RECORD (2026-08-28, HEAD `4eed5b4`).** All commands, counts
+> (307 tests), versions (Python 3.14.4, manifest `99f9bd37`), and gates below reflect
+> that date and are preserved as history — do not treat them as current. Current status
+> (2026-09-12): full suite **621 passed / 0 failed**, core `0.9.0-c8`, production
+> hardening H0–H3 complete. Re-run the commands below against the live repo for today's
+> numbers.
+
 ## 1. Audit date and repository commit
 
 | Field | Value |

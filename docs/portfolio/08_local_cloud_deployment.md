@@ -21,9 +21,11 @@ demonstration surface, not a production path.
   primary.
 
 ## Controlled pilot deployment
-- The pilot/capability runtime is instantiated in-process against a `GovernedMemory`. There is no
-  standalone server in this build (the cockpit shell is a separate web app that injects its own boot
-  context and is not required to run the governed core).
+- The pilot/capability runtime is instantiated in-process against a `GovernedMemory`. A standalone
+  FastAPI spine (`helix-api`, `server/`) now exists and is the canonical entry point — loopback-bound
+  (`127.0.0.1`), auth-protected (`/healthz` excepted), exposing the governed engine, kill switch
+  (`/api/halt/*`), and metrics (`/metrics`, behind auth). The cockpit remains a separate web app that
+  injects its own boot context and is not required to run the governed core.
 
 ## What is NOT claimed
 - No real cloud deployment, no production infrastructure, no live multi-tenant hosting. The

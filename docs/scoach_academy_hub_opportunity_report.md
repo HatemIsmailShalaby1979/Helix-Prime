@@ -25,9 +25,9 @@
 
 **One-liner:** For private sports academies drowning in manual operations, Helix Codex OS provides a governed AI operating system that coordinates scheduling, attendance, CRM, churn detection, and staff KPIs — unlike point solutions like Upper Hand or Yuvoxx that solve one piece, Helix runs the whole operation as one accountable system.
 
-**PCV Score: 11/24 (strong opportunity — worth pursuing with caution)**
+**PCV Score: 18/24 (strong opportunity — worth pursuing)**
 
-**Recommendation:** Proceed. This is a real problem with a real customer who is already in pain. The fit between Helix Codex's six engines and a sports academy's six core operational needs is remarkably tight. But you are entering a new vertical with no existing capability pack — so the first 90 days are about proving value on a narrow scope, not selling the full vision.
+**Recommendation:** Proceed. This is a real problem with a real customer who is already in pain. The fit between Helix Codex's six engines and a sports academy's six core operational needs is remarkably tight. **Status (2026-09-12): the sports-academy capability pack (v1.0.0) has been BUILT** — `capabilities/sports_academy/` with attendance, coach KPIs, athlete profiles, facility, payments, roles, workflows, and cockpit views on simulated data — so the "new vertical, no pack" risk is retired. What remains is proving value on a narrow scope via the pilot, not selling the full vision.
 
 **Key risks:**
 - You are a solo builder with no prior clients in this vertical
@@ -302,15 +302,15 @@ Beyond the six engines, Helix Codex has a governance layer that no competitor of
 
 ## 5. What to build (capability pack)
 
-Helix Codex currently has no sports-academy capability pack. You need to build one. Here is what it should contain:
+**Status: BUILT and shipped as of 2026-09-10 (pack v1.0.0).** The layout planned below is exactly what `capabilities/sports_academy/` implements (declarations mirror YAML, drift-tested). The only later renames: `kpi_definitions/` → `declarations/` (single declarations tree), and `roles/academy_roles.yaml` → `declarations/academy_roles.yaml`. See `docs/sports_academy_pack.md` for the verified implementation.
 
 ### Sports-academy capability pack (v1)
 
 ```
-sports-academy-v1/
+sports-academy-v1/  →  capabilities/sports_academy/ (implemented)
 ├── adapters/
-│   ├── attendance_adapter.py      # Check-in/check-out tracking
-│   ├── athlete_profile_adapter.py # Athlete/family CRM profiles
+│   ├── attendance_adapter.py      # Check-in/check-out tracking (→ reuses engines.rta)
+│   ├── athlete_profile_adapter.py # Athlete/family CRM profiles (→ reuses engines.cx)
 │   ├── facility_adapter.py        # Court/field booking
 │   └── payment_adapter.py         # Fee collection (start with manual)
 ├── kpi_definitions/
@@ -328,15 +328,15 @@ sports-academy-v1/
     └── parent_portal.py          # Schedule, attendance, billing, comms
 ```
 
-**Build priority (what to do first):**
-1. **Attendance adapter** — the simplest, most visible pain. Get check-in/check-out working.
-2. **Coach KPIs** — define and track 3-5 KPIs per coach. This is the "no KPIs" pain.
-3. **Athlete profiles** — basic CRM. Name, age, program, enrollment status, attendance history.
-4. **Owner dashboard** — a single screen showing the 5 most important numbers.
+**Build priority (what was built first → what runs today):**
+1. **Attendance adapter** — the simplest, most visible pain. Check-in/check-out against sessions, RTA adherence reuse. ✅ built
+2. **Coach KPIs** — 4 KPIs per coach (session adherence, athlete attendance, on-time delivery, parent satisfaction). ✅ built — the "no KPIs" pain
+3. **Athlete profiles** — CRM with attendance history, enrollment stage, churn-risk flags (CX engine reuse). ✅ built
+4. **Owner dashboard** — a single screen showing the 5 most important numbers. ✅ built
 
-**What NOT to build yet:**
+**What NOT built yet (deliberately deferred — v1 non-goals):**
 - Parent mobile app (too much for pilot)
-- Payment processing (too complex, start with manual)
+- Payment processing (start with manual fee records)
 - Athlete progression tracking (requires curriculum definition first)
 - Multi-location support (pilot is one location)
 
@@ -597,7 +597,7 @@ PILOT AGREEMENT
 ### Before you talk to the client (this week):
 
 1. **Read this document twice.** Understand the business, the mapping, and the pitch.
-2. **Build the attendance adapter** — this is the simplest, most visible pain to solve first. Even a basic check-in/check-out flow in the Streamlit cockpit will demonstrate value.
+2. **Pack is built — now pilot it.** The attendance adapter, coach KPIs, athlete profiles, and owner dashboard all exist in `capabilities/sports_academy/` on synthetic data. The remaining value step is the real-data pilot: roster import, adapter swap from fixtures to connectors, KPI calibration.
 3. **Prepare a 1-page "what I do" document** — not a pitch deck, just a simple page explaining: "I build operations systems for sports academies. I track attendance, KPIs, and athlete data in one place. I'm offering a free 60-day pilot."
 4. **Practice the discovery questions** — the 7 questions in section 6.2 are the most important part of the entire process. If you nail these, the rest follows.
 5. **Set up a shared workspace** — a simple Notion page or Google Doc where you and the client can track progress, share notes, and document decisions.
@@ -612,10 +612,9 @@ PILOT AGREEMENT
 
 ### After first meeting:
 
-1. Build the capability pack adapters for the top pain
-2. Configure roles and KPIs
-3. Prepare a tailored pilot plan (specific to their academy)
-4. Come back with the pitch (section 6.3)
+1. Configure roles and KPIs against the imported roster
+2. Prepare a tailored pilot plan (specific to their academy)
+3. Come back with the pitch (section 6.3)
 
 ### Remember:
 

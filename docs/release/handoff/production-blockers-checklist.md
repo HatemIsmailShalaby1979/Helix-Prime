@@ -1,5 +1,10 @@
 # External Production Blockers — Verification Checklist
 
+> **STATUS: STILL LIVE (updated 2026-09-12).** Scope line refreshed for the current
+> build: Helix Prime Codex `0.9.0-c8` at HEAD `ed50c9a`, full suite **621 passed / 0 failed**
+> (was 307 at the 2026-08-28 snapshot). All Class 2–5 items remain intentionally `OPEN`.
+> The fail-closed statement below is unchanged and still binding.
+
 Fail-closed: for the product to reach `PRODUCTION_READY`, **every** item below must be
 independently satisfied. Any `NO`/blank answer keeps release `NOT_READY`. This checklist
 separates who/what is responsible for each class of verification and is deliberately not
@@ -13,7 +18,7 @@ Scope: Helix Prime Codex `0.9.0-c8`, manifest snapshot `99f9bd37` (`PRODUCTION_C
 
 | # | Check | Gate | Status |
 |---|-------|------|--------|
-| 1.1 | Full regression suite passes | C0–C8 base | `PASS` (307 passed) |
+| 1.1 | Full regression suite passes | C0–C8 base | `PASS` (621 passed, 2026-09-12) |
 | 1.2 | Controlled-pilot release gate green | `controlled_pilot` | `PASS` (`CONTROLLED_PILOT_READY`) |
 | 1.3 | Production release gate blocks release | `production` | `PASS` (`NOT_READY`, exit 1) — correctly fails closed |
 | 1.4 | No `production_approved` fabricated | sign-off | `PASS` (False) |

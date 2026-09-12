@@ -56,7 +56,7 @@ artifact is regenerated from `DEMO_SCRIPT.md` on every build — no stale mp4.
 - Tagline: **"An AI Organization. Not a tool. Not a chatbot. Not a dashboard."**
 - Accent colour: `#e94560` (Helix red)
 - Author credit mandatory: **Hatem Shalaby**
-- Every claim must be traceable to `MASTER_STORY.md` or to a test run executed and observed in the same session. No claim may reference a "proof ledger" — no such thing exists. (See `CHANGE_LOG.md` for the removal of fabricated proof-ledger and customer claims.)
+- Every claim must be traceable to `MASTER_STORY.md` or to a test run executed and observed in the same session. No claim may reference a "proof ledger" — no such thing exists. (See `CHANGELOG.md` for the removal of fabricated proof-ledger and customer claims.)
 
 ## Screenshots
 

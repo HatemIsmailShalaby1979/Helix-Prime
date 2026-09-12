@@ -1,7 +1,8 @@
 # External Production Blockers — Verification Checklist
 
 > **STATUS: STILL LIVE (updated 2026-09-12).** Scope line refreshed for the current
-> build: Helix Prime Codex `0.9.0-c8` at HEAD `ed50c9a`, full suite **621 passed / 0 failed**
+> build: Helix Prime Codex `0.9.0-c8` at HEAD `c5a88ef` (docs-only since the code HEAD
+> `ed50c9a`), full suite **621 passed / 0 failed**
 > (was 307 at the 2026-08-28 snapshot). All Class 2–5 items remain intentionally `OPEN`.
 > The fail-closed statement below is unchanged and still binding.
 
@@ -10,7 +11,10 @@ independently satisfied. Any `NO`/blank answer keeps release `NOT_READY`. This c
 separates who/what is responsible for each class of verification and is deliberately not
 self-asserted. No value in this file is a substitute for real external evidence.
 
-Scope: Helix Prime Codex `0.9.0-c8`, manifest snapshot `99f9bd37` (`PRODUCTION_CANDIDATE`).
+Scope: Helix Prime Codex `0.9.0-c8` at HEAD `c5a88ef` (2026-09-12). The 2026-08-28
+snapshot this checklist documents (307 tests, manifest `99f9bd37`,
+`PRODUCTION_CANDIDATE`) is superseded on Class 1 rows only; Classes 2–5 are
+version-independent external-evidence requirements and stay as written below.
 
 ---
 

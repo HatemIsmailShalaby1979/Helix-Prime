@@ -11,15 +11,14 @@ Uses deterministic SHA-256 hash chain.
 """
 from __future__ import annotations
 
-import dataclasses
 import datetime
 import hashlib
 import json
 import re
 import sqlite3
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 SCHEMA_VERSION = "1.0"
 
@@ -244,24 +243,30 @@ class AuditTrail:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_prev ON audit(previous_hash)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit(timestamp)")
         self.conn.commit()
-
     def last_hash(self) -> Optional[str]:
         """
         Return the current tip of the hash chain, or None for an empty trail.
 
         One indexed read. Callers that used to fetch the whole chain to find
-        this must use it instead: audit cost is otherwise linear in chain length,
-        which quietly becomes the dominant cost of every workflow submission.
+        this must use it instead: audit cost is otherwise linear in chain
+        length, which quietly becomes the dominant cost of every workflow
+        submission.
+
+        The tip is the most recently INSERTED record (rowid), not the record
+        with the newest timestamp: rapid appends can share a timestamp down to
+        the microsecond, and a timestamp-descending tip then returns an older
+        record, corrupting the next previous_hash. Insertion order is the
+        chain order.
         """
         cur = self.conn.cursor()
-        cur.execute("SELECT current_hash FROM audit ORDER BY timestamp DESC, audit_id DESC LIMIT 1")
+        cur.execute("SELECT current_hash FROM audit ORDER BY rowid DESC LIMIT 1")
         row = cur.fetchone()
         return row[0] if row else None
 
     def append(self, record: AuditRecord) -> AuditRecord:
         # Verify previous_hash matches last record's current_hash (unless genesis)
         cur = self.conn.cursor()
-        cur.execute("SELECT current_hash FROM audit ORDER BY timestamp DESC, audit_id DESC LIMIT 1")
+        cur.execute("SELECT current_hash FROM audit ORDER BY rowid DESC LIMIT 1")
         row = cur.fetchone()
         last_hash = row[0] if row else None
         # For genesis, previous_hash should be None; otherwise must match last_hash
@@ -328,7 +333,7 @@ class AuditTrail:
 
     def list_records(self, limit: int = 100) -> list[AuditRecord]:
         cur = self.conn.cursor()
-        cur.execute("SELECT data FROM audit ORDER BY timestamp ASC, audit_id ASC LIMIT ?", (limit,))
+        cur.execute("SELECT data FROM audit ORDER BY rowid ASC LIMIT ?", (limit,))
         rows = cur.fetchall()
         # This is simplified: we need to reconstruct AuditRecord from dict, but to_dict loses some fields like previous_hash handling
         # Instead, we should store full record dict with all fields
@@ -371,6 +376,7 @@ class AuditTrail:
         prev_hash = None
         for rec in records:
             if rec.previous_hash != prev_hash:
+                self._record_verification(False)
                 return False, f"tamper detected: record {rec.audit_id} previous_hash {rec.previous_hash!r} != expected {prev_hash!r}"
             # Recompute hash
             content = {
@@ -395,9 +401,22 @@ class AuditTrail:
             content_filtered = {k: v for k, v in content.items() if v is not None}
             expected = _hash_record(content_filtered)
             if expected != rec.current_hash:
+                self._record_verification(False)
                 return False, f"tamper detected: record {rec.audit_id} current_hash mismatch"
             prev_hash = rec.current_hash
+        self._record_verification(True)
         return True, f"chain valid with {len(records)} records"
+
+    def _record_verification(self, ok: bool) -> None:
+        try:
+            from observability.metrics import REGISTRY
+
+            REGISTRY.record_audit_verification(ok)
+        except ImportError as exc:
+            raise RuntimeError(
+                f"audit metrics recording unavailable: {exc} — a governance control "
+                "that cannot run must fail closed, not silently skip"
+            ) from exc
 
     def clear_for_tests(self) -> None:
         cur = self.conn.cursor()

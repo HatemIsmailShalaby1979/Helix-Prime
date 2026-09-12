@@ -29,6 +29,7 @@ try:
     from security.audit import AuditTrail, AuditRecord
     from security.injection import is_suspicious_prompt, scan_for_injection
     from observability.logging import log_structured
+    from observability.metrics import REGISTRY as _metrics_registry
 except ImportError as _import_err:
     raise GovernanceControlUnavailable(
         f"C3 security stack unavailable on startup: {_import_err}"
@@ -51,6 +52,7 @@ _gov_names = (
     "is_suspicious_prompt",
     "scan_for_injection",
     "log_structured",
+    "_metrics_registry",
 )
 _gov_symbols = tuple(globals()[n] for n in _gov_names)
 if any(s is None for s in _gov_symbols):
@@ -151,6 +153,7 @@ class Engine:
 
     def _audit(self, event_type: str, workflow: Workflow, actor: str, actor_type: str = "agent", decision: str = "allowed", input_ref: str | None = None, output_ref: str | None = None, approval_decision: str | None = None) -> None:
         """Helper: append tamper-evident audit record (best-effort, no cloud)."""
+        _metrics_registry.record_governance_decision(decision)
         try:
             trail = AuditTrail(db_path=self.audit_db_path)
             prev_hash = self._chain_tip(trail)

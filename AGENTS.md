@@ -83,11 +83,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H2.1 complete; next: H2.2 (monitoring/alerting) — H1.3 (drift AST) and H1.5 (kill switch) still open** |
+| Current step | **H2.2 complete; next: H2.3 (deployable artifact) — H1.3 (drift AST) and H1.5 (kill switch) still open** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **595 passed, 0 failed** (2026-09-12, H2.1 full-suite verification run; baseline 571 + 7 migration-drift tests + 17 prior-session tests in tree) |
-| Last commit | H2.1: feat(infra): add alembic migrations and CI drift check |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.6 ✅, H2.1 ✅ |
+| Last full-suite result | **608 passed, 0 failed** (2026-09-12, H2.2 full-suite verification run; baseline 571 + 13 metrics tests + 24 prior-session tests in tree) |
+| Last commit | H2.2: feat(obs): add /metrics, correlation-id logging, and alert rules |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅ |
 
 ### 1.2 Step ledger
 
@@ -168,7 +168,46 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       `alembic_version` bookkeeping excluded. Wired into `.github/workflows/ci.yml`
       after check_dependencies. Tests: `tests/test_migration_drift.py` (7, fast,
       no live migration required) incl. can-fail proof (G16 lesson).
-- [ ] **H2.2** Monitoring/alerting (G22)
+- [x] **H2.2** Monitoring/alerting (G22) — **Completed 2026-09-12.**
+      `observability/metrics.py`: stdlib-only Prometheus registry (no client lib,
+      no exporter sidecar, no new dependency) — counters/gauges/histogram with a
+      FIXED label vocabulary (route templates, status codes, decision buckets);
+      caller-supplied strings can never become label values, so the exposition
+      cannot leak PII/secrets by construction. Metric families:
+      helix_http_requests_total{route,status,method},
+      helix_http_request_duration_seconds (cumulative buckets),
+      helix_governance_decisions_total{decision},
+      helix_audit_chain_verifications_total{result},
+      helix_audit_chain_verification_failures, helix_approval_queue_depth.
+      Hooks: `Engine._audit` records every governance decision (import validated
+      in the engine's fail-closed startup block — H1.1 pattern);
+      `AuditTrail.verify_chain` records each verification outcome (ImportError
+      raises, never silently skips). HTTP surface: `/metrics` on the metrics
+      router, BEHIND the standard `current_identity` auth (deployment-sensitive:
+      route inventory, traffic mix, queue depth; Prometheus scrapes with the
+      same bearer token — documented in infra/monitoring/README.md). Queue
+      depth refreshed from the store on every scrape. `server/app.py`
+      middleware: per-request count/latency by route template + one structured
+      `http_request` log line per request (correlation id, route, status,
+      duration_ms; payload redacted via security.secrets.redact_dict; log_path
+      from app settings). Alert rules as CONFIG: `infra/monitoring/alerts.yml`
+      (Prometheus rule-file format: scrape-down, 5xx ratio, p95 latency,
+      governance denial spike, audit-chain failure = critical, queue backlog,
+      queue-starved info). Tests: `tests/test_metrics.py` (13) incl. auth
+      boundary, exposition format, route-template counting, tamper-detection
+      metric, queue depth, log redaction (fake secrets generated at runtime —
+      R1 lesson), and alert-rule drift (rules may only reference exported
+      metrics). Live-verified: uvicorn on 127.0.0.1:8901 — /metrics without
+      token → 401 (counted), with token → 200 full exposition.
+      **Latent bug fixed en route:** `AuditTrail.last_hash`/`append`/
+      `list_records` ordered the chain tip by `timestamp DESC, audit_id DESC`;
+      rapid appends sharing a microsecond timestamp returned the wrong tip,
+      corrupting the next previous_hash (out-of-order append failures — the
+      flaky test_engine_audit_perf failure across 3 sessions, and likely the
+      cause of the 2026-08-29 live audit.db fork). Chain order = insertion
+      order: all three queries now use `rowid`. Suite-affecting residue in
+      security/audit.py (unused-import removal from a prior session) rides in
+      this commit.
 - [ ] **H2.3** One deployable artifact (G23, G24, G25)
 - [ ] **H2.4** CI quality (G27, G28)
 - [ ] **H2.5** Data-retention policy (G26)

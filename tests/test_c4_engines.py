@@ -675,7 +675,6 @@ def test_secret_pii_redaction():
 
 
 def test_audit_record_creation(tmp_path):
-
     from security.audit import AuditTrail
 
     # Use isolated audit database

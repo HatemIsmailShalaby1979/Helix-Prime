@@ -114,7 +114,6 @@ def test_unknown_capability_discovery_via_unified_api():
 
 
 def test_ambiguous_capability_fails_closed():
-
     # Build a synthetic catalog with duplicate capability to simulate ambiguous ownership
     catalog = load_role_catalog("organization/role-catalog.yaml")
     import copy

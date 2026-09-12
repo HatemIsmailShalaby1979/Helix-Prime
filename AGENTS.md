@@ -53,10 +53,10 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H2.4 (CI quality) + H2.5 (data retention) COMPLETE — all G26–G30 done; only H1.3 (drift AST) remains open** |
+| Current step | **H3.3 + H3.4 COMPLETE (G36–G38, G40, G41) — H1.3 (drift AST) is the only remaining open item** |
 | Baseline test count | 527 (pre-pack; 2 Windows teardown failures fixed in `fe25653`) |
-| Last full-suite result | **620 passed, 0 failed** (2026-09-12, re-verified after G26–G30) |
-| Last commit | `cbac59a` fix(release): source manifest version from pyproject.toml |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12, re-verified after H3.3/H3.4) |
+| Last commit | `271870a` docs: rename overview.md to scoach summary (G41) |
 | Pack complete? | **YES — sports-academy pack v1.0.0 COMPLETE** |
 | Blockers | none |
 
@@ -89,11 +89,11 @@
 
 | Field | Value |
 |---|---|
-| Current step | **H3.2 (stale facts, G32–G35) COMPLETE — test count + agent count + Python baseline + LICENSE corrected repo-wide; H1.3 + H3.3/H3.4 open** |
+| Current step | **H3.3 + H3.4 COMPLETE (G36–G38, G40, G41) — H1.3 (drift AST) is the only remaining open item** |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified after the H3.2 stale-fact cleanup) |
-| Last commit | H3.2: docs: correct stale test count, agent count, python baseline, license claim |
-| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)** |
+| Last full-suite result | **620 passed, 0 failed** (2026-09-12; re-verified after the H3.3/H3.4 security-docs + hygiene steps) |
+| Last commit | `271870a` docs: rename overview.md to scoach summary (G41) |
+| Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)**, **H3.3 ✅ (G36 + G37)**, **H3.4 ✅ (G38 + G40 + G41)** |
 
 ### 1.2 Step ledger
 
@@ -358,8 +358,46 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       (`IMPLEMENTATION_MATRIX.md:23` `base_agent.py:406-445`) is a file
       **line-number range**, not a test count. Full suite 620 passed/0 failed; ruff
       N/A (docs-only).
-- [ ] **H3.3** Security docs (G36, G37)
-- [ ] **H3.4** CHANGELOG + hygiene (G38, G40, G41)
+- [x] **H3.3** Security docs (G36, G37) — **Completed 2026-09-12.**
+      (a) G36 SECURITY.md: the fabricated contact (`github.com/HatemShelby/Helix-Prime` +
+      "security@helixprime.io mailbox … fabricated and are void" self-contradiction)
+      replaced with the REAL repository + maintainer (`github.com/HatemIsmailShalaby1979/`
+      — verified against `git remote -v` and `pyproject.toml [project.urls]`); the
+      "static analysis (bandit, safety)" claims made to match exactly what CI runs
+      (bandit + pip-audit + Dependabot; safety is NOT in CI — scrubbed the fabricated
+      name). Four sites fixed (contact block, Dependencies, Automated Testing, Conclusion).
+      Commit `5761cd6`. (b) G37 threat model: `docs/C3-threat-model.md` was 14 days behind
+      (last touched 2026-08-27, predated `engines/rta` + `server/` — the two services with
+      P0 findings). Added threat #12 (unauth/exposed FastAPI spine — loopback bind,
+      router-level `Depends(current_identity)` including `/metrics`, 401/403 fail-closed)
+      and #13 (RTA Flask exposure — `127.0.0.1:5000`, `debug=True` removed, deny-by-default
+      CORS gated on `RTA_CORS_ORIGINS`, no auth on loopback → must add if ever exposed).
+      Scope line + "Last reviewed: 2026-09-12" + Residual Risk + References updated to
+      cite `server/config.py`, `server/auth.py`, `server/app.py`, `engines/rta/src/app.py`.
+      Commit `5a865f0`. Full suite 620 passed/0 failed re-verified after both; ruff N/A
+      (docs-only).
+- [x] **H3.4** CHANGELOG + hygiene (G38, G40, G41) — **Completed 2026-09-12.**
+      (a) G38 CHANGELOG: inserted `[Unreleased]` + `### Added` block documenting the
+      sports-academy pack v1.0.0 (commits `d5dcb45..c3c4abf`, 44 tests, 2026-09-10 — the
+      12-day gap); added a **Version-note** truthful explanation of the apparent SemVer
+      regression 2.1.0 → 0.9.0-c8 (single-sourced from `pyproject.toml` version=
+      `"0.9.0"` + `CEREMONY_SUFFIX="-c8"` in `release/manifest.py`; NOT a downgrade; packs
+      carry their own SemVer). Commit `5d6bdbd`. (b) G40 fonts: moved the 3 DejaVu TTFs
+      (~1.8 MB) to **Git LFS** (choose LFS over vendor-at-build: `build_demo.py`
+      `FONT_CANDIDATES` prefers bundled fonts with system-font fallbacks, so removing
+      the blobs from git history keeps the demo deterministic with zero behavior change
+      and zero new build dependencies; git-lfs 3.7.1 already installed + filters active).
+      `.gitattributes` (`marketing/assets/fonts/*.ttf filter=lfs diff=lfs merge=lfs -text`),
+      `git lfs track` + `add --renormalize` → 3 LFS pointers, `git lfs checkout` smudged
+      back (content intact, sizes verified); `actions/checkout@v4` gained `lfs: true`
+      (CI doesn't build the demo, but future-proofs any consumer). Commit `e565e2b`.
+      (c) G41 rename: `overview.md` (it was the Scoach client report summary, NOT a repo
+      overview) → `git mv` to `docs/scoach_academy_hub_summary.md`, title updated to
+      "Scoach Academy Hub — Opportunity Report Summary"; programmatic scan proved ZERO
+      live inbound links to `overview.md` (portfolio hits were the unrelated
+      `01_architecture_overview.md`), so no link rewrites needed. Commit `271870a`.
+      **Link crawler: 0 broken relative links across all tracked .md. Full suite 620
+      passed/0 failed. Git status clean of stray binaries.** ruff N/A (docs-only).
 
 ---
 

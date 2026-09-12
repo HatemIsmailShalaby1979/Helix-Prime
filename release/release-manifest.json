@@ -5,9 +5,9 @@
   "classification": "NOT_READY",
   "release_approved": true,
   "version": "0.9.0-c8",
-  "git_commit": "950bead1a8095173316a5d70806baee60bcaabfa",
-  "git_branch": "h02-server-bind",
-  "build_timestamp": "2026-09-12T16:30:34.680764Z",
+  "git_commit": "d7b60156239098ecfa2e154ed4e5add68f29036a",
+  "git_branch": "main",
+  "build_timestamp": "2026-09-12T20:52:58.478708Z",
   "python_version": "3.12.10",
   "platform": "win32",
   "supported_python": ">=3.12,<3.13",
@@ -44,7 +44,5 @@
     "Pilot data must be limited to synthetic or explicitly consented data.",
     "Production label not claimed without every production gate passing."
   ],
-  "evidence_refs": [
-    "evidence\\releases\\20260912T163034Z"
-  ]
+  "evidence_refs": []
 }

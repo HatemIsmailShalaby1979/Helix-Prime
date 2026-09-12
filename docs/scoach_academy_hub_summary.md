@@ -1,4 +1,4 @@
-# Overview: Scoach Academy Hub Opportunity Report
+# Scoach Academy Hub — Opportunity Report Summary
 
 ## What was done
 A comprehensive opportunity validation report was created for Helix Codex OS's first potential client — Scoach Academy Hub, a private sports academy. The report applies the Hexa Opportunity Memo framework (PCV scoring) and includes deep research on the sports academy business domain, competitive landscape, pricing strategy, and a 90-day client onboarding playbook.

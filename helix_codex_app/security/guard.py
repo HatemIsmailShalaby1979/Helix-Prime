@@ -5,9 +5,10 @@ the sessions table, refreshes the idle timestamp, loads the account, and
 attaches session and account to request.state. It is installed once at the
 /app router boundary, so a handler can never skip it. require_csrf guards
 every mutating /app route by comparing the X-CSRF-Token header with the
-session's stored CSRF token using compare_digest. require_scope and
-require_capability gate the finer actions; require_permission is a
-deny-by-default placeholder until P1.4 ships the permission catalog.
+session's stored CSRF token using compare_digest. require_scope,
+require_capability, and require_permission (checked against the app
+permission catalog) gate the finer actions; an unknown permission key is
+denied, never allowed.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from fastapi import Depends, Request
 from helix_codex_app.db import close, connect
 from helix_codex_app.errors import AuthError, PermissionDenied
 from helix_codex_app.security.accounts import Account, AccountRepository
+from helix_codex_app.security.permissions import has_permission
 from helix_codex_app.security.sessions import SESSION_COOKIE, SessionStore
 
 
@@ -59,13 +61,18 @@ def require_csrf(request: Request, _caller: Account = Depends(current_account)) 
 
 
 def require_permission(key: str) -> Callable[[Request, Account], None]:
-    """Return a deny-by-default dependency until the P1.4 catalog lands."""
+    """Return a dependency granting the route only for a granted permission.
+
+    has_permission resolves the account's role against the app permission
+    catalog; an unknown key or unknown role denies, never allows.
+    """
 
     def dependency(request: Request, account: Account = Depends(current_account)) -> None:
-        raise PermissionDenied(
-            f"permission {key!r} not granted",
-            payload={"account_id": account.account_id, "permission_key": key},
-        )
+        if not has_permission(account, key):
+            raise PermissionDenied(
+                f"permission {key!r} not granted",
+                payload={"account_id": account.account_id, "permission_key": key},
+            )
 
     return dependency
 

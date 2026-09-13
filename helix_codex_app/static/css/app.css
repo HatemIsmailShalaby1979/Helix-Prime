@@ -118,9 +118,96 @@ a {
 
 .btn:focus-visible,
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.auth-body {
+  background: var(--surface-2);
+}
+
+.auth-content {
+  max-width: 24rem;
+  margin: 0 auto;
+  padding: calc(var(--nav-h) + var(--space-5)) var(--space-4) var(--space-6);
+}
+
+.auth-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.auth-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field__label {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.field__input {
+  min-height: var(--tap-min);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  color: var(--ink);
+  background: var(--surface);
+  width: 100%;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.home-greet {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.home-greet h1 {
+  margin: 0;
+}
+
+.home-greet__role {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.home-signout {
+  margin: 0;
+}
+
+.identity-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.identity-chip__role {
+  color: var(--muted);
+  font-size: var(--text-xs);
 }
 
 .section-link {

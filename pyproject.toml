@@ -197,10 +197,10 @@ extend-immutable-calls = ["fastapi.Depends"]
 "scripts/pilot_dry_run.py" = ["S110"]
 "scripts/smoke.py" = ["S603"]
 # Tests: assert (S101) is the pytest idiom; subprocess-under-test (S603/S607),
-# seeded fixture credentials (S105), best-effort teardown (S110), the deliberate
+# seeded fixture credentials (S105/S106/S107), best-effort teardown (S110), the deliberate
 # broad-exception probe in C1 (B017), sys.path bootstrap imports (E402), and
 # construct-and-verify locals (F841) are all conventional in tests.
-"tests/*" = ["S101", "S105", "S110", "S603", "S607", "B017", "E402", "F841"]
+"tests/*" = ["S101", "S105", "S106", "S107", "S110", "S603", "S607", "B017", "E402", "F841"]
 
 # ---------------------------------------------------------------------------
 # Mypy (was mypy.ini)

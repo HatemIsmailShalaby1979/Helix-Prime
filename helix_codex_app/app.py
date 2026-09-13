@@ -11,25 +11,24 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import AsyncIterator
 
 from fastapi import APIRouter, Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from helix_codex_app import db
 from helix_codex_app.config import AppSettings, get_app_settings
 from helix_codex_app.errors import AppError
+from helix_codex_app.modules.identity.router import identity_router
 from helix_codex_app.security.guard import current_account, require_csrf
+from helix_codex_app.templating import render
 from server import deps
 from server.config import get_settings as get_server_settings
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 health_router = APIRouter()
 shell_router = APIRouter()
 app_router = APIRouter(prefix="/app", dependencies=[Depends(current_account)])
@@ -37,17 +36,6 @@ csrf_router = APIRouter(
     prefix="/app",
     dependencies=[Depends(current_account), Depends(require_csrf)],
 )
-
-
-def render(request: Request, name: str, context: dict[str, Any] | None = None) -> HTMLResponse:
-    """Render a template with the app settings and the caller's CSRF token."""
-    session = getattr(request.state, "session", None)
-    ctx = {
-        "csrf_token": session.csrf_token if session else "",
-        "settings": request.app.state.settings,
-        **(context or {}),
-    }
-    return templates.TemplateResponse(request, name, ctx)
 
 
 @health_router.get("/app/healthz")
@@ -65,7 +53,11 @@ def index(request: Request) -> HTMLResponse:
 @app_router.get("/")
 def app_index(request: Request) -> HTMLResponse:
     """Serve the app home screen at /app, behind the account guard."""
-    return render(request, "shell/home.html", {"active_nav": "home"})
+    return render(
+        request,
+        "shell/home.html",
+        {"active_nav": "home", "account": request.state.account},
+    )
 
 
 @asynccontextmanager
@@ -107,6 +99,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(shell_router)
+    app.include_router(identity_router)
     app.include_router(app_router)
     app.include_router(csrf_router)
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

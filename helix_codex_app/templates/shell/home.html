@@ -1,8 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Home — Helix Codex{% endblock %}
 {% block content %}
+{% set name = account.display_name if account and account.display_name else "operator" %}
+{% set role = account.role_id if account else "" %}
 <section class="card">
-  <h1>Hello, operator.</h1>
+  <div class="home-greet">
+    <div>
+      <h1>Hello, {{ name }}.</h1>
+      <p class="home-greet__role">{{ role or "member" }}</p>
+    </div>
+    {% if account %}
+    <form hx-post="/app/auth/logout"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}' class="home-signout">
+      <button class="btn btn--ghost" type="submit">Sign out</button>
+    </form>
+    {% endif %}
+  </div>
   <p>
     Helix Codex keeps your workflows, documents, and governed AI on
     hardware you control. Nothing leaves your network without an audit

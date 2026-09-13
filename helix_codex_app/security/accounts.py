@@ -389,6 +389,20 @@ class AccountRepository:
         self.conn.commit()
         return self._require_account(account_id)
 
+    def set_password(self, account_id: str, password_hash: str) -> Account:
+        """Replace the password hash and clear any must-change flag."""
+        self.conn.execute(
+            """
+            UPDATE accounts
+            SET password_hash = ?, password_algo = ?, password_params = ?,
+                must_change_password = 0, updated_at = ?
+            WHERE account_id = ?
+            """,
+            (password_hash, HASH_ALGO, self._params_for(password_hash), _now(), account_id),
+        )
+        self.conn.commit()
+        return self._require_account(account_id)
+
     def lock_account(self, account_id: str, *, until: str | None = None) -> Account:
         """Lock the account until the given instant, defaulting to LOCK_MINS."""
         lock_until = until

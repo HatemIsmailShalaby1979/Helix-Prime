@@ -47,9 +47,9 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P1 — Identity, auth, org, limits (next prompt P1.5) |
-| Baseline test count | 774 |
-| Last commit | `c244872` feat(app): add app permission catalog and core policy bridge |
+| Current step | P1 — Identity, auth, org, limits (next prompt P1.6) |
+| Baseline test count | 794 |
+| Last commit | `39e58ff` feat(app): add domain login, lockout, and auth screens |
 | Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3, P1.4 |
 
 ## Step ledger
@@ -61,7 +61,7 @@ App-specific rules:
 - [x] P0.3 governance.md (Prompt 3) — commit `0b3765c`
 - [x] P0.4 agents.md and repomap.md (Prompt 4) — commit `50bba63`, 621 passed
 
-### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.4)
+### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.6)
 
 - [x] P1.1 App database and the single writer (Prompt 5) — commit `781b0b3`, 629 passed
 - [x] P1.2 Accounts, domains, and passwords (Prompt 6) — commit `f8cccb5`, 663 passed
@@ -102,7 +102,36 @@ App-specific rules:
       passthrough/None, employee-denied and catalog-owner-passed engine authorization, policy-deny
       raising, invalid-request denial, and no scope widening through the bridge. Full suite
       774 passed / 0 failed (686 + 88); ruff check + format clean.
-- [ ] P1.5 Login, logout, and the auth screens (Prompt 9)
+- [x] P1.5 Login, logout, and the auth screens (Prompt 9) — commit `39e58ff`,
+      `helix_codex_app/modules/identity/service.py`
+      (LoginService: `login(domain_name, username, password, ip, user_agent)` resolves
+      username@domain and turns a verified password into a session; wrong domain, unknown
+      account, wrong password, a non-active account, and locked all share ONE user-facing
+      message while the machine code (`no_such_domain` / `no_such_account` / `bad_password` /
+      `unusable_account` / `locked` / `success`) goes only to the `login_events` audit row —
+      no enumeration through the page; `MAX_FAILED_ATTEMPTS=5` consecutive failures lock the
+      account for `LOCK_MINUTES=15` (the lock itself is recorded), an expired lock unlocks on
+      the next attempt, success resets the counter and stamps `last_login_at`; every outcome
+      writes a row, including a nonexistent domain/account with NULL ids; `logout(session_id)`
+      revokes; `change_password(account, old, new)` verifies old, enforces
+      `MIN_PASSWORD_LENGTH=8`, clears `must_change_password`) and `helix_codex_app/modules/
+      identity/router.py` (identity_router under `/app/auth`; public GET/POST `/login`,
+      guarded GET `/me`, POST `/logout`, GET/POST `/password` behind `current_account` +
+      `require_csrf`; answers are redirects, full pages, or HTMX fragments — never JSON-only;
+      success redirects to `/app/` or, when `must_change_password`, to `/app/auth/password`).
+      `helix_codex_app/templating.py` (one shared `render()` injecting the session CSRF token
+      and settings — the P1.3 render logic leaves `app.py`), `helix_codex_app/templates/auth/
+      {login,password,me}.html` (standalone, no shell inheritance), `templates/shell/home.html`
+      (greets by display name, shows the role, HTMX sign-out form carrying X-CSRF-Token),
+      `security/accounts.py` `set_password()`, auth CSS in `app.css`. `app.py` includes
+      `identity_router` and passes the account to the home page. Tests:
+      `tests/helix_codex_app/test_login_and_auth.py` (20) cover the cookie attributes, the
+      no-enumeration page message, the 5-fail→lock→locked-cannot-login progression, expired-
+      lock re-login, logout + CSRF rejection, the must-change password redirect and change
+      flow, short-password and wrong-current rejection, the /me fragment, the home greeting,
+      and the unknown-domain audit rows. `TestClient` is driven with `follow_redirects=False`
+      so the 303 login redirects are asserted directly. Full suite 794 passed / 0 failed
+      (774 + 20); ruff check + format clean.
 - [ ] P1.6 Admin: users, domains, org units, capabilities, limits (Prompt 10)
 - [ ] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11)
 

@@ -59,7 +59,9 @@ What this does not mean: per-user memory is not a private place to hide. Every r
 
 ## 7. Decision log
 
-The eight decisions locked for the app on 2026-09-13 (master plan §2). Each entry states the assumption behind it, per constitution rule 3. Append a new dated entry whenever an invariant, permission, or the integration seam changes, and cite a test for every invariant change.
+The decisions locked for the app (2026-09-13 onward; master plan §2). Each entry states the
+assumption behind it, per constitution rule 3. Append a new dated entry whenever an invariant,
+permission, or the integration seam changes, and cite a test for every invariant change.
 
 1. 2026-09-13. Deliverables go in `E:\Helix-Prime\docs`. Assumption: one repo, one git history, one place to look. A separate folder would fragment the record.
 2. 2026-09-13. Frontend is a server-rendered PWA (FastAPI, HTMX, Alpine). Assumption: one language and no build tooling keep the operational cost low, and a PWA avoids app stores.
@@ -70,3 +72,4 @@ The eight decisions locked for the app on 2026-09-13 (master plan §2). Each ent
 7. 2026-09-13. Mail and video are deferred to v2. Assumption: self-hosted mail is blacklist-prone and WebRTC is genuinely hard. Both are specialist problems (master plan §14, items 6 and 7).
 8. 2026-09-13. Package name is `helix_codex_app/`, console script `helix-app`. Assumption: one process with two factories, and `helix-api` stays untouched for headless clients (master plan §3.1).
 9. 2026-09-14. `helix_codex_app/security/permissions.py` reads `organization/role_catalog.py` at import time for the nine privileged role ids. Assumption: the role catalog is public read-only data, not a parent internal; rule 4's parenthetical list does not name `organization`, and master plan §5.1 explicitly sanctions the read. The catalog file is never edited. Proven by `test_privileged_catalog_role_ids_match_the_organization_catalog` (P1.4).
+10. 2026-09-14. Lockout and no-enumeration on sign-in. After MAX_FAILED_ATTEMPTS (5) consecutive failures an account locks for LOCK_MINUTES (15); an expired lock unlocks on the next attempt; every attempt writes a `login_events` row, including when the domain or account does not exist (ids NULL); the page shows exactly one message for a wrong domain, a wrong username, or a wrong password, and the machine code stays in the audit row. Assumption: rate-limiting real accounts only still slows a brute-force attacker, and a shared message protects real accounts from enumeration through the login form. Proven by `test_sixth_attempt_is_locked_and_lock_is_recorded`, `test_unknown_domain_is_recorded_without_enumeration`, and `test_expired_lock_allows_login_again` (P1.5).

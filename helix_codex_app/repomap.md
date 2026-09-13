@@ -43,10 +43,16 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `authorize_engine_action` calls `security.policy.authorize` with the account's own tenant/client
   and raises `PermissionDenied` on any deny). `engine_bridge.py`, `memory_bridge.py`,
   `metacognition_bridge.py`, `cockpit_bridge.py`, and `packs.py` are planned with their phases.
-- `modules/` — planned. `identity`, `messaging`, `docs`, `tasks`, `calendar`, `notifications`,
-  `attendance`, `memory`, `ops`, `cockpit`, `admin`, `lowcode`. `rooms/` and `mail/` are v2 stubs.
-- `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/` exist. `auth/`, `admin/`, and
-  the per-module pages arrive with their phases.
+- `templating.py` — the one shared template renderer. Reads the CSRF token from
+  `request.state.session` and the settings off `request.app.state`, so every route renders with
+  the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,
+  no shell inheritance) because the login screen must work before a session exists.
+- `modules/` — the feature modules, one folder per vertical. `identity` (live: the `/app/auth`
+  login/me/logout/password surface plus LoginService) exists; `messaging`, `docs`, `tasks`,
+  `calendar`, `notifications`, `attendance`, `memory`, `ops`, `cockpit`, `admin`, `lowcode`
+  arrive with their phases. `rooms/` and `mail/` are v2 stubs.
+- `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, and `auth/` (login,
+  password, me) exist. The remaining per-module pages arrive with their phases.
 - `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers), `vendor/` (vendored HTMX and
   Alpine), `manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`.
 
@@ -67,7 +73,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Shell and health (live) | `/`, `/app/healthz` | none |
 | App home (live) | `/app` | session |
 | Static (live) | `/static` | none |
-| Auth (planned, P1) | `/app/auth/login`, `/logout`, `/me`, `/password` | none for login |
+| Auth (live) | `/app/auth/login`, `/me`, `/logout`, `/password` | none for GET/POST `/login`; session + CSRF for the rest |
 | Admin (planned, P1) | `/app/admin/users`, `/domains`, `/org-units` | `admin.users` |
 | Messaging and notifications (planned, P2) | `/app/chat`, `/app/api/conversations`, `/app/notifications` | session |
 | Docs and KB (planned, P3) | `/app/docs`, `/app/kb`, `/app/api/documents` | `docs.read` and `docs.write` |

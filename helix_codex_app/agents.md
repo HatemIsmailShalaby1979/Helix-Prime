@@ -59,7 +59,7 @@ App-specific rules:
 - [x] P0.1 Scaffold the package and boot the shell (Prompt 1) — commit `822402e`
 - [x] P0.2 The mobile-first PWA shell (Prompt 2) — commit `3887079`
 - [x] P0.3 governance.md (Prompt 3) — commit `0b3765c`
-- [x] P0.4 agents.md and repomap.md (Prompt 4) — this commit
+- [x] P0.4 agents.md and repomap.md (Prompt 4) — commit `50bba63`, 621 passed
 
 ### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.1)
 

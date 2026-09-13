@@ -14,15 +14,18 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
 - `errors.py` — `AppError` base; `AuthError`, `PermissionDenied`, `LimitExceeded`, `NotFoundError`.
 - `deps.py` — planned. `AccountStore`, `CollabStore`, `EngineProvider`, and the memory and
   metacognition providers.
-- `db.py` — planned. Sqlite3 connection factory, schema bootstrap, and `record_node()`, the single
+- `db.py` — Sqlite3 connection factory, schema bootstrap, and `record_node()`, the single
   writer for governed events.
 - `governance.md` — the app's operating rules and decision log.
 - `agents.md` — the build ledger.
 - `repomap.md` — this file.
-- `alembic.ini` and `migrations/` — planned. The app-local alembic env, so app tables never join the
+- `alembic.ini` and `migrations/` — The app-local alembic env, so app tables never join the
   parent migration head.
-- `security/` — planned. `accounts.py`, `passwords.py`, `sessions.py`, `permissions.py`, `limits.py`,
-  `guard.py`. This is the app-local role and auth layer; it never edits the parent catalog.
+- `scripts/check_app_migration_drift.py` — builds one database via `db.py` and one via
+  `alembic upgrade head` and proves their `sqlite_master` contents agree, exit 0 or 1.
+- `security/` — planned. `accounts.py`, `passwords.py`, `sessions.py`, `permissions.py`,
+  `limits.py`, `guard.py`. This is the app-local role and auth layer; it never edits the parent
+  catalog.
 - `integration/` — planned until its phases fill it. The only package allowed to import parent
   internals. `engine_bridge.py`, `policy_bridge.py`, `memory_bridge.py`, `metacognition_bridge.py`,
   `cockpit_bridge.py`, `packs.py`.
@@ -72,8 +75,7 @@ Governance layer: `nodes`. Working layer: `conversations`, `conversation_members
 `domains`, `org_units`, `accounts`, `sessions`, `account_capabilities`, `account_limits`,
 `login_events`.
 
-All are created by `db.py::_init_schema()` and the app-local alembic baseline in P1.1. None exist
-before then.
+All are created by `db.py::_init_schema()` and the app-local alembic baseline `0001_codex_app_baseline` (P1.1).
 
 ## How to add a module
 

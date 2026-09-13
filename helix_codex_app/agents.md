@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P1 — Identity, auth, org, limits (next prompt P1.1) |
-| Baseline test count | 621 |
-| Last commit | `0b3765c` docs(app): add app governance rules and decision log |
-| Completed steps | P0.1, P0.2, P0.3, P0.4 |
+| Current step | P1 — Identity, auth, org, limits (next prompt P1.2) |
+| Baseline test count | 629 |
+| Last commit | `781b0b3` feat(app): add app database, schema bootstrap, and governed node writer |
+| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1 |
 
 ## Step ledger
 
@@ -61,9 +61,9 @@ App-specific rules:
 - [x] P0.3 governance.md (Prompt 3) — commit `0b3765c`
 - [x] P0.4 agents.md and repomap.md (Prompt 4) — commit `50bba63`, 621 passed
 
-### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.1)
+### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.2)
 
-- [ ] P1.1 App database, schema bootstrap, and the single writer (Prompt 5)
+- [x] P1.1 App database and the single writer (Prompt 5) — commit `781b0b3`, 629 passed
 - [ ] P1.2 Accounts, domains, and passwords (Prompt 6)
 - [ ] P1.3 Sessions, cookies, and CSRF (Prompt 7)
 - [ ] P1.4 The permission catalog and role mapping (Prompt 8)

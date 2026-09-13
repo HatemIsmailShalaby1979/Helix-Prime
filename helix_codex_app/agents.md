@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P1 — Identity, auth, org, limits (next prompt P1.4) |
-| Baseline test count | 686 |
-| Last commit | `5631717` feat(app): add opaque cookie sessions and csrf guard |
-| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3 |
+| Current step | P1 — Identity, auth, org, limits (next prompt P1.5) |
+| Baseline test count | 774 |
+| Last commit | `c244872` feat(app): add app permission catalog and core policy bridge |
+| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3, P1.4 |
 
 ## Step ledger
 
@@ -83,7 +83,25 @@ App-specific rules:
       revocation/expiry/idle, locked accounts, token-hash-only storage, cookie attributes, tenant
       scope, capabilities, and deny-by-default permissions. Full suite 686 passed / 0 failed;
       ruff check + format clean.
-- [ ] P1.4 The permission catalog and role mapping (Prompt 8)
+- [x] P1.4 The permission catalog and role mapping (Prompt 8) — commit `c244872`,
+      `helix_codex_app/security/permissions.py`
+      (PERMISSION_MATRIX mirroring master plan §5.5 across owner/manager/employee/contractor/
+      external plus a `catalog` column with True/"scoped"/False values; `permissions_for`,
+      `has_permission`; `PRIVILEGED_CATALOG_ROLE_IDS` = the nine ids read from
+      `organization/role_catalog.py` at import time; unknown keys and unknown roles deny) and
+      `helix_codex_app/integration/policy_bridge.py`
+      (`to_identity`: `security.identity.Identity` with actor=account_id, actor_type="human",
+      tenant_id/client_id from the account, role_id set ONLY for the nine catalog roles — every
+      app role maps to None and the policy engine denies by construction; `authorize_engine_action`:
+      calls `security.policy.authorize` with the account's own tenant/client and raises
+      `PermissionDenied` on any deny, never defaulting to allow). `guard.require_permission` now
+      enforces the catalog instead of the P1.3 deny-placeholder. Tests:
+      `tests/helix_codex_app/test_permissions_and_policy_bridge.py` (88) cover every (role,
+      permission) pair across the 5 app roles (65) and all 9 catalog roles (117 assertions), the
+      nine-ids constant, deny-by-default for unknown roles/keys, scoped grants, to_identity role
+      passthrough/None, employee-denied and catalog-owner-passed engine authorization, policy-deny
+      raising, invalid-request denial, and no scope widening through the bridge. Full suite
+      774 passed / 0 failed (686 + 88); ruff check + format clean.
 - [ ] P1.5 Login, logout, and the auth screens (Prompt 9)
 - [ ] P1.6 Admin: users, domains, org units, capabilities, limits (Prompt 10)
 - [ ] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11)

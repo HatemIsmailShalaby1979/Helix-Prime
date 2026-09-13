@@ -45,7 +45,7 @@ Each rule names where it is enforced so it can be checked in tests.
    - Policy bridge: `policy_bridge` calls `security/policy.authorize` for any engine action, using the account's own tenant and client.
    Checked by `test_cockpit_requires_permission` and `test_cockpit_cross_tenant_denied` (master plan §5.6).
 
-3. The app-local role layer lives in `helix_codex_app/security/permissions.py` and never edits the parent role catalog. App roles (`owner`, `manager`, `employee`, `contractor`, `external`) map to `organization/role-catalog.yaml` roles where an equivalent exists. A role with no equivalent gets `role_id=None` and is denied at the policy seam. Checked by the permission-matrix tests and the deny-by-construction test (master plan §5.1).
+3. The app-local role layer lives in `helix_codex_app/security/permissions.py` and never edits the parent role catalog. App roles (`owner`, `manager`, `employee`, `contractor`, `external`) map to `organization/role-catalog.yaml` roles where an equivalent exists. A role with no equivalent gets `role_id=None` and is denied at the policy seam. Checked by the permission-matrix tests and the deny-by-construction test in `tests/helix_codex_app/test_permissions_and_policy_bridge.py` (master plan §5.1).
 
 4. `helix_codex_app/integration/` is the only package that imports parent internals (`control_plane`, `engines`, `security`, `memory`, `metacognition`, `capabilities`, `connectors`). Any other module under `helix_codex_app/` that imports a parent package is a defect (master plan §3.2).
 
@@ -69,3 +69,4 @@ The eight decisions locked for the app on 2026-09-13 (master plan §2). Each ent
 6. 2026-09-13. Per-user memory is a truly isolated store. Assumption: real isolation is the product promise and is worth paying the index cost for, so a rotating verification sweep keeps it honest (master plan §6.6).
 7. 2026-09-13. Mail and video are deferred to v2. Assumption: self-hosted mail is blacklist-prone and WebRTC is genuinely hard. Both are specialist problems (master plan §14, items 6 and 7).
 8. 2026-09-13. Package name is `helix_codex_app/`, console script `helix-app`. Assumption: one process with two factories, and `helix-api` stays untouched for headless clients (master plan §3.1).
+9. 2026-09-14. `helix_codex_app/security/permissions.py` reads `organization/role_catalog.py` at import time for the nine privileged role ids. Assumption: the role catalog is public read-only data, not a parent internal; rule 4's parenthetical list does not name `organization`, and master plan §5.1 explicitly sanctions the read. The catalog file is never edited. Proven by `test_privileged_catalog_role_ids_match_the_organization_catalog` (P1.4).

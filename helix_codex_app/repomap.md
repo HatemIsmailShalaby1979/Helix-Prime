@@ -25,18 +25,24 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   parent migration head.
 - `scripts/check_app_migration_drift.py` — builds one database via `db.py` and one via
   `alembic upgrade head` and proves their `sqlite_master` contents agree, exit 0 or 1.
-- `security/` — the app-local identity layer. `passwords.py` (stdlib scrypt, SOC-less
+- `security/` — the app-local identity and permission layer. `passwords.py` (stdlib scrypt, SOC-less
   `scrypt$n$r$p$salt$hash` envelope), `accounts.py` (Domain, OrgUnit, Account dataclasses plus
   `AccountRepository`; every account read takes tenant scope from the owning domain, never the
   caller), `limits.py` (role defaults + `check_and_consume`, `LimitExceeded`), `sessions.py`
   (SessionStore: opaque tokens stored as SHA-256 only + a CSRF token; `verify` rejects revoked/
-  expired/idle/locked-account sessions; `set_session_cookie`), `guard.py` (FastAPI deps:
-  `current_account`, `require_csrf`, `require_scope`, `require_capability`, and
-  `require_permission` — deny-by-default until the P1.4 catalog lands). `permissions.py` arrives
-  in P1.4. This layer never edits the parent catalog.
-- `integration/` — planned until its phases fill it. The only package allowed to import parent
-  internals. `engine_bridge.py`, `policy_bridge.py`, `memory_bridge.py`, `metacognition_bridge.py`,
-  `cockpit_bridge.py`, `packs.py`.
+  expired/idle/locked-account sessions; `set_session_cookie`), `permissions.py` (the app permission
+  catalog mirroring master plan §5.5 — `PERMISSION_MATRIX` over owner/manager/employee/contractor/
+  external plus a `catalog` column, `permissions_for`, `has_permission`, and
+  `PRIVILEGED_CATALOG_ROLE_IDS` read from `organization/role_catalog.py` at import time; unknown keys
+  and unknown roles deny), `guard.py` (FastAPI deps: `current_account`, `require_csrf`,
+  `require_scope`, `require_capability`, and `require_permission` — enforced against the catalog).
+  This layer never edits the parent catalog.
+- `integration/` — the only package allowed to import parent internals. `policy_bridge.py` (live:
+  `to_identity` maps an account to a `security.identity.Identity` with `role_id` set only for the
+  nine catalog roles — every app role maps to `None` and is denied by construction;
+  `authorize_engine_action` calls `security.policy.authorize` with the account's own tenant/client
+  and raises `PermissionDenied` on any deny). `engine_bridge.py`, `memory_bridge.py`,
+  `metacognition_bridge.py`, `cockpit_bridge.py`, and `packs.py` are planned with their phases.
 - `modules/` — planned. `identity`, `messaging`, `docs`, `tasks`, `calendar`, `notifications`,
   `attendance`, `memory`, `ops`, `cockpit`, `admin`, `lowcode`. `rooms/` and `mail/` are v2 stubs.
 - `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/` exist. `auth/`, `admin/`, and

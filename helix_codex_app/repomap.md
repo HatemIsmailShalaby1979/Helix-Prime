@@ -23,8 +23,11 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   parent migration head.
 - `scripts/check_app_migration_drift.py` — builds one database via `db.py` and one via
   `alembic upgrade head` and proves their `sqlite_master` contents agree, exit 0 or 1.
-- `security/` — planned. `accounts.py`, `passwords.py`, `sessions.py`, `permissions.py`,
-  `limits.py`, `guard.py`. This is the app-local role and auth layer; it never edits the parent
+- `security/` — the app-local identity layer. `passwords.py` (stdlib scrypt, SOC-less
+  `scrypt$n$r$p$salt$hash` envelope), `accounts.py` (Domain, OrgUnit, Account dataclasses plus
+  `AccountRepository`; every account read takes tenant scope from the owning domain, never the
+  caller), `limits.py` (role defaults + `check_and_consume`, `LimitExceeded`). `sessions.py`,
+  `permissions.py`, `guard.py` arrive in later P1 prompts. This layer never edits the parent
   catalog.
 - `integration/` — planned until its phases fill it. The only package allowed to import parent
   internals. `engine_bridge.py`, `policy_bridge.py`, `memory_bridge.py`, `metacognition_bridge.py`,

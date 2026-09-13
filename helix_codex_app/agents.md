@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P1 — Identity, auth, org, limits (next prompt P1.3) |
-| Baseline test count | 663 |
-| Last commit | `f8cccb5` feat(app): add domain-scoped accounts and scrypt password storage |
-| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2 |
+| Current step | P1 — Identity, auth, org, limits (next prompt P1.4) |
+| Baseline test count | 686 |
+| Last commit | `5631717` feat(app): add opaque cookie sessions and csrf guard |
+| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3 |
 
 ## Step ledger
 
@@ -61,11 +61,28 @@ App-specific rules:
 - [x] P0.3 governance.md (Prompt 3) — commit `0b3765c`
 - [x] P0.4 agents.md and repomap.md (Prompt 4) — commit `50bba63`, 621 passed
 
-### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.3)
+### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.4)
 
 - [x] P1.1 App database and the single writer (Prompt 5) — commit `781b0b3`, 629 passed
 - [x] P1.2 Accounts, domains, and passwords (Prompt 6) — commit `f8cccb5`, 663 passed
-- [ ] P1.3 Sessions, cookies, and CSRF (Prompt 7)
+- [x] P1.3 Sessions, cookies, and CSRF (Prompt 7) — commit `5631717`,
+      `helix_codex_app/security/sessions.py`
+      (SessionStore: opaque `secrets.token_urlsafe(32)` token, only its SHA-256 hash + a separate
+      CSRF token stored; `verify()` joins the account and rejects missing/revoked/expired/
+      idle-expired/locked-account sessions; `touch`, `revoke`, `revoke_all_for`;
+      `set_session_cookie` HttpOnly + SameSite=Lax + path=/ + Secure behind `cookie_secure`)
+      and `helix_codex_app/security/guard.py` (`current_account` reads the `helix_session` cookie
+      and raises `AuthError`; `require_csrf` compares the X-CSRF-Token header with the session
+      token via `compare_digest`; `require_scope`, `require_capability`; `require_permission` is a
+      **deny-by-default placeholder** until the P1.4 catalog lands). `app.py` wires the guard once
+      at the router boundary: `app_router` (read `/app/*`) behind `current_account`, `csrf_router`
+      (mutating `/app/*`) behind `current_account` + `require_csrf`; `/`, `/app/healthz`, and the
+      static mount stay public; `render()` injects the session CSRF token; lifespan bootstraps the
+      app schema; an `AppError` handler maps `AuthError`→401 and `PermissionDenied`→403.
+      Tests: `tests/helix_codex_app/test_sessions_and_guard.py` (23) cover all six VERIFY cases,
+      revocation/expiry/idle, locked accounts, token-hash-only storage, cookie attributes, tenant
+      scope, capabilities, and deny-by-default permissions. Full suite 686 passed / 0 failed;
+      ruff check + format clean.
 - [ ] P1.4 The permission catalog and role mapping (Prompt 8)
 - [ ] P1.5 Login, logout, and the auth screens (Prompt 9)
 - [ ] P1.6 Admin: users, domains, org units, capabilities, limits (Prompt 10)

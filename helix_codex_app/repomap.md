@@ -7,7 +7,9 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
 
 - `__init__.py` — package marker; module docstring only.
 - `app.py` — `create_app()` product factory. Mounts the shell, the static mount, and the feature
-  routers.
+  routers. `app_router` (read `/app/*`, behind `current_account`) and `csrf_router` (mutating
+  `/app/*`, behind `current_account` + `require_csrf`) are wired once at the router boundary;
+  `/`, `/app/healthz`, and `/static` stay public.
 - `cli.py` — `helix-app` console entrypoint. Runs uvicorn on `settings.host` and `settings.port`.
 - `config.py` — `AppSettings`, env prefix `HELIX_APP_`, loopback-only default host, fail-closed
   settings check.
@@ -26,9 +28,12 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
 - `security/` — the app-local identity layer. `passwords.py` (stdlib scrypt, SOC-less
   `scrypt$n$r$p$salt$hash` envelope), `accounts.py` (Domain, OrgUnit, Account dataclasses plus
   `AccountRepository`; every account read takes tenant scope from the owning domain, never the
-  caller), `limits.py` (role defaults + `check_and_consume`, `LimitExceeded`). `sessions.py`,
-  `permissions.py`, `guard.py` arrive in later P1 prompts. This layer never edits the parent
-  catalog.
+  caller), `limits.py` (role defaults + `check_and_consume`, `LimitExceeded`), `sessions.py`
+  (SessionStore: opaque tokens stored as SHA-256 only + a CSRF token; `verify` rejects revoked/
+  expired/idle/locked-account sessions; `set_session_cookie`), `guard.py` (FastAPI deps:
+  `current_account`, `require_csrf`, `require_scope`, `require_capability`, and
+  `require_permission` — deny-by-default until the P1.4 catalog lands). `permissions.py` arrives
+  in P1.4. This layer never edits the parent catalog.
 - `integration/` — planned until its phases fill it. The only package allowed to import parent
   internals. `engine_bridge.py`, `policy_bridge.py`, `memory_bridge.py`, `metacognition_bridge.py`,
   `cockpit_bridge.py`, `packs.py`.
@@ -53,7 +58,8 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 
 | Group | Prefix | Gate |
 | --- | --- | --- |
-| Shell and health (live) | `/`, `/app`, `/app/healthz` | none for health and static |
+| Shell and health (live) | `/`, `/app/healthz` | none |
+| App home (live) | `/app` | session |
 | Static (live) | `/static` | none |
 | Auth (planned, P1) | `/app/auth/login`, `/logout`, `/me`, `/password` | none for login |
 | Admin (planned, P1) | `/app/admin/users`, `/domains`, `/org-units` | `admin.users` |

@@ -27,6 +27,7 @@ class AppSettings(BaseSettings):
     port: int = 8100
     session_idle_minutes: int = 720
     session_absolute_days: int = 30
+    cookie_secure: bool = True
     cors_origins: list[str] = Field(default_factory=list)
 
     def require_safe_defaults(self) -> None:

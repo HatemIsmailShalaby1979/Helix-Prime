@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline — Helix Codex</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <style>
+    body {
+      font-family: var(--font);
+      background: var(--surface-2);
+      color: var(--ink);
+      margin: 0;
+    }
+    .offline-card {
+      max-width: 24rem;
+      margin: 20vh auto 0;
+      padding: var(--space-5);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .offline-card h1 {
+      font-size: var(--text-xl);
+      margin: 0 0 var(--space-3);
+    }
+    .offline-card p {
+      color: var(--ink-2);
+      margin: var(--space-2) 0;
+    }
+  </style>
+</head>
+<body>
+  <main class="offline-card">
+    <h1>You are offline</h1>
+    <p>Your last viewed pages are still readable from this device.</p>
+    <p>New messages and edits need a connection. Try again when you are back online.</p>
+  </main>
+</body>
+</html>

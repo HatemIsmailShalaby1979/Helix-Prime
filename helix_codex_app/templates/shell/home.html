@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Home — Helix Codex{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Hello, operator.</h1>
+  <p>
+    Helix Codex keeps your workflows, documents, and governed AI on
+    hardware you control. Nothing leaves your network without an audit
+    trail you can point to.
+  </p>
+</section>
+<section class="card">
+  <h2>Sections</h2>
+  <nav class="section-list" aria-label="App sections">
+    <a class="section-link" href="/app">Home</a>
+    <span class="section-link section-link--disabled" aria-disabled="true">Chat — planned</span>
+    <span class="section-link section-link--disabled" aria-disabled="true">Tasks — planned</span>
+    <span class="section-link section-link--disabled" aria-disabled="true">Calendar — planned</span>
+  </nav>
+</section>
+{% endblock %}

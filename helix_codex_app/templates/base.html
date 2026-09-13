@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e94560">
+  {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token }}">{% endif %}
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <title>{% block title %}Helix Codex{% endblock %}</title>
+</head>
+<body>
+  <a class="skip-link" href="#app-content">Skip to content</a>
+  <header class="app-header">
+    <div class="app-header__inner">
+      <span class="app-header__brand">Helix Codex</span>
+      <span class="badge">App</span>
+    </div>
+  </header>
+  {% include "partials/nav_rail.html" %}
+  <main class="app-content" id="app-content">
+    {% block content %}{% endblock %}
+  </main>
+  {% include "partials/nav_bottom.html" %}
+  <div id="toast-host" class="toast-host" aria-live="polite"></div>
+  <div id="install-banner" class="install-banner" hidden>
+    <p class="install-banner__title">Install Helix Codex</p>
+    <p class="install-banner__text">It launches standalone and keeps working offline.</p>
+    <button type="button" class="btn btn--primary" data-install>Install</button>
+  </div>
+  <script defer src="/static/vendor/htmx.min.js"></script>
+  <script defer src="/static/vendor/alpine.min.js"></script>
+  <script defer src="/static/js/pwa.js"></script>
+</body>
+</html>

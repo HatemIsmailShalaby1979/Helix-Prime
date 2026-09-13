@@ -192,6 +192,7 @@ extend-immutable-calls = ["fastapi.Depends"]
 "observability/health.py" = ["S101", "S110", "S310"]
 "release/security_gate.py" = ["S105", "S112"]  # scan fixture value + resilient collector
 "release/manifest.py" = ["S603", "S607", "S110"]  # git ref collection shell-outs (fixed argv)
+"helix_codex_app/scripts/check_app_migration_drift.py" = ["S110", "S603"]
 "scripts/check_migration_drift.py" = ["S110", "S603"]
 "scripts/pilot_dry_run.py" = ["S110"]
 "scripts/smoke.py" = ["S603"]

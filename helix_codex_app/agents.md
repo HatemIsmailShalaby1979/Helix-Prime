@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P3 — Documents, KB, tasks (next prompt P3.3) |
-| Baseline test count | 980 |
-| Last commit | `381ecc7` feat(app): add document versions and the knowledge base |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1, P3.2 |
+| Current step | P4 — Calendar, on-calls, attendance (next prompt P4.4) |
+| Baseline test count | 1105 |
+| Last commit | `0a0bc5d` feat(app): add attendance punch clock and summary |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1, P3.2, P3.3, P3.4, P4.1, P4.2, **P4.3** |
 
 ## Step ledger
 
@@ -372,7 +372,7 @@ App-specific rules:
       never a mention; sender never notified). Full suite **929 passed, 0 failed**
       (902 baseline + 27); ruff check + format clean on all three new modules.
 
-### P3 — Documents, KB, tasks (status: NOT STARTED)
+### P3 — Documents, KB, tasks (status: COMPLETE)
 
 - [x] P3.1 Documents and the block editor (Prompt 16) — commit `02700f8`,
       `helix_codex_app/modules/docs/{__init__,repository,service,router}.py`
@@ -479,14 +479,362 @@ App-specific rules:
       kb screen 401/200 + type filter + search; SOPs render before Knowledge
       base. Full suite **980 passed, 0 failed** (954 baseline + 26); ruff check
       + format clean on helix_codex_app/ and tests/helix_codex_app/.
-- [ ] P3.3 Tasks (Prompt 18)
-- [ ] P3.4 Close out P3 (Prompt 19)
+- [x] P3.3 Tasks with a board, assignment, and comments (Prompt 18) — commit
+      `3cc625e` (docs milestone `42f3907`), `helix_codex_app/modules/tasks/{repository,service,router}.py`
+      (repository: `Task`/`TaskComment` frozen dataclasses with `to_dict()`;
+      `VISIBLE_STATUSES=("open","doing","done")`, `ALL_STATUSES` adds
+      `"archived"` (soft delete — a task is never deleted in v1);
+      `MANAGER_ROLES=("owner","manager")`; `TasksRepository` tenant-scoped —
+      `get_task` raises `NotFoundError` with ONE message shape for missing OR
+      foreign; `list_tasks(q, status, assignee_account_id, include_archived)`
+      excludes archived unless asked, newest-update-first; `update_task` uses
+      separate static UPDATEs per field (the P1.2 "no assembled statement"
+      lesson); `set_status` stamps/clears `completed_at` when entering/leaving
+      done; `assign_task`; `add_comment`; `list_comments` oldest-first.
+      service: `TaskService.create_task/list_tasks/get_task/update_task/
+      set_status/assign/add_comment` — every write calls `record_node()` with
+      kind `task` (body carries task_id + the changed fields), nature
+      `user_claim`, classification internal, provenance `helix_codex_app.tasks`
+      / `app_runtime`, fresh `task-<uuid4>` correlation per write, tenant/
+      client/domain from the account record; `_require_steward` gates every
+      status/assignment/field change to the creator, the current assignee, or a
+      manager (`PermissionDenied`); `_notify_assigned` fires exactly one
+      `task_assigned` notification per new assignment through
+      `NotificationService` (create-with-assignee and changed-assignee paths,
+      self-assignment never notifies) with link `/app/tasks/{task_id}`.
+      router: `tasks_router` under `/app` with `tasks.use` at the boundary; GET
+      `/app/tasks` (board screen, or `partials/task_board.html` fragment under
+      HX-Request), GET `/app/tasks/{id}` (detail screen — a foreign task is a
+      plain 404 through the AppError handler), POST `/app/api/tasks` (201 JSON
+      or board fragment), GET `/app/api/tasks/{id}` (task + comments),
+      PUT `/app/api/tasks/{id}` (fields or assignee, notifies on changed
+      assignee), POST `/app/api/tasks/{id}/status` (open/doing/done/archived),
+      POST `/app/api/tasks/{id}/comments` (201 JSON or the
+      `task_detail_comments.html` fragment) — mutating routes carry
+      `require_csrf`, read a JSON body or an HTMX urlencoded form. Templates
+      `templates/{tasks.html,task_detail.html}` and partials
+      `{task_board,task_detail_task,task_detail_comments}.html` (three-column
+      board with draggable cards gated by `x-data="tasksBoard()"` +
+      `static/js/tasks.js` — HTML5 drag posts the status via `htmx.ajax` and
+      swaps `#task-board` outerHTML, and every card also carries a status
+      `<select>` so touch users can move it too; comments render oldest-first;
+      the create form targets the board; nav links enabled in both nav
+      partials), task CSS appended to `app.css`, `app.py` mounts `tasks_router`.
+      Tests: `tests/helix_codex_app/test_tasks.py` (30) prove the P3.3
+      invariants — create writes exactly one `task` node; blank title rejected;
+      list excludes archived by default; done stamps `completed_at`; bad status
+      rejected; the steward gate admits the creator, the assignee, and a
+      manager but denies an unrelated employee; assignment notifies exactly
+      once (both on create-with-assignee and on changed-assignee, and NOT on a
+      no-op re-assign); a comment writes one node and blank bodies are rejected;
+      comments are oldest-first; the board screen renders, the detail screen
+      renders, and a foreign-tenant task is a 404 at HTTP level; create/status/
+      comment answer JSON (201) and HTML fragments under HX-Request; CSRF 403;
+      unauthenticated 401. Full suite **1010 passed, 0 failed** (980 baseline
+      + 30); ruff check + format clean on helix_codex_app/ and
+      tests/helix_codex_app/.
+- [x] P3.4 Close out P3 (Prompt 19) — commit `f62cddc`,
+      `tests/helix_codex_app/test_docs_isolation.py`
+      (10 tests: a document in tenant A is invisible in tenant B — get/list/
+      blocks/versions all raise `NotFoundError` and the peer's writes never
+      land, so no governed node is recorded for a foreign document; a private
+      note is invisible to a peer employee (service read, list, edit,
+      snapshot) but visible to its owner and any manager; HTTP: the editor
+      screen is 404 across tenants and for a peer note, and the `/app/docs`
+      list screen shows the empty state for a foreign tenant and for a peer
+      who only has an inaccessible note while the owner sees the title),
+      `tests/helix_codex_app/test_node_invariants.py`
+      (11 tests: every P3 write path appends exactly one governed node with a
+      non-null tenant_id, a non-empty `doc-`/`task-` correlation_id, a
+      classification from the allowed set, and provenance data_mode
+      `app_runtime` — create_document (kind document), insert/update/delete
+      block (kind block), set_doc_type (kind document), snapshot/restore
+      (kind version, restore body carries `"restored_from"`), create_task/
+      set_status/update_task/assign/add_comment (kind task — comments share
+      the task kind; assign also records its task_assigned notification
+      node), plus a full-session sweep proving no un-enveloped node exists),
+      `tests/helix_codex_app/test_version_restore.py`
+      (7 tests: a restore appends a NEW version row whose bytes equal the
+      restored snapshot and NEVER rewrites any prior version row — originals
+      1–4 keep their exact bytes through restores, edits, further snapshots,
+      and chained restores; restoring twice appends twice; the live blocks
+      match the restored snapshot; a restored version is itself restorable; a
+      later snapshot captures the restored content; each restore records its
+      own governed version node). Full suite **1038 passed, 0 failed**
+      (1010 baseline + 28); ruff check + format clean on helix_codex_app/ and
+      tests/helix_codex_app/.
 
-### P4 — Calendar, on-calls, attendance (status: NOT STARTED)
+### P4 — Calendar, on-calls, attendance (status: COMPLETE)
 
-- [ ] P4.1 Calendar and events (Prompt 20)
-- [ ] P4.2 On-call rosters (Prompt 21)
-- [ ] P4.3 Attendance and punch in/out (Prompt 22)
+- [x] P4.1 Calendar and events (Prompt 20) — commit `5794fad`,
+      `helix_codex_app/modules/calendar/{__init__,repository,service,router}.py`
+      (repository: `Event`/`EventAttendee` frozen dataclasses with `to_dict()`;
+      `CONFIRMED`/`CANCELLED`, `PENDING`, `RESPONSES=("yes","no","maybe")`,
+      `RECURRENCE_RULES=("","daily","weekly")`, `MAX_ATTENDEES=64`,
+      `MAX_OCCURRENCES=400`; `_parse` treats a naive ISO value as UTC, `_fmt`
+      emits tz-aware UTC — events are stored and rendered in UTC, with no
+      per-tenant timezone column in v1; `CalendarRepository` tenant-scoped —
+      `get_event` raises `NotFoundError` with ONE message shape for missing,
+      non-visible, and foreign events, visible ONLY to the creator or an
+      `event_attendees` row (SQL `EXISTS`); `list_events` filters
+      `status = confirmed`, expands recurrence into occurrences on read
+      (recurrence is ONE text rule, never materialised as rows — the Prompt 20
+      mandated limitation), returns `[from, to)` start-inclusive end-exclusive,
+      ordered by occurrence time; `update_event` uses separate static UPDATEs
+      per field (the P1.2 lesson); `set_attendees` keeps retained RSVPs and
+      returns the newly added ids; `respond` is a row-based UPDATE — a
+      non-attendee gets `NotFoundError`; `cancel_event` is a soft status flip
+      (`confirmed → cancelled`), the row stays; `resolve_attendees` resolves
+      account ids inside the tenant's domains). The `events` table gained its
+      `status TEXT` column in `db.py::_init_schema` AND the alembic baseline
+      `0001_codex_app_baseline.py` (token-identical, drift test proves it) —
+      there is no live `app.db` so nothing to migrate.
+      service: `CalendarService.create_event/get_event/list_events/update_event/
+      respond/cancel_event` — every write calls `record_node()` with kind
+      `event` (create/update/cancel; the update node body carries the changed
+      fields) or `event_response` (respond), nature `user_claim`,
+      classification internal, provenance `helix_codex_app.calendar` /
+      `app_runtime`, fresh `event-<uuid4>` correlation per write; `_require_steward`
+      gates update/cancel to the creator or a manager
+      (`role_id in ("owner","manager")`, `PermissionDenied`); `_notify_new_attendees`
+      fires exactly one `event_invite` notification per new attendee (never for
+      self, never on a no-op re-run) with link `/app/calendar` and body
+      `starts_at (UTC)`; `_validate_time` rejects end ≤ start and unparsable
+      values; `_validate_recurrence` rejects anything outside the three rules.
+      router: `calendar_router` under `/app` with `calendar.use` at the boundary;
+      GET `/app/calendar` (agenda-first screen), GET `/app/api/events`
+      (`?from=&to=` JSON `{events, from, to}`, both edges or neither — a lone
+      edge is 400), POST `/app/api/events` (201 JSON or, under HX-Request, the
+      `partials/calendar_view.html` fragment), PUT `/app/api/events/{id}`
+      (field update, or cancel when `status` is `cancelled`), POST
+      `/app/api/events/{id}/respond` — mutating routes carry `require_csrf`,
+      read a JSON body or an HTMX urlencoded form through `_payload()` where
+      repeated `attendee` fields collapse into a list; `_view_context` supplies
+      occurrences (each annotated with `my_response` and `cancellable`),
+      `members`, `by_date`, `weeks` (Mon-first month grid), `month_label`.
+      Templates `templates/calendar.html` + partials `{event_form,
+      calendar_view}.html` (create form `hx-post` with datetime-local inputs,
+      multi-select attendee of domain members, recurrence select; agenda list +
+      month grid toggled by a `min-width: 768px` media query, per-event
+      Yes/No/Maybe RSVP forms and a Cancel button shown only for
+      creator/manager), calendar CSS appended to `app.css`, `app.py` mounts
+      `calendar_router`, Calendar links enabled in both nav partials (the
+      `--disabled` placeholders become real links).
+      Tests: `tests/helix_codex_app/test_calendar.py` (41) prove the P4.1
+      invariants — one `event` node per create with the full envelope; creator
+      sees own event with no attendees; same-tenant outsider, unattached
+      attendee, and foreign-tenant reads are all 404-shaped `NotFoundError`;
+      range is inclusive of `from` and exclusive of `to`; cancelled events
+      vanish from listings while the row and its `status: cancelled` node stay;
+      RSVP updates the attendee row + writes an `event_response` node, and a
+      non-attendee's RSVP is `NotFoundError`; the steward gate denies an
+      unrelated attendee on update AND cancel but admits a manager who is
+      visible; the update node body records every changed field; attendee-add
+      fires exactly one `event_invite` notification (and none on a no-op
+      re-run or for self); daily recurrence expands to 30 and weekly to 5
+      occurrences in September 2026 with shifted times; invalid recurrence,
+      blank title, end ≤ start, and unknown attendees rejected; all_day
+      round-trips; HTTP: screen renders (and 401 unauth), create API writes
+      and audits (201 + one node + one notification), CSRF 403, bad payload
+      400, list API serves the `[from, to)` range and rejects a lone edge,
+      respond route round-trips, cancel-via-PUT hides the event and keeps both
+      nodes, foreign-tenant event is 404, and the HX-Request create returns
+      the calendar-view fragment containing the new event. Full suite
+      **1079 passed, 0 failed** (1038 baseline + 41); ruff check + format
+      clean on helix_codex_app/ and tests/helix_codex_app/.
+      **Design notes for the ledger:** recurrence in v1 is limited to one text
+      rule (daily/weekly) expanded on read (documented in `governance.md` item
+      19); all times are UTC both stored and rendered — there is no per-tenant
+      timezone column, so v1 shows UTC and a future tz column + per-account
+      display conversion are an explicit v2 item; cancellation is a soft status
+      flip so the governed audit trail is the only "deletion" path.
+
+- [x] P4.2 On-call rosters (Prompt 21) — commit `07e9cee`,
+      `helix_codex_app/integration/engine_bridge.py`
+      (the app's FIRST engine bridge, and the only module allowed to import
+      the `engines` package: `wfm_coverage(tenant_id, client_id,
+      correlation_id, actor, from_at, to_at)` reads the WFM staffing
+      requirement for a tenant and window — `engines.wfm.adapter.adapt` on
+      `ENGINE_BASELINE_PAYLOADS["wfm"]` with `owning_role_id="ops_gm"` and
+      `is_sample=True` — imported lazily so a missing engine surfaces as an
+      explicit `EngineUnavailableError` at call time, never at app startup.
+      The engine is an Erlang-C calculator, NOT a roster model: it says how
+      many agents must be rostered, never who is on a shift. It fails closed:
+      an import failure, a non-None `result.error`, or a missing
+      `optimal_agents` metric each raise `EngineUnavailableError` ("WFM
+      engine unavailable", "could not produce coverage", "returned no
+      staffing figure"), so a coverage figure the engine did not produce is
+      never returned and an empty result is never served as if it were a
+      roster. The returned figure is honestly labeled: `data_mode="sample"`,
+      `is_sample=True`, `basis="canonical WFM sample baseline"`),
+      `helix_codex_app/errors.py`
+      (`EngineUnavailableError(AppError)`, `code="engine_unavailable"`,
+      `status_code=503`, added for P4.2),
+      `helix_codex_app/modules/calendar/repository.py`
+      (`OnCallShift` frozen dataclass: shift_id, tenant_id, domain_id,
+      `roster` tuple, starts_at, ends_at, primary_account_id,
+      backup_account_id, `to_dict()`; `OnCallCoverage`: covered,
+      shift, status, `to_dict()`; `create_shift` inserts one row with the
+      roster text (`json.dumps`) and reads it back; `get_current_shift(tenant,
+      at)` is start-inclusive/end-exclusive `starts_at <= at < ends_at`,
+      `ORDER BY starts_at DESC` limit 1; `get_next_shift(tenant, after_at)` is
+      the earliest `starts_at > after_at`; `list_shifts(tenant, from, to)`
+      overlap semantics `[from, to)` exactly as for events; `list_account_shifts`
+      is the account's upcoming shifts where it is primary OR backup;
+      `_shift_from_row` is NULL-safe (a broken roster JSON degrades to ()),
+      `helix_codex_app/modules/calendar/service.py`
+      (`create_shift` is a MANAGER action — `account.role_id not in
+      ("owner","manager")` raises `PermissionDenied` (code
+      `permission_denied`) — and requires a valid window, a non-blank primary
+      and backup, distinct accounts, and both accounts resolving inside the
+      tenant (unknown or foreign → `ValueError("unknown account")`); every
+      write calls `record_node()` with kind `oncall_shift`, nature
+      `user_claim`, classification internal, provenance
+      `helix_codex_app.calendar` / `app_runtime`, and a fresh
+      `shift-<uuid4>` correlation id; body records shift_id/starts_at/
+      ends_at/primary/backup. `current_oncall(tenant_id, at)` answers the
+      coverage question: a window with no rostered shift returns
+      `OnCallCoverage(covered=False, shift=None, status="gap")` — a gap,
+      NEVER an empty list and never a fabricated roster. `list_shifts`
+      scopes to the account's tenant; `next_shifts(account)` is the account's
+      own upcoming shifts (primary or backup), `next_tenant_shift(tenant,
+      after_at)` is the tenant's earliest future shift),
+      `helix_codex_app/modules/calendar/router.py`
+      (`GET /app/api/oncall` under the existing `calendar.use` boundary:
+      returns `{coverage, next_shifts, wfm}` where the `coverage` object
+      reports covered-or-gap, the roster source is the app's own
+      `oncall_shifts` table, and the engine read is a 24 h window from now.
+      **Fail-closed split (the prompt's honest-seam decision):** the API
+      calls `engine_bridge.wfm_coverage` and lets `EngineUnavailableError`
+      PROPAGATE to the global AppError handler — a typed 503
+      `{error: {code: "engine_unavailable", ...}}`, never a degraded 200
+      roster; `POST /app/api/oncall/shifts` with `require_csrf` creates a
+      shift and returns 201 or the service error (404/403/400)) and
+      `helix_codex_app/templating.py`/`helix_codex_app/app.py`
+      (the server-rendered HOME card is roster-ONLY: `app_index` builds
+      `name_map` from the account's domain accounts, `coverage`,
+      `next_shift`, and `my_shifts`, and `templates/shell/home.html` renders
+      "X is the on-call primary until …", a "coverage gap is open right now"
+      state, or — when the bridge raises and the home route lets it fail
+      closed — an explicit "On-call coverage is unavailable" state; the
+      Sections card links were made live: Chat, Tasks, Calendar, Documents,
+      Knowledge base, Notifications). No DDL change: `oncall_shifts` already
+      exists in `db.py::_init_schema` and the 0001 baseline (P1.1) — app
+      migration drift check passes at head.
+      Tests: `tests/helix_codex_app/test_oncall.py` (26) prove the prompt's
+      three invariants — (1) `current_oncall` returns the primary for the
+      current window (`covered`, status `covered`), (2) a gap is reported AS
+      a gap rather than an empty list (`OnCallCoverage(covered=False,
+      status="gap")` and `to_dict()["status"] == "gap"`), (3) an unavailable
+      engine RAISES rather than degrading (all three bridge failure modes:
+      engine missing from the package, `result.error` set, and a result
+      without `optimal_agents` → `EngineUnavailableError` with the matching
+      message). Plus: a create writes exactly one `oncall_shift` node with
+      the full envelope; manager-only creation (employee `PermissionDenied`);
+      distinct/unknown/foreign-account and bad-window rejection; shifts are
+      tenant-scoped and a foreign tenant sees nothing; `next_shifts` lists
+      only the account's own upcoming windows (current + future), and
+      `next_tenant_shift` returns the earliest future shift (None when none);
+      the API returns coverage + wfm (63 required agents, is_sample) + own
+      next shifts; the API is 503 with `error.code == "engine_unavailable"`
+      when the engine is unavailable; create-shift API is 201 + one node,
+      403 for a missing CSRF, 403 `permission_denied` for an employee, 400
+      for a foreign backup; the on-call route is 401 unauthenticated; the
+      home screen shows the on-call person to her tenant and hides a foreign
+      tenant's shifts. Full suite **1105 passed, 0 failed** (1079 baseline
+      + 26); ruff check + format clean; migration drift clean.
+      **Design notes for the ledger:** the roster is ALWAYS app data in
+      `oncall_shifts`; the WFM engine is a staffing calculator the bridge
+      reads for coverage context, never the roster source — Prompt 21's
+      premise that the engine models on-call coverage was corrected to this
+      honest seam and the correction is recorded here (the prompt's
+      "unavailable engine raises" is exercised at the bridge and the API,
+      not inside `current_oncall` which is roster-only by design).
+- [x] P4.3 Attendance and punch in/out (Prompt 22) — commit `0a0bc5d`,
+      `helix_codex_app/modules/attendance/{__init__,repository,service,router}.py`
+      (repository: `PunchRecord` frozen dataclass with `to_dict()`;
+      `PUNCH_IN="in"`, `PUNCH_OUT="out"`, `PUNCH_TYPES`; `insert_punch`
+      appends one immutable `punch_records` row (fresh `punch-<hex>` punch_id
+      AND correlation_id, `punched_at` defaults to the server clock — no
+      caller-supplied time is ever accepted), `latest_punch` orders by
+      `(punched_at DESC, rowid DESC)` so two punches at the same microsecond
+      still resolve deterministically, `list_records` is `[from_at, to_at)`
+      ordered `(punched_at, rowid)`, `records_after` has NO upper bound (a
+      pairing walk needs the closing "out" even when it lands after the
+      window end) and groups per account; no update or delete method exists —
+      a correction is a new row with a note. service: `AttendanceService.
+      punch_in(account, source=None, device_id=None)` raises
+      `ValueError("a punch is already open")` on the open-punch rule, writes
+      the row, then records ONE governed node sharing the punch row's
+      correlation_id (`kind="punch"`, `nature="user_claim"`, classification
+      internal, provenance `helix_codex_app.attendance` / `app_runtime`) so
+      each tap reads as one story in the audit trail; `punch_out(account)`
+      raises `ValueError("no punch is open")` when nothing is open and closes
+      the row the same way; `current_status(account)` returns the open punch
+      exactly when the most recent row is an "in"; `list_records` is scoped by
+      `_visible_account_ids` — owner → whole domain, manager → self plus the
+      accounts sharing their org_unit (a manager with no org unit falls back
+      to self-only, NEVER wider), everyone else → self only; `summary(account,
+      from, to)` counts only COMPLETED in/out pairs whose punch-in lies inside
+      `[from, to)`, buckets each pair's minutes to the punch-in UTC date, an
+      open punch contributes ZERO, and the window must end after it starts
+      (returns days + total_minutes); `today_minutes(account)` is the punch
+      clock's running total: today's closed pairs plus the open segment
+      accrued from the later of its punch-in and midnight. router:
+      `attendance_router` under `/app` with `attendance.punch` at the
+      boundary; GET `/app/attendance` (screen), POST
+      `/app/api/attendance/punch` (`require_csrf`; JSON or urlencoded payload
+      through `_payload`; `action=in|out` with a toggle default when omitted,
+      source/device_id accepted, `ValueError` → 400; 201 `PunchRecord.to_dict()`
+      or, under HX-Request, the re-rendered `partials/punch.html` fragment so
+      the button label and the running total swap in place), GET
+      `/app/api/attendance/records` and GET `/app/api/attendance/summary`
+      (`?from=&to=` both-or-neither, defaults: records = today, summary =
+      current UTC week Monday→now). Templates `templates/attendance.html` +
+      partial `templates/partials/punch.html` (ONE large Punch in/out button
+      posting with the X-CSRF-Token header, an explicit on/off state with the
+      since-timestamp, and "Today: N min"), punch-clock CSS appended to
+      `app.css`, `app.py` mounts `attendance_router` beside calendar, and
+      Attendance links are enabled in both nav partials + the home Sections
+      card. No DDL change: `punch_records` already exists in `db.py` and the
+      0001 baseline since P1.1 — migration drift stays clean; `attendance.punch`
+      already exists in `permissions.py` — no permission change.
+      Tests: `tests/helix_codex_app/test_attendance.py` (38) prove the
+      prompt's five required invariants plus the honesty surface — double
+      punch-in raises (`test_double_punch_in_raises`); punch-out with nothing
+      open raises (`test_punch_out_with_nothing_open_raises`); a punch records
+      exactly one row and one node sharing the punch correlation_id
+      (`test_punch_in_writes_one_record_and_one_node`,
+      `test_punch_node_shares_the_punch_correlation_id`); the summary sums
+      across a day boundary (`test_summary_sums_correctly_across_a_day_boundary`
+      — in 23:30 UTC D, out 00:30 UTC D+1 → 60 minutes on D),
+      ignores pairs whose "in" is outside the window, counts an open punch as
+      zero, rejects an inverted window, and totals the visible scope; an
+      employee sees only their own records, a manager sees their org unit,
+      a manager without an org unit sees only self, the owner sees the whole
+      domain, and a foreign tenant sees nothing (service + records API +
+      summary). Plus: the server decides the timestamp (stamped value falls
+      between before/after clocks), append-only (no update/delete path on the
+      repository, second punch is a new id), `today_minutes` via a pinned
+      `_FakeDatetime` (0 with nothing, 60 for a closed pair, 60 accrued for an
+      open punch), and the HTTP surface: screen renders / 401 unauth / 403
+      external, punch API 201 + audits + CSRF 403 + double-in 400 +
+      out-with-nothing 400 + omitted-action toggle, the HX fragment swaps to
+      "Punch out", records/summary APIs reject a lone edge and an inverted
+      range, and the manager records API scopes to the org unit. Full suite
+      **1143 passed, 0 failed** (1105 baseline + 38); ruff check + format
+      clean; app migration drift check passes at head.
+      **Design notes for the ledger:** the SERVER is the time authority —
+      `punched_at` is always the server clock, matching the calendar's
+      UTC-everywhere decision (governance entry 19). Summary semantics lock in
+      "completed pairs only, bucketed to the punch-in UTC date": an open punch
+      earns zero on the week card while the clock's running total separately
+      accrues the open segment — the two numbers answer different questions
+      (manager-trustworthy worked time vs. live feedback). Visibility reuses
+      the P1.6 admin rule (owner whole-domain, manager own-org-unit-or-self,
+      everyone else self) and `current_status` stays row-only, so an external
+      who holds no `attendance.punch` is denied at the router boundary and can
+      never learn who is on the clock.
 - [ ] P4.4 Close out P4 (Prompt 23)
 
 ### P5 — Per-user metacognitive memory (status: NOT STARTED)

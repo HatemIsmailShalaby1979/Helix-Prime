@@ -1,13 +1,16 @@
 """Tests for the evidence-gated metacognitive improvement system (Prompt 8).
 
 Covers: proposal generation, failed evaluation, rejection, approval (with
-separation-of-duties), rollback, and the core guarantee that no unapproved
-proposal ever changes runtime behavior.
+separation-of-duties), rollback, the refusal to approve a proposal that has not
+passed evaluation, and the core guarantee that no unapproved proposal ever
+changes runtime behavior.
 """
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -20,6 +23,7 @@ from metacognition.improvement import (
     REJECTED,
     ROLLED_BACK,
     MetacognitionEngine,
+    ProposalNotApprovableError,
     apply_proposal,
     rollback_proposal,
 )
@@ -97,8 +101,34 @@ def test_failed_evaluation(tmp_path):
     res = eng.evaluate(p, historical_cases=_cases(), simulated_cases=_cases(), simulate=_simulate)
     assert res.passed is False
     assert eng.get_proposal(p.proposal_id).approval_state == EVALUATED_FAILED
-    dec = eng.approve(p.proposal_id, "human-1", "ict_gm")
-    assert dec.decision == "denied"
+    with pytest.raises(ProposalNotApprovableError):
+        eng.approve(p.proposal_id, "human-1", "ict_gm")
+
+
+# --- an unevaluated proposal cannot be approved -------------------------------
+def test_unevaluated_draft_cannot_be_approved(tmp_path):
+    eng = MetacognitionEngine(path=str(tmp_path / "prop.jsonl"))
+    p = _propose(eng, 0.3)
+    assert eng.get_proposal(p.proposal_id).approval_state == DRAFT
+    with pytest.raises(ProposalNotApprovableError):
+        eng.approve(p.proposal_id, "human-1", "ict_gm")
+    # the refusal changed nothing
+    assert eng.get_proposal(p.proposal_id).approval_state == DRAFT
+    assert eng.get_proposal(p.proposal_id).reviewer is None
+    # and the same reviewer is still allowed once evaluation has passed
+    eng.evaluate(p, historical_cases=_cases(), simulated_cases=_cases(), simulate=_simulate)
+    assert eng.approve(p.proposal_id, "human-1", "ict_gm").decision == "allowed"
+
+
+# --- an already-rejected proposal cannot be approved --------------------------
+def test_rejected_proposal_cannot_be_approved(tmp_path):
+    eng = MetacognitionEngine(path=str(tmp_path / "prop.jsonl"))
+    p = _propose(eng, 0.3)
+    eng.evaluate(p, historical_cases=_cases(), simulated_cases=_cases(), simulate=_simulate)
+    eng.reject(p.proposal_id, "human-1", "not convinced")
+    with pytest.raises(ProposalNotApprovableError):
+        eng.approve(p.proposal_id, "human-2", "ict_gm")
+    assert eng.get_proposal(p.proposal_id).approval_state == REJECTED
 
 
 # --- rejection ----------------------------------------------------------------
@@ -108,8 +138,6 @@ def test_rejection(tmp_path):
     eng.evaluate(p, historical_cases=_cases(), simulated_cases=_cases(), simulate=_simulate)
     eng.reject(p.proposal_id, "human-1", "not convinced")
     assert eng.get_proposal(p.proposal_id).approval_state == REJECTED
-    dec = eng.approve(p.proposal_id, "human-2", "ict_gm")
-    assert dec.decision == "denied"
 
 
 # --- approval (with separation of duties) -------------------------------------

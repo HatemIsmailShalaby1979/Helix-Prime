@@ -312,7 +312,8 @@ def upgrade() -> None:
         creator_account_id TEXT,
         recurrence_rule TEXT,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        status TEXT
     )
     
     """

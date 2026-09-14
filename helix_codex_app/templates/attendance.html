@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Attendance — Helix Codex{% endblock %}
+{% block content %}
+<div class="attendance-page">
+  <div class="calendar-page__header">
+    <h1>Attendance</h1>
+  </div>
+  {% include "partials/punch.html" %}
+  <section class="card">
+    <h2>This week</h2>
+    {% if weekly.days %}
+    <ul class="section-list">
+      {% for day in weekly.days %}
+      <li class="section-link">
+        {{ day.date }} — {{ day.minutes }} min
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="home-greet__role">Total: {{ weekly.total_minutes }} min</p>
+    {% else %}
+    <p>No completed punches this week.</p>
+    {% endif %}
+  </section>
+  <section class="card">
+    <h2>Today's punches</h2>
+    {% if today_records %}
+    <ul class="section-list">
+      {% for record in today_records %}
+      <li class="section-link">
+        {% if record.account_id == account.account_id %}You{% else %}Another account{% endif %}
+        — {{ record.punch_type }} at {{ record.punched_at }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No punches recorded today.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

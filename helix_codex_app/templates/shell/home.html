@@ -22,13 +22,54 @@
     trail you can point to.
   </p>
 </section>
+{% if oncall %}
+<section class="card">
+  <h2>On call</h2>
+  {% if oncall.coverage and oncall.coverage.covered %}
+  {% set current = oncall.coverage.shift %}
+  <p>
+    <strong>{{ name_map.get(current.primary_account_id, current.primary_account_id) }}</strong>
+    is the on-call primary until {{ current.ends_at }}.
+  </p>
+  <p class="home-greet__role">
+    Backup: {{ name_map.get(current.backup_account_id, current.backup_account_id) }}
+  </p>
+  {% elif oncall.coverage %}
+  <p>A coverage gap is open right now — no one is rostered.</p>
+  {% else %}
+  <p>On-call coverage is unavailable.</p>
+  {% endif %}
+  {% if oncall.next_shift %}
+  {% set next = oncall.next_shift %}
+  <p>
+    Next up: {{ name_map.get(next.primary_account_id, next.primary_account_id) }}
+    starting {{ next.starts_at }}.
+  </p>
+  {% endif %}
+  {% if oncall.my_shifts %}
+  <p class="home-greet__role">Your upcoming shifts:</p>
+  <ul class="section-list">
+    {% for shift in oncall.my_shifts %}
+    <li class="section-link">
+      {{ shift.starts_at }} – {{ shift.ends_at }}
+      {% if shift.primary_account_id == account.account_id %}(primary){% else %}(backup){% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
 <section class="card">
   <h2>Sections</h2>
   <nav class="section-list" aria-label="App sections">
     <a class="section-link" href="/app">Home</a>
-    <span class="section-link section-link--disabled" aria-disabled="true">Chat — planned</span>
-    <span class="section-link section-link--disabled" aria-disabled="true">Tasks — planned</span>
-    <span class="section-link section-link--disabled" aria-disabled="true">Calendar — planned</span>
+    <a class="section-link" href="/app/chat">Chat</a>
+    <a class="section-link" href="/app/tasks">Tasks</a>
+    <a class="section-link" href="/app/calendar">Calendar</a>
+    <a class="section-link" href="/app/attendance">Attendance</a>
+    <a class="section-link" href="/app/docs">Documents</a>
+    <a class="section-link" href="/app/kb">Knowledge base</a>
+    <a class="section-link" href="/app/notifications">Notifications</a>
   </nav>
 </section>
 {% endblock %}

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Calendar — Helix Codex{% endblock %}
+{% block content %}
+<section class="calendar-page" data-calendar>
+  <div class="calendar-page__header">
+    <h1>Calendar</h1>
+  </div>
+  {% include "partials/event_form.html" %}
+  {% include "partials/calendar_view.html" %}
+</section>
+{% endblock %}

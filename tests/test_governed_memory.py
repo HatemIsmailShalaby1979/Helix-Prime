@@ -2,9 +2,9 @@
 
 Covers every required verification: persistence/reload, tenant isolation,
 classification enforcement, provenance, correction, supersession, retention,
-simulated-vs-historical labeling, audit-chain integrity, no-unverified-as-fact,
-no-cross-tenant-leakage, no-silent-deletion, no-auto-policy-change, and
-command-center display.
+correction/supersession/deletion flags surviving a reload, simulated-vs-historical
+labeling, audit-chain integrity, no-unverified-as-fact, no-cross-tenant-leakage,
+no-silent-deletion, no-auto-policy-change, and command-center display.
 """
 from __future__ import annotations
 
@@ -350,6 +350,91 @@ def test_no_silent_deletion():
         x for x in m._records if x.kind == "workflow_history" and x.body.get("action") == "delete"
     ]
     assert dels and dels[0].body["target"] == r.record_id
+
+
+# --- correction / supersession / deletion survive a reload --------------------
+def test_correction_status_survives_reload(tmp_path):
+    p = str(tmp_path / "m.jsonl")
+    m = GovernedMemory(path=p)
+    r = _add(m, body={"text": "original"})
+    m.correct(
+        record_id=r.record_id,
+        actor="a2",
+        role_id="r2",
+        reason="incorrect",
+        correction_body={"text": "fixed"},
+        timestamp="2026-08-29T01:00:00Z",
+    )
+    assert m._by_id[r.record_id].retention_status == "corrected"
+    m2 = GovernedMemory(path=p)
+    assert m2._by_id[r.record_id].retention_status == "corrected"
+
+
+def test_supersession_status_survives_reload(tmp_path):
+    p = str(tmp_path / "m.jsonl")
+    m = GovernedMemory(path=p)
+    r = _add(m, body={"text": "v1"})
+    m.supersede(
+        record_id=r.record_id,
+        actor="a2",
+        role_id="r2",
+        reason="newer",
+        superseding_body={"text": "v2"},
+        nature="verified_fact",
+        classification="client_confidential",
+        correlation_id="corr-2",
+        timestamp="2026-08-29T01:00:00Z",
+        confidence=0.95,
+    )
+    assert m._by_id[r.record_id].retention_status == "superseded"
+    m2 = GovernedMemory(path=p)
+    assert m2._by_id[r.record_id].retention_status == "superseded"
+
+
+def test_deletion_survives_reload(tmp_path):
+    p = str(tmp_path / "m.jsonl")
+    m = GovernedMemory(path=p)
+    r = _add(m, body={"text": "remove me"})
+    m.delete(
+        record_id=r.record_id,
+        actor="a",
+        role_id="r",
+        reason="oops",
+        timestamp="2026-08-29T02:00:00Z",
+    )
+    m2 = GovernedMemory(path=p)
+    restored = m2._by_id[r.record_id]
+    assert restored.deleted == "oops"
+    assert restored.retention_status == "deleted"
+    # still present in the store, still excluded from default retrieval
+    assert len(m2._records) == 2
+    assert all(x.record_id != r.record_id for x in m2.retrieve(tenant_id="t1"))
+    assert len(m2.retrieve(tenant_id="t1", include_deleted=True)) == 2
+
+
+def test_second_delete_after_reload_is_still_a_no_op(tmp_path):
+    p = str(tmp_path / "m.jsonl")
+    m = GovernedMemory(path=p)
+    r = _add(m)
+    m.delete(
+        record_id=r.record_id,
+        actor="a",
+        role_id="r",
+        reason="first",
+        timestamp="2026-08-29T02:00:00Z",
+    )
+    m2 = GovernedMemory(path=p)
+    before = len(m2._records)
+    again = m2.delete(
+        record_id=r.record_id,
+        actor="a",
+        role_id="r",
+        reason="second",
+        timestamp="2026-08-29T03:00:00Z",
+    )
+    assert len(m2._records) == before  # no second marker written
+    assert again.deleted == "first"  # the original reason stands
+    assert m2._by_id[r.record_id].deleted == "first"
 
 
 # --- no automatic policy/behavior change -------------------------------------

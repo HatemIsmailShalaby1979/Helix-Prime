@@ -13,7 +13,8 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
 - `cli.py` — `helix-app` console entrypoint. Runs uvicorn on `settings.host` and `settings.port`.
 - `config.py` — `AppSettings`, env prefix `HELIX_APP_`, loopback-only default host, fail-closed
   settings check.
-- `errors.py` — `AppError` base; `AuthError`, `PermissionDenied`, `LimitExceeded`, `NotFoundError`.
+- `errors.py` — `AppError` base; `AuthError`, `PermissionDenied`, `LimitExceeded`, `NotFoundError`,
+  and `EngineUnavailableError` (503, `engine_unavailable`, the engine-bridge fail-closed signal).
 - `deps.py` — planned. `AccountStore`, `CollabStore`, `EngineProvider`, and the memory and
   metacognition providers.
 - `db.py` — Sqlite3 connection factory, schema bootstrap, and `record_node()`, the single
@@ -46,8 +47,13 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `authorize_engine_action` calls `security.policy.authorize` with the account's own tenant/client
   and raises `PermissionDenied` on any deny). `sse_bridge.py` (live, P2.2: the app's only window
   onto `server.sse.EventBus` — `subscribe`/`unsubscribe`/`publish`/`publish_sync`/
-  `subscriber_count` + `encode`, one bus per process). `engine_bridge.py`, `memory_bridge.py`,
-  `metacognition_bridge.py`, `cockpit_bridge.py`, and `packs.py` are planned with their phases.
+  `subscriber_count` + `encode`, one bus per process). `engine_bridge.py` (live, P4.2: the app's
+  first engine read — `wfm_coverage` calls `engines.wfm.adapter.adapt` on the canonical sample
+  baseline with `owning_role_id="ops_gm"`, lazily imported at call time, and raises
+  `EngineUnavailableError` on import failure, a non-None `result.error`, or a missing
+  `optimal_agents` figure — an unavailable engine never yields an empty/degraded answer).
+  `memory_bridge.py`, `metacognition_bridge.py`, `cockpit_bridge.py`, and `packs.py` are planned
+  with their phases.
 - `templating.py` — the one shared template renderer. Reads the CSRF token from
   `request.state.session` and the settings off `request.app.state`, so every route renders with
   the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,
@@ -60,23 +66,58 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   conversation SSE stream, all `router → service → repository` over the P2.1 schemas) and
   `notifications` (live, P2.3: the `/app/notifications` screen, the notifications/read/read-all
   JSON API, the account-scoped SSE badge stream, and the mention/dm trigger hooks that
-  `messaging.service.send_message` calls after its commit) exist;
-  `docs` (live, P3.2: the `/app/docs` list screen + block editor screen, the
-  documents/blocks JSON API, document versions — snapshot/list/get/restore,
-  append-only history with `current_version` on documents — the `/app/kb`
-  knowledge base screen (sop+kb grouped, SOPs first), doc_type note/sop/kb/
-  policy with manager-only sop/policy and note owner/manager visibility; router
-  → service → repository, one governed `document`/`block`/`version` node
-  per write with a fresh `doc-<uuid4>` correlation id — leaves `tasks`,
-  `calendar`, `attendance`, `memory`, `ops`, `cockpit`,
+  `messaging.service.send_message` calls after its commit) exist; `tasks` (live, P3.3:
+  the `/app/tasks` board screen (open/doing/done columns, draggable cards +
+  mobile status selects) + `/app/tasks/{id}` detail screen + the tasks/status/
+  comments JSON API and HTMX fragments, all `router → service → repository`,
+  one governed `task` node per write with a fresh `task-<uuid4>` correlation
+  id, assignment notifications through `NotificationService`, a steward gate
+  (creator, assignee, or manager may change status/assignment), and the
+  archived soft-delete), `calendar` (live, P4.1: the `/app/calendar`
+  agenda-first screen (agenda list <768px, month grid ≥768px) + the
+  events/respond JSON API and HTMX calendar-view fragment, all
+  `router → service → repository`; events are visible only to the creator
+  and invited attendees, `[from, to)` range queries with recurrence
+  (one text rule daily/weekly) expanded on read never materialised as rows,
+  RSVP yes/no/maybe, soft cancellation (`confirmed → cancelled`), a steward
+  gate (creator or manager may edit/cancel), one governed
+  `event`/`event_response` node per write with a fresh `event-<uuid4>`
+  correlation id, and exactly-one `event_invite` notification per new
+  attendee; all times are stored and rendered UTC; on-call rosters (P4.2):
+  assignments live in `oncall_shifts` with a primary and a backup —
+  `create_shift` is manager-only and records one `oncall_shift` node,
+  `current_oncall(tenant, at)` reports a covered shift or a `gap`
+  (`OnCallCoverage`), never an empty list, and the roster is always app
+  data while the WFM staffing figure is read through the engine bridge),
+   `attendance` (live, P4.3: the `/app/attendance` punch-clock
+   screen, the punch toggle and records/summary JSON API, all
+   `router → service → repository`; punches are append-only rows with
+   the server deciding `punched_at`, one open punch per account, one
+   governed `punch` node per tap sharing the punch correlation_id, an
+   org-unit-visible summary (owner whole-domain, manager own-org-unit
+   else self, everyone else self) that counts only completed in/out
+   pairs bucketed to the punch-in UTC date),
+  `docs` (live, P3.2: the `/app/docs` list screen +
+  block editor screen, the documents/blocks JSON API, document versions —
+  snapshot/list/get/restore, append-only history with `current_version` on
+  documents — the `/app/kb` knowledge base screen (sop+kb grouped, SOPs
+  first), doc_type note/sop/kb/policy with manager-only sop/policy and note
+  owner/manager visibility; router → service → repository, one governed
+  `document`/`block`/`version` node per write with a fresh `doc-<uuid4>`
+  correlation id. Leaves `memory`, `ops`, `cockpit`,
   `lowcode` arriving with their phases. `rooms/` and `mail/` are v2 stubs.
 - `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, `auth/` (login,
   password, me), and `admin/` (index, users, user_detail, domains, org_units) exist. The
-  remaining per-module pages arrive with their phases.
+  per-module pages: `tasks.html` + `task_detail.html`, `calendar.html` +
+  `partials/event_form.html` + `partials/calendar_view.html`, `docs.html` + `docs/editor.html`,
+  `kb.html`, `attendance.html` + `partials/punch.html`, chat and notifications pages. The remaining per-module pages arrive with their phases.
 - `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers: `pwa.js`, live in P2.2
   `sse.js` — the EventSource client with backoff, per-message dedupe, and the optimistic
   composer — and live in P3.1 `docs.js` — the block editor autosave: debounced `htmx.ajax`
-  PUTs on input + blur, small Saved indicator, re-wires after an HTMX add-block swap),
+  PUTs on input + blur, small Saved indicator, re-wires after an HTMX add-block swap —
+  and live in P3.3 `tasks.js` — the `task_board` Alpine component: HTML5 drag-and-drop
+  posts the status via `htmx.ajax` and swaps the board, plus the per-card status
+  `<select>` move for touch devices),
   `vendor/` (vendored HTMX and Alpine), `manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`.
   `sw.js` excludes `/stream` paths from its `/app/api/` cache handler on purpose: a live stream is
   never cached.
@@ -103,8 +144,10 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Messaging (live, P2.2) | `/app/chat`, `/app/chat/{id}`, `/app/api/conversations`, `/app/api/conversations/{id}/messages`, `/app/api/conversations/{id}/read`, `/app/api/conversations/{id}/stream` | session; CSRF on posts; membership per route (stream = 403 for non-members) |
 | Notifications (live, P2.3) | `/app/notifications`, `/app/api/notifications`, `/app/api/notifications/read-all`, `/app/api/notifications/{id}/read`, `/app/api/notifications/stream` | session; CSRF on the read/read-all posts |
 | Docs (live, P3.2) | `/app/docs`, `/app/kb`, `/app/api/documents`, `/app/api/documents/{id}`, `/app/api/documents/{id}/blocks`, `/app/api/documents/{id}/blocks/{block_id}`, `/app/api/documents/{id}/versions`, `/app/api/documents/{id}/versions/{n}/restore` | `docs.read` at the boundary; `docs.write` + CSRF on the mutating routes; sop/policy doc_type is manager-or-owner only; published (sop/kb/policy) visible to all tenant members, notes owner/manager only |
-| Tasks (planned, P3) | `/app/tasks`, `/app/api/tasks` | `tasks.use` |
-| Calendar, on-call, attendance (planned, P4) | `/app/calendar`, `/app/api/oncall`, `/app/attendance` | `calendar.use`, `attendance.punch` |
+| Tasks (live, P3.3) | `/app/tasks`, `/app/tasks/{id}`, `/app/api/tasks`, `/app/api/tasks/{id}`, `/app/api/tasks/{id}/status`, `/app/api/tasks/{id}/comments` | `tasks.use` at the boundary; `tasks.use` + CSRF on the mutating routes; status/assignment changes need creator, assignee, or manager |
+| Calendar (live, P4.1) | `/app/calendar`, `/app/api/events`, `/app/api/events/{id}`, `/app/api/events/{id}/respond` | `calendar.use` at the boundary; `calendar.use` + CSRF on the mutating routes; update/cancel need creator or manager; RSVP requires being an attendee |
+| On-call (live, P4.2) | `/app/api/oncall`, `/app/api/oncall/shifts` | `calendar.use` at the boundary + CSRF on the create route; the status route reads the roster (`OnCallCoverage`, covered-or-gap) and fails closed with a typed 503 `engine_unavailable` when the WFM engine read raises; shift creation is manager-only (owner/manager) |
+| Attendance (live, P4.3) | `/app/attendance`, `/app/api/attendance/punch`, `/app/api/attendance/records`, `/app/api/attendance/summary` | `attendance.punch` at the boundary; CSRF on the punch toggle; records/summary read APIs apply the same boundary gate |
 | Memory (planned, P5) | `/app/memory`, `/app/memory/proposals`, `/app/api/memory` | `memory.review` for reviews |
 | Ops (planned, P6) | `/app/ops`, `/app/api/ops` | `ops.view` |
 | Cockpit (planned, P6) | `/app/cockpit/owner`, `/coach`, `/parent`, `/control-plane` | `cockpit.view` |
@@ -157,7 +200,63 @@ of four produces version 5 with version 2's content; a snapshot is immutable;
 an employee cannot publish sop/policy; a note is invisible to a peer employee
 but visible to its owner and managers; kb list = sop+kb only; the versions
 JSON/CSRF/HTMX surface and the `/app/kb` screen with type filter, search, and
-SOPs-first grouping).
+SOPs-first grouping). P3.3 added `test_tasks.py` (30: one egoverned node per
+create/status/comment/assign write; blank-title/blank-body/bad-status
+rejection; archived tasks excluded from the default list; done stamps
+`completed_at`; the steward gate admits the creator, the assignee, and a
+manager and denies an unrelated employee; assignment notifies exactly once on
+create-with-assignee and on a changed assignee, never on a no-op re-assign;
+comments oldest-first; board + detail screens render and a foreign-tenant task
+is a 404; the JSON contract (201 + CSRF 403) and the HTMX board/comments
+fragments under HX-Request; unauthenticated 401). P3.4 closed
+out P3 with `test_docs_isolation.py` (10: a document in tenant A is
+invisible in tenant B at service and HTTP level with no governed write ever
+recorded for a foreign document, and a private note is invisible to a peer
+employee but visible to its owner and managers), `test_node_invariants.py`
+(11: every P3 write path — documents, blocks, versions, tasks, comments —
+appends a governed node with a non-null tenant_id, a non-empty `doc-`/
+`task-` correlation_id, a known classification, and provenance data_mode
+`app_runtime`, plus a full-session sweep finding no un-enveloped node), and
+`test_version_restore.py` (7: restore appends a NEW version row whose bytes
+equal the restored snapshot and never rewrites any prior row, restores
+chain, and each restore records its own governed version node). P4.1 added
+`test_calendar.py` (41: one `event` node per create; visibility limited to
+the creator and invited attendees (outside/foreign reads are NotFoundError);
+`[from, to)` start-inclusive end-exclusive semantics; cancellation hides the
+event from listings while the row and its `status: cancelled` node stay; RSVP
+updates the attendee row, writes an `event_response` node, and is
+NotFoundError for a non-attendee; the steward gate (creator or manager) on
+update/cancel; the update node records every changed field; event_invite
+notifications fire exactly once per new attendee, never for self or a no-op
+re-run; daily/weekly recurrence expansion and single-event non-expansion;
+rejection of invalid recurrence/times/titles/unknown attendees; the screens +
+JSON contract + CSRF + HTMX fragment + foreign-tenant 404 surface). P4.2
+added `test_oncall.py` (26: current_oncall returns the primary for the
+current window; a gap is reported as `OnCallCoverage(covered=False,
+status="gap")` — never an empty list; all three engine-unavailable modes
+raise `EngineUnavailableError` at the bridge (package missing, result
+error, missing staff figure); create writes exactly one `oncall_shift`
+node with the full envelope and is manager-only; distinct/unknown/
+foreign-account/bad-window rejection; tenant scoping with a foreign tenant
+seeing nothing; next_shifts lists only the account's own upcoming windows;
+the on-call API returns roster coverage + WFM staffing (63 required agents,
+is_sample) + own shifts and 503s typed `engine_unavailable` when the engine
+is unavailable; create-shift API 201/CSRF-403/manager-403/foreign-400; 401
+unauthenticated; the home screen shows the on-call person inside her tenant
+and hides a foreign tenant's shifts). P4.3 added `test_attendance.py` (38:
+double punch-in raises; punch-out with nothing open raises; one row + one
+governed node per punch sharing the punch correlation_id; the server decides
+the timestamp; append-only rows with no update/delete path; employee
+self-only visible scope, manager org-unit scope (and self-only for a manager
+with no org unit), owner whole-domain, foreign tenant nothing — at service,
+summary, and records-API level; day-boundary summary math (in 23:30 UTC D,
+out 00:30 UTC D+1 → 60 minutes on day D), window-excluded pairs, open punch
+contributes zero, inverted window rejected; today_minutes for zero/nothing,
+a closed pair, and an open punch under a pinned `_FakeDatetime` clock; the
+HTTP surface — screen renders/401/403-external, punch 201 + audit + CSRF-403
++ double-in 400 + out-with-nothing 400 + omitted-action toggle, the HTMX
+fragment swapping the label to "Punch out", records/summary APIs rejecting a
+lone range edge and an inverted range, manager records API scoping).
 
 ## How to add a module
 

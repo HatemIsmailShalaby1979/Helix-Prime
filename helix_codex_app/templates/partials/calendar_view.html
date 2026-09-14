@@ -1,0 +1,69 @@
+<section id="calendar-view" class="calendar-view">
+  <h2 class="calendar-view__month">{{ month_label }}</h2>
+
+  <div class="calendar-agenda">
+    {% if not by_date %}
+      <p class="calendar-agenda__empty">No events this month.</p>
+    {% endif %}
+    {% for date_key, day_events in by_date.items() %}
+      <div class="agenda-day">
+        <h3 class="agenda-day__date">{{ date_key }}</h3>
+        {% for ev in day_events %}
+          <article class="agenda-item">
+            <div class="agenda-item__title">{{ ev.title }}</div>
+            <div class="agenda-item__time">
+              {% if ev.all_day %}All day{% else %}{{ ev.starts_at }}{% endif %}
+              {% if ev.recurrence_rule %} · repeats {{ ev.recurrence_rule }}{% endif %}
+            </div>
+            {% if ev.location or ev.room_id %}
+            <div class="agenda-item__place">{{ ev.location }}{% if ev.room_id %}{% if ev.location %} · {% endif %}Room {{ ev.room_id }}{% endif %}</div>
+            {% endif %}
+            <div class="agenda-item__actions">
+              <form class="agenda-item__rsvp" hx-post="/app/api/events/{{ ev.event_id }}/respond"
+                    hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+                    hx-target="#calendar-view" hx-swap="outerHTML">
+                <span class="agenda-item__status" data-rsvp="{{ ev.my_response }}">{{ ev.my_response }}</span>
+                <button type="submit" name="response" value="yes">Yes</button>
+                <button type="submit" name="response" value="no">No</button>
+                <button type="submit" name="response" value="maybe">Maybe</button>
+              </form>
+              {% if ev.cancellable %}
+              <form class="agenda-item__cancel" hx-put="/app/api/events/{{ ev.event_id }}"
+                    hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+                    hx-target="#calendar-view" hx-swap="outerHTML">
+                <input type="hidden" name="status" value="cancelled">
+                <button type="submit">Cancel event</button>
+              </form>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="calendar-grid" role="grid">
+    <div class="calendar-grid__weekdays">
+      <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+    </div>
+    {% for week in weeks %}
+      <div class="calendar-grid__week" role="row">
+        {% for cell in week %}
+          {% if cell %}
+          <div class="grid-day" role="gridcell">
+            <div class="grid-day__number">{{ cell.day }}</div>
+            {% for ev in cell.events[:3] %}
+            <div class="grid-day__chip" title="{{ ev.title }}">{{ ev.title }}</div>
+            {% endfor %}
+            {% if cell.events|length > 3 %}
+            <div class="grid-day__more">+{{ cell.events|length - 3 }} more</div>
+            {% endif %}
+          </div>
+          {% else %}
+          <div class="grid-day grid-day--empty" role="presentation"></div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+</section>

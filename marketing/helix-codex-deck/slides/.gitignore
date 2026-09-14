@@ -1,0 +1,4 @@
+node_modules/
+*-preview.pptx
+output/*.log
+output/qa.txt

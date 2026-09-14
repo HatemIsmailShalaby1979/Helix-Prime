@@ -1,0 +1,47 @@
+<form class="event-form" hx-post="/app/api/events"
+      hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+      hx-target="#calendar-view" hx-swap="outerHTML">
+  <label class="event-form__field">
+    Title
+    <input name="title" placeholder="What is happening?" required>
+  </label>
+  <div class="event-form__row">
+    <label class="event-form__field">
+      From
+      <input type="datetime-local" name="starts_at" required>
+    </label>
+    <label class="event-form__field">
+      To
+      <input type="datetime-local" name="ends_at" required>
+    </label>
+  </div>
+  <div class="event-form__row">
+    <label class="event-form__check">
+      <input type="checkbox" name="all_day" value="on"> All day
+    </label>
+    <label class="event-form__field">
+      Repeats
+      <select name="recurrence_rule">
+        <option value="">Does not repeat</option>
+        <option value="daily">Every day</option>
+        <option value="weekly">Every week</option>
+      </select>
+    </label>
+  </div>
+  <label class="event-form__field">
+    Location
+    <input name="location" placeholder="Where? (optional)">
+  </label>
+  <input type="hidden" name="kind" value="event">
+  <label class="event-form__field">
+    Invite
+    <select name="attendee" multiple>
+      {% for account_id, name in members.items() %}
+      {% if account_id != account.account_id %}
+      <option value="{{ account_id }}">{{ name }}</option>
+      {% endif %}
+      {% endfor %}
+    </select>
+  </label>
+  <button class="btn btn--primary" type="submit">Create event</button>
+</form>

@@ -55,3 +55,10 @@ class NotFoundError(AppError):
 
     code = "not_found"
     status_code = 404
+
+
+class EngineUnavailableError(AppError):
+    """A governed engine could not be read, so a result would be unreliable."""
+
+    code = "engine_unavailable"
+    status_code = 503

@@ -1,0 +1,12 @@
+{
+  "name": "helix-codex-deck",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marketing deck for the Helix Codex App. Rebuild with: npm install && npm run build",
+  "scripts": {
+    "build": "node compile.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^4.0.1"
+  }
+}

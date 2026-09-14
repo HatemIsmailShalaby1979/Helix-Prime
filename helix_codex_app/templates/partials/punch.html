@@ -1,0 +1,18 @@
+<section id="punch-clock" class="punch-clock" data-punch-state="{{ 'open' if punch.open else 'closed' }}">
+  <div class="punch-clock__state" aria-live="polite">
+    {% if punch.open %}
+    <p class="punch-clock__status punch-clock__status--on">You are on the clock.</p>
+    <p class="punch-clock__since">Since {{ punch.punched_at }}</p>
+    {% else %}
+    <p class="punch-clock__status punch-clock__status--off">You are off the clock.</p>
+    {% endif %}
+  </div>
+  <form class="punch-clock__form" hx-post="/app/api/attendance/punch"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#punch-clock" hx-swap="outerHTML">
+    <input type="hidden" name="action" value="{{ punch.action }}">
+    <input type="hidden" name="source" value="web">
+    <button class="punch-clock__button" type="submit">{{ punch.label }}</button>
+  </form>
+  <p class="punch-clock__total">Today: <strong>{{ today_minutes }}</strong> min</p>
+</section>

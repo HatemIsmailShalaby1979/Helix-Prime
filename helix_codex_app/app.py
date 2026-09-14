@@ -10,6 +10,7 @@ wired once, at the router boundary, not per handler.
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import AsyncIterator
 
@@ -22,11 +23,15 @@ from helix_codex_app import db
 from helix_codex_app.config import AppSettings, get_app_settings
 from helix_codex_app.errors import AppError
 from helix_codex_app.modules.admin.router import admin_router
+from helix_codex_app.modules.attendance.router import attendance_router
+from helix_codex_app.modules.calendar.router import calendar_router
+from helix_codex_app.modules.calendar.service import CalendarService
 from helix_codex_app.modules.docs.router import docs_router
 from helix_codex_app.modules.identity.router import identity_router
 from helix_codex_app.modules.messaging.router import messaging_router
 from helix_codex_app.modules.notifications.router import notifications_router
 from helix_codex_app.modules.tasks.router import tasks_router
+from helix_codex_app.security.accounts import AccountRepository
 from helix_codex_app.security.guard import current_account, require_csrf
 from helix_codex_app.templating import render
 from server import deps
@@ -58,10 +63,31 @@ def index(request: Request) -> HTMLResponse:
 @app_router.get("/")
 def app_index(request: Request) -> HTMLResponse:
     """Serve the app home screen at /app, behind the account guard."""
+    account = request.state.account
+    conn = db.connect(db_path=request.app.state.settings.db_path)
+    try:
+        service = CalendarService(conn)
+        now = datetime.now(timezone.utc).isoformat()
+        name_map = {
+            a.account_id: a.display_name or a.username
+            for a in AccountRepository(conn).list_accounts(account.domain_id)
+        }
+        oncall = {
+            "coverage": service.current_oncall(account.tenant_id, now),
+            "next_shift": service.next_tenant_shift(account.tenant_id, now),
+            "my_shifts": service.next_shifts(account),
+        }
+    finally:
+        db.close(conn)
     return render(
         request,
         "shell/home.html",
-        {"active_nav": "home", "account": request.state.account},
+        {
+            "active_nav": "home",
+            "account": account,
+            "name_map": name_map,
+            "oncall": oncall,
+        },
     )
 
 
@@ -110,6 +136,8 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app.include_router(notifications_router)
     app.include_router(docs_router)
     app.include_router(tasks_router)
+    app.include_router(calendar_router)
+    app.include_router(attendance_router)
     app.include_router(app_router)
     app.include_router(csrf_router)
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Domains — Admin — Helix Codex{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Domains</h1>
+  <p>One domain is one tenant. A username is scoped to its domain.</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  {% if flash == "created" %}<p class="form-flash">Domain created.</p>{% endif %}
+</section>
+
+{% if is_owner %}
+<section class="card">
+  <h2>Create a domain</h2>
+  <form method="post" action="/app/admin/domains"
+        hx-post="/app/admin/domains"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        class="admin-form">
+    <label class="field">
+      <span class="field__label">Name</span>
+      <input class="field__input" type="text" name="name" placeholder="team.company" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Tenant id</span>
+      <input class="field__input" type="text" name="tenant_id" placeholder="tenant-id" required>
+    </label>
+    <button class="btn btn--primary" type="submit">Create domain</button>
+  </form>
+</section>
+{% else %}
+<section class="card">
+  <p>Only an owner can create domains.</p>
+</section>
+{% endif %}
+
+<section class="card">
+  <h2>Your domains</h2>
+  {% if domains %}
+  <div class="admin-cards">
+    {% for domain in domains %}
+    <div class="admin-card">
+      <strong class="admin-card__title">{{ domain.name }}</strong>
+      <span class="admin-card__meta">{{ domain.tenant_id }} · {{ domain.status }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No domains in your tenant.</p>
+  {% endif %}
+</section>
+{% endblock %}

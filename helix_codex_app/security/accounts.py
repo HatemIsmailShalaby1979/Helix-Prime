@@ -180,6 +180,27 @@ class AccountRepository:
             created_at=created_at,
         )
 
+    def get_org_unit(self, unit_id: str) -> OrgUnit | None:
+        """Return the org unit with this id, or None."""
+        row = self.conn.execute(
+            """
+            SELECT unit_id, domain_id, parent_unit_id, name, kind, path, created_at
+            FROM org_units WHERE unit_id = ?
+            """,
+            (unit_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return OrgUnit(
+            unit_id=row["unit_id"],
+            domain_id=row["domain_id"],
+            parent_unit_id=row["parent_unit_id"],
+            name=row["name"],
+            kind=row["kind"],
+            path=row["path"],
+            created_at=row["created_at"],
+        )
+
     def list_org_units(self, domain_id: str) -> list[OrgUnit]:
         """List the org units in one domain, oldest first."""
         rows = self.conn.execute(

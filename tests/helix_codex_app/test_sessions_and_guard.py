@@ -288,8 +288,8 @@ def test_capability_denied_for_other_account(ctx, client) -> None:
 
 
 def test_permission_gate_denies_until_catalog(ctx, client) -> None:
-    token_a, _session = ctx.store.issue_session(ctx.amira)
-    resp = client.get("/app/permission-punch", cookies=_cookie(token_a))
+    token_b, _session = ctx.store.issue_session(ctx.omar)
+    resp = client.get("/app/permission-punch", cookies=_cookie(token_b))
     assert resp.status_code == 403
 
 

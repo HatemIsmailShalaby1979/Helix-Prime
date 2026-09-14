@@ -18,12 +18,21 @@ TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
-def render(request: Request, name: str, context: dict[str, Any] | None = None) -> HTMLResponse:
-    """Render a template with the app settings and the caller's CSRF token."""
+def render(
+    request: Request,
+    name: str,
+    context: dict[str, Any] | None = None,
+    *,
+    status_code: int = 200,
+) -> HTMLResponse:
+    """Render a template with the app settings and the caller's CSRF token.
+
+    status_code defaults to 200; an error screen passes its own.
+    """
     session = getattr(request.state, "session", None)
     ctx = {
         "csrf_token": session.csrf_token if session else "",
         "settings": request.app.state.settings,
         **(context or {}),
     }
-    return templates.TemplateResponse(request, name, ctx)
+    return templates.TemplateResponse(request, name, ctx, status_code=status_code)

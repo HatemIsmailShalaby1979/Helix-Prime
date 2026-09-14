@@ -64,11 +64,19 @@ def require_permission(key: str) -> Callable[[Request, Account], None]:
     """Return a dependency granting the route only for a granted permission.
 
     has_permission resolves the account's role against the app permission
-    catalog; an unknown key or unknown role denies, never allows.
+    catalog and then unions the account's enabled capability rows, so an
+    admin grant or revoke is effective on the very next request. An unknown
+    key or unknown role denies, never allows.
     """
 
     def dependency(request: Request, account: Account = Depends(current_account)) -> None:
-        if not has_permission(account, key):
+        settings = request.app.state.settings
+        conn = connect(db_path=settings.db_path)
+        try:
+            granted = has_permission(account, key, conn)
+        finally:
+            close(conn)
+        if not granted:
             raise PermissionDenied(
                 f"permission {key!r} not granted",
                 payload={"account_id": account.account_id, "permission_key": key},

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Org units — Admin — Helix Codex{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Org units</h1>
+  <p>Teams inside your domain. A manager administers only their own unit.</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  {% if flash == "created" %}<p class="form-flash">Org unit created.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Create an org unit</h2>
+  <form method="post" action="/app/admin/org-units"
+        hx-post="/app/admin/org-units"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        class="admin-form">
+    <label class="field">
+      <span class="field__label">Name</span>
+      <input class="field__input" type="text" name="name" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Kind</span>
+      <select class="field__input" name="kind">
+        <option value="team" selected>Team</option>
+        <option value="department">Department</option>
+        <option value="site">Site</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="field__label">Parent unit</span>
+      <select class="field__input" name="parent_unit_id">
+        <option value="" selected>None</option>
+        {% for unit in units %}
+        <option value="{{ unit.unit_id }}">{{ unit.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button class="btn btn--primary" type="submit">Create org unit</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Units</h2>
+  {% if units %}
+  <div class="admin-cards">
+    {% for unit in units %}
+    <div class="admin-card">
+      <strong class="admin-card__title">{{ unit.name }}</strong>
+      <span class="admin-card__meta">{{ unit.kind }} · {{ unit.path }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No org units yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

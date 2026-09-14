@@ -12,6 +12,8 @@ Unknown permission keys and unknown roles are denied — never allowed.
 """
 from __future__ import annotations
 
+import sqlite3
+
 from helix_codex_app.security.accounts import Account
 from organization import role_catalog as _role_catalog
 
@@ -123,15 +125,36 @@ def _catalog_role_ids() -> frozenset[str]:
 PRIVILEGED_CATALOG_ROLE_IDS: frozenset[str] = _catalog_role_ids()
 
 
-def permissions_for(account: Account) -> frozenset[str]:
-    """All permission keys granted to the account, scoped grants included."""
+def permissions_for(account: Account, conn: sqlite3.Connection | None = None) -> frozenset[str]:
+    """All permission keys granted to the account, scoped grants included.
+
+    When a database connection is passed, the account's enabled capability
+    rows are unioned in, so an admin grant takes effect on the very next
+    read. Without a connection the answer is the role matrix alone.
+    """
     if account.role_id in PRIVILEGED_CATALOG_ROLE_IDS:
         row = PERMISSION_MATRIX["catalog"]
     else:
         row = PERMISSION_MATRIX.get(account.role_id) or {}
-    return frozenset(key for key, value in row.items() if value)
+    granted = frozenset(key for key, value in row.items() if value)
+    if conn is None:
+        return granted
+    return granted | capabilities_for(conn, account)
 
 
-def has_permission(account: Account, key: str) -> bool:
+def capabilities_for(conn: sqlite3.Connection, account: Account) -> frozenset[str]:
+    """The enabled capability keys granted to the account by an admin."""
+    rows = conn.execute(
+        "SELECT capability_key FROM account_capabilities" " WHERE account_id = ? AND enabled = 1",
+        (account.account_id,),
+    ).fetchall()
+    return frozenset(row["capability_key"] for row in rows)
+
+
+def has_permission(
+    account: Account,
+    key: str,
+    conn: sqlite3.Connection | None = None,
+) -> bool:
     """True only when the account is granted the key. Deny by default."""
-    return key in permissions_for(account)
+    return key in permissions_for(account, conn)

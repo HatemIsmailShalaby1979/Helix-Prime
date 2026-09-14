@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin — Helix Codex{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Users</h1>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  {% if flash == "created" %}<p class="form-flash">Account created.</p>{% endif %}
+  <form method="get" action="/app/admin/users" class="admin-search">
+    <label class="field">
+      <span class="field__label">Search</span>
+      <input class="field__input" type="search" name="q" value="{{ query or '' }}"
+             placeholder="Name, username, or email">
+    </label>
+    <button class="btn" type="submit">Search</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Create a user</h2>
+  <form method="post" action="/app/admin/users"
+        hx-post="/app/admin/users"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        class="admin-form">
+    <label class="field">
+      <span class="field__label">Username</span>
+      <input class="field__input" type="text" name="username" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Password</span>
+      <input class="field__input" type="password" name="password" minlength="8"
+             autocomplete="new-password" required>
+    </label>
+    <label class="field">
+      <span class="field__label">Display name</span>
+      <input class="field__input" type="text" name="display_name">
+    </label>
+    <label class="field">
+      <span class="field__label">Email</span>
+      <input class="field__input" type="email" name="email">
+    </label>
+    <label class="field">
+      <span class="field__label">Role</span>
+      <select class="field__input" name="role_id">
+        <option value="employee" selected>Employee</option>
+        <option value="manager">Manager</option>
+        <option value="contractor">Contractor</option>
+        <option value="external">External</option>
+        <option value="owner">Owner</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="field__label">Org unit</span>
+      <select class="field__input" name="org_unit_id">
+        <option value="" selected>None</option>
+        {% for unit in org_units %}
+        <option value="{{ unit.unit_id }}">{{ unit.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <input type="hidden" name="domain_id" value="{{ account.domain_id }}">
+    <button class="btn btn--primary" type="submit">Create user</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Accounts</h2>
+  {% if accounts %}
+  <div class="admin-cards" data-table="users">
+    {% for row in accounts %}
+    <a class="admin-card" href="/app/admin/users/{{ row.account_id }}">
+      <strong class="admin-card__title">{{ row.display_name or row.username }}</strong>
+      <span class="admin-card__meta">{{ row.username }} · {{ row.role_id or "no role" }}</span>
+      <span class="admin-card__meta status status--{{ row.status }}">{{ row.status }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  <div class="admin-table" data-table="users">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Username</th>
+          <th scope="col">Display name</th>
+          <th scope="col">Role</th>
+          <th scope="col">Status</th>
+          <th scope="col">Last login</th>
+          <th scope="col"><span class="visually-hidden">Open</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in accounts %}
+        <tr>
+          <td><a href="/app/admin/users/{{ row.account_id }}">{{ row.username }}</a></td>
+          <td>{{ row.display_name or "—" }}</td>
+          <td>{{ row.role_id or "—" }}</td>
+          <td><span class="status status--{{ row.status }}">{{ row.status }}</span></td>
+          <td>{{ row.last_login_at or "never" }}</td>
+          <td><a href="/app/admin/users/{{ row.account_id }}">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No accounts match.</p>
+  {% endif %}
+</section>
+{% endblock %}

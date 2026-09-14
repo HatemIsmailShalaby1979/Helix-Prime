@@ -172,6 +172,145 @@ input:focus-visible {
   margin: 0;
 }
 
+.form-flash {
+  color: var(--success);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.admin-search {
+  display: flex;
+  gap: var(--space-3);
+  align-items: end;
+  margin: 0;
+}
+
+.admin-search .field {
+  flex: 1;
+}
+
+.admin-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.admin-actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.admin-cards {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a.admin-card:active,
+a.admin-card:hover {
+  border-color: var(--accent);
+}
+
+.admin-card__title {
+  font-size: var(--text-md);
+}
+
+.admin-card__meta {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.admin-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-4) 0 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.admin-list li {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+
+.status--active {
+  background: var(--success);
+  color: #ffffff;
+}
+
+.status--disabled,
+.status--terminated,
+.status--locked {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.admin-table {
+  display: none;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .admin-cards {
+    display: none;
+  }
+
+  .admin-table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+
 .btn--block {
   width: 100%;
 }

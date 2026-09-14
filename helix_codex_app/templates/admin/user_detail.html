@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ target.username }} — Admin — Helix Codex{% endblock %}
+{% block content %}
+{% if not target %}
+<section class="card">
+  <h1>User not found</h1>
+  <p class="form-error" role="alert">{{ error or "This account is outside your scope." }}</p>
+  <p><a href="/app/admin/users">Back to users</a></p>
+</section>
+{% else %}
+<section class="card">
+  <h1>{{ target.display_name or target.username }}</h1>
+  <p class="admin-card__meta">{{ target.username }}@{{ target.domain_name }} ·
+    {{ target.role_id or "no role" }}</p>
+  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  {% if flash == "saved" %}<p class="form-flash">Saved.</p>{% endif %}
+  {% if flash == "capability" %}<p class="form-flash">Capability updated.</p>{% endif %}
+  {% if flash == "limit" %}<p class="form-flash">Limit saved.</p>{% endif %}
+</section>
+
+<section class="card">
+  <h2>Profile</h2>
+  <form method="post" action="/app/admin/users/{{ target.account_id }}"
+        hx-patch="/app/admin/users/{{ target.account_id }}"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        class="admin-form">
+    <label class="field">
+      <span class="field__label">Display name</span>
+      <input class="field__input" type="text" name="display_name"
+             value="{{ target.display_name or '' }}">
+    </label>
+    <label class="field">
+      <span class="field__label">Email</span>
+      <input class="field__input" type="email" name="email" value="{{ target.email or '' }}">
+    </label>
+    {% if target.account_id != account.account_id %}
+    <label class="field">
+      <span class="field__label">Role</span>
+      <select class="field__input" name="role_id">
+        <option value="" {% if not target.role_id %}selected{% endif %}>No role</option>
+        <option value="employee" {% if target.role_id == 'employee' %}selected{% endif %}>Employee</option>
+        <option value="manager" {% if target.role_id == 'manager' %}selected{% endif %}>Manager</option>
+        <option value="contractor" {% if target.role_id == 'contractor' %}selected{% endif %}>Contractor</option>
+        <option value="external" {% if target.role_id == 'external' %}selected{% endif %}>External</option>
+        <option value="owner" {% if target.role_id == 'owner' %}selected{% endif %}>Owner</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="field__label">Status</span>
+      <select class="field__input" name="status">
+        <option value="active" {% if target.status == 'active' %}selected{% endif %}>Active</option>
+        <option value="disabled" {% if target.status == 'disabled' %}selected{% endif %}>Disabled</option>
+        <option value="locked" {% if target.status == 'locked' %}selected{% endif %}>Locked</option>
+        <option value="terminated" {% if target.status == 'terminated' %}selected{% endif %}>Terminated</option>
+      </select>
+    </label>
+    {% endif %}
+    <button class="btn btn--primary" type="submit">Save</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Capabilities</h2>
+  {% if target.account_id != account.account_id %}
+  <form method="post" action="/app/admin/users/{{ target.account_id }}/capabilities"
+        hx-post="/app/admin/users/{{ target.account_id }}/capabilities"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        class="admin-form">
+    <label class="field">
+      <span class="field__label">Capability</span>
+      <input class="field__input" type="text" name="capability_key"
+             placeholder="e.g. docs.write" required>
+    </label>
+    <div class="admin-actions">
+      <button class="btn btn--primary" type="submit" name="action" value="grant">Grant</button>
+      <button class="btn" type="submit" name="action" value="revoke">Revoke</button>
+    </div>
+  </form>
+  {% else %}
+  <p>You cannot change your own capabilities here.</p>
+  {% endif %}
+  {% if capabilities %}
+  <ul class="admin-list">
+    {% for cap in capabilities %}
+    <li>
+      <strong>{{ cap.capability_key }}</strong> —
+      {% if cap.enabled %}<span class="status status--active">granted</span>
+      {% else %}<span class="status status--disabled">revoked</span>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No capability rows yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Limits</h2>
+  {% if target.account_id != account.account_id %}
+  <form method="post" action="/app/admin/users/{{ target.account_id }}/limits"
+        hx-post="/app/admin/users/{{ target.account_id }}/limits"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        class="admin-form">
+    <label class="field">
+      <span class="field__label">Limit</span>
+      <select class="field__input" name="limit_key">
+        <option value="storage_mb" selected>storage_mb</option>
+        <option value="messages_per_day">messages_per_day</option>
+        <option value="records_per_day">records_per_day</option>
+      </select>
+    </label>
+    <label class="field">
+      <span class="field__label">Value</span>
+      <input class="field__input" type="number" name="limit_value" min="0" value="500" required>
+    </label>
+    <button class="btn btn--primary" type="submit">Set limit</button>
+  </form>
+  {% else %}
+  <p>You cannot change your own limits here.</p>
+  {% endif %}
+  {% if limits %}
+  <ul class="admin-list">
+    {% for key, value in limits.items() %}
+    <li><strong>{{ key }}</strong> — {{ value }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No limits set. The role defaults apply.</p>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

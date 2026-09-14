@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P2 — Messaging, notifications, SSE (next prompt P2.2) |
-| Baseline test count | 857 |
-| Last commit | `48c75ab` feat(app): add conversations and messages |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1 |
+| Current step | P2 — Messaging, notifications, SSE (next prompt P2.3) |
+| Baseline test count | 877 |
+| Last commit | `7989e33` feat(app): add chat ui with live sse updates |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1, P2.2 |
 
 ## Step ledger
 
@@ -250,7 +250,57 @@ App-specific rules:
       round-trip, and list ordering by latest activity with message_count and
       preview. Full suite **857 passed, 0 failed** (839 baseline + 18);
       ruff check + format clean on the new paths; app-dir suite 228 passed.
-- [ ] P2.2 The chat UI and the SSE stream (Prompt 13)
+- [x] P2.2 The chat UI and the SSE stream (Prompt 13) — commit `7989e33`,
+      `helix_codex_app/modules/messaging/router.py`
+      (messaging_router under `/app`, guard + per-route membership; GET `/chat` and
+      `/chat/{id}` screens; GET+POST `/api/conversations`, GET+POST
+      `/api/conversations/{id}/messages`, POST `/api/conversations/{id}/read`,
+      GET `/api/conversations/{id}/stream`. Every mutating route reads a JSON body OR
+      an HTMX urlencoded form through `_payload()` — repeated `member_ids` fields
+      collapse into a list — and carries `require_csrf`. HTMX answers are fragments:
+      create re-renders `chat_list.html` (root `id="chat-section"`, swapped via
+      `hx-target` outerHTML) INSIDE the connection try so it never reads a closed
+      DB, send re-renders the single `message_row.html` bubble; JSON answers are
+      `ConversationOut`/`MessageOut`/`MessagePage`. The SSE route checks membership
+      first and refuses non-members with a **403** (`PermissionDenied` — carried as
+      code `permission_denied`) instead of 404, so no observer learns a foreign
+      conversation exists; every other route's non-member answer stays 404.
+      `conversation_event_stream` is split out for direct driving in tests:
+      subscribe → 15 s heartbeat keep-alive comment → `encode` each bus frame →
+      unsubscribe in `finally`.), `helix_codex_app/integration/sse_bridge.py`
+      (the app's only window onto the parent bus: `server.sse.EventBus` wrapped as
+      `subscribe`/`unsubscribe`/`publish`/`publish_sync`/`subscriber_count` + `encode`
+      — one bus per process, a broker is a documented v2 decision),
+      `helix_codex_app/static/js/sse.js` (EventSource client with exponential backoff
+      `[1s,2s,4s,8s]`, re-dispatches frames as `helix:chat-message` CustomEvents,
+      `HelixChat.append` dedupes on `data-message-id` and skips while a
+      `[data-pending]` bubble exists so an SSE arrival never fights the optimistic
+      HTMX write, `ChatComposer.optimistic/reconcile`, auto-boots on
+      `[data-messages][data-conversation-id]`), `helix_codex_app/static/sw.js`
+      (the `/app/api/` cache handler now skips paths ending in `/stream` — a live
+      stream must never be cached), templates `chat/{list,thread}.html` and partials
+      `{chat_list,chat_thread,composer,message_row}.html` (mobile-first composer
+      pinned above the keyboard with `bottom: var(--nav-h)`, desktop `0`), chat CSS
+      in `app.css`, Chat nav entries enabled in both nav partials, `app.py` mounts
+      `messaging_router` between admin and app. Tests:
+      `tests/helix_codex_app/test_messaging_routes.py` (20) cover screens (list
+      renders peers + titles, thread oldest-first with `data-messages`/
+      `data-conversation-id`/`data-self`, non-member 404, unauth 401), conversations
+      (direct idempotent 201, unknown account 404, create-hx fragment returns the
+      `chat-section` list, group 201 with membership, no-CSRF 403), messages (JSON
+      201 + one `nodes` row + matching `messages.node_id`, send-hx fragment = one
+      `chat-bubble--me`, non-member 404, cursor `next_before` paging, mark_read
+      stamps only the caller, non-member list 404), and the stream (member-open is
+      pinned at the handler level — `conversation_stream` returns a StreamingResponse
+      with event-stream media type + the three headers, because a test client cannot
+      drain an infinite body; the earlier `client.stream` variant HUNG TestClient and
+      was replaced; non-member 403 parametrized over a same-tenant outsider and an
+      other-tenant account; the generator emits a posted frame and returns to zero
+      subscribers on disconnect). **Measured round-trip:** send-message POST median
+      117 ms (max 169 ms), thread screen GET 58 ms on this machine — under the 1 s
+      local target. App-dir suite 248 passed / 0 failed; full suite
+      **877 passed, 0 failed** (857 baseline + 20); ruff check + format clean on
+      helix_codex_app/ and tests/helix_codex_app/.
 - [ ] P2.3 Notifications (Prompt 14)
 - [ ] P2.4 Close out P2 (Prompt 15)
 

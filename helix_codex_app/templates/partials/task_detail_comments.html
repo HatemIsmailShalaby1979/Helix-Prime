@@ -1,0 +1,15 @@
+<div id="task-comments" class="task-comments">
+  {% if comments %}
+  <ul class="task-comments__list">
+    {% for c in comments %}
+    <li class="task-comments__item">
+      <span class="task-comments__author">{{ members.get(c.account_id, c.account_id) }}</span>
+      <span class="task-comments__body">{{ c.body }}</span>
+      <span class="task-comments__time">{{ c.created_at[:16] }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="task-comments__empty">No comments yet.</p>
+  {% endif %}
+</div>

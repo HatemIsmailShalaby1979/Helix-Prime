@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Tasks — Helix Codex{% endblock %}
+{% block content %}
+<section class="tasks-page" data-tasks>
+  <div class="tasks-page__header">
+    <h1>Tasks</h1>
+  </div>
+  <form class="task-create" hx-post="/app/api/tasks"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#task-board" hx-swap="outerHTML">
+    <input name="title" placeholder="What needs to be done?" required>
+    <button class="btn btn--primary" type="submit">Add task</button>
+  </form>
+  <form class="task-search" hx-get="/app/tasks"
+        hx-target="#task-board" hx-swap="outerHTML">
+    <input name="q" placeholder="Search tasks" value="{{ q }}">
+  </form>
+  {% include "partials/task_board.html" %}
+  <script defer src="/static/js/tasks.js"></script>
+</section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ task.title }} — Helix Codex{% endblock %}
+{% block content %}
+<section class="task-detail" data-task-detail>
+  <div class="task-detail__back">
+    <a class="doc-editor__back" href="/app/tasks">All tasks</a>
+  </div>
+  {% include "partials/task_detail_task.html" %}
+  <div class="task-detail__section">
+    <h2>Comments</h2>
+    {% include "partials/task_detail_comments.html" %}
+    <form class="task-comment-form" hx-post="/app/api/tasks/{{ task.task_id }}/comments"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          hx-target="#task-comments" hx-swap="innerHTML">
+      <textarea name="body" rows="2" placeholder="Add a comment" required></textarea>
+      <button class="btn btn--primary btn--small" type="submit">Post</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

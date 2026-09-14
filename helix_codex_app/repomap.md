@@ -256,7 +256,21 @@ a closed pair, and an open punch under a pinned `_FakeDatetime` clock; the
 HTTP surface — screen renders/401/403-external, punch 201 + audit + CSRF-403
 + double-in 400 + out-with-nothing 400 + omitted-action toggle, the HTMX
 fragment swapping the label to "Punch out", records/summary APIs rejecting a
-lone range edge and an inverted range, manager records API scoping).
+lone range edge and an inverted range, manager records API scoping). P4.4
+closed out P4 with `test_calendar_isolation.py` (16: events and on-call
+shifts never cross tenants at service and HTTP level — foreign
+read/update/cancel/respond are NotFoundError, foreign lists are empty,
+foreign coverage is a gap never a leaked roster, a shift cannot name a
+foreign account, each tenant's writes land in its own rows + governed nodes),
+`test_attendance_rules.py` (17: the one-open-punch rule is per account;
+punches are append-only rows with no update/delete path; manager-org-unit
+visibility — owner whole domain, manager own org unit or just self, everyone
+else self, foreign tenant nothing — at service, summary, and records-API
+level), and `test_engine_bridge_failclosed.py` (6: a healthy `wfm_coverage`
+run returns a full figure and each of the bridge's three failure modes —
+engine missing, engine error, missing staffing figure — raises
+`EngineUnavailableError`, a raised engine exception propagates as-is, and no
+failure mode returns an empty result). Suite: 1182 passed / 0 failed.
 
 ## How to add a module
 

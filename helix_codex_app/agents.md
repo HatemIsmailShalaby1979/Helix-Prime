@@ -47,10 +47,26 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P4 — Calendar, on-calls, attendance (next prompt P4.4) |
-| Baseline test count | 1105 |
-| Last commit | `0a0bc5d` feat(app): add attendance punch clock and summary |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1, P3.2, P3.3, P3.4, P4.1, P4.2, **P4.3** |
+| Current step | **P4 COMPLETE** — all P4 steps done; next prompt P5.1 |
+| Baseline test count | 1182 (full suite **1182 passed, 0 failed** at P4.4) |
+| Last commit | `13aab0b` test(app): prove calendar/attendance/bridge fail-closed rules, close phase p4 — **RECOVERY** of lost P4-era commits (see P4.4); manifest follow-up `197af32` |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1, P3.2, P3.3, P3.4, P4.1, P4.2, P4.3, **P4.4** |
+
+> **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
+> commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
+> `07e9cee` (P4.2), `0221f31`, `0a0bc5d` (P4.3), and `493d1a7`, plus the P3.3 docs
+> milestone `42f3907`. `f62cddc` (P3.4) survived but its parent object is gone, so it
+> is unreachable (dangling). The loose `refs/heads/main` pointed at garbage `de3b273…`;
+> the packed history is complete down to `3cc625e` (P3.3); the remote `origin/main`
+> (`1ab9bea`) was too old to rescue. RECOVERY (user-approved): re-pointed `main` at
+> `3cc625e`, `git add -A`'d the surviving working tree, and made ONE honest recovery
+> commit **`13aab0b`** carrying ALL of the P3.4–P4.4 work (61 files: 47 added, 14
+> modified, 0 deleted — zero content loss). `release/release-manifest.json` was then
+> regenerated at the recovered HEAD and committed as **`197af32`**. `git fsck` is clean
+> (dangling commits only), the corrupt reflog entry was expired, and the tree is clean.
+> **Ledger SHA caveat:** the `5794fad` / `07e9cee` / `0a0bc5d` identifiers referenced in
+> the P4.1–P4.3 entries below are the ORIGINAL (lost) hashes; that work now lives in
+> `13aab0b`.
 
 ## Step ledger
 
@@ -835,7 +851,47 @@ App-specific rules:
       everyone else self) and `current_status` stays row-only, so an external
       who holds no `attendance.punch` is denied at the router boundary and can
       never learn who is on the clock.
-- [ ] P4.4 Close out P4 (Prompt 23)
+- [x] P4.4 Close out P4 (Prompt 23) — feature/test commit `13aab0b`
+      (recovery commit, see Status banner),
+      `tests/helix_codex_app/test_calendar_isolation.py`
+      (16 tests: events and on-call shifts never cross tenants — a tenant B
+      read/update/cancel/respond of a tenant A event is `NotFoundError`, the
+      tenant B event/shift lists are empty, tenant B coverage is reported as
+      a `gap` (`OnCallCoverage(covered=False, status="gap")`) rather than a
+      leaked roster, `next_tenant_shift` is None for the foreign tenant, and
+      a shift cannot be created naming a foreign account
+      (`ValueError("unknown account")`); a tenant B write lands in tenant B
+      rows AND tenant B governed nodes (tenant_id asserted in both); each
+      tenant lists only its own events; HTTP: tenant B `/app/api/events` is
+      empty, a tenant B PUT-cancel of a tenant A event is 404, and tenant B
+      `/app/api/oncall` reports a gap with no leaked `next_shifts`),
+      `tests/helix_codex_app/test_attendance_rules.py`
+      (17 tests: the one-open-punch rule is per account — a second punch-in
+      raises "already open", punch-out with nothing open raises "no punch is
+      open", one account's open punch never blocks another, an open punch
+      closes only for its owner, and a closed punch allows a new one;
+      append-only — every punch is a new row, the repository exposes no
+      update/delete method, and closing keeps the open row; manager-org-unit
+      visibility — a manager with an org unit sees exactly that unit (never
+      the other), a manager without a unit sees only self, the owner sees
+      the whole domain, an employee sees only self, a foreign tenant sees
+      nothing — repeated at the service, summary, and records-API level),
+      `tests/helix_codex_app/test_engine_bridge_failclosed.py`
+      (6 tests: a healthy `wfm_coverage` run returns a full figure
+      (engine_id, 63 required agents, `is_sample=True`); each of the
+      bridge's three failure modes raises `EngineUnavailableError` — engine
+      cannot be imported ("unavailable"), the engine run reports an error
+      ("could not produce"), and a run with no `optimal_agents` staffing
+      figure ("no staffing figure"); a raised engine exception propagates as
+      itself (`RuntimeError`), and a sweep over all four failure modes
+      proves none of them returns an empty result).
+      Full suite **1182 passed, 0 failed** (1143 baseline + 39); ruff check
+      + format clean on the new modules; app migration drift check passes at
+      head; no source changes this step (tests + ledger only).
+      **Design note for the ledger:** the close-out is deliberate — the P4.1–P4.3
+      features already enforced these rules piecemeal; P4.4 collects them into
+      dedicated proof modules (one per phase invariant) so the isolation and
+      fail-closed guarantees are asserted in one place each.
 
 ### P5 — Per-user metacognitive memory (status: NOT STARTED)
 

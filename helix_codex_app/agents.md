@@ -49,7 +49,7 @@ App-specific rules:
 |---|---|
 | Current step | P2 — Messaging, notifications, SSE (next prompt P2.1) |
 | Baseline test count | 839 |
-| Last commit | `PENDING` test(app): prove tenant isolation and close phase p1 |
+| Last commit | `bc24190` test(app): prove tenant isolation and close phase p1 |
 | Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3, P1.4, P1.5, P1.6, P1.7 |
 
 ## Step ledger
@@ -178,7 +178,7 @@ App-specific rules:
       parent `release/security_gate.py` secrets scan (7 findings) and failed the 5
       release-gate tests; the literals now use the allowlisted `your-password`, and the
       gate tests pass. The committed feature SHA is `67d6961` (amended once for this fix).
-- [x] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11) — commit `PENDING`,
+- [x] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11) — commit `bc24190`,
       `tests/helix_codex_app/test_tenant_isolation.py`
       (7 tests: account/domain/org-unit reads stay scoped; sessions of tenant B never
       verify inside tenant A; the same username in two tenants is two accounts;

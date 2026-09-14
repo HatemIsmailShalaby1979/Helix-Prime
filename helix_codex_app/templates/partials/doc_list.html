@@ -1,0 +1,27 @@
+<section id="docs-section" class="card" aria-label="Documents">
+  <h1>Documents</h1>
+  <form class="doc-new" hx-post="/app/api/documents"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#docs-section" hx-swap="outerHTML">
+    <input name="title" placeholder="Document title" required>
+    <button class="btn btn--primary" type="submit">New document</button>
+  </form>
+  <form class="doc-search" hx-get="/app/docs"
+        hx-target="#docs-section" hx-swap="outerHTML">
+    <input name="q" placeholder="Search documents" value="{{ q }}">
+  </form>
+  <div id="doc-list">
+    {% if documents %}
+    <div class="doc-list">
+      {% for document in documents %}
+      <a class="doc-list__item" href="/app/docs/{{ document.document_id }}">
+        <strong class="doc-list__title">{{ document.title }}</strong>
+        <span class="doc-list__meta">{{ document.updated_at }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="doc-list__empty">No documents yet. Create the first one.</p>
+    {% endif %}
+  </div>
+</section>

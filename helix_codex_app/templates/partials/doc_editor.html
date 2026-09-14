@@ -1,0 +1,25 @@
+<section id="doc-editor" class="card" aria-label="Document editor">
+  <div class="doc-editor__header">
+    <a class="doc-editor__back" href="/app/docs">Documents</a>
+    <h1 class="doc-editor__title">{{ document.title }}</h1>
+    <span class="doc-editor__saved" data-doc-saved hidden>Saved</span>
+  </div>
+  <div id="doc-blocks" class="doc-blocks">
+    {% for block in blocks %}
+    <div class="doc-block" data-block-id="{{ block.block_id }}">
+      <div class="doc-block__content"
+           contenteditable="true"
+           data-block-url="/app/api/documents/{{ document.document_id }}/blocks/{{ block.block_id }}"
+           data-block-id="{{ block.block_id }}">{{ block.content }}</div>
+      <span class="doc-block__saved" data-block-saved hidden>Saved</span>
+    </div>
+    {% else %}
+    <p class="doc-blocks__empty">No blocks yet. Add the first one below.</p>
+    {% endfor %}
+  </div>
+  <button type="button" class="btn btn--ghost doc-editor__add"
+          hx-post="/app/api/documents/{{ document.document_id }}/blocks"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          hx-target="#doc-editor"
+          hx-swap="outerHTML">Add block</button>
+</section>

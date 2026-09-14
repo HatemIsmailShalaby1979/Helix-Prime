@@ -816,3 +816,134 @@ a.chat-list__item:hover {
   padding: 4px 12px;
   font-size: var(--text-sm);
 }
+
+/* Documents */
+
+.doc-new {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.doc-new input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.doc-new .btn {
+  flex: none;
+}
+
+.doc-search {
+  margin-bottom: var(--space-4);
+}
+
+.doc-search input {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font);
+  font-size: var(--text-md);
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.doc-list__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  margin-bottom: var(--space-2);
+}
+
+.doc-list__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc-list__meta {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.doc-list__empty {
+  color: var(--muted);
+}
+
+.doc-editor__header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.doc-editor__back {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: var(--text-sm);
+}
+
+.doc-editor__title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.doc-editor__saved {
+  flex: none;
+  color: var(--success);
+  font-size: var(--text-xs);
+}
+
+.doc-blocks__empty {
+  color: var(--muted);
+}
+
+.doc-block {
+  margin-bottom: var(--space-3);
+}
+
+.doc-block__content {
+  min-height: var(--tap-min);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.doc-block__content:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.doc-block__saved {
+  display: block;
+  color: var(--success);
+  font-size: var(--text-xs);
+  margin-top: var(--space-1);
+}
+
+.doc-editor__add {
+  display: inline-flex;
+}

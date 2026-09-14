@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P2 — Messaging, notifications, SSE (next prompt P2.1) |
-| Baseline test count | 839 |
-| Last commit | `bc24190` test(app): prove tenant isolation and close phase p1 |
-| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3, P1.4, P1.5, P1.6, P1.7 |
+| Current step | P2 — Messaging, notifications, SSE (next prompt P2.2) |
+| Baseline test count | 857 |
+| Last commit | `48c75ab` feat(app): add conversations and messages |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1 |
 
 ## Step ledger
 
@@ -174,7 +174,7 @@ App-specific rules:
       granted `test.punch` capability) — under the new grant semantics amira's permission
       gate legitimately passes; the deny-by-default intent is unchanged. App-dir suite
       191 passed / 0 failed; ruff check + format clean. **Test-secret-scan lesson:** the
-      admin tests originally used `password="brand-new-pass"` literals, which tripped the
+      admin tests first used a long invented password literal in test code, which tripped the
       parent `release/security_gate.py` secrets scan (7 findings) and failed the 5
       release-gate tests; the literals now use the allowlisted `your-password`, and the
       gate tests pass. The committed feature SHA is `67d6961` (amended once for this fix).
@@ -204,12 +204,52 @@ App-specific rules:
       domain first, exactly as the P1.2 repository promised. Full suite **839 passed,
       0 failed** (794 baseline + 26 admin + 19 close-out); ruff check + format clean on
       helix_codex_app/ and tests/helix_codex_app/.
-- [ ] P1.6 Admin: users, domains, org units, capabilities, limits (Prompt 10)
-- [ ] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11)
 
-### P2 — Messaging, notifications, SSE (status: NOT STARTED)
+### P2 — Messaging, notifications, SSE (status: IN PROGRESS)
 
-- [ ] P2.1 Conversations and messages (Prompt 12)
+- [x] P2.1 Conversations and messages (Prompt 12) — commit `48c75ab`,
+      `helix_codex_app/modules/messaging/repository.py`
+      (slots for conversations, members, and messages; `get_conversation(
+      conversation_id, account_id)` raises `NotFoundError` with ONE message
+      shape for missing conversation, non-member, and foreign tenant, so a
+      caller cannot learn which part was wrong; `list_conversations` joins
+      membership in the SQL, so a conversation the caller is not in is absent
+      rather than filtered; `find_direct_conversation` treats the pair as
+      unordered; `list_messages(conversation_id, before, limit)` pages
+      newest-first by `created_at < before`, cursor-safe, bounded 1..200),
+      `helix_codex_app/modules/messaging/service.py`
+      (MessagingService: `create_direct(a, b)` same-tenant-only and
+      idempotent (second call returns the existing conversation, either
+      argument order); `create_group(creator, name, members)` dedupes,
+      caps at MAX_GROUP_MEMBERS=64, cross-tenant member denied; `send_message`
+      validates body (non-blank, ≤8000), then writes ONE message row and ONE
+      governed node through `record_node()` with kind `message`,
+      classification `internal`, nature `user_claim`, provenance
+      `helix_codex_app.messaging` / `app_runtime`, and the conversation's OWN
+      correlation_id — a thread reads as one story in the audit trail;
+      `mark_read` stamps only the caller's membership row and never creates
+      membership; `remove_member` returns False when the row was already
+      gone), `helix_codex_app/modules/messaging/schemas.py`
+      (pydantic request/response models: `MessageOut`, `ConversationOut`,
+      `MessagePage` with the `next_before` cursor, `SendMessageRequest`,
+      `CreateGroupRequest`, `CreateDirectRequest`, `MarkReadRequest`,
+      `AddMemberRequest` — the wire shape is pinned before any client
+      exists). No router yet: P2.1 is the service layer only (Prompt 12 has
+      no route). Tables already existed in `db.py::_init_schema` and the
+      app alembic baseline since P1.1; this step changed no DDL and no
+      migration. Tests: `tests/helix_codex_app/test_messaging.py` (18) cover
+      non-member read/post/member-management all raising `NotFoundError`,
+      create_direct idempotence in both argument orders, one-pair-per-direct
+      (not one channel), exactly one `nodes` row per message with the full
+      envelope and the conversation correlation_id, pagination + newest-first
+      ordering + member scoping, group shape/dedupe, cross-tenant membership
+      denied at service level AND invisible even with a foreign id, same-
+      tenant-different-domain still allowed, remove/read-receipt semantics,
+      empty/oversized message rejection, blank group name, direct-with-self,
+      no edit/delete write paths (columns exist, methods do not), schema
+      round-trip, and list ordering by latest activity with message_count and
+      preview. Full suite **857 passed, 0 failed** (839 baseline + 18);
+      ruff check + format clean on the new paths; app-dir suite 228 passed.
 - [ ] P2.2 The chat UI and the SSE stream (Prompt 13)
 - [ ] P2.3 Notifications (Prompt 14)
 - [ ] P2.4 Close out P2 (Prompt 15)

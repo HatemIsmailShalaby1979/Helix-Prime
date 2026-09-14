@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P3 — Documents, KB, tasks (next prompt P3.2) |
-| Baseline test count | 954 |
-| Last commit | `02700f8` feat(app): add block documents and inline editor |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1 |
+| Current step | P3 — Documents, KB, tasks (next prompt P3.3) |
+| Baseline test count | 980 |
+| Last commit | `381ecc7` feat(app): add document versions and the knowledge base |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1, P3.2 |
 
 ## Step ledger
 
@@ -420,7 +420,65 @@ App-specific rules:
       404, no-CSRF 403); create/add-block HTMX fragments. Full suite
       **954 passed, 0 failed** (929 baseline + 25); ruff check + format clean
       on helix_codex_app/ and tests/helix_codex_app/.
-- [ ] P3.2 Versions and the knowledge base (Prompt 17)
+- [x] P3.2 Versions and the knowledge base (Prompt 17) — commit `381ecc7`,
+      `helix_codex_app/modules/docs/{repository,service,router}.py`
+      (repository: `Version` frozen dataclass with `to_dict()`;
+      `DOC_TYPES=("note","sop","kb","policy")`, `PUBLISHED_TYPES=(sop,kb,policy`,
+      `MANAGER_ROLES=("owner","manager")`; `current_version` column on documents
+      = next version number to assign (P3.1's test pins `current_version == 1`
+      after create); `create_version` writes a row with `version_no =
+      current_version` then bumps it; `snapshot_version` saves the live block
+      list as JSON; `restore_version` parses the target snapshot, `replace_blocks`
+      DELETEs + re-inserts the same `block_id`s/ordinals, then appends a NEW
+      version row whose content equals the old snapshot — history is append-only
+      and a version row is never deleted or rewritten; `list_versions`
+      newest-first; `get_version(version_id, tenant_id)` JOINs `documents`, so a
+      cross-tenant version is a plain 404; `set_doc_type` validates the type and
+      requires `role_id in MANAGER_ROLES` for sop/policy (else
+      `PermissionDenied` 403, code `permission_denied`); kb is open to any
+      `docs.write` holder; `list_documents` gains `doc_types` + visibility —
+      published types (sop, kb, policy) visible to every tenant member, a note
+      visible only to its owner or a manager (`visible_note_owner`,
+      `include_all_notes`). service: `_require_readable` enforces the note rule
+      inside `get_document`, and ALL block/version/archive methods route through
+      `self.get_document(...)` instead of the raw repo so a peer employee cannot
+      read or edit a note; `snapshot_version/list_versions/get_version/
+      restore_version/set_doc_type`; every write calls `record_node()` with kind
+      `version` (body: document_id, version_id, version_no, restored_from,
+      block_count) or `document` (for the type change), nature `user_claim`,
+      classification internal, provenance `helix_codex_app.docs` / `app_runtime`.
+      router: `docs_router` under `/app` with `docs.read` at the boundary; GET
+      `/app/kb` (`kb.html` screen, SOPs grouped first, `?type=` filter + `?q=`
+      search; KB list is `doc_types IN ('sop','kb')` — policy is excluded by
+      design); POST+GET `/app/api/documents/{id}/versions`, POST
+      `/app/api/documents/{id}/versions/{n}/restore` — mutating routes carry
+      `docs.write` + `require_csrf`, answer JSON (`Version.to_dict()`, 201) or,
+      under HX-Request, the `partials/doc_page.html` fragment (root
+      `id="doc-page"`, wrapping `doc_editor` + `doc_versions`, swapped outerHTML
+      so restore blocks revert AND the new version appears; insert_block's HX
+      answer stays the doc_editor fragment alone to avoid nesting). create route
+      accepts an optional `doc_type` from the form. Templates `templates/kb.html`
+      (search form + grouped list) and partials `{doc_versions,doc_page}.html`
+      (snapshot button `hx-post .../versions`, per-version Restore button
+      `hx-post .../restore`, both `hx-target="#doc-page"`), `docs/editor.html`
+      includes `doc_page.html`, `partials/doc_list.html` gained a Knowledge base
+      link + a doc_type select (sop/policy options rendered only for
+      manager/owner). `app.py` unchanged (docs_router already mounted);
+      versions/KB/filter CSS appended to `app.css`.
+      Tests: `tests/helix_codex_app/test_doc_versions_and_kb.py` (26) prove the
+      P3.2 invariants — restoring version 2 of a 4-version document produces
+      version 5 with version 2's content (append-only, nothing rewritten);
+      an employee cannot set doc_type to policy (`PermissionDenied`); a snapshot
+      is immutable (later edits never alter an earlier version row); a manager
+      can publish sop AND policy; unknown doc_type rejected; a note is invisible
+      to a peer employee but visible to its owner and any manager (service +
+      list + HTTP 404 through every call site); kb list contains only sop and kb;
+      snapshot/restore/list versions JSON + CSRF + HTMX fragments; restore
+      reverts the live blocks and shows the new version; foreign-document and
+      foreign-version access are 404 (JOIN scoping); bad version number 400;
+      kb screen 401/200 + type filter + search; SOPs render before Knowledge
+      base. Full suite **980 passed, 0 failed** (954 baseline + 26); ruff check
+      + format clean on helix_codex_app/ and tests/helix_codex_app/.
 - [ ] P3.3 Tasks (Prompt 18)
 - [ ] P3.4 Close out P3 (Prompt 19)
 

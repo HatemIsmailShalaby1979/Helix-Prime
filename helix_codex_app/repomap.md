@@ -61,8 +61,12 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `notifications` (live, P2.3: the `/app/notifications` screen, the notifications/read/read-all
   JSON API, the account-scoped SSE badge stream, and the mention/dm trigger hooks that
   `messaging.service.send_message` calls after its commit) exist;
-  `docs` (live, P3.1: the `/app/docs` list screen + block editor screen, the documents/
-  blocks JSON API, router → service → repository, one governed `document`/`block` node
+  `docs` (live, P3.2: the `/app/docs` list screen + block editor screen, the
+  documents/blocks JSON API, document versions — snapshot/list/get/restore,
+  append-only history with `current_version` on documents — the `/app/kb`
+  knowledge base screen (sop+kb grouped, SOPs first), doc_type note/sop/kb/
+  policy with manager-only sop/policy and note owner/manager visibility; router
+  → service → repository, one governed `document`/`block`/`version` node
   per write with a fresh `doc-<uuid4>` correlation id — leaves `tasks`,
   `calendar`, `attendance`, `memory`, `ops`, `cockpit`,
   `lowcode` arriving with their phases. `rooms/` and `mail/` are v2 stubs.
@@ -98,7 +102,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Admin (live, P1.6) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units` | `admin.users` |
 | Messaging (live, P2.2) | `/app/chat`, `/app/chat/{id}`, `/app/api/conversations`, `/app/api/conversations/{id}/messages`, `/app/api/conversations/{id}/read`, `/app/api/conversations/{id}/stream` | session; CSRF on posts; membership per route (stream = 403 for non-members) |
 | Notifications (live, P2.3) | `/app/notifications`, `/app/api/notifications`, `/app/api/notifications/read-all`, `/app/api/notifications/{id}/read`, `/app/api/notifications/stream` | session; CSRF on the read/read-all posts |
-| Docs (live, P3.1) | `/app/docs`, `/app/api/documents`, `/app/api/documents/{id}`, `/app/api/documents/{id}/blocks`, `/app/api/documents/{id}/blocks/{block_id}` | `docs.read` at the boundary; `docs.write` + CSRF on the mutating routes; KB itself lands in P3.2 |
+| Docs (live, P3.2) | `/app/docs`, `/app/kb`, `/app/api/documents`, `/app/api/documents/{id}`, `/app/api/documents/{id}/blocks`, `/app/api/documents/{id}/blocks/{block_id}`, `/app/api/documents/{id}/versions`, `/app/api/documents/{id}/versions/{n}/restore` | `docs.read` at the boundary; `docs.write` + CSRF on the mutating routes; sop/policy doc_type is manager-or-owner only; published (sop/kb/policy) visible to all tenant members, notes owner/manager only |
 | Tasks (planned, P3) | `/app/tasks`, `/app/api/tasks` | `tasks.use` |
 | Calendar, on-call, attendance (planned, P4) | `/app/calendar`, `/app/api/oncall`, `/app/attendance` | `calendar.use`, `attendance.punch` |
 | Memory (planned, P5) | `/app/memory`, `/app/memory/proposals`, `/app/api/memory` | `memory.review` for reviews |
@@ -147,7 +151,13 @@ sender never notified). P3.1 added `test_docs.py` (25: the four prompt
 invariants — one node per create, one node per block edit, a foreign-document
 block refused through the wrong route at service and HTTP level, order kept
 after reorder — plus delete/archive/search/reject rules, foreign-tenant 404
-isolation, and the screens + JSON API + HTMX fragments + CSRF surface).
+isolation, and the screens + JSON API + HTMX fragments + CSRF surface). P3.2
+added `test_doc_versions_and_kb.py` (26: restore appends — restoring version 2
+of four produces version 5 with version 2's content; a snapshot is immutable;
+an employee cannot publish sop/policy; a note is invisible to a peer employee
+but visible to its owner and managers; kb list = sop+kb only; the versions
+JSON/CSRF/HTMX surface and the `/app/kb` screen with type filter, search, and
+SOPs-first grouping).
 
 ## How to add a module
 

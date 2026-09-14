@@ -44,23 +44,30 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `to_identity` maps an account to a `security.identity.Identity` with `role_id` set only for the
   nine catalog roles — every app role maps to `None` and is denied by construction;
   `authorize_engine_action` calls `security.policy.authorize` with the account's own tenant/client
-  and raises `PermissionDenied` on any deny). `engine_bridge.py`, `memory_bridge.py`,
+  and raises `PermissionDenied` on any deny). `sse_bridge.py` (live, P2.2: the app's only window
+  onto `server.sse.EventBus` — `subscribe`/`unsubscribe`/`publish`/`publish_sync`/
+  `subscriber_count` + `encode`, one bus per process). `engine_bridge.py`, `memory_bridge.py`,
   `metacognition_bridge.py`, `cockpit_bridge.py`, and `packs.py` are planned with their phases.
 - `templating.py` — the one shared template renderer. Reads the CSRF token from
   `request.state.session` and the settings off `request.app.state`, so every route renders with
   the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,
   no shell inheritance) because the login screen must work before a session exists.
 - `modules/` — the feature modules, one folder per vertical. `identity` (live: the `/app/auth`
-  login/me/logout/password surface plus LoginService) and `admin` (live: the `/app/admin`
+  login/me/logout/password surface plus LoginService), `admin` (live: the `/app/admin`
   users/domains/org-units/capabilities/limits surface plus AdminService, owner whole-domain,
-  manager own-org-unit only, every write through record_node) exist; `messaging`, `docs`,
-  `tasks`, `calendar`, `notifications`, `attendance`, `memory`, `ops`, `cockpit`, `lowcode`
-  arrive with their phases. `rooms/` and `mail/` are v2 stubs.
+  manager own-org-unit only, every write through record_node), and `messaging` (live, P2.2:
+  the `/app/chat` list + thread screens, the conversations/messages/read JSON API, and the
+  conversation SSE stream, all `router → service → repository` over the P2.1 schemas) exist;
+  `docs`, `tasks`, `calendar`, `notifications`, `attendance`, `memory`, `ops`, `cockpit`,
+  `lowcode` arrive with their phases. `rooms/` and `mail/` are v2 stubs.
 - `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, `auth/` (login,
   password, me), and `admin/` (index, users, user_detail, domains, org_units) exist. The
   remaining per-module pages arrive with their phases.
-- `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers), `vendor/` (vendored HTMX and
-  Alpine), `manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`.
+- `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers: `pwa.js` and, live in P2.2,
+  `sse.js` — the EventSource client with backoff, per-message dedupe, and the optimistic composer),
+  `vendor/` (vendored HTMX and Alpine), `manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`.
+  `sw.js` excludes `/stream` paths from its `/app/api/` cache handler on purpose: a live stream is
+  never cached.
 
 ## The integration seam
 
@@ -81,7 +88,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Static (live) | `/static` | none |
 | Auth (live) | `/app/auth/login`, `/me`, `/logout`, `/password` | none for GET/POST `/login`; session + CSRF for the rest |
 | Admin (live, P1.6) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units` | `admin.users` |
-| Messaging and notifications (planned, P2) | `/app/chat`, `/app/api/conversations`, `/app/notifications` | session |
+| Messaging (live, P2.2) | `/app/chat`, `/app/chat/{id}`, `/app/api/conversations`, `/app/api/conversations/{id}/messages`, `/app/api/conversations/{id}/read`, `/app/api/conversations/{id}/stream` | session; CSRF on posts; membership per route (stream = 403 for non-members) |
 | Docs and KB (planned, P3) | `/app/docs`, `/app/kb`, `/app/api/documents` | `docs.read` and `docs.write` |
 | Tasks (planned, P3) | `/app/tasks`, `/app/api/tasks` | `tasks.use` |
 | Calendar, on-call, attendance (planned, P4) | `/app/calendar`, `/app/api/oncall`, `/app/attendance` | `calendar.use`, `attendance.punch` |
@@ -113,7 +120,10 @@ All are created by `db.py::_init_schema()` and the app-local alembic baseline `0
 `test_tenant_isolation.py`, `test_cockpit_exclusion.py` (re-pointed at the live
 cockpit routes in P6), `test_pwa_assets.py`, and `test_app_migration_drift.py`
 (named to avoid the module-name collision with the parent
-`tests/test_migration_drift.py`).
+`tests/test_migration_drift.py`). P2.1 added `test_messaging.py` (service
+layer); P2.2 added `test_messaging_routes.py` (screens, JSON contract, HTMX
+fragments, CSRF, and the SSE stream — the stream's member-open case is pinned
+at the handler level because a test client cannot drain an infinite body).
 
 ## How to add a module
 

@@ -1,0 +1,37 @@
+<section id="chat-section" class="card" aria-label="Chat">
+  <h1>Chat</h1>
+  {% if peers %}
+  <h2>New chat</h2>
+  <div class="chat-peers">
+    {% for peer in peers %}
+    <div class="peer">
+      <div class="peer__info">
+        <strong class="peer__name">{{ peer.display_name or peer.username }}</strong>
+        <span class="peer__username">{{ peer.username }}</span>
+      </div>
+      <button class="btn"
+              hx-post="/app/api/conversations"
+              hx-vals='{"account_id": "{{ peer.account_id }}"}'
+              hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+              hx-target="#chat-section"
+              hx-swap="outerHTML">Chat</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div id="chat-list">
+    <h2>Conversations</h2>
+    {% if conversations %}
+    <div class="chat-list">
+      {% for conversation in conversations %}
+      <a class="chat-list__item" href="/app/chat/{{ conversation.conversation_id }}">
+        <strong class="chat-list__title">{{ titles.get(conversation.conversation_id, conversation.title or "Conversation") }}</strong>
+        <span class="chat-list__preview">{{ conversation.last_message_preview or "No messages yet" }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="chat-list__empty">No conversations yet. Start one with a teammate.</p>
+    {% endif %}
+  </div>
+</section>

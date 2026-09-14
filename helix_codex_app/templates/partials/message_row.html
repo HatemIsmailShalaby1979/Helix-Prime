@@ -1,0 +1,8 @@
+<div class="chat-bubble chat-bubble--{{ 'me' if message.sender_account_id == account.account_id else 'them' }}"
+     data-message-id="{{ message.message_id }}">
+  {% if message.sender_account_id != account.account_id %}
+  <span class="chat-bubble__sender">{{ senders.get(message.sender_account_id, "") }}</span>
+  {% endif %}
+  <p class="chat-bubble__body">{{ message.body }}</p>
+  <time class="chat-bubble__meta">{{ message.created_at }}</time>
+</div>

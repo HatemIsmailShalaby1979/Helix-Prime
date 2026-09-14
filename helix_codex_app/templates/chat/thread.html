@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}{{ conversation.title or "Chat" }} — Helix Codex{% endblock %}
+{% block content %}
+{% include "partials/chat_thread.html" %}
+{% include "partials/composer.html" %}
+<script defer src="/static/js/sse.js"></script>
+{% endblock %}

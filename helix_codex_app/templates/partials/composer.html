@@ -1,0 +1,14 @@
+<form class="composer"
+      x-data="{}"
+      hx-post="/app/api/conversations/{{ conversation.conversation_id }}/messages"
+      hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+      hx-target="#chat-messages-{{ conversation.conversation_id }}"
+      hx-swap="beforeend"
+      x-on:submit="ChatComposer.optimistic($el)"
+      x-on:htmx:after-request="ChatComposer.reconcile($event)">
+  <label class="visually-hidden" for="composer-body-{{ conversation.conversation_id }}">Message</label>
+  <input class="composer__input" id="composer-body-{{ conversation.conversation_id }}"
+         name="body" type="text" maxlength="8000"
+         placeholder="Type a message" autocomplete="off" required>
+  <button class="btn btn--primary" type="submit">Send</button>
+</form>

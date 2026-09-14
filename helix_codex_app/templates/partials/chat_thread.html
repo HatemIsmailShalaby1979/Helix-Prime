@@ -1,0 +1,16 @@
+<section class="card chat-thread" aria-label="Conversation">
+  <div class="chat-thread__header">
+    <a class="btn btn--ghost" href="/app/chat">← Chat</a>
+    <strong class="chat-thread__title">{{ conversation.title or "Chat" }}</strong>
+    <span class="badge">{{ conversation.kind }}</span>
+  </div>
+  <div id="chat-messages-{{ conversation.conversation_id }}"
+       class="chat-messages"
+       data-messages
+       data-conversation-id="{{ conversation.conversation_id }}"
+       data-self="{{ account.account_id }}">
+    {% for message in messages %}
+      {% include "partials/message_row.html" %}
+    {% endfor %}
+  </div>
+</section>

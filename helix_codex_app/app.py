@@ -23,6 +23,7 @@ from helix_codex_app.config import AppSettings, get_app_settings
 from helix_codex_app.errors import AppError
 from helix_codex_app.modules.admin.router import admin_router
 from helix_codex_app.modules.identity.router import identity_router
+from helix_codex_app.modules.messaging.router import messaging_router
 from helix_codex_app.security.guard import current_account, require_csrf
 from helix_codex_app.templating import render
 from server import deps
@@ -102,6 +103,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app.include_router(shell_router)
     app.include_router(identity_router)
     app.include_router(admin_router)
+    app.include_router(messaging_router)
     app.include_router(app_router)
     app.include_router(csrf_router)
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

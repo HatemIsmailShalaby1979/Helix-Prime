@@ -3,7 +3,7 @@
   {% if account and account.role_id in ('owner', 'manager') %}
   <a class="nav-bottom__item{% if active_nav == 'admin' %} nav-bottom__item--active{% endif %}" href="/app/admin">Admin</a>
   {% endif %}
-  <span class="nav-bottom__item nav-bottom__item--disabled" aria-disabled="true">Chat</span>
+  <a class="nav-bottom__item{% if active_nav == 'chat' %} nav-bottom__item--active{% endif %}" href="/app/chat">Chat</a>
   <span class="nav-bottom__item nav-bottom__item--disabled" aria-disabled="true">Tasks</span>
   <span class="nav-bottom__item nav-bottom__item--disabled" aria-disabled="true">Calendar</span>
   <span class="nav-bottom__item nav-bottom__item--disabled" aria-disabled="true">More</span>

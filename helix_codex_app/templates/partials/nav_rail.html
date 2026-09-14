@@ -4,7 +4,7 @@
   {% if account and account.role_id in ('owner', 'manager') %}
   <a class="nav-rail__item{% if active_nav == 'admin' %} nav-rail__item--active{% endif %}" href="/app/admin">Admin</a>
   {% endif %}
-  <span class="nav-rail__item nav-rail__item--disabled" aria-disabled="true">Chat</span>
+  <a class="nav-rail__item{% if active_nav == 'chat' %} nav-rail__item--active{% endif %}" href="/app/chat">Chat</a>
   <span class="nav-rail__item nav-rail__item--disabled" aria-disabled="true">Tasks</span>
   <span class="nav-rail__item nav-rail__item--disabled" aria-disabled="true">Calendar</span>
   <span class="nav-rail__item nav-rail__item--disabled" aria-disabled="true">More</span>

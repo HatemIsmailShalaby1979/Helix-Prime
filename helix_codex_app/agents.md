@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P2 — Messaging, notifications, SSE (next prompt P2.4) |
-| Baseline test count | 902 |
-| Last commit | `bd3e406` feat(app): add notification centre and triggers |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1, P2.2, P2.3 |
+| Current step | P3 — Documents, KB, tasks (next prompt P3.1) |
+| Baseline test count | 929 |
+| Last commit | `e3f6a8d` test(app): prove messaging and notification isolation, close phase p2 |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4 |
 
 ## Step ledger
 
@@ -205,7 +205,7 @@ App-specific rules:
       0 failed** (794 baseline + 26 admin + 19 close-out); ruff check + format clean on
       helix_codex_app/ and tests/helix_codex_app/.
 
-### P2 — Messaging, notifications, SSE (status: IN PROGRESS)
+### P2 — Messaging, notifications, SSE (status: COMPLETE)
 
 - [x] P2.1 Conversations and messages (Prompt 12) — commit `48c75ab`,
       `helix_codex_app/modules/messaging/repository.py`
@@ -354,7 +354,23 @@ App-specific rules:
       happens is a changed behavior, and the P1.6 precedent applies. Full suite
       **902 passed, 0 failed** (877 baseline + 12 + 13); ruff check + format
       clean on helix_codex_app/ and tests/helix_codex_app/.
-- [ ] P2.4 Close out P2 (Prompt 15)
+- [x] P2.4 Close out P2 (Prompt 15) — commit `e3f6a8d`,
+      `tests/helix_codex_app/test_messaging_isolation.py` (12 tests: foreign
+      conversations absent from list; get_conversation/list_messages/send_message
+      raise NotFoundError; mark_read no-op with no membership row; foreign
+      notifications invisible; HTTP: conversations API empty, thread/messages/
+      send API 404, notifications API empty + screen "No notifications yet"),
+      `tests/helix_codex_app/test_sse_isolation.py` (6 items: conversation
+      stream 403 for any non-member parametrized over same-tenant outsider and
+      foreign-tenant account; member-open StreamingResponse + headers pinned at
+      handler level; per-conversation key isolation via call_later wrong-then-
+      right publish; notification stream owner-only frame delivery; owner-scoped
+      initial unread count), `tests/helix_codex_app/test_notification_triggers.py`
+      (9 tests: one DM → one dm; each DM fires its own dm (unread 2); repeated
+      @omar → exactly 1; @omar @layla → 1 each; @nobody → nothing; no-mention →
+      nothing; @ghada foreign-domain → nothing; DM with @omar body → exactly 1 dm,
+      never a mention; sender never notified). Full suite **929 passed, 0 failed**
+      (902 baseline + 27); ruff check + format clean on all three new modules.
 
 ### P3 — Documents, KB, tasks (status: NOT STARTED)
 

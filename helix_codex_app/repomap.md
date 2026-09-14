@@ -131,7 +131,14 @@ at the handler level because a test client cannot drain an infinite body).
 P2.3 added `test_notifications.py` (service layer: mention/dm triggers, unread
 counting, mark-read idempotency, isolation, governed node per batch) and
 `test_notifications_routes.py` (screen, JSON contract, CSRF, and the badge SSE
-stream pinned at the handler level).
+stream pinned at the handler level). P2.4 added `test_messaging_isolation.py`
+(service + HTTP: foreign-tenant conversations, messages, and notifications
+never leak; `test_sse_isolation.py` (conversation stream 403 for any non-
+member, per-conversation key isolation, notification stream owner-only frame
+delivery, owner-scoped initial count) and `test_notification_triggers.py`
+(once-only semantics: each DM fires one dm, each @mention fires one mention,
+repeated names collapse, unknown/foreign-domain/self-mention produce nothing,
+sender never notified).
 
 ## How to add a module
 

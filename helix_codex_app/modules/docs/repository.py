@@ -1,9 +1,11 @@
-"""The storage layer for documents and their blocks.
+"""The storage layer for documents, their blocks, and their versions.
 
 A document is one row in documents plus an ordered list of rows in
 doc_blocks. Every query is scoped by tenant, and list_blocks is reached
 only through a document the caller already owns, so a block never leaks
-across documents or tenants.
+across documents or tenants. A snapshot writes the whole block list into
+document_versions as one JSON row; a restore re-reads that snapshot and
+appends a NEW version row, so history is never rewritten.
 """
 from __future__ import annotations
 
@@ -17,6 +19,14 @@ from helix_codex_app.errors import NotFoundError
 
 MAX_TITLE_LENGTH = 200
 MAX_BLOCK_LENGTH = 20000
+
+DOC_TYPE_NOTE = "note"
+DOC_TYPE_SOP = "sop"
+DOC_TYPE_KB = "kb"
+DOC_TYPE_POLICY = "policy"
+DOC_TYPES = (DOC_TYPE_NOTE, DOC_TYPE_SOP, DOC_TYPE_KB, DOC_TYPE_POLICY)
+PUBLISHED_TYPES = (DOC_TYPE_SOP, DOC_TYPE_KB, DOC_TYPE_POLICY)
+MANAGER_ROLES = ("owner", "manager")
 
 
 def _now() -> str:
@@ -80,6 +90,28 @@ class Block:
             "content": self.content,
             "updated_by": self.updated_by,
             "updated_at": self.updated_at,
+        }
+
+
+@dataclass(frozen=True)
+class Version:
+    """One snapshot of a document's block list."""
+
+    version_id: str
+    document_id: str
+    version_no: int
+    snapshot: str
+    created_by: str
+    created_at: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "version_id": self.version_id,
+            "document_id": self.document_id,
+            "version_no": self.version_no,
+            "snapshot": self.snapshot,
+            "created_by": self.created_by,
+            "created_at": self.created_at,
         }
 
 
@@ -151,11 +183,18 @@ class DocsRepository:
         *,
         q: str | None = None,
         status: str | None = None,
+        doc_types: tuple[str, ...] | None = None,
+        visible_note_owner: str | None = None,
+        include_all_notes: bool = False,
     ) -> list[Document]:
-        """Every document of the tenant, newest update first.
+        """The documents of the tenant the caller can see, newest first.
 
-        An optional search term filters titles, and an optional status
-        filters by the status column ('active' by default downstream).
+        An optional search term filters titles, an optional status filters by
+        the status column ('active' by default downstream), and an optional
+        doc_types tuple narrows to those types (used by the KB view). When no
+        type filter is given, a non-manager sees published types plus only the
+        notes they own; include_all_notes widens to every document for a
+        manager.
         """
         sql = """
             SELECT document_id, tenant_id, domain_id, title, doc_type,
@@ -165,6 +204,13 @@ class DocsRepository:
             WHERE tenant_id = ?
         """
         params: list[Any] = [tenant_id]
+        if doc_types:
+            placeholders = ", ".join("?" for _ in doc_types)
+            sql += f" AND doc_type IN ({placeholders})"
+            params.extend(doc_types)
+        elif not include_all_notes:
+            sql += " AND (doc_type IN ('sop', 'kb', 'policy') OR owner_account_id = ?)"
+            params.append(visible_note_owner or "")
         if q:
             sql += " AND title LIKE ?"
             params.append(f"%{q}%")
@@ -190,6 +236,147 @@ class DocsRepository:
             raise NotFoundError(f"no document {document_id!r} for this account")
         self.conn.commit()
         return self.get_document(document_id, tenant_id)
+
+    def set_doc_type(self, document_id: str, tenant_id: str, doc_type: str) -> Document:
+        """Change a document's type and return the updated row."""
+        updated_at = _now()
+        cursor = self.conn.execute(
+            """
+            UPDATE documents
+            SET doc_type = ?, updated_at = ?
+            WHERE document_id = ? AND tenant_id = ?
+            """,
+            (doc_type, updated_at, document_id, tenant_id),
+        )
+        if cursor.rowcount == 0:
+            raise NotFoundError(f"no document {document_id!r} for this account")
+        self.conn.commit()
+        return self.get_document(document_id, tenant_id)
+
+    def get_version(self, version_id: str, tenant_id: str) -> Version:
+        """Load one version of a document owned by the tenant.
+
+        document_versions has no tenant column, so the load joins the
+        document row. A missing version or a version whose document belongs
+        to another tenant raise the one NotFoundError shape.
+        """
+        row = self.conn.execute(
+            """
+            SELECT v.version_id, v.document_id, v.version_no, v.snapshot,
+                   v.created_by, v.created_at
+            FROM document_versions v
+            JOIN documents d ON d.document_id = v.document_id
+            WHERE v.version_id = ? AND d.tenant_id = ?
+            """,
+            (version_id, tenant_id),
+        ).fetchone()
+        if row is None:
+            raise NotFoundError(f"no version {version_id!r} for this account")
+        return _version_from_row(row)
+
+    def get_version_by_no(self, document_id: str, version_no: int) -> Version:
+        """Load the numbered version of one document, or NotFoundError."""
+        row = self.conn.execute(
+            """
+            SELECT version_id, document_id, version_no, snapshot,
+                   created_by, created_at
+            FROM document_versions
+            WHERE document_id = ? AND version_no = ?
+            """,
+            (document_id, version_no),
+        ).fetchone()
+        if row is None:
+            raise NotFoundError(f"no version {version_no} of document {document_id!r}")
+        return _version_from_row(row)
+
+    def list_versions(self, document_id: str) -> list[Version]:
+        """Every version of one document, newest first."""
+        rows = self.conn.execute(
+            """
+            SELECT version_id, document_id, version_no, snapshot,
+                   created_by, created_at
+            FROM document_versions
+            WHERE document_id = ?
+            ORDER BY version_no DESC
+            """,
+            (document_id,),
+        ).fetchall()
+        return [_version_from_row(row) for row in rows]
+
+    def create_version(
+        self,
+        *,
+        document_id: str,
+        version_no: int,
+        snapshot: str,
+        created_by: str,
+    ) -> Version:
+        """Append one version row and bump the document's current_version.
+
+        The live blocks stay untouched; this method only writes history.
+        The caller decides the version_no (the next one for the document's
+        current state), which is why documents.current_version moves to
+        version_no + 1 in the same commit.
+        """
+        version_id = _new_id("ver")
+        created_at = _now()
+        self.conn.execute(
+            """
+            INSERT INTO document_versions (
+                version_id, document_id, version_no, snapshot,
+                created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (version_id, document_id, version_no, snapshot, created_by, created_at),
+        )
+        self.conn.execute(
+            "UPDATE documents SET current_version = ?, updated_at = ? WHERE document_id = ?",
+            (version_no + 1, created_at, document_id),
+        )
+        self.conn.commit()
+        return Version(
+            version_id=version_id,
+            document_id=document_id,
+            version_no=version_no,
+            snapshot=snapshot,
+            created_by=created_by,
+            created_at=created_at,
+        )
+
+    def replace_blocks(
+        self,
+        document_id: str,
+        blocks: list[dict[str, Any]],
+        updated_by: str,
+    ) -> list[Block]:
+        """Replace the live block list with a snapshot's blocks.
+
+        The snapshot's own block ids and ordinals are re-inserted, so a
+        restore is a plain overwrite of the live list, never a touch on the
+        version rows.
+        """
+        updated_at = _now()
+        self.conn.execute("DELETE FROM doc_blocks WHERE document_id = ?", (document_id,))
+        for block in blocks:
+            self.conn.execute(
+                """
+                INSERT INTO doc_blocks (
+                    block_id, document_id, ordinal, block_type, content,
+                    updated_by, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    block["block_id"],
+                    document_id,
+                    block["ordinal"],
+                    block["block_type"],
+                    block["content"],
+                    updated_by,
+                    updated_at,
+                ),
+            )
+        self.conn.commit()
+        return self.list_blocks(document_id)
 
     def list_blocks(self, document_id: str) -> list[Block]:
         """The blocks of one document, in order."""
@@ -376,4 +563,15 @@ def _block_from_row(row: sqlite3.Row) -> Block:
         content=row["content"],
         updated_by=row["updated_by"],
         updated_at=row["updated_at"],
+    )
+
+
+def _version_from_row(row: sqlite3.Row) -> Version:
+    return Version(
+        version_id=row["version_id"],
+        document_id=row["document_id"],
+        version_no=row["version_no"],
+        snapshot=row["snapshot"],
+        created_by=row["created_by"],
+        created_at=row["created_at"],
     )

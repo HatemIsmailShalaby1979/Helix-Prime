@@ -1,9 +1,20 @@
 <section id="docs-section" class="card" aria-label="Documents">
-  <h1>Documents</h1>
+  <div class="doc-list__header">
+    <h1>Documents</h1>
+    <a class="doc-editor__back" href="/app/kb">Knowledge base</a>
+  </div>
   <form class="doc-new" hx-post="/app/api/documents"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
         hx-target="#docs-section" hx-swap="outerHTML">
     <input name="title" placeholder="Document title" required>
+    <select name="doc_type" class="doc-new__type" aria-label="Document type">
+      <option value="note">Note</option>
+      <option value="kb">KB</option>
+      {% if is_manager %}
+      <option value="sop">SOP</option>
+      <option value="policy">Policy</option>
+      {% endif %}
+    </select>
     <button class="btn btn--primary" type="submit">New document</button>
   </form>
   <form class="doc-search" hx-get="/app/docs"

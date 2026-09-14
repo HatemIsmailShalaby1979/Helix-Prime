@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Knowledge base — Helix Codex{% endblock %}
+{% block content %}
+<section id="kb-section" class="card" aria-label="Knowledge base">
+  <h1>Knowledge base</h1>
+  <a class="doc-editor__back" href="/app/docs">Documents</a>
+  <form class="doc-search" action="/app/kb" method="get">
+    <input name="q" placeholder="Search the knowledge base" value="{{ q }}">
+  </form>
+  <p class="doc-search" aria-label="Filter by type">
+    <a class="kb-filter{% if ftype == '' %} kb-filter--on{% endif %}" href="/app/kb">All</a>
+    <a class="kb-filter{% if ftype == 'sop' %} kb-filter--on{% endif %}" href="/app/kb?type=sop">SOPs</a>
+    <a class="kb-filter{% if ftype == 'kb' %} kb-filter--on{% endif %}" href="/app/kb?type=kb">Knowledge base</a>
+  </p>
+  {% for group_label, group_documents in groups %}
+  <h2 class="kb-group__title">{{ group_label }}</h2>
+  {% if group_documents %}
+  <div class="doc-list">
+    {% for document in group_documents %}
+    <a class="doc-list__item" href="/app/docs/{{ document.document_id }}">
+      <strong class="doc-list__title">{{ document.title }}</strong>
+      <span class="doc-list__meta">{{ document.updated_at }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="doc-list__empty">No {{ group_label|lower }} yet.</p>
+  {% endif %}
+  {% endfor %}
+</section>
+{% endblock %}

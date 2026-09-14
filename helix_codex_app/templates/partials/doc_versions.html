@@ -1,0 +1,27 @@
+<section id="doc-versions" class="card doc-versions" aria-label="Version history">
+  <div class="doc-versions__header">
+    <h2>Version history</h2>
+    <button type="button" class="btn btn--ghost btn--small"
+            hx-post="/app/api/documents/{{ document.document_id }}/versions"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+            hx-target="#doc-page"
+            hx-swap="outerHTML">Snapshot now</button>
+  </div>
+  {% if versions %}
+  <ol class="doc-versions__list">
+    {% for version in versions %}
+    <li class="doc-versions__item">
+      <span class="doc-versions__no">Version {{ version.version_no }}</span>
+      <span class="doc-versions__meta">{{ version.created_at }}</span>
+      <button type="button" class="btn btn--ghost btn--small"
+              hx-post="/app/api/documents/{{ document.document_id }}/versions/{{ version.version_no }}/restore"
+              hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+              hx-target="#doc-page"
+              hx-swap="outerHTML">Restore</button>
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="doc-versions__empty">No versions yet. Snapshot now to capture the current blocks.</p>
+  {% endif %}
+</section>

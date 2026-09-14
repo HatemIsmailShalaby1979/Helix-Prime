@@ -44,7 +44,7 @@ APPROVED = "approved"
 ROLLED_BACK = "rolled_back"
 
 PROPOSAL_KINDS = ("workflow", "policy", "permission", "memory_rule")
-_APPROVABLE = (EVALUATED, DRAFT)  # a proposal must have passed evaluation to approve
+_APPROVABLE = (EVALUATED,)  # only a proposal that passed evaluation may be approved
 
 
 @dataclass(frozen=True)
@@ -117,6 +117,15 @@ class ApprovalDecision:
 
 class ProposalTamperError(Exception):
     pass
+
+
+class ProposalNotApprovableError(Exception):
+    """Raised when approve() is called on a proposal that has not passed evaluation.
+
+    A draft, a proposal still evaluating, a proposal that failed evaluation, and a
+    proposal already rejected or rolled back are all refused here rather than
+    returned as a decision, so a caller cannot ignore the refusal by accident.
+    """
 
 
 def _canonical(payload: Mapping[str, Any]) -> str:
@@ -355,12 +364,13 @@ class MetacognitionEngine:
         prev = self._latest.get(proposal_id)
         if prev is None:
             raise KeyError(f"no such proposal {proposal_id!r}")
-        if prev.approval_state == EVALUATED_FAILED:
-            return ApprovalDecision("denied", "Proposal failed evaluation; cannot be approved")
         if prev.approval_state not in _APPROVABLE:
-            return ApprovalDecision(
-                "denied", f"Proposal not in an approvable state ({prev.approval_state})"
+            reason = (
+                "proposal failed evaluation and cannot be approved"
+                if prev.approval_state == EVALUATED_FAILED
+                else f"proposal is not approvable in state {prev.approval_state!r}"
             )
+            raise ProposalNotApprovableError(f"{proposal_id}: {reason}")
         req_actor = requester_actor or prev.created_by
         req_role = requester_role or prev.role_id
         if reviewer == req_actor:

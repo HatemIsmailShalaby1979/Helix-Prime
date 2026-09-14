@@ -160,6 +160,7 @@ class GovernedMemory:
                 self._records.append(rec)
                 self._by_id[rec.record_id] = rec
         self._rebuild_supersession()
+        self._rebuild_flags()
 
     def _rebuild_supersession(self) -> None:
         for rec in self._records:
@@ -191,6 +192,26 @@ class GovernedMemory:
                             "reason": rec.body.get("reason"),
                         }
                     )
+
+    def _rebuild_flags(self) -> None:
+        """Replay correction, supersession, and deletion markers after a reload.
+
+        correct(), supersede(), and delete() set fields on the target record in
+        memory. The ledger is append-only, so the target's own line is never
+        rewritten and those fields would be lost on the next load. Each marker
+        record already carries what is needed to reconstruct them, so replay
+        every marker in ledger order. The last marker for a record wins.
+        """
+        for rec in self._records:
+            if rec.corrects and rec.corrects in self._by_id:
+                self._by_id[rec.corrects].retention_status = "corrected"
+            if rec.supersedes and rec.supersedes in self._by_id:
+                self._by_id[rec.supersedes].retention_status = "superseded"
+            if rec.body.get("action") == "delete":
+                target_id = rec.body.get("target")
+                if target_id and target_id in self._by_id:
+                    self._by_id[target_id].deleted = rec.body.get("reason")
+                    self._by_id[target_id].retention_status = "deleted"
 
     def _append_envelope(self, env: dict) -> None:
         self._ledger.append(env)

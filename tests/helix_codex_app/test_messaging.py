@@ -114,15 +114,17 @@ def test_direct_conversation_is_one_pair_not_one_channel(ctx) -> None:
 
 
 def test_send_message_creates_exactly_one_nodes_row(ctx) -> None:
+    """One message row, one message node, plus one notification node for the
+    direct-recipient trigger (P2.3).  The message node is always first."""
     conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
     before = ctx.conn.execute("SELECT COUNT(*) AS n FROM nodes").fetchone()["n"]
     message = ctx.service.send_message(ctx.amira, conversation.conversation_id, "first shift note")
     after = ctx.conn.execute("SELECT COUNT(*) AS n FROM nodes").fetchone()["n"]
-    assert after == before + 1
+    assert after == before + 2
     row = ctx.conn.execute(
         "SELECT node_id, kind, classification, nature, tenant_id, correlation_id,"
         " created_by, thread_id, provenance_source, provenance_data_mode"
-        " FROM nodes"
+        " FROM nodes WHERE kind = 'message'"
     ).fetchone()
     assert row["node_id"] == message.node_id
     assert row["kind"] == "message"

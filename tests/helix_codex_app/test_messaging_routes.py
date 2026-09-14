@@ -210,6 +210,7 @@ def test_create_conversation_requires_csrf(ctx, client) -> None:
 
 
 def test_send_message_route_json_writes_and_audits(ctx, client) -> None:
+    """One message produces one message node plus one notification node (P2.3)."""
     conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
     cookies, headers = _login(ctx, ctx.amira)
     before = ctx.conn.execute("SELECT COUNT(*) AS n FROM nodes").fetchone()["n"]
@@ -224,7 +225,7 @@ def test_send_message_route_json_writes_and_audits(ctx, client) -> None:
     assert body["conversation_id"] == conversation.conversation_id
     assert body["sender_account_id"] == ctx.amira.account_id
     after = ctx.conn.execute("SELECT COUNT(*) AS n FROM nodes").fetchone()["n"]
-    assert after == before + 1
+    assert after == before + 2
     stored = ctx.conn.execute(
         "SELECT node_id FROM messages WHERE message_id = ?", (body["message_id"],)
     ).fetchone()

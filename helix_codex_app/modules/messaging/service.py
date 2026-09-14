@@ -6,7 +6,7 @@ group carries a title, and every sent message lands twice — once as a
 working-table row and once as a governed node through record_node(), so
 chat is in the audit trail like every other write in the app. Tenant and
 client ids come from the sender's account record; the request never supplies
-them. A member's own tenant is the only tenant a conversation can carry.
+them.
 """
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ from helix_codex_app.modules.messaging.repository import (
     Message,
     MessagingRepository,
 )
+from helix_codex_app.modules.notifications.service import NotificationService
 from helix_codex_app.security.accounts import Account
 
 PROVENANCE_SOURCE = "helix_codex_app.messaging"
@@ -162,6 +163,16 @@ class MessagingService:
             (node_id, message.message_id),
         )
         self.conn.commit()
+        NotificationService(self.conn).notify_message_sent(
+            sender=account,
+            conversation_id=conversation.conversation_id,
+            conversation_tenant_id=conversation.tenant_id,
+            conversation_domain_id=conversation.domain_id,
+            conversation_kind=conversation.kind,
+            conversation_title=conversation.title,
+            body=message.body,
+            member_ids=self.repo.member_ids(conversation.conversation_id),
+        )
         return stamped
 
     def list_conversations(self, account: Account) -> list[Conversation]:

@@ -55,10 +55,13 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
 - `modules/` — the feature modules, one folder per vertical. `identity` (live: the `/app/auth`
   login/me/logout/password surface plus LoginService), `admin` (live: the `/app/admin`
   users/domains/org-units/capabilities/limits surface plus AdminService, owner whole-domain,
-  manager own-org-unit only, every write through record_node), and `messaging` (live, P2.2:
+  manager own-org-unit only, every write through record_node), `messaging` (live, P2.2:
   the `/app/chat` list + thread screens, the conversations/messages/read JSON API, and the
-  conversation SSE stream, all `router → service → repository` over the P2.1 schemas) exist;
-  `docs`, `tasks`, `calendar`, `notifications`, `attendance`, `memory`, `ops`, `cockpit`,
+  conversation SSE stream, all `router → service → repository` over the P2.1 schemas) and
+  `notifications` (live, P2.3: the `/app/notifications` screen, the notifications/read/read-all
+  JSON API, the account-scoped SSE badge stream, and the mention/dm trigger hooks that
+  `messaging.service.send_message` calls after its commit) exist;
+  `docs`, `tasks`, `calendar`, `attendance`, `memory`, `ops`, `cockpit`,
   `lowcode` arrive with their phases. `rooms/` and `mail/` are v2 stubs.
 - `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, `auth/` (login,
   password, me), and `admin/` (index, users, user_detail, domains, org_units) exist. The
@@ -89,6 +92,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Auth (live) | `/app/auth/login`, `/me`, `/logout`, `/password` | none for GET/POST `/login`; session + CSRF for the rest |
 | Admin (live, P1.6) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units` | `admin.users` |
 | Messaging (live, P2.2) | `/app/chat`, `/app/chat/{id}`, `/app/api/conversations`, `/app/api/conversations/{id}/messages`, `/app/api/conversations/{id}/read`, `/app/api/conversations/{id}/stream` | session; CSRF on posts; membership per route (stream = 403 for non-members) |
+| Notifications (live, P2.3) | `/app/notifications`, `/app/api/notifications`, `/app/api/notifications/read-all`, `/app/api/notifications/{id}/read`, `/app/api/notifications/stream` | session; CSRF on the read/read-all posts |
 | Docs and KB (planned, P3) | `/app/docs`, `/app/kb`, `/app/api/documents` | `docs.read` and `docs.write` |
 | Tasks (planned, P3) | `/app/tasks`, `/app/api/tasks` | `tasks.use` |
 | Calendar, on-call, attendance (planned, P4) | `/app/calendar`, `/app/api/oncall`, `/app/attendance` | `calendar.use`, `attendance.punch` |
@@ -124,6 +128,10 @@ cockpit routes in P6), `test_pwa_assets.py`, and `test_app_migration_drift.py`
 layer); P2.2 added `test_messaging_routes.py` (screens, JSON contract, HTMX
 fragments, CSRF, and the SSE stream — the stream's member-open case is pinned
 at the handler level because a test client cannot drain an infinite body).
+P2.3 added `test_notifications.py` (service layer: mention/dm triggers, unread
+counting, mark-read idempotency, isolation, governed node per batch) and
+`test_notifications_routes.py` (screen, JSON contract, CSRF, and the badge SSE
+stream pinned at the handler level).
 
 ## How to add a module
 

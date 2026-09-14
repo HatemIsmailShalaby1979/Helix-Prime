@@ -1,0 +1,43 @@
+<div class="notifications-page" data-notifications>
+  <div class="notifications-page__head">
+    <h1>Notifications</h1>
+    {% if unread %}
+    <button type="button"
+            class="btn btn--ghost"
+            hx-post="/app/api/notifications/read-all"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+            hx-swap="none"
+            x-on:htmx:after-request="HelixBadge.apply(0)">Mark all read</button>
+    {% endif %}
+  </div>
+  {% if notifications %}
+  <ul class="notification-list">
+    {% for n in notifications %}
+    <li class="notification-item{% if n.read_at %} notification-item--read{% endif %}"
+        data-notification-id="{{ n.notification_id }}"
+        data-notification-read="{% if n.read_at %}true{% else %}false{% endif %}">
+      <div class="notification-item__icon" aria-hidden="true">
+        {% if n.kind == "dm" %}DM{% elif n.kind == "mention" %}@{% else %}<span class="notification-item__icon--generic">i</span>{% endif %}
+      </div>
+      <div class="notification-item__content">
+        <h2 class="notification-item__title">{{ n.title }}</h2>
+        {% if n.body %}<p class="notification-item__body">{{ n.body }}</p>{% endif %}
+        <div class="notification-item__actions">
+          <a class="btn btn--ghost btn--small" href="{{ n.link }}">Open</a>
+          {% if not n.read_at %}
+          <button type="button"
+                  class="btn btn--ghost btn--small"
+                  hx-post="/app/api/notifications/{{ n.notification_id }}/read"
+                  hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+                  hx-swap="none"
+                  x-on:htmx:after-request="HelixBadge.apply(0)">Mark read</button>
+          {% endif %}
+        </div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="notifications-page__empty">No notifications yet.</p>
+  {% endif %}
+</div>

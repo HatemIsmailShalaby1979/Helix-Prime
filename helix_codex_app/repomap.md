@@ -61,13 +61,18 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `notifications` (live, P2.3: the `/app/notifications` screen, the notifications/read/read-all
   JSON API, the account-scoped SSE badge stream, and the mention/dm trigger hooks that
   `messaging.service.send_message` calls after its commit) exist;
-  `docs`, `tasks`, `calendar`, `attendance`, `memory`, `ops`, `cockpit`,
-  `lowcode` arrive with their phases. `rooms/` and `mail/` are v2 stubs.
+  `docs` (live, P3.1: the `/app/docs` list screen + block editor screen, the documents/
+  blocks JSON API, router → service → repository, one governed `document`/`block` node
+  per write with a fresh `doc-<uuid4>` correlation id — leaves `tasks`,
+  `calendar`, `attendance`, `memory`, `ops`, `cockpit`,
+  `lowcode` arriving with their phases. `rooms/` and `mail/` are v2 stubs.
 - `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, `auth/` (login,
   password, me), and `admin/` (index, users, user_detail, domains, org_units) exist. The
   remaining per-module pages arrive with their phases.
-- `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers: `pwa.js` and, live in P2.2,
-  `sse.js` — the EventSource client with backoff, per-message dedupe, and the optimistic composer),
+- `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers: `pwa.js`, live in P2.2
+  `sse.js` — the EventSource client with backoff, per-message dedupe, and the optimistic
+  composer — and live in P3.1 `docs.js` — the block editor autosave: debounced `htmx.ajax`
+  PUTs on input + blur, small Saved indicator, re-wires after an HTMX add-block swap),
   `vendor/` (vendored HTMX and Alpine), `manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`.
   `sw.js` excludes `/stream` paths from its `/app/api/` cache handler on purpose: a live stream is
   never cached.
@@ -93,7 +98,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Admin (live, P1.6) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units` | `admin.users` |
 | Messaging (live, P2.2) | `/app/chat`, `/app/chat/{id}`, `/app/api/conversations`, `/app/api/conversations/{id}/messages`, `/app/api/conversations/{id}/read`, `/app/api/conversations/{id}/stream` | session; CSRF on posts; membership per route (stream = 403 for non-members) |
 | Notifications (live, P2.3) | `/app/notifications`, `/app/api/notifications`, `/app/api/notifications/read-all`, `/app/api/notifications/{id}/read`, `/app/api/notifications/stream` | session; CSRF on the read/read-all posts |
-| Docs and KB (planned, P3) | `/app/docs`, `/app/kb`, `/app/api/documents` | `docs.read` and `docs.write` |
+| Docs (live, P3.1) | `/app/docs`, `/app/api/documents`, `/app/api/documents/{id}`, `/app/api/documents/{id}/blocks`, `/app/api/documents/{id}/blocks/{block_id}` | `docs.read` at the boundary; `docs.write` + CSRF on the mutating routes; KB itself lands in P3.2 |
 | Tasks (planned, P3) | `/app/tasks`, `/app/api/tasks` | `tasks.use` |
 | Calendar, on-call, attendance (planned, P4) | `/app/calendar`, `/app/api/oncall`, `/app/attendance` | `calendar.use`, `attendance.punch` |
 | Memory (planned, P5) | `/app/memory`, `/app/memory/proposals`, `/app/api/memory` | `memory.review` for reviews |
@@ -138,7 +143,11 @@ member, per-conversation key isolation, notification stream owner-only frame
 delivery, owner-scoped initial count) and `test_notification_triggers.py`
 (once-only semantics: each DM fires one dm, each @mention fires one mention,
 repeated names collapse, unknown/foreign-domain/self-mention produce nothing,
-sender never notified).
+sender never notified). P3.1 added `test_docs.py` (25: the four prompt
+invariants — one node per create, one node per block edit, a foreign-document
+block refused through the wrong route at service and HTTP level, order kept
+after reorder — plus delete/archive/search/reject rules, foreign-tenant 404
+isolation, and the screens + JSON API + HTMX fragments + CSRF surface).
 
 ## How to add a module
 

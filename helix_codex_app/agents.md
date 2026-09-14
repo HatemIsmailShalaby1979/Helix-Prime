@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P3 — Documents, KB, tasks (next prompt P3.1) |
-| Baseline test count | 929 |
-| Last commit | `e3f6a8d` test(app): prove messaging and notification isolation, close phase p2 |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4 |
+| Current step | P3 — Documents, KB, tasks (next prompt P3.2) |
+| Baseline test count | 954 |
+| Last commit | `02700f8` feat(app): add block documents and inline editor |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1 |
 
 ## Step ledger
 
@@ -374,7 +374,52 @@ App-specific rules:
 
 ### P3 — Documents, KB, tasks (status: NOT STARTED)
 
-- [ ] P3.1 Documents and the block editor (Prompt 16)
+- [x] P3.1 Documents and the block editor (Prompt 16) — commit `02700f8`,
+      `helix_codex_app/modules/docs/{__init__,repository,service,router}.py`
+      (repository: `Document`/`Block` frozen dataclasses with `to_dict()`,
+      `DocsRepository` tenant-scoped — `get_document` raises `NotFoundError`
+      with ONE message shape for missing OR foreign; `list_documents(q, status)`
+      newest-update-first; `set_status`; `list_blocks`; `get_block` scoped by
+      `block_id AND document_id` so a block never leaks through the wrong
+      document; `append_block` takes the next ordinal; `insert_block` shifts
+      later blocks; `update_block` rowcount-0 → `NotFoundError`; `delete_block`
+      renumbers the gap; `reorder_blocks` refuses any list that is not exactly
+      the document's blocks; `MAX_TITLE_LENGTH=200`, `MAX_BLOCK_LENGTH=20000`.
+      service: `DocsService.create_document/list_documents/get_document/
+      insert_block/update_block/delete_block/reorder_blocks/archive_document` —
+      every write calls `record_node()` with kind `document` or `block`, nature
+      `user_claim`, classification internal, provenance `helix_codex_app.docs` /
+      `app_runtime`, fresh `doc-<uuid4>` correlation per write, tenant/client/
+      domain from the account record, never from the request. router: `docs_router`
+      under `/app` with `docs.read` at the boundary; GET `/docs` (screen, or
+      `partials/doc_list.html` fragment under HX-Request), GET `/docs/{id}`
+      (editor screen), GET/POST `/api/documents`, GET `/api/documents/{id}`,
+      PUT `/api/documents/{id}/blocks/{block_id}`, POST
+      `/api/documents/{id}/blocks` — mutating routes carry `docs.write` +
+      `require_csrf`, read a JSON body or an HTMX urlencoded form, answer JSON
+      or an HTMX fragment (create re-renders the list, add-block re-renders the
+      editor) inside the connection try). Templates `templates/{docs.html,
+      docs/editor.html}` and partials `{doc_list,doc_editor}.html`
+      (contenteditable blocks render server-side, so reading works with JS
+      off; saving posts on blur + a 1.5 s debounce through `static/js/docs.js`
+      via `htmx.ajax` PUT with a small Saved indicator; add-block posts empty
+      content and swaps the editor). `app.py` mounts `docs_router`; Docs nav
+      entries enabled in both nav partials; doc/list/editor CSS in `app.css`.
+      Tests: `tests/helix_codex_app/test_docs.py` (25) prove the P3.1
+      invariants — create writes exactly one `document` node; edit updates the
+      row and writes one `block` node; a block of another document is refused
+      through this document's route at service and HTTP level (`NotFoundError`,
+      404) with the source block untouched; reorder preserves order with
+      contiguous ordinals; delete renumbers; reorder refuses partial lists;
+      archive drops the doc from the active list; blank/oversized content
+      rejected; search filters titles; foreign-tenant document read/edit are
+      404 with no row leakage; screens render (empty state, editor with
+      contenteditable, 401 unauth, foreign-doc 404); the JSON API contract
+      (201 + one node, CSRF 403, blank title 400, doc+blocks payload, foreign
+      404); block PUT (update + one node = insert+update total 2, wrong-doc
+      404, no-CSRF 403); create/add-block HTMX fragments. Full suite
+      **954 passed, 0 failed** (929 baseline + 25); ruff check + format clean
+      on helix_codex_app/ and tests/helix_codex_app/.
 - [ ] P3.2 Versions and the knowledge base (Prompt 17)
 - [ ] P3.3 Tasks (Prompt 18)
 - [ ] P3.4 Close out P3 (Prompt 19)

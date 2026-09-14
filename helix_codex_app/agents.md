@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P1 — Identity, auth, org, limits (next prompt P1.6) |
-| Baseline test count | 794 |
-| Last commit | `39e58ff` feat(app): add domain login, lockout, and auth screens |
-| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3, P1.4 |
+| Current step | P2 — Messaging, notifications, SSE (next prompt P2.1) |
+| Baseline test count | 839 |
+| Last commit | `PENDING` test(app): prove tenant isolation and close phase p1 |
+| Completed steps | P0.1, P0.2, P0.3, P0.4, P1.1, P1.2, P1.3, P1.4, P1.5, P1.6, P1.7 |
 
 ## Step ledger
 
@@ -61,7 +61,7 @@ App-specific rules:
 - [x] P0.3 governance.md (Prompt 3) — commit `0b3765c`
 - [x] P0.4 agents.md and repomap.md (Prompt 4) — commit `50bba63`, 621 passed
 
-### P1 — Identity, auth, org, limits (status: IN PROGRESS, next prompt P1.6)
+### P1 — Identity, auth, org, limits (status: COMPLETE)
 
 - [x] P1.1 App database and the single writer (Prompt 5) — commit `781b0b3`, 629 passed
 - [x] P1.2 Accounts, domains, and passwords (Prompt 6) — commit `f8cccb5`, 663 passed
@@ -132,6 +132,78 @@ App-specific rules:
       and the unknown-domain audit rows. `TestClient` is driven with `follow_redirects=False`
       so the 303 login redirects are asserted directly. Full suite 794 passed / 0 failed
       (774 + 20); ruff check + format clean.
+- [x] P1.6 Admin: users, domains, org units, capabilities, limits (Prompt 10) — commit
+      `67d6961`,
+      `helix_codex_app/modules/admin/service.py`
+      (AdminService: `create_user`, `update_user`, `set_user_status`, `grant_capability`,
+      `revoke_capability`, `set_limit`, `create_domain`, `create_org_unit`, `list_users`,
+      plus `list_domains`, `list_org_units`, `get_managed_user`, `capabilities_of`,
+      `limits_of`. Owner acts on the whole domain; a manager acts only inside their own
+      org unit (`_require_managed_account`, `_require_create_scope`); a manager with no
+      org unit manages nothing. An account can never change its own role or status, move
+      its own org unit, or grant/revoke its own capability. `set_user_status` to a
+      non-active value also revokes the target's live sessions. Domain creation is owner
+      only. Every write calls `record_node()` with tenant/client/domain ids, a fresh
+      `admin-*` correlation id, classification internal, nature historical_event, kind
+      admin, provenance `helix_codex_app.admin` / `app_runtime`.) and
+      `helix_codex_app/modules/admin/router.py`
+      (admin_router under `/app/admin`, included with `require_permission("admin.users")`
+      at the router boundary; GET `` (landing), `/users`, `/users/{id}`, `/domains`,
+      `/org-units`; POST `/users`, `/users/{id}/capabilities`, `/users/{id}/limits`,
+      `/domains`, `/org-units`; PATCH `/users/{id}` — every mutating route also carries
+      `require_csrf`; answers are 303 redirects with a flash query param; form errors
+      redirect back with `?error=`). Templates `templates/admin/{index,users,user_detail,
+      domains,org_units}.html` — cards on mobile, tables at ≥768px. **Permission semantics
+      change (the prompt's VERIFY case):** `permissions_for`/`has_permission` gained an
+      optional `conn`; when passed, enabled `account_capabilities` rows are unioned into
+      the role-matrix result, so an admin grant takes effect at the very next request.
+      `guard.require_permission` and `AdminService._require_admin` pass the conn.
+      `templating.render` gained an optional `status_code`. `security/accounts.py` gained
+      a read-only `get_org_unit`. Nav partials show Admin for owner/manager. Tests:
+      `tests/helix_codex_app/test_admin.py` (26) cover owner create + audit envelope,
+      UI create → login round-trip, manager org-unit scoping (create/list/update/status/
+      capability/limit/domain), manager-cannot-manage-owner, unit-less manager manages
+      nothing, employee 403 on every admin route (GET + mutating), the admin screens
+      render, grant→`has_permission` immediate + revoke, grant→route-access immediate,
+      self-grant/self-role/self-status/self-org-unit-move denied, status-change revokes
+      sessions + audits, unknown status/role rejection, set-limit-below-usage no-crash
+      (LimitExceeded on next consume, per check_and_consume), duplicate domain, weak
+      password, cross-domain NotFound, CSRF-required on admin POST. **One existing test
+      was updated deliberately:** `test_sessions_and_guard.py::test_permission_gate_denies_
+      until_catalog` now probes omar (no capability rows) instead of amira (who holds a
+      granted `test.punch` capability) — under the new grant semantics amira's permission
+      gate legitimately passes; the deny-by-default intent is unchanged. App-dir suite
+      191 passed / 0 failed; ruff check + format clean. **Test-secret-scan lesson:** the
+      admin tests originally used `password="brand-new-pass"` literals, which tripped the
+      parent `release/security_gate.py` secrets scan (7 findings) and failed the 5
+      release-gate tests; the literals now use the allowlisted `your-password`, and the
+      gate tests pass. The committed feature SHA is `67d6961` (amended once for this fix).
+- [x] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11) — commit `PENDING`,
+      `tests/helix_codex_app/test_tenant_isolation.py`
+      (7 tests: account/domain/org-unit reads stay scoped; sessions of tenant B never
+      verify inside tenant A; the same username in two tenants is two accounts;
+      record_node's tenant column is enforced NOT NULL and every tenant-carrying table
+      declares tenant_id; login resolves the domain first, so a tenant A username cannot
+      be logged into through tenant B's domain name),
+      `tests/helix_codex_app/test_cockpit_exclusion.py`
+      (5 tests: no cockpit route is mounted before P6; an employee, a contractor, an
+      external, and an unknown-role session all get 403 through a probe route registered
+      behind `require_permission("cockpit.view")` on the real app_router — the P1.3
+      probe pattern; the owner passes; the module is re-pointed at the live cockpit
+      routes in P6),
+      `tests/helix_codex_app/test_pwa_assets.py`
+      (4 tests: the manifest parses, lists exactly three icons including a maskable one,
+      start_url=/app, standalone display; every icon file exists and is non-empty; sw.js
+      defines a versioned CACHE_NAME; offline.html exists),
+      `tests/helix_codex_app/test_app_migration_drift.py`
+      (3 tests: the drift check passes at head; the check CAN FAIL (a table added to the
+      db.py side is reported); normalisation ignores indentation, not tokens. Named
+      `test_app_migration_drift.py`, not `test_migration_drift.py`, to avoid the pytest
+      module-name collision with the parent `tests/test_migration_drift.py` — both dirs
+      have no `__init__.py`). No isolation bug was found: every scoped read resolved its
+      domain first, exactly as the P1.2 repository promised. Full suite **839 passed,
+      0 failed** (794 baseline + 26 admin + 19 close-out); ruff check + format clean on
+      helix_codex_app/ and tests/helix_codex_app/.
 - [ ] P1.6 Admin: users, domains, org units, capabilities, limits (Prompt 10)
 - [ ] P1.7 Close out P1: isolation, PWA assets, ledger (Prompt 11)
 

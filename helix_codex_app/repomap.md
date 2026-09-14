@@ -31,11 +31,14 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   caller), `limits.py` (role defaults + `check_and_consume`, `LimitExceeded`), `sessions.py`
   (SessionStore: opaque tokens stored as SHA-256 only + a CSRF token; `verify` rejects revoked/
   expired/idle/locked-account sessions; `set_session_cookie`), `permissions.py` (the app permission
-  catalog mirroring master plan §5.5 — `PERMISSION_MATRIX` over owner/manager/employee/contractor/
-  external plus a `catalog` column, `permissions_for`, `has_permission`, and
-  `PRIVILEGED_CATALOG_ROLE_IDS` read from `organization/role_catalog.py` at import time; unknown keys
-  and unknown roles deny), `guard.py` (FastAPI deps: `current_account`, `require_csrf`,
-  `require_scope`, `require_capability`, and `require_permission` — enforced against the catalog).
+  catalog mirroring master plan §5.5 —   `PERMISSION_MATRIX` over owner/manager/employee/contractor/
+  external plus a `catalog` column, `permissions_for`, `has_permission`, `capabilities_for`,
+  and `PRIVILEGED_CATALOG_ROLE_IDS` read from `organization/role_catalog.py` at import
+  time; unknown keys and unknown roles deny; with a connection passed, enabled
+  `account_capabilities` rows are unioned in so an admin grant is effective immediately),
+  `guard.py` (FastAPI deps: `current_account`, `require_csrf`,
+  `require_scope`, `require_capability`, and `require_permission` — enforced against the
+  catalog plus live capability rows).
   This layer never edits the parent catalog.
 - `integration/` — the only package allowed to import parent internals. `policy_bridge.py` (live:
   `to_identity` maps an account to a `security.identity.Identity` with `role_id` set only for the
@@ -48,11 +51,14 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,
   no shell inheritance) because the login screen must work before a session exists.
 - `modules/` — the feature modules, one folder per vertical. `identity` (live: the `/app/auth`
-  login/me/logout/password surface plus LoginService) exists; `messaging`, `docs`, `tasks`,
-  `calendar`, `notifications`, `attendance`, `memory`, `ops`, `cockpit`, `admin`, `lowcode`
+  login/me/logout/password surface plus LoginService) and `admin` (live: the `/app/admin`
+  users/domains/org-units/capabilities/limits surface plus AdminService, owner whole-domain,
+  manager own-org-unit only, every write through record_node) exist; `messaging`, `docs`,
+  `tasks`, `calendar`, `notifications`, `attendance`, `memory`, `ops`, `cockpit`, `lowcode`
   arrive with their phases. `rooms/` and `mail/` are v2 stubs.
-- `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, and `auth/` (login,
-  password, me) exist. The remaining per-module pages arrive with their phases.
+- `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, `auth/` (login,
+  password, me), and `admin/` (index, users, user_detail, domains, org_units) exist. The
+  remaining per-module pages arrive with their phases.
 - `static/` — `css/` (tokens and shell), `js/` (PWA and SSE helpers), `vendor/` (vendored HTMX and
   Alpine), `manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`.
 
@@ -74,7 +80,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | App home (live) | `/app` | session |
 | Static (live) | `/static` | none |
 | Auth (live) | `/app/auth/login`, `/me`, `/logout`, `/password` | none for GET/POST `/login`; session + CSRF for the rest |
-| Admin (planned, P1) | `/app/admin/users`, `/domains`, `/org-units` | `admin.users` |
+| Admin (live, P1.6) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units` | `admin.users` |
 | Messaging and notifications (planned, P2) | `/app/chat`, `/app/api/conversations`, `/app/notifications` | session |
 | Docs and KB (planned, P3) | `/app/docs`, `/app/kb`, `/app/api/documents` | `docs.read` and `docs.write` |
 | Tasks (planned, P3) | `/app/tasks`, `/app/api/tasks` | `tasks.use` |
@@ -97,6 +103,17 @@ Governance layer: `nodes`. Working layer: `conversations`, `conversation_members
 `login_events`.
 
 All are created by `db.py::_init_schema()` and the app-local alembic baseline `0001_codex_app_baseline` (P1.1).
+
+## Tests
+
+`tests/helix_codex_app/` holds the app suite: `test_passwords.py` (P1.2),
+`test_accounts.py` (P1.2), `test_sessions_and_guard.py` (P1.3),
+`test_permissions_and_policy_bridge.py` (P1.4), `test_login_and_auth.py` (P1.5),
+`test_admin.py` (P1.6), and the four P1.7 boundary modules:
+`test_tenant_isolation.py`, `test_cockpit_exclusion.py` (re-pointed at the live
+cockpit routes in P6), `test_pwa_assets.py`, and `test_app_migration_drift.py`
+(named to avoid the module-name collision with the parent
+`tests/test_migration_drift.py`).
 
 ## How to add a module
 

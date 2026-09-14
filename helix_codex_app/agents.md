@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | P2 — Messaging, notifications, SSE (next prompt P2.3) |
-| Baseline test count | 877 |
-| Last commit | `7989e33` feat(app): add chat ui with live sse updates |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1, P2.2 |
+| Current step | P2 — Messaging, notifications, SSE (next prompt P2.4) |
+| Baseline test count | 902 |
+| Last commit | `bd3e406` feat(app): add notification centre and triggers |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1, P2.2, P2.3 |
 
 ## Step ledger
 
@@ -301,7 +301,59 @@ App-specific rules:
       local target. App-dir suite 248 passed / 0 failed; full suite
       **877 passed, 0 failed** (857 baseline + 20); ruff check + format clean on
       helix_codex_app/ and tests/helix_codex_app/.
-- [ ] P2.3 Notifications (Prompt 14)
+- [x] P2.3 Notifications (Prompt 14) — commit `bd3e406`,
+      `helix_codex_app/modules/notifications/repository.py`
+      (per-account `notifications` rows with sender/recipient/kind/body/link/
+      read_at; `create`, `list_for(account_id)` newest-first, `unread_count`,
+      `mark_read` idempotent — `UPDATE ... WHERE read_at IS NULL` — and
+      `mark_all_read` returning the number newly stamped), `schemas.py`
+      (`NotificationOut`: id, kind, body_preview, link, created_at, read_at),
+      `service.py` (NotificationService: `create` writes the row, records a
+      governed node (`kind="notification"`, `nature="system_event"`,
+      classification internal, provenance `helix_codex_app.notifications` /
+      `app_runtime`, `created_by` the SENDER, `correlation_id` shared across
+      the batch from one send via `notif-<uuid4>`), then `_publish_badge`
+      pushes a fresh `unread_count` frame to the recipient's stream channel;
+      `notify_message_sent(sender, conversation_id, tenant, domain, kind,
+      title, body, member_ids)` fires DMs (one per other direct member) and
+      mentions (`@username` matches resolved lowercased against the same
+      domain's accounts, sender excluded, `MAX_PREVIEW=120`, link
+      `/app/chat/{conversation_id}`)), and `router.py` (notifications_router:
+      GET `/notifications` screen, GET `/api/notifications`, POST
+      `/api/notifications/read-all`, POST `/api/notifications/{id}/read` every
+      mutating route behind `require_csrf`, and GET `/api/notifications/stream`
+      — the badge SSE stream, account-scoped via `notifications-event-stream`
+      read of the session). Every route reads the account from the session,
+      never the path, so a foreign id is a plain 404. `MessagingService.
+      send_message` now triggers `notify_message_sent` AFTER its commit, so a
+      send that fails its governed write never notifies; the recipient stream
+      is reached through the existing `sse_bridge` channels (still in-process,
+      one bus per process). The shell gained a Bell link in the header
+      (`templates/base.html`) with a `data-notification-badge` count element
+      updated by `static/js/notifications.js` (exactly one EventSource, retry
+      backoff `[1s,2s,4s,8s]`, applies on `unread_count` frames), and Notifications
+      nav entries in both nav partials. **The stream is `/app/api/notifications/
+      stream`, not `/app/notifications/stream`:** `sw.js` already excludes paths
+      ending in `/stream` inside its `/app/api/` cache handler, so the badge
+      stream inherits that rule and is never cached (sw.js itself is unchanged).
+      Tests: `tests/helix_codex_app/test_notifications.py` (12) cover the mention
+      trigger, sender-never-notified, dm trigger, unread counting, idempotent
+      read, cross-account isolation, node envelope + shared correlation_id,
+      no-notify-on-group-without-mention, self-mention no-op, mark_all_read,
+      and empty-body no-op; `test_notifications_routes.py` (13) cover the
+      screen (empty/list/401), the JSON list (own items + isolation), mark_read
+      idempotent + 404-for-foreign + CSRF, read-all, and the stream pinned at
+      the handler level (StreamingResponse + three headers, initial
+      `unread_count` frame, bus `notification` frame delivery, cleanup to zero
+      subscribers on disconnect — a test client cannot drain an infinite body,
+      the P2.2 lesson). **Two P2.1 messaging tests were updated deliberately:**
+      `test_send_message_creates_exactly_one_nodes_row` and
+      `test_send_message_route_json_writes_and_audits` now expect `before + 2`
+      node rows (message node + dm notification node) and the former selects
+      the message row `WHERE kind = 'message'` — a governed write that actually
+      happens is a changed behavior, and the P1.6 precedent applies. Full suite
+      **902 passed, 0 failed** (877 baseline + 12 + 13); ruff check + format
+      clean on helix_codex_app/ and tests/helix_codex_app/.
 - [ ] P2.4 Close out P2 (Prompt 15)
 
 ### P3 — Documents, KB, tasks (status: NOT STARTED)

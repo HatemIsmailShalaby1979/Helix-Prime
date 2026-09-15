@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P5 IN PROGRESS** — P5.1 and P5.2 complete; next prompt P5.3 |
-| Baseline test count | P4.4: 1182 passed / 0 failed. **P5.1 checkpoint, full suite: 1186 passed, 2 failed, 1188 collected (29 min).** Both failures are pre-existing flakes in unrelated modules — `test_structured_logs_contain_identifiers` races on the shared `observability/logs.jsonl`, and `test_existing_c0_c4_regression` shells out to a smoke run. Both pass in isolation, and the same 2 were already failing at the P4.4 checkpoint. P5.2's 15 tests are not yet included in a full run. |
-| Last commit | `8e6b79d` feat(app): add per-account governed memory stores |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1**, **P5.2** |
+| Current step | **P5 COMPLETE** — all six P5 steps done; next prompt P6.1 |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P5.2–P5.6 add 73 app tests. The ten P5 modules run together give **104 passed, 0 failed**. A full-suite re-run is still owed before P6. |
+| Last commit | `afe2175` feat(app): add governed promotion into org memory (P5.5); the P5.6 close-out follows |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1–P5.6** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -893,7 +893,7 @@ App-specific rules:
       dedicated proof modules (one per phase invariant) so the isolation and
       fail-closed guarantees are asserted in one place each.
 
-### P5 — Per-user metacognitive memory (status: IN PROGRESS — P5.1, P5.2 done)
+### P5 — Per-user metacognitive memory (status: COMPLETE)
 
 > **P5 verification (2026-09-15).** Full suite at the P5.1 checkpoint: **1186 passed, 2 failed,
 > 1188 collected, 29 min**. The two failures are pre-existing flakes in unrelated modules — see the
@@ -987,10 +987,50 @@ App-specific rules:
 > proposal is in `DRAFT` or `EVALUATED`. Best done in P5.3, where the proposal lifecycle is already
 > being built.
 
-- [ ] P5.3 Proposals, reviews, and the projection tables (Prompt 26)
-- [ ] P5.4 The memory screen (Prompt 27)
-- [ ] P5.5 Promotion into org memory (Prompt 28)
-- [ ] P5.6 Close out P5 (Prompt 29)
+- [x] **P5.3** Proposals, reviews, and the projection tables (Prompt 26) — **COMPLETE.**
+      `integration/metacognition_bridge.py` — `AccountMetacognition`, one engine per ledger, paths
+      resolved exactly the way a memory store path is. `modules/memory/{repository,service,router}.py`
+      — the `proposals` and `proposal_reviews` projection, the lifecycle, and nine routes.
+      **Design correction its own tests forced:** a proposal lives in its *author's* ledger, so
+      resolving the engine from the caller meant a reviewer looked in their own ledger and found
+      nothing. Every write path now resolves the proposal's owner through the tenant-scoped
+      projection first and works in the owner's ledger, recording the acting account separately as
+      the actor. `evaluate` is author-only; `approve`/`reject`/`rollback` reach the owner.
+      Also closed the review's open finding: `evaluate()` now refuses anything that is not DRAFT or
+      EVALUATED, so `evaluate → reject → evaluate → approve` can no longer quietly undo a rejection.
+      The engine gained `ProposalStateError`, with `ProposalNotApprovableError` as a subclass so
+      existing callers keep working. Commit `5e4201c`.
+- [x] **P5.4** The memory screen (Prompt 27) — **COMPLETE.**
+      `templates/memory.html` plus `partials/proposal_card.html`, `partials/proposal_actions.html`,
+      and `partials/data_mode_badge.html`. The card shows the evaluation's five numbers — baseline
+      rate, proposed rate, change, historical cases, simulated cases — with the risk note, the
+      rollback plan, and the chain status. The actions are decided by state and ownership: evaluate
+      on your own draft, approve or reject on somebody else's evaluated proposal, roll back only once
+      it is applied. An approve button is never drawn on your own proposal, because the engine would
+      refuse it and a button that can only fail is a lie. Review actions answer an HTMX fragment so
+      the card re-renders in place. The screen is the author's own memory; a reviewer gets a separate
+      "waiting for your review" section. Commit `9bed4cf`.
+- [x] **P5.5** Promotion into org memory (Prompt 28) — **COMPLETE.**
+      `request_promotion` builds the org-level proposal from an already-approved personal one and
+      evaluates it against the org store; `approve_promotion` requires a manager or owner who is not
+      the author; `reject_promotion` needs a reason; `rollback_promotion` retires the org rule with a
+      soft delete and writes a reversal note into the author's own store, so both ledgers tell the
+      story. `promotions` gained `org_proposal_id` — without it a rollback could not find the org
+      proposal it was undoing. The column sits last in the `CREATE TABLE` in both `db.py` and the
+      alembic baseline, because the drift check compares DDL text and `ALTER TABLE ADD COLUMN` would
+      land it in a different position. Commit `afe2175`.
+- [x] **P5.6** Close out P5 (Prompt 29) — **COMPLETE.**
+      Four close-out modules: `test_memory_store_isolation.py` (one account's records and proposals
+      never appear in another's, across the read, verify, and rollback paths),
+      `test_proposal_lifecycle.py` (draft → evaluated → approved → rolled back, with the SOD refusal
+      and the guarantee that a rejected proposal stays rejected),
+      `test_promotion_second_approver.py` (self-approval denied, peer employee denied, manager
+      accepted), and `test_ledger_verify.py` (a tampered line fails on both ledgers, an intact chain
+      passes). Writing them surfaced **two more real defects, both fixed**: `reject` and `rollback`
+      had no reviewer guard, so any same-tenant peer could decide somebody else's proposal — a peer is
+      now told it does not exist, the same answer an outsider gets; and `verify_ledger` checked only
+      the proposals chain, so the screen could report "verified" while the memory ledger was broken —
+      it now verifies both. `governance.md` §6 and `repomap.md` updated with the pointers.
 
 ### P6 — Operations and the cockpit (status: NOT STARTED)
 

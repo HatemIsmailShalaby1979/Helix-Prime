@@ -61,6 +61,15 @@ Each account has its own governed memory store and its own metacognition engine,
 
 What this does not mean: per-user memory is not a private place to hide. Every record still carries tenant, classification, provenance, correlation, and evidence references, and a request can never name another account's store. This paragraph exists because over-claiming isolation would break the constitution's truth requirement (00_CONSTITUTION.md, "Truth is paramount").
 
+The tests that hold this up, and the ones to re-run if any of it changes:
+
+- `tests/helix_codex_app/test_memory_store_isolation.py` — one account's records and proposals never appear in another's, across the read, verify, and rollback paths.
+- `tests/helix_codex_app/test_proposal_lifecycle.py` — the whole path, draft to rolled back, including the separation-of-duties refusal and the guarantee that a rejected proposal stays rejected.
+- `tests/helix_codex_app/test_promotion_second_approver.py` — self-approval denied, a peer employee denied, a manager accepted.
+- `tests/helix_codex_app/test_ledger_verify.py` — a tampered line fails verification on both ledgers, an intact chain passes.
+
+A proposal is never approved before it has been evaluated, and a promotion is never decided by its own author. Both are enforced in the service and by the metacognition engine, not only in the screen.
+
 ## 7. Decision log
 
 The decisions locked for the app (2026-09-13 onward; master plan §2). Each entry states the

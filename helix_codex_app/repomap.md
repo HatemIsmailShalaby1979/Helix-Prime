@@ -148,7 +148,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Calendar (live, P4.1) | `/app/calendar`, `/app/api/events`, `/app/api/events/{id}`, `/app/api/events/{id}/respond` | `calendar.use` at the boundary; `calendar.use` + CSRF on the mutating routes; update/cancel need creator or manager; RSVP requires being an attendee |
 | On-call (live, P4.2) | `/app/api/oncall`, `/app/api/oncall/shifts` | `calendar.use` at the boundary + CSRF on the create route; the status route reads the roster (`OnCallCoverage`, covered-or-gap) and fails closed with a typed 503 `engine_unavailable` when the WFM engine read raises; shift creation is manager-only (owner/manager) |
 | Attendance (live, P4.3) | `/app/attendance`, `/app/api/attendance/punch`, `/app/api/attendance/records`, `/app/api/attendance/summary` | `attendance.punch` at the boundary; CSRF on the punch toggle; records/summary read APIs apply the same boundary gate |
-| Memory (planned, P5) | `/app/memory`, `/app/memory/proposals`, `/app/api/memory` | `memory.review` for reviews |
+| Memory (live, P5.3–P5.5) | `/app/memory`, `/app/memory/proposals`, `/app/memory/proposals/{id}`, `/app/memory/ledger/verify`, `/app/memory/promotions`, `/app/api/memory/proposals`, `/app/api/memory/proposals/{id}/evaluate`, `/approve`, `/reject`, `/rollback`, `/app/api/memory/promotions`, `/app/api/memory/promotions/{id}/approve`, `/reject`, `/rollback` | `memory.propose` at the boundary; `memory.review` + CSRF on the review and promotion routes. A proposal is only readable by its author, or by a reviewer in a different role; a same-role peer is told it does not exist. Promotion needs a manager or owner who is not the author |
 | Ops (planned, P6) | `/app/ops`, `/app/api/ops` | `ops.view` |
 | Cockpit (planned, P6) | `/app/cockpit/owner`, `/coach`, `/parent`, `/control-plane` | `cockpit.view` |
 | Low-code (planned, P7) | `/app/api/sections`, `/app/api/packs` | `packs.manage` for writes |
@@ -166,6 +166,8 @@ Governance layer: `nodes`. Working layer: `conversations`, `conversation_members
 `login_events`.
 
 All are created by `db.py::_init_schema()` and the app-local alembic baseline `0001_codex_app_baseline` (P1.1).
+
+`promotions` carries `org_proposal_id`, which links a promotion to the org-level proposal it created; without it a rollback could not find what to undo. The column sits last in the `CREATE TABLE`, in both `db.py` and the baseline, because the drift check compares the DDL text and an `ALTER TABLE ADD COLUMN` would land it in a different position.
 
 ## Tests
 
@@ -272,8 +274,16 @@ engine missing, engine error, missing staffing figure — raises
 `EngineUnavailableError`, a raised engine exception propagates as-is, and no
 failure mode returns an empty result). Suite: 1182 passed / 0 failed.
 
-## How to add a module
+The P5 modules prove the memory promise end to end: `test_memory_store.py` (P5.2 — store
+resolution, per-account isolation, the index, chain integrity), `test_memory_proposals.py` (P5.3 —
+the lifecycle and its refusals), `test_memory_screen.py` (P5.4 — the card partial: evidence numbers
+present, rollback only once applied, no approve button on your own proposal), `test_memory_promotion.py`
+(P5.5 — promotion and its second approver), plus the four P5.6 close-out modules
+`test_memory_store_isolation.py`, `test_proposal_lifecycle.py`, `test_promotion_second_approver.py`,
+and `test_ledger_verify.py`. The two parent defects fixed in P5.1 are covered by
+`tests/test_metacognition.py` and `tests/test_governed_memory.py`.
 
+## How to add a module
 Follow the proven `router → service → repository` shape from `server/features/workflows/`. Add
 `helix_codex_app/modules/<name>/` with `repository.py`, `service.py`, and `router.py`. Every mutating
 path calls `record_node()` with the full envelope. If the module needs the core, add a function to the

@@ -139,9 +139,8 @@ class MemoryService:
         """
         owner = self._owner_of(account, proposal_id)
         if owner.account_id != account.account_id:
-            raise PermissionDenied(
-                "only the author may evaluate this proposal",
-                payload={"proposal_id": proposal_id},
+            raise NotFoundError(
+                f"no such proposal {proposal_id}", payload={"proposal_id": proposal_id}
             )
         proposal = self.get_proposal(account, proposal_id)
         if historical_cases is None and simulated_cases is None:
@@ -190,6 +189,7 @@ class MemoryService:
         if not reason or not reason.strip():
             raise ValueError("a rejection needs a reason")
         owner = self._owner_of(account, proposal_id)
+        self._ensure_may_decide(account, owner, proposal_id)
         proposal = self.engines.reject(
             owner, proposal_id, reviewer=account.account_id, reason=reason
         )
@@ -206,6 +206,7 @@ class MemoryService:
     def rollback(self, account: Account, proposal_id: str, *, reason: str) -> ImprovementProposal:
         """Roll a proposal back. Only an applied or approved proposal may be rolled back."""
         owner = self._owner_of(account, proposal_id)
+        self._ensure_may_decide(account, owner, proposal_id)
         current = self.engines.get(owner, proposal_id)
         if current.approval_state not in ROLLBACK_STATES:
             raise InvalidStateError(
@@ -263,10 +264,19 @@ class MemoryService:
         return self.engines.evidence_report(owner, self.get_proposal(account, proposal_id))
 
     def verify_ledger(self, account: Account) -> dict:
-        ok, detail = self.engines.verify_chain(account)
+        """Verify both of the account's ledgers: its memory and its proposals.
+
+        One answer, both chains. Checking only one of them would let a screen say
+        "verified" while the other ledger was broken.
+        """
+        memory_ok, memory_detail = self.stores.verify_chain(account)
+        proposals_ok, proposals_detail = self.engines.verify_chain(account)
+        ok = memory_ok and proposals_ok
         return {
             "ok": ok,
-            "detail": detail,
+            "detail": "chain intact" if ok else "chain broken",
+            "memory": {"ok": memory_ok, "detail": memory_detail},
+            "proposals": {"ok": proposals_ok, "detail": proposals_detail},
             "store_id": db.store_id_for(path=self.engines.resolve_path(account)),
         }
 
@@ -536,6 +546,21 @@ class MemoryService:
                 f"no such proposal {proposal_id}", payload={"proposal_id": proposal_id}
             )
         return owner
+
+    def _ensure_may_decide(self, account: Account, owner: Account, proposal_id: str) -> None:
+        """Refuse a decision from somebody the engine would not let decide.
+
+        The author may always act on their own proposal. Anybody else has to be a
+        different person in a different role, which is the same line the engine
+        draws for approval. A same-role peer is told the proposal does not exist,
+        the same answer an outsider gets, so nothing leaks by asking.
+        """
+        if owner.account_id == account.account_id:
+            return
+        if (owner.role_id or "") == (account.role_id or ""):
+            raise NotFoundError(
+                f"no such proposal {proposal_id}", payload={"proposal_id": proposal_id}
+            )
 
     def _promotion_for(self, account: Account, promotion_id: str) -> PromotionRow:
         """One promotion, scoped to the caller's tenant."""

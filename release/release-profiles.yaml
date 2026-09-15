@@ -14,6 +14,7 @@ profiles:
   - controlled_pilot
   - production_candidate
   - production
+  - app_pilot
 
 gates:
   - repository_state
@@ -30,6 +31,14 @@ gates:
   - performance_limits
   - operator_readiness
   - release_approval
+
+app_gates:
+  - app_auth_boundary
+  - app_session_fail_closed
+  - app_tenant_isolation
+  - app_memory_store_isolation
+  - app_migration_drift
+  - app_pwa_assets
 
 required_gates:
   alpha:
@@ -69,6 +78,18 @@ required_gates:
     - performance_limits
     - operator_readiness
     - release_approval
+  app_pilot:
+    - repository_state
+    - configuration_validation
+    - startup_readiness
+    - data_isolation
+    - audit_integrity
+    - app_auth_boundary
+    - app_session_fail_closed
+    - app_tenant_isolation
+    - app_memory_store_isolation
+    - app_migration_drift
+    - app_pwa_assets
   production:
     - repository_state
     - reproducible_install

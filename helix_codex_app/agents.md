@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P7.1 COMPLETE** — next prompt P7.2 (app release gates) |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
-| Last commit | `dceab76` feat(app): add capability pack loader with enforced invariants (feature commit; P7.1 docs checkpoint follows) |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, **P7.1** |
+| Current step | **P7.2 COMPLETE** — next prompt P7.3 (evidence export, backup, restore) |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
+| Last commit | (commit SHA set at P7.2 feature commit) |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, **P7.2** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),

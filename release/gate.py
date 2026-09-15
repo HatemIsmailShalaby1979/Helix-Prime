@@ -287,6 +287,237 @@ def _gate_legal_privacy_review() -> tuple[bool, str]:
     return _prod_gate_reason("legal_privacy_review", "signed legal/privacy review where applicable")
 
 
+# ── app release gates (the Helix Codex App product surface) ────────────────
+# These prove the app's own invariants before a pilot claim. Each is a
+# self-contained, fail-closed check over a temporary state; none touches a
+# live database.
+
+
+def _app_build() -> tuple[Any, Any]:
+    from helix_codex_app.app import create_app
+    from helix_codex_app.config import AppSettings
+
+    return create_app(AppSettings(db_path=":memory:", cookie_secure=False)), None
+
+
+def _gate_app_auth_boundary() -> tuple[bool, str]:
+    """Every /app route except healthz and the static mount must run the guard."""
+    try:
+        app, _ = _app_build()
+    except Exception as e:  # noqa: BLE001
+        return False, f"app_auth_boundary: app build failed: {type(e).__name__}: {e}"
+    guard_name = "current_account"
+    unguarded: list[str] = []
+    for route in app.routes:
+        path = getattr(route, "path", None)
+        if path is None or not str(path).startswith("/app"):
+            continue
+        if str(path) == "/app/healthz":
+            continue
+        dependant = getattr(route, "dependant", None)
+        if dependant is None:
+            unguarded.append(f"{path}: no dependency tree")
+            continue
+        deps = getattr(dependant, "dependencies", [])
+        names = {getattr(getattr(d, "call", None), "__name__", "") for d in deps}
+        if guard_name not in names:
+            unguarded.append(path)
+    ok = not unguarded
+    detail = f"app_auth_boundary: {len(unguarded)} unguarded /app routes"
+    if unguarded:
+        detail += " (first: " + ", ".join(str(p) for p in unguarded[:3]) + ")"
+    return ok, detail
+
+
+def _gate_app_session_fail_closed() -> tuple[bool, str]:
+    """A revoked and an expired session both fail; a live one passes."""
+    import tempfile
+
+    from helix_codex_app import db
+    from helix_codex_app.config import AppSettings
+    from helix_codex_app.security.accounts import AccountRepository
+    from helix_codex_app.security.passwords import hash_password
+    from helix_codex_app.security.sessions import SessionStore
+
+    work = tempfile.mkdtemp(prefix="hp_gate_app_session_")
+    try:
+        db_path = os.path.join(work, "app.db")
+        conn = db.connect(db_path=db_path)
+        db._init_schema(conn)
+        repo = AccountRepository(conn)
+        domain = repo.create_domain(
+            "gate.academy", tenant_id="tenant-gate", client_id="client-gate"
+        )
+        account = repo.create_account(
+            domain.domain_id,
+            "gateuser",
+            role_id="owner",
+            password_hash=hash_password("your-password"),
+        )
+        settings = AppSettings(db_path=db_path, cookie_secure=False)
+        store = SessionStore(conn, settings)
+        token, session = store.issue_session(account)
+        live = store.verify(token)
+        store.revoke(session.session_id)
+        revoked = store.verify(token)
+        token2, session2 = store.issue_session(account)
+        conn.execute(
+            "UPDATE sessions SET expires_at = '2000-01-01T00:00:00+00:00' WHERE session_id = ?",
+            (session2.session_id,),
+        )
+        conn.commit()
+        expired = store.verify(token2)
+        db.close(conn)
+        ok = live is not None and revoked is None and expired is None
+        return (
+            ok,
+            f"app_session_fail_closed: live={live is not None} revoked={revoked is None} "
+            f"expired={expired is None}",
+        )
+    except Exception as e:  # noqa: BLE001
+        return False, f"app_session_fail_closed: {type(e).__name__}: {e}"
+
+
+def _gate_app_tenant_isolation() -> tuple[bool, str]:
+    """Two tenants never see each other's rows; a cross-tenant login fails."""
+    import tempfile
+
+    from helix_codex_app import db
+    from helix_codex_app.security.accounts import AccountRepository
+    from helix_codex_app.security.passwords import hash_password
+
+    work = tempfile.mkdtemp(prefix="hp_gate_app_tenant_")
+    try:
+        db_path = os.path.join(work, "app.db")
+        conn = db.connect(db_path=db_path)
+        db._init_schema(conn)
+        repo = AccountRepository(conn)
+        domain_a = repo.create_domain("a.gate", tenant_id="tenant-a", client_id="client-a")
+        domain_b = repo.create_domain("b.gate", tenant_id="tenant-b", client_id="client-b")
+        amira = repo.create_account(
+            domain_a.domain_id,
+            "amira",
+            role_id="owner",
+            password_hash=hash_password("your-password"),
+        )
+        repo.create_account(
+            domain_b.domain_id,
+            "omar",
+            role_id="owner",
+            password_hash=hash_password("your-password"),
+        )
+        listed_a = {a.account_id for a in repo.list_accounts(domain_a.domain_id)}
+        listed_b = {a.account_id for a in repo.list_accounts(domain_b.domain_id)}
+        cross = repo.get_account_by_login("b.gate", "amira")
+        db.close(conn)
+        ok = listed_a == {amira.account_id} and amira.account_id not in listed_b and cross is None
+        return ok, f"app_tenant_isolation: scoped-read ok={ok}"
+    except Exception as e:  # noqa: BLE001
+        return False, f"app_tenant_isolation: {type(e).__name__}: {e}"
+
+
+def _gate_app_memory_store_isolation() -> tuple[bool, str]:
+    """One account's governed memory never appears in another's store."""
+    import tempfile
+
+    from helix_codex_app import db
+    from helix_codex_app.integration.memory_bridge import AccountMemoryStore
+    from helix_codex_app.security.accounts import AccountRepository
+    from helix_codex_app.security.passwords import hash_password
+
+    work = tempfile.mkdtemp(prefix="hp_gate_app_memiso_")
+    try:
+        db_path = os.path.join(work, "app.db")
+        memory_root = os.path.join(work, "memory_stores")
+        conn = db.connect(db_path=db_path)
+        db._init_schema(conn)
+        repo = AccountRepository(conn)
+        domain = repo.create_domain("a.gate", tenant_id="tenant-a", client_id="client-a")
+        amira = repo.create_account(
+            domain.domain_id, "amira", role_id="owner", password_hash=hash_password("your-password")
+        )
+        omar = repo.create_account(
+            domain.domain_id,
+            "omar",
+            role_id="employee",
+            password_hash=hash_password("your-password"),
+        )
+        store = AccountMemoryStore(conn=conn, memory_root=memory_root)
+        mem_a = store.store_for(amira)
+        mem_a.add(
+            kind="recommendation",
+            nature="model_inference",
+            tenant_id="tenant-a",
+            client_id="client-a",
+            actor=amira.account_id,
+            role_id="owner",
+            source="helix_codex_app.release_gate",
+            classification="internal",
+            timestamp="2026-09-15T00:00:00+00:00",
+            correlation_id="app-gate-memiso",
+            confidence=0.9,
+        )
+        tail = store.store_for(omar).retrieve(tenant_id="tenant-a")
+        db.close(conn)
+        ok = all(r.actor != amira.account_id for r in tail)
+        return ok, f"app_memory_store_isolation: cross-account visible={not ok}"
+    except Exception as e:  # noqa: BLE001
+        return False, f"app_memory_store_isolation: {type(e).__name__}: {e}"
+
+
+def _gate_app_migration_drift() -> tuple[bool, str]:
+    """db.py and the alembic head must agree token-for-token."""
+    from helix_codex_app.scripts.check_app_migration_drift import check_drift
+
+    try:
+        errors, report = check_drift()
+    except Exception as e:  # noqa: BLE001
+        return False, f"app_migration_drift: could not run: {type(e).__name__}: {e}"
+    ok = not errors
+    return (
+        ok,
+        f"app_migration_drift: store={report['store_objects']} migration={report['migration_objects']} "
+        f"errors={len(errors)}",
+    )
+
+
+def _gate_app_pwa_assets() -> tuple[bool, str]:
+    """The installable shell — manifest, icons, service worker, offline page."""
+    import json
+    import re
+
+    app_static = ROOT / "helix_codex_app" / "static"
+    manifest_p = app_static / "manifest.webmanifest"
+    sw_p = app_static / "sw.js"
+    offline_p = app_static / "offline.html"
+    if not (manifest_p.exists() and sw_p.exists() and offline_p.exists()):
+        missing = [
+            name
+            for name, p in (("manifest", manifest_p), ("sw", sw_p), ("offline", offline_p))
+            if not p.exists()
+        ]
+        return False, f"app_pwa_assets: missing {', '.join(missing)}"
+    try:
+        manifest = json.loads(manifest_p.read_text(encoding="utf-8"))
+        icons = manifest.get("icons") or []
+        icon_ok = all(
+            (app_static / icon.get("src", "").replace("/static/", "")).is_file() for icon in icons
+        )
+        start_ok = manifest.get("start_url") == "/app" and manifest.get("display") == "standalone"
+        sw_text = sw_p.read_text(encoding="utf-8")
+        match = re.search(r'CACHE_NAME\s*=\s*"([^"]+)"', sw_text)
+        sw_ok = bool(match and re.search(r"-v\d+$", match.group(1)))
+        offline_ok = "offline" in offline_p.read_text(encoding="utf-8").lower()
+        ok = icon_ok and start_ok and sw_ok and offline_ok
+        return (
+            ok,
+            f"app_pwa_assets: icons={len(icons)}/valid={icon_ok} start={start_ok} "
+            f"sw={sw_ok} offline={offline_ok}",
+        )
+    except Exception as e:  # noqa: BLE001
+        return False, f"app_pwa_assets: {type(e).__name__}: {e}"
+
+
 GATE_IMPL = {
     "repository_state": _gate_repository_state,
     "reproducible_install": _gate_reproducible_install,
@@ -311,6 +542,12 @@ GATE_IMPL = {
     "incident_oncall_ownership": _gate_incident_oncall_ownership,
     "security_review": _gate_security_review,
     "legal_privacy_review": _gate_legal_privacy_review,
+    "app_auth_boundary": _gate_app_auth_boundary,
+    "app_session_fail_closed": _gate_app_session_fail_closed,
+    "app_tenant_isolation": _gate_app_tenant_isolation,
+    "app_memory_store_isolation": _gate_app_memory_store_isolation,
+    "app_migration_drift": _gate_app_migration_drift,
+    "app_pwa_assets": _gate_app_pwa_assets,
 }
 
 

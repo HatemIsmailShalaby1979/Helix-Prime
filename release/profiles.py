@@ -25,6 +25,7 @@ PROFILE_ORDER = [
     "controlled_pilot",
     "production_candidate",
     "production",
+    "app_pilot",
 ]
 
 # Final classification allowed by THIS sprint (never "production").
@@ -50,6 +51,19 @@ GATE_NAMES = [
     "performance_limits",  # bounded load/soak within explicit limits
     "operator_readiness",  # runbook + incident guide present
     "release_approval",  # explicit human go/no-go recorded
+]
+
+# App product gates — owned by the Helix Codex App build, distinct from the
+# C8 core gate set. The app_pilot profile combines a subset of the core gates
+# with these; they deliberately never enter GATE_NAMES, whose length is a
+# pinned C8 invariant.
+APP_GATE_NAMES = [
+    "app_auth_boundary",  # every /app route but healthz/static runs the guard
+    "app_session_fail_closed",  # revoked and expired sessions fail closed
+    "app_tenant_isolation",  # one tenant never reads another tenant's rows
+    "app_memory_store_isolation",  # one account's memory never leaks to another
+    "app_migration_drift",  # db.py and the alembic head agree
+    "app_pwa_assets",  # installable shell: manifest, icons, sw, offline page
 ]
 
 _RELEASE_YAML = pathlib.Path(__file__).resolve().parent / "release-profiles.yaml"
@@ -90,6 +104,22 @@ PROFILE_REQUIRED_GATES: Dict[str, List[str]] = {
     "controlled_pilot": _all_c8_gates(),
     "production_candidate": _all_c8_gates(),
     "production": _all_c8_gates() + PRODUCTION_ONLY_GATES,
+    # The app product surface — the Helix Codex App's own release gates.
+    # A green app_pilot run means the app is safe to pilot on its side of the
+    # seam, riding on the core's configuration/startup/data/audit guarantees.
+    "app_pilot": [
+        "repository_state",
+        "configuration_validation",
+        "startup_readiness",
+        "data_isolation",
+        "audit_integrity",
+        "app_auth_boundary",
+        "app_session_fail_closed",
+        "app_tenant_isolation",
+        "app_memory_store_isolation",
+        "app_migration_drift",
+        "app_pwa_assets",
+    ],
 }
 
 
@@ -100,6 +130,7 @@ def load_profiles(rel_path: Optional[str] = None) -> Dict[str, Any]:
         return {
             "profiles": PROFILE_ORDER,
             "gates": GATE_NAMES,
+            "app_gates": APP_GATE_NAMES,
             "required_gates": PROFILE_REQUIRED_GATES,
             "allowed_final": sorted(ALLOWED_FINAL_CLASSIFICATIONS),
             "default_c8": DEFAULT_C8_CLASSIFICATION,
@@ -161,6 +192,8 @@ def classify_from_gate_results(
             return "CONTROLLED_PILOT_READY"
         if profile == "production_candidate":
             return "PRODUCTION_CANDIDATE"
+        if profile == "app_pilot":
+            return "CONTROLLED_PILOT_READY"
         return profile
 
     # Red gates -> fail closed, never a candidate.

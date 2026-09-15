@@ -15,8 +15,10 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   settings check.
 - `errors.py` — `AppError` base; `AuthError`, `PermissionDenied`, `LimitExceeded`, `NotFoundError`,
   and `EngineUnavailableError` (503, `engine_unavailable`, the engine-bridge fail-closed signal).
-- `deps.py` — planned. `AccountStore`, `CollabStore`, `EngineProvider`, and the memory and
-  metacognition providers.
+- `deps.py` — providers that hand out services bound to the authenticated account
+  (`memory_store_for`, the `AccountMemoryStore` provider). Each provider takes the
+  account the guard resolved, never anything from the request body, so a caller cannot
+  widen its own scope by asking.
 - `db.py` — Sqlite3 connection factory, schema bootstrap, and `record_node()`, the single
   writer for governed events.
 - `governance.md` — the app's operating rules and decision log.
@@ -52,8 +54,19 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   baseline with `owning_role_id="ops_gm"`, lazily imported at call time, and raises
   `EngineUnavailableError` on import failure, a non-None `result.error`, or a missing
   `optimal_agents` figure — an unavailable engine never yields an empty/degraded answer).
-  `memory_bridge.py`, `metacognition_bridge.py`, `cockpit_bridge.py`, and `packs.py` are planned
-  with their phases.
+  `memory_bridge.py` (live, P5.3: `AccountMemoryStore`, the per-account governed memory
+  provider — `resolve_store_path`, `safe_component`, the store's read/verify/record/
+  rollback surface; the org store is the same class with `account_id=None`).
+  `metacognition_bridge.py` (live, P5.3: `AccountMetacognition`, the per-account proposal
+  engine — `propose`, `evaluate`, `approve`, `reject`, `rollback`,
+  `generate_evidence_report`, `verify_chain`).
+  `cockpit_bridge.py` (live, P6.3: `owner_summary`, `coach_summary`, `parent_summary`,
+  `picker_options`, `as_of_now`, `_context` — calls the pack's own `compute_*` functions
+  and hands the dicts to Jinja, so no dashboard logic is rewritten; the data-mode badge
+  is the pack's responsibility and the bridge never fabricates a live figure).
+  `packs.py` (live, P6.1: `pack_names`, `pack_metadata`, `list_packs`,
+  `pack_sections`, `all_sections` — discovers packs by reading each pack's own metadata
+  function and derives a section per cockpit view, each gated by `cockpit.view`).
 - `templating.py` — the one shared template renderer. Reads the CSRF token from
   `request.state.session` and the settings off `request.app.state`, so every route renders with
   the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,
@@ -148,9 +161,9 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Calendar (live, P4.1) | `/app/calendar`, `/app/api/events`, `/app/api/events/{id}`, `/app/api/events/{id}/respond` | `calendar.use` at the boundary; `calendar.use` + CSRF on the mutating routes; update/cancel need creator or manager; RSVP requires being an attendee |
 | On-call (live, P4.2) | `/app/api/oncall`, `/app/api/oncall/shifts` | `calendar.use` at the boundary + CSRF on the create route; the status route reads the roster (`OnCallCoverage`, covered-or-gap) and fails closed with a typed 503 `engine_unavailable` when the WFM engine read raises; shift creation is manager-only (owner/manager) |
 | Attendance (live, P4.3) | `/app/attendance`, `/app/api/attendance/punch`, `/app/api/attendance/records`, `/app/api/attendance/summary` | `attendance.punch` at the boundary; CSRF on the punch toggle; records/summary read APIs apply the same boundary gate |
-| Memory (live, P5.3–P5.5) | `/app/memory`, `/app/memory/proposals`, `/app/memory/proposals/{id}`, `/app/memory/ledger/verify`, `/app/memory/promotions`, `/app/api/memory/proposals`, `/app/api/memory/proposals/{id}/evaluate`, `/approve`, `/reject`, `/rollback`, `/app/api/memory/promotions`, `/app/api/memory/promotions/{id}/approve`, `/reject`, `/rollback` | `memory.propose` at the boundary; `memory.review` + CSRF on the review and promotion routes. A proposal is only readable by its author, or by a reviewer in a different role; a same-role peer is told it does not exist. Promotion needs a manager or owner who is not the author |
-| Ops (planned, P6) | `/app/ops`, `/app/api/ops` | `ops.view` |
-| Cockpit (planned, P6) | `/app/cockpit/owner`, `/coach`, `/parent`, `/control-plane` | `cockpit.view` |
+| Memory (live, P5.3–P5.6) | `/app/memory`, `/app/memory/proposals`, `/app/memory/proposals/{id}`, `/app/memory/ledger/verify`, `/app/memory/promotions`, `/app/api/memory/proposals`, `/app/api/memory/proposals/{id}/evaluate`, `/approve`, `/reject`, `/rollback`, `/app/api/memory/promotions`, `/app/api/memory/promotions/{id}/approve`, `/reject`, `/rollback` | `memory.propose` at the boundary; `memory.review` + CSRF on the review and promotion routes. A proposal is only readable by its author, or by a reviewer in a different role; a same-role peer is told it does not exist. Promotion needs a manager or owner who is not the author |
+| Ops (live, P6.2) | `/app/ops`, `/app/ops/{engine}`, `/app/api/ops/workflows`, `/app/api/ops/workflows/{id}`, `/app/api/ops/workflows/{id}/approve`, `/app/api/ops/stream/{id}` | `ops.view` at the boundary; CSRF on the submit and decide routes; the stream is a tenant check before it opens, then a keep-alive loop |
+| Cockpit (live, P6.3–P6.4) | `/app/cockpit`, `/app/cockpit/owner`, `/app/cockpit/coach`, `/app/cockpit/parent`, `/app/cockpit/control-plane`, `/app/api/cockpit/summary` | `cockpit.view` at the boundary, re-checked in the service, and enforced by the bridge's own `policy_bridge` call |
 | Low-code (planned, P7) | `/app/api/sections`, `/app/api/packs` | `packs.manage` for writes |
 
 Every `/app` route except health and static runs the account guard. Every non-GET `/app` route runs
@@ -282,6 +295,23 @@ present, rollback only once applied, no approve button on your own proposal), `t
 `test_memory_store_isolation.py`, `test_proposal_lifecycle.py`, `test_promotion_second_approver.py`,
 and `test_ledger_verify.py`. The two parent defects fixed in P5.1 are covered by
 `tests/test_metacognition.py` and `tests/test_governed_memory.py`.
+
+P6 added `test_ops.py` (P6.2: the ops section's submit/decide/stream surface and the
+correlation-id contract), `test_cockpit_owner.py` (P6.3: the five owner KPIs, the
+at-risk list, the approval queue, the data-mode badge, and the foreign-tenant empty
+queue), `test_cockpit_views.py` (P6.4: coach, parent, and control-plane selectors and
+the audit panel's tenant filter), and the three P6.5 close-out modules:
+`test_cockpit_requires_permission.py` (14: every cockpit route returns 403 for an
+employee, a contractor, and an external account, and 200 for a manager and an owner;
+a refused role gets the same refusal with or without a session and on every path
+shape), `test_cockpit_cross_tenant.py` (4: the connector context is built from the
+caller's own account, a foreign owner sees an empty approval queue, a foreign owner
+gets 404 on another tenant's workflow, and the control-plane audit panel is filtered
+by tenant id), and `test_ops_lifecycle.py` (6: submit → approve → close keeps the
+correlation id, a refusal stops the workflow to dead_letter with the id intact, a
+refused workflow cannot be executed, the submitter cannot decide their own, each
+workflow gets its own correlation id, and the correlation id lands in the audit
+trail). Suite at the P6.5 checkpoint: **1216 passed, 0 failed**.
 
 ## How to add a module
 Follow the proven `router → service → repository` shape from `server/features/workflows/`. Add

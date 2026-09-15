@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P6 IN PROGRESS** — P6.1–P6.4 done; next prompt P6.5 |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests, P6.2 adds 10, P6.3 adds 9, P6.4 adds 12. A full-suite re-run is still owed. |
-| Last commit | `8017219` feat(app): add coach, parent, and control plane cockpit views |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3**, **P6.4** |
+| Current step | **P6 COMPLETE** — next prompt P7.1 (low-code capability loader) |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests, P6.2 adds 10, P6.3 adds 9, P6.4 adds 12, P6.5 adds 14. Full-suite re-run at the P6.5 checkpoint: **1216 passed, 0 failed, 1230 collected (27 min)**. |
+| Last commit | `7d04f5b` test(app): prove cockpit gating and ops lifecycle, close phase p6 |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3**, **P6.4**, **P6.5** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1032,7 +1032,7 @@ App-specific rules:
       the proposals chain, so the screen could report "verified" while the memory ledger was broken —
       it now verifies both. `governance.md` §6 and `repomap.md` updated with the pointers.
 
-### P6 — Operations and the cockpit (status: IN PROGRESS — P6.1, P6.2 done)
+### P6 — Operations and the cockpit (status: COMPLETE — P6.1–P6.5)
 
 - [x] **P6.1** The engine bridge, done properly (Prompt 30) — **COMPLETE.**
       `integration/engine_bridge.py` now carries the whole core surface: `submit_workflow`,
@@ -1097,7 +1097,18 @@ App-specific rules:
       by `tenant_id` before narrowing workflow rows.
       Tests: 12 cockpit-view tests, plus 41 in the P6.3/P6.4/bridge set after the fixes. Commit
       `8017219`.
-- [ ] P6.5 Close out P6 (Prompt 34)
+- [x] **P6.5** Close out P6 (Prompt 34) — **COMPLETE.**
+      Three proof modules, all through the real app with real sessions on a temporary
+      database: `test_cockpit_requires_permission.py` (14), `test_cockpit_cross_tenant.py`
+      (4), `test_ops_lifecycle.py` (6). The cockpit gate is exercised at all three layers
+      — the router dependency, the service re-check, and the bridge's own `policy_bridge`
+      call — and the cross-tenant proof pins the workspace state the cockpit reads
+      alongside the numbers, because the pack's synthetic aggregates are seeded from a
+      fixed RNG and "the numbers differ" would be a test that passes for the wrong reason.
+      `governance.md` §7 entry 22 and `repomap.md` updated with the pointers.
+      Full suite **1216 passed, 0 failed** (1230 collected, 27 min); ruff check + format
+      clean on the three new modules. Commit `7d04f5b`, recorded in the status table by
+      `docs(app): record the p6.5 checkpoint`.
 
 ### P7 — Low-code, release, packaging, signoff (status: NOT STARTED)
 

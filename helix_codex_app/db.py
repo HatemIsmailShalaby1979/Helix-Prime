@@ -506,3 +506,90 @@ def record_node(
     )
     conn.commit()
     return resolved_node_id
+
+
+def store_id_for(*, tenant_id: str, account_id: str | None) -> str:
+    """The stable id for one governed memory store.
+
+    Derived from server-side values only, so registering the same store twice
+    updates the same row instead of creating a second one.
+    """
+    return f"store::{tenant_id}::{account_id or '_org'}"
+
+
+def register_store(
+    conn: sqlite3.Connection,
+    *,
+    tenant_id: str,
+    account_id: str | None,
+    kind: str,
+    path: str,
+) -> str:
+    """Record a memory store in the index, creating the row or refreshing it.
+
+    kind is "account" for a person's own store and "org" for the tenant's
+    shared store. The record count and chain head start empty and are kept
+    current by touch_store().
+    """
+    if not tenant_id or not tenant_id.strip():
+        raise ValueError("register_store: tenant_id must not be blank")
+    if not path or not path.strip():
+        raise ValueError("register_store: path must not be blank")
+    store_id = store_id_for(tenant_id=tenant_id, account_id=account_id)
+    conn.execute(
+        """
+        INSERT INTO memory_stores (
+            store_id, tenant_id, account_id, kind, path, record_count, chain_head, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 0, NULL, ?)
+        ON CONFLICT(store_id) DO UPDATE SET
+            kind = excluded.kind,
+            path = excluded.path,
+            updated_at = excluded.updated_at
+        """,
+        (
+            store_id,
+            tenant_id,
+            account_id,
+            kind,
+            path,
+            datetime.now(timezone.utc).isoformat(),
+        ),
+    )
+    conn.commit()
+    return store_id
+
+
+def touch_store(
+    conn: sqlite3.Connection,
+    *,
+    store_id: str,
+    record_count: int,
+    chain_head: str | None,
+) -> None:
+    """Refresh a store's record count and chain head after a write."""
+    conn.execute(
+        """
+        UPDATE memory_stores
+           SET record_count = ?, chain_head = ?, updated_at = ?
+         WHERE store_id = ?
+        """,
+        (int(record_count), chain_head, datetime.now(timezone.utc).isoformat(), store_id),
+    )
+    conn.commit()
+
+
+def list_stores(conn: sqlite3.Connection, tenant_id: str) -> list[sqlite3.Row]:
+    """Every memory store registered for one tenant. A blank tenant is rejected."""
+    if not tenant_id or not tenant_id.strip():
+        raise ValueError("list_stores: tenant_id is required")
+    return list(
+        conn.execute(
+            "SELECT * FROM memory_stores WHERE tenant_id = ? ORDER BY store_id",
+            (tenant_id,),
+        ).fetchall()
+    )
+
+
+def get_store(conn: sqlite3.Connection, store_id: str) -> sqlite3.Row | None:
+    """One store index row, or None."""
+    return conn.execute("SELECT * FROM memory_stores WHERE store_id = ?", (store_id,)).fetchone()

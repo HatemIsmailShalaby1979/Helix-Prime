@@ -505,6 +505,14 @@ class GovernedMemory:
         ok, _ = self.verify_chain()
         return "verified" if ok else "broken"
 
+    def record_count(self) -> int:
+        """How many records the ledger holds. Deleted and expired rows count."""
+        return len(self._records)
+
+    def chain_head(self) -> str:
+        """Hash of the last ledger entry, or the genesis hash when empty."""
+        return self._ledger[-1]["hash"] if self._ledger else GENESIS_HASH
+
     # ---------------------------------------------------------- demo utilities
     def clear_for_demo(
         self, *, actor: str, role_id: str, timestamp: str, correlation_id: str = "demo-reset"

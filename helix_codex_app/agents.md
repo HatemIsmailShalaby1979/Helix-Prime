@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P6 IN PROGRESS** — P6.1–P6.3 done; next prompt P6.4 |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests, P6.2 adds 10, P6.3 adds 9. A full-suite re-run is still owed. |
-| Last commit | `da166ca` feat(app): add owner cockpit cards behind role gate |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3** |
+| Current step | **P6 IN PROGRESS** — P6.1–P6.4 done; next prompt P6.5 |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests, P6.2 adds 10, P6.3 adds 9, P6.4 adds 12. A full-suite re-run is still owed. |
+| Last commit | `8017219` feat(app): add coach, parent, and control plane cockpit views |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3**, **P6.4** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1081,7 +1081,22 @@ App-specific rules:
       call returns (so the numbers cannot drift from the pack), that an employee gets 403 on every
       route, that the five labels render, and that a foreign tenant's owner sees an empty approval
       queue. Commit `da166ca`.
-- [ ] P6.4 The cockpit, part two: coach, parent, control plane (Prompt 33)
+- [x] **P6.4** The cockpit, part two: coach, parent, control plane (Prompt 33) — **COMPLETE.**
+      Routes `/app/cockpit/coach`, `/app/cockpit/parent` and `/app/cockpit/control-plane` are live;
+      the first two use the pack's `compute_coach_dashboard` and `compute_parent_view` through the
+      existing bridge, with selectors that default to the first server-provided option and refuse an
+      unknown id. The control-plane panel is read-only: engines, the tenant halt state, audit-chain
+      status and this tenant's audit rows. It has no POST route and no form.
+      **Independent review found three defects before commit, all fixed:** (1) the control-plane
+      service was reading core state without the bridge's third policy gate; it now calls
+      `engine_bridge.authorize_read(account)` before any core read; (2) the coach template expected
+      `attended`/`expected`, but the pack returns `present`/`roster_size` — corrected to the real
+      compute shape; (3) the audit panel first read the wrong store (`control_plane`'s audit_events,
+      while the engine writes `security/audit.py`'s AuditTrail), and filtered only by workflow
+      correlation ids. The bridge now reads the actual tamper-evident trail, and the service filters
+      by `tenant_id` before narrowing workflow rows.
+      Tests: 12 cockpit-view tests, plus 41 in the P6.3/P6.4/bridge set after the fixes. Commit
+      `8017219`.
 - [ ] P6.5 Close out P6 (Prompt 34)
 
 ### P7 — Low-code, release, packaging, signoff (status: NOT STARTED)

@@ -1,28 +1,48 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Operations — Helix Codex{% endblock %}
 {% block content %}
 <div class="ops-page">
-  <div class="calendar-page__header">
-    <h1>Operations</h1>
-    {% include "partials/data_mode_badge.html" %}
-  </div>
+  {% call head.page_head("Operations", "Every request that reaches the governed core, where it stands, and who decided it. Nothing runs until a decision is recorded.", "Governance") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
 
   {% if error %}
-  <p class="card">The governed core could not be read, so nothing is shown rather than something
-    stale. {{ error.error.message }}</p>
+  <div class="callout callout--warn">
+    <span>
+      <strong>Nothing is shown rather than something stale.</strong>
+      The governed core could not be read. {{ error.error.message }}
+    </span>
+  </div>
   {% else %}
 
   <section class="card">
     <h2>Where things stand</h2>
-    <ul class="section-list">
-      <li class="section-link">{{ counts.total }} requests in this workspace</li>
-      <li class="section-link">{{ counts.awaiting_approval }} waiting on a decision</li>
-      <li class="section-link">{{ counts.open }} still open</li>
-      <li class="section-link">{{ counts.closed }} closed or cancelled</li>
-      <li class="section-link">
-        Audit chain: {{ "verified" if audit_chain_verified else "NOT verified" }}
-      </li>
-    </ul>
+    <div class="stat-grid">
+      <div class="stat">
+        <span class="stat__value">{{ counts.total }}</span>
+        <span class="stat__label">Requests</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ counts.awaiting_approval }}</span>
+        <span class="stat__label">Waiting on a decision</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ counts.open }}</span>
+        <span class="stat__label">Still open</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value">{{ counts.closed }}</span>
+        <span class="stat__label">Closed or cancelled</span>
+      </div>
+    </div>
+    <p class="ops-chain">
+      Audit chain
+      <span class="status {% if audit_chain_verified %}status--active{% else %}status--disabled{% endif %}">
+        {{ "verified" if audit_chain_verified else "not verified" }}
+      </span>
+    </p>
   </section>
 
   <section class="memory-section">
@@ -37,6 +57,7 @@
         {{ engine.registered_capabilities | length }} of {{ engine.capabilities | length }}
         capabilities registered
       </span>
+      <span class="engine-row__go" aria-hidden="true">{{ icons.icon("arrow-right") }}</span>
     </a>
     {% endfor %}
   </section>
@@ -48,8 +69,14 @@
     {% include "partials/workflow_card.html" %}
     {% endfor %}
     {% else %}
-    <p class="card">Nothing submitted yet. A request goes to the governance gate first; it only runs
-      once somebody approves it.</p>
+    <div class="empty">
+      <p class="empty__title">Nothing submitted yet.</p>
+      <p class="empty__body">
+        A request goes to the governance gate first. It only runs once somebody
+        approves it, and both the request and the decision are written to the
+        ledger — so this list is the history, not a summary of it.
+      </p>
+    </div>
     {% endif %}
   </section>
 

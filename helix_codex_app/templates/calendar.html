@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Calendar — Helix Codex{% endblock %}
 {% block content %}
 <section class="calendar-page" data-calendar>
-  <div class="calendar-page__header">
-    <h1>Calendar</h1>
-  </div>
+  {% call head.page_head("Calendar", "Your month, and anything you have been invited to. Open an event to answer yes, no or maybe.", "Work") %}
+  <a class="btn btn--ghost" href="/app/attendance">{{ icons.icon("attendance") }} Attendance</a>
+  {% endcall %}
   {% include "partials/event_form.html" %}
   {% include "partials/calendar_view.html" %}
 </section>

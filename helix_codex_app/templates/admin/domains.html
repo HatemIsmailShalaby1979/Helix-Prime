@@ -1,16 +1,26 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Domains — Admin — Helix Codex{% endblock %}
+{% block breadcrumbs %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="/app/admin">Admin</a>
+  <span class="crumbs__sep" aria-hidden="true">/</span>
+  <span>Domains</span>
+</nav>
+{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Domains</h1>
-  <p>One domain is one tenant. A username is scoped to its domain.</p>
-  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
-  {% if flash == "created" %}<p class="form-flash">Domain created.</p>{% endif %}
-</section>
+{% call head.page_head("Domains", "One domain is one tenant. A username only exists inside its own domain, and nothing crosses between them.", "Administration") %}
+<a class="btn btn--ghost" href="/app/admin/users">{{ icons.icon("admin") }} Users</a>
+<a class="btn btn--ghost" href="/app/admin/org-units">{{ icons.icon("apps") }} Org units</a>
+{% endcall %}
+
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+{% if flash == "created" %}<p class="form-flash">Domain created.</p>{% endif %}
 
 {% if is_owner %}
-<section class="card">
-  <h2>Create a domain</h2>
+<details class="card card--quiet">
+  <summary>{{ icons.icon("plus") }} Create a domain</summary>
   <form method="post" action="/app/admin/domains"
         hx-post="/app/admin/domains"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
@@ -22,14 +32,15 @@
     <label class="field">
       <span class="field__label">Tenant id</span>
       <input class="field__input" type="text" name="tenant_id" placeholder="tenant-id" required>
+      <span class="field__hint">The tenant id is what keeps this domain's data separate from every other.</span>
     </label>
     <button class="btn btn--primary" type="submit">Create domain</button>
   </form>
-</section>
+</details>
 {% else %}
-<section class="card">
-  <p>Only an owner can create domains.</p>
-</section>
+<div class="callout callout--info">
+  <span>Only an owner can create a domain. You can still see the ones you belong to.</span>
+</div>
 {% endif %}
 
 <section class="card">
@@ -39,12 +50,13 @@
     {% for domain in domains %}
     <div class="admin-card">
       <strong class="admin-card__title">{{ domain.name }}</strong>
-      <span class="admin-card__meta">{{ domain.tenant_id }} · {{ domain.status }}</span>
+      <span class="admin-card__meta">{{ domain.tenant_id }}</span>
+      <span class="status status--{{ domain.status }}">{{ domain.status }}</span>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p>No domains in your tenant.</p>
+  <p class="empty__body">No domains in your tenant.</p>
   {% endif %}
 </section>
 {% endblock %}

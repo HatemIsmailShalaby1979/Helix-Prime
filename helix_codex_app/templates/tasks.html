@@ -1,20 +1,27 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Tasks — Helix Codex{% endblock %}
 {% block content %}
 <section class="tasks-page" data-tasks>
-  <div class="tasks-page__header">
-    <h1>Tasks</h1>
-  </div>
+  {% call head.page_head("Tasks", "Everything open, in progress and finished. Drag a card between columns, or use the status control on touch.", "Work") %}
+  <a class="btn btn--ghost" href="/app/calendar">{{ icons.icon("calendar") }} Calendar</a>
+  {% endcall %}
+
   <form class="task-create" hx-post="/app/api/tasks"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
         hx-target="#task-board" hx-swap="outerHTML">
-    <input name="title" placeholder="What needs to be done?" required>
-    <button class="btn btn--primary" type="submit">Add task</button>
+    <label class="visually-hidden" for="task-title">What needs to be done?</label>
+    <input id="task-title" name="title" placeholder="What needs to be done?" required>
+    <button class="btn btn--primary" type="submit">{{ icons.icon("plus") }} Add task</button>
   </form>
-  <form class="task-search" hx-get="/app/tasks"
-        hx-target="#task-board" hx-swap="outerHTML">
-    <input name="q" placeholder="Search tasks" value="{{ q }}">
+
+  <form class="task-search" hx-get="/app/tasks" hx-target="#task-board" hx-swap="outerHTML"
+        role="search">
+    <label class="visually-hidden" for="task-query">Search tasks</label>
+    <input id="task-query" type="search" name="q" placeholder="Search tasks" value="{{ q }}">
   </form>
+
   {% include "partials/task_board.html" %}
   <script defer src="/static/js/tasks.js"></script>
 </section>

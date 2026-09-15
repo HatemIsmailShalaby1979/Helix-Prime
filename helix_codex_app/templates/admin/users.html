@@ -1,22 +1,34 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Users — Admin — Helix Codex{% endblock %}
+{% block breadcrumbs %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="/app/admin">Admin</a>
+  <span class="crumbs__sep" aria-hidden="true">/</span>
+  <span>Users</span>
+</nav>
+{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Users</h1>
-  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
-  {% if flash == "created" %}<p class="form-flash">Account created.</p>{% endif %}
-  <form method="get" action="/app/admin/users" class="admin-search">
-    <label class="field">
-      <span class="field__label">Search</span>
-      <input class="field__input" type="search" name="q" value="{{ query or '' }}"
-             placeholder="Name, username, or email">
-    </label>
-    <button class="btn" type="submit">Search</button>
-  </form>
-</section>
+{% call head.page_head("Users", "Everyone in this domain, what role they hold, and whether their account is active.", "Administration") %}
+<a class="btn btn--ghost" href="/app/admin/domains">{{ icons.icon("shield") }} Domains</a>
+<a class="btn btn--ghost" href="/app/admin/org-units">{{ icons.icon("apps") }} Org units</a>
+{% endcall %}
 
-<section class="card">
-  <h2>Create a user</h2>
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+{% if flash == "created" %}<p class="form-flash">Account created.</p>{% endif %}
+
+<form method="get" action="/app/admin/users" class="admin-search" role="search">
+  <label class="field">
+    <span class="field__label">Search</span>
+    <input class="field__input" type="search" name="q" value="{{ query or '' }}"
+           placeholder="Name, username, or email">
+  </label>
+  <button class="btn" type="submit">{{ icons.icon("search") }} Search</button>
+</form>
+
+<details class="card card--quiet">
+  <summary>{{ icons.icon("plus") }} Create a user</summary>
   <form method="post" action="/app/admin/users"
         hx-post="/app/admin/users"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
@@ -29,6 +41,7 @@
       <span class="field__label">Password</span>
       <input class="field__input" type="password" name="password" minlength="8"
              autocomplete="new-password" required>
+      <span class="field__hint">Eight characters or more. The person can change it after signing in.</span>
     </label>
     <label class="field">
       <span class="field__label">Display name</span>
@@ -47,6 +60,7 @@
         <option value="external">External</option>
         <option value="owner">Owner</option>
       </select>
+      <span class="field__hint">The role decides which sections appear in their navigation.</span>
     </label>
     <label class="field">
       <span class="field__label">Org unit</span>
@@ -60,7 +74,7 @@
     <input type="hidden" name="domain_id" value="{{ account.domain_id }}">
     <button class="btn btn--primary" type="submit">Create user</button>
   </form>
-</section>
+</details>
 
 <section class="card">
   <h2>Accounts</h2>
@@ -70,7 +84,7 @@
     <a class="admin-card" href="/app/admin/users/{{ row.account_id }}">
       <strong class="admin-card__title">{{ row.display_name or row.username }}</strong>
       <span class="admin-card__meta">{{ row.username }} · {{ row.role_id or "no role" }}</span>
-      <span class="admin-card__meta status status--{{ row.status }}">{{ row.status }}</span>
+      <span class="status status--{{ row.status }}">{{ row.status }}</span>
     </a>
     {% endfor %}
   </div>
@@ -93,7 +107,7 @@
           <td>{{ row.display_name or "—" }}</td>
           <td>{{ row.role_id or "—" }}</td>
           <td><span class="status status--{{ row.status }}">{{ row.status }}</span></td>
-          <td>{{ row.last_login_at or "never" }}</td>
+          <td class="doc-list__meta">{{ row.last_login_at or "never" }}</td>
           <td><a href="/app/admin/users/{{ row.account_id }}">Open</a></td>
         </tr>
         {% endfor %}
@@ -101,7 +115,10 @@
     </table>
   </div>
   {% else %}
-  <p>No accounts match.</p>
+  <div class="empty">
+    <p class="empty__title">No accounts match.</p>
+    <p class="empty__body">Clear the search box to see everyone in this domain.</p>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

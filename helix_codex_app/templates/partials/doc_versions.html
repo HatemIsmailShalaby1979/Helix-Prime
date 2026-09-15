@@ -1,3 +1,4 @@
+{% import "partials/icons.html" as icons %}
 <section id="doc-versions" class="card doc-versions" aria-label="Version history">
   <div class="doc-versions__header">
     <h2>Version history</h2>
@@ -22,6 +23,9 @@
     {% endfor %}
   </ol>
   {% else %}
-  <p class="doc-versions__empty">No versions yet. Snapshot now to capture the current blocks.</p>
+  <p class="doc-versions__empty">
+    No versions yet. Take a snapshot before a big edit and you can always come
+    back to it.
+  </p>
   {% endif %}
 </section>

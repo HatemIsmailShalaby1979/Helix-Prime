@@ -1,22 +1,36 @@
 {% extends "base.html" %}
-{% block title %}{{ target.username }} — Admin — Helix Codex{% endblock %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
+{% block title %}{{ target.username if target else "Not found" }} — Admin — Helix Codex{% endblock %}
+{% block breadcrumbs %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="/app/admin">Admin</a>
+  <span class="crumbs__sep" aria-hidden="true">/</span>
+  <a href="/app/admin/users">Users</a>
+  <span class="crumbs__sep" aria-hidden="true">/</span>
+  <span>{{ target.username if target else "Not found" }}</span>
+</nav>
+{% endblock %}
 {% block content %}
 {% if not target %}
-<section class="card">
-  <h1>User not found</h1>
-  <p class="form-error" role="alert">{{ error or "This account is outside your scope." }}</p>
-  <p><a href="/app/admin/users">Back to users</a></p>
-</section>
+{% call head.page_head("User not found", "", "Administration") %}
+<a class="btn btn--ghost" href="/app/admin/users">Back to users</a>
+{% endcall %}
+<div class="callout callout--warn">
+  <span>{{ error or "This account is outside your scope." }}</span>
+</div>
 {% else %}
-<section class="card">
-  <h1>{{ target.display_name or target.username }}</h1>
-  <p class="admin-card__meta">{{ target.username }}@{{ target.domain_name }} ·
-    {{ target.role_id or "no role" }}</p>
-  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
-  {% if flash == "saved" %}<p class="form-flash">Saved.</p>{% endif %}
-  {% if flash == "capability" %}<p class="form-flash">Capability updated.</p>{% endif %}
-  {% if flash == "limit" %}<p class="form-flash">Limit saved.</p>{% endif %}
-</section>
+
+{% call head.page_head(target.display_name or target.username,
+  target.username ~ "@" ~ target.domain_name ~ " · " ~ (target.role_id or "no role"),
+  "Administration") %}
+<a class="btn btn--ghost" href="/app/admin/users">{{ icons.icon("admin") }} All users</a>
+{% endcall %}
+
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+{% if flash == "saved" %}<p class="form-flash">Saved.</p>{% endif %}
+{% if flash == "capability" %}<p class="form-flash">Capability updated.</p>{% endif %}
+{% if flash == "limit" %}<p class="form-flash">Limit saved.</p>{% endif %}
 
 <section class="card">
   <h2>Profile</h2>
@@ -53,7 +67,10 @@
         <option value="locked" {% if target.status == 'locked' %}selected{% endif %}>Locked</option>
         <option value="terminated" {% if target.status == 'terminated' %}selected{% endif %}>Terminated</option>
       </select>
+      <span class="field__hint">A disabled or locked account cannot sign in.</span>
     </label>
+    {% else %}
+    <p class="field__hint">You are editing your own account, so role and status are locked here.</p>
     {% endif %}
     <button class="btn btn--primary" type="submit">Save</button>
   </form>
@@ -70,6 +87,7 @@
       <span class="field__label">Capability</span>
       <input class="field__input" type="text" name="capability_key"
              placeholder="e.g. docs.write" required>
+      <span class="field__hint">A capability is one specific thing this person may do.</span>
     </label>
     <div class="admin-actions">
       <button class="btn btn--primary" type="submit" name="action" value="grant">Grant</button>
@@ -77,20 +95,20 @@
     </div>
   </form>
   {% else %}
-  <p>You cannot change your own capabilities here.</p>
+  <p class="empty__body">You cannot change your own capabilities here.</p>
   {% endif %}
   {% if capabilities %}
   <ul class="admin-list">
     {% for cap in capabilities %}
     <li>
-      <strong>{{ cap.capability_key }}</strong> —
+      <strong>{{ cap.capability_key }}</strong>
       {% if cap.enabled %}<span class="status status--active">granted</span>
       {% else %}<span class="status status--disabled">revoked</span>{% endif %}
     </li>
     {% endfor %}
   </ul>
   {% else %}
-  <p>No capability rows yet.</p>
+  <p class="empty__body">No capability rows yet. The role defaults apply.</p>
   {% endif %}
 </section>
 
@@ -116,16 +134,16 @@
     <button class="btn btn--primary" type="submit">Set limit</button>
   </form>
   {% else %}
-  <p>You cannot change your own limits here.</p>
+  <p class="empty__body">You cannot change your own limits here.</p>
   {% endif %}
   {% if limits %}
   <ul class="admin-list">
     {% for key, value in limits.items() %}
-    <li><strong>{{ key }}</strong> — {{ value }}</li>
+    <li><strong>{{ key }}</strong> <span class="workflow-card__corr">{{ value }}</span></li>
     {% endfor %}
   </ul>
   {% else %}
-  <p>No limits set. The role defaults apply.</p>
+  <p class="empty__body">No limits set. The role defaults apply.</p>
   {% endif %}
 </section>
 {% endif %}

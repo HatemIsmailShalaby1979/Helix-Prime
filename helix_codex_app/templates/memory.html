@@ -1,15 +1,23 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Memory — Helix Codex{% endblock %}
 {% block content %}
 <div class="memory-page">
-  <div class="calendar-page__header">
-    <h1>Your memory</h1>
-    {% include "partials/data_mode_badge.html" %}
-  </div>
+  {% call head.page_head("Your memory", "What the system remembers about you, and the proposals you have made to change it. Nothing here applies until somebody else approves it.", "Knowledge") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
 
   <section class="card">
     <h2>Ledger</h2>
     <p class="home-greet__role">{{ ledger.detail }}</p>
+    <div class="callout callout--info" style="margin-top: var(--space-4)">
+      <span>
+        <strong>Nothing is edited in place.</strong> Every change to this memory
+        is proposed, reviewed by a second person, and appended to the ledger —
+        so the history is the record.
+      </span>
+    </div>
   </section>
 
   <section class="memory-section">
@@ -19,14 +27,24 @@
     {% include "partials/proposal_card.html" %}
     {% endfor %}
     {% else %}
-    <p class="card">No proposals yet. A proposal is how you suggest a change to your own memory.
-      It only takes effect once somebody else approves it.</p>
+    <div class="empty">
+      <p class="empty__title">No proposals yet.</p>
+      <p class="empty__body">
+        A proposal is how you suggest a change to your own memory — a threshold,
+        a rule, a preference. Write the hypothesis, let it be evaluated against
+        your records, and it only takes effect once a second person agrees.
+      </p>
+    </div>
     {% endif %}
   </section>
 
   {% if review_cards %}
   <section class="memory-section">
     <h2>Waiting for your review</h2>
+    <p class="doc-list__empty">
+      These are other people's proposals. Your decision is recorded separately
+      from theirs.
+    </p>
     {% for card in review_cards %}
     {% include "partials/proposal_card.html" %}
     {% endfor %}
@@ -38,11 +56,14 @@
     {% if records %}
     <ul class="section-list">
       {% for record in records %}
-      <li class="section-link">{{ record.kind }} — {{ record.nature }}</li>
+      <li class="section-link">
+        <span class="badge">{{ record.kind }}</span>
+        <span>{{ record.nature }}</span>
+      </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p>Nothing recorded yet.</p>
+    <p class="empty__body">Nothing recorded yet.</p>
     {% endif %}
   </section>
 </div>

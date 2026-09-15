@@ -1,16 +1,21 @@
+{% import "partials/icons.html" as icons %}
 <section class="card chat-thread" aria-label="Conversation">
   <div class="chat-thread__header">
-    <a class="btn btn--ghost" href="/app/chat">← Chat</a>
+    <a class="btn btn--ghost btn--small" href="/app/chat">{{ icons.icon("chat") }} All chats</a>
     <strong class="chat-thread__title">{{ conversation.title or "Chat" }}</strong>
     <span class="badge">{{ conversation.kind }}</span>
   </div>
   <div id="chat-messages-{{ conversation.conversation_id }}"
        class="chat-messages"
+       role="log"
+       aria-live="polite"
        data-messages
        data-conversation-id="{{ conversation.conversation_id }}"
        data-self="{{ account.account_id }}">
     {% for message in messages %}
-      {% include "partials/message_row.html" %}
+    {% include "partials/message_row.html" %}
+    {% else %}
+    <p class="chat-list__empty">No messages yet. Say something below to start.</p>
     {% endfor %}
   </div>
 </section>

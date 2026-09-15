@@ -1,0 +1,64 @@
+{#- One icon set, drawn on a 24px grid with a single stroke weight so every
+    glyph in the shell reads as the same hand.
+
+    The paths live in a sprite that base.html renders once; callers only emit a
+    tiny <use> reference, so a page with four navigation surfaces in it still
+    ships each path exactly once.
+
+      {% import "partials/icons.html" as icons %}
+      {{ icons.sprite() }}          once, near the top of <body>
+      {{ icons.icon("tasks", "nav-rail__glyph") }}
+      {{ icons.mark() }}            the Helix Codex mark
+
+    Colour comes from currentColor; size from the consuming rule. -#}
+{% set ICON_STROKE = 'fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"' %}
+
+{% set ICONS = {
+  "home": '<path d="M3.5 10.6 12 3.6l8.5 7"/><path d="M5.8 9.7V19a1.5 1.5 0 0 0 1.5 1.5h9.4A1.5 1.5 0 0 0 18.2 19V9.7"/><path d="M9.9 20.5v-5.6h4.2v5.6"/>',
+  "tasks": '<rect x="3.5" y="3.5" width="17" height="17" rx="4.2"/><path d="m8.2 12.3 2.6 2.6 5-5.6"/>',
+  "calendar": '<rect x="3.5" y="5" width="17" height="15.5" rx="3.6"/><path d="M3.5 10h17"/><path d="M8 3.2v3.6M16 3.2v3.6"/><path d="M8 14h2.4M13.6 14H16M8 17.4h2.4"/>',
+  "chat": '<path d="M20.5 11.7c0 4.3-3.8 7.8-8.5 7.8a9.7 9.7 0 0 1-2.6-.35L4.2 21l1.3-3.7a7.3 7.3 0 0 1-2-5.6c0-4.3 3.8-7.8 8.5-7.8s8.5 3.5 8.5 7.8Z"/><path d="M8.8 11.7h.01M12 11.7h.01M15.2 11.7h.01"/>',
+  "bell": '<path d="M18 8.6a6 6 0 1 0-12 0c0 5.3-2.2 6.8-2.2 6.8h16.4S18 13.9 18 8.6Z"/><path d="M13.7 19a2 2 0 0 1-3.4 0"/>',
+  "docs": '<path d="M14 3.3H7.6A2.6 2.6 0 0 0 5 5.9v12.2a2.6 2.6 0 0 0 2.6 2.6h8.8a2.6 2.6 0 0 0 2.6-2.6V8.3Z"/><path d="M14 3.3v5h5"/><path d="M8.8 13h6.4M8.8 16.4h4.2"/>',
+  "kb": '<path d="M4.6 4.9A2.4 2.4 0 0 1 7 2.5h12v17.2H7a2.4 2.4 0 0 0-2.4 2.4Z"/><path d="M4.6 17.9h14.4"/><path d="M9 6.6h6.2"/>',
+  "memory": '<path d="m12 2.8 8.8 4.5-8.8 4.5-8.8-4.5Z"/><path d="m3.9 12.2 8.1 4.2 8.1-4.2"/><path d="m3.9 16.4 8.1 4.2 8.1-4.2"/>',
+  "attendance": '<circle cx="12" cy="12" r="8.6"/><path d="M12 7.2V12l3.2 2"/>',
+  "ops": '<path d="M2.8 12.2h4l2.4-7.4 4.2 14.4 2.4-7h5.4"/>',
+  "cockpit": '<path d="M20.2 18.4a9 9 0 1 0-16.4 0"/><path d="m12 14 3.9-4.6"/><circle cx="12" cy="15.6" r="1.6"/>',
+  "shield": '<path d="M12 2.8 4.7 5.7v6c0 4.4 3 7.7 7.3 9.4 4.3-1.7 7.3-5 7.3-9.4v-6Z"/><path d="m9.1 11.9 2 2 3.8-4"/>',
+  "promotions": '<circle cx="12" cy="12" r="8.6"/><path d="M12 16.4V7.9"/><path d="m8.6 11.3 3.4-3.4 3.4 3.4"/>',
+  "admin": '<circle cx="9.2" cy="8.3" r="3.5"/><path d="M2.9 20a6.5 6.5 0 0 1 12.6 0"/><path d="M16.6 5.4a3.3 3.3 0 0 1 0 6.1"/><path d="M17.8 14.3A6.5 6.5 0 0 1 21.4 20"/>',
+  "search": '<circle cx="10.8" cy="10.8" r="6.7"/><path d="m15.7 15.7 4.1 4.1"/>',
+  "apps": '<rect x="3.6" y="3.6" width="7" height="7" rx="2.2"/><rect x="13.4" y="3.6" width="7" height="7" rx="2.2"/><rect x="3.6" y="13.4" width="7" height="7" rx="2.2"/><rect x="13.4" y="13.4" width="7" height="7" rx="2.2"/>',
+  "close": '<path d="m6.2 6.2 11.6 11.6M17.8 6.2 6.2 17.8"/>',
+  "logout": '<path d="M9.6 3.6H6.5A2.5 2.5 0 0 0 4 6.1v11.8a2.5 2.5 0 0 0 2.5 2.5h3.1"/><path d="m15.6 8 4 4-4 4"/><path d="M19.6 12H9.4"/>',
+  "plus": '<path d="M12 5.2v13.6M5.2 12h13.6"/>',
+  "arrow-right": '<path d="M4.6 12h14.2"/><path d="m13.4 6.4 5.4 5.6-5.4 5.6"/>',
+  "sparkle": '<path d="M12 3.2l1.9 5.1 5.1 1.9-5.1 1.9L12 17.2l-1.9-5.1L5 10.2l5.1-1.9Z"/><path d="M18.6 15.8l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7Z"/>',
+  "check": '<path d="m5 12.6 4.6 4.6L19 6.6"/>',
+  "info": '<circle cx="12" cy="12" r="8.6"/><path d="M12 11.2v5.2"/><path d="M12 7.9h.01"/>'
+} %}
+
+{% set MARK_BODY = '<path d="M12 3.4C21.3331 5.488 21.3331 7.0452 12 9.1333 2.6669 11.2213 2.6669 12.7787 12 14.8667 21.3331 16.9548 21.3331 18.512 12 20.6"/><path d="M12 3.4C2.6669 5.488 2.6669 7.0452 12 9.1333 21.3331 11.2213 21.3331 12.7787 12 14.8667 2.6669 16.9548 2.6669 18.512 12 20.6"/>' %}
+
+
+{#- Render once per document, immediately inside <body>. -#}
+{% macro sprite() -%}
+<svg class="icon-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+  {% for name, body in ICONS.items() %}
+  <symbol id="i-{{ name }}" viewBox="0 0 24 24" {{ ICON_STROKE|safe }}>{{ body|safe }}</symbol>
+  {% endfor %}
+  <symbol id="i-mark" viewBox="0 0 24 24" {{ ICON_STROKE|safe }} stroke-width="2.1">{{ MARK_BODY|safe }}</symbol>
+  <symbol id="i-mark-thin" viewBox="0 0 24 24" {{ ICON_STROKE|safe }} stroke-width="1.4">{{ MARK_BODY|safe }}</symbol>
+</svg>
+{%- endmacro %}
+
+
+{% macro icon(name, cls="") -%}
+<svg{% if cls %} class="{{ cls }}"{% endif %} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-{{ name }}"/></svg>
+{%- endmacro %}
+
+
+{% macro mark(cls="", thin=false) -%}
+<svg{% if cls %} class="{{ cls }}"{% endif %} viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#i-{{ 'mark-thin' if thin else 'mark' }}"/></svg>
+{%- endmacro %}

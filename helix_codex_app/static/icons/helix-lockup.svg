@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 32" fill="none" role="img"
+     aria-label="Helix Codex">
+  <title>Helix Codex</title>
+  <g stroke="#ff6b85" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M14 5.4C23.3331 7.488 23.3331 9.0452 14 11.1333 4.6669 13.2213 4.6669 14.7787 14 16.8667 23.3331 18.9548 23.3331 20.512 14 22.6"/>
+    <path d="M14 5.4C4.6669 7.488 4.6669 9.0452 14 11.1333 23.3331 13.2213 23.3331 14.7787 14 16.8667 4.6669 18.9548 4.6669 20.512 14 22.6"/>
+  </g>
+  <text x="36" y="21.5" font-family="Instrument Serif, Iowan Old Style, Georgia, serif"
+        font-size="20" fill="#ece8f0" letter-spacing="0.2">Helix</text>
+  <text x="82" y="21.5" font-family="Instrument Serif, Iowan Old Style, Georgia, serif"
+        font-size="20" fill="#ff6b85" letter-spacing="0.2">Codex</text>
+</svg>

@@ -1,15 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Promotions — Helix Codex{% endblock %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
+{% block title %}Promotion queue — Helix Codex{% endblock %}
 {% block content %}
 <div class="memory-page">
-  <div class="calendar-page__header">
-    <h1>Promotion queue</h1>
-    {% include "partials/data_mode_badge.html" %}
-  </div>
+  {% call head.page_head("Promotion queue", "Rules that one person proved on their own records, now asking to apply to everyone. Each one needs a second, independent decision.", "Governance") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
 
-  <p class="card">A promotion takes one person's approved rule and asks for it to apply across the
-    whole company. It always needs a second person to agree, and the two decisions are recorded
-    separately.</p>
+  <div class="callout">
+    <span>
+      <strong>Two decisions, recorded separately.</strong> A promotion is never
+      applied on one person's say-so: the proposer's evidence and your decision
+      are both written to the ledger, and either can be rolled back later.
+    </span>
+  </div>
 
   {% if promotions %}
   {% for item in promotions %}
@@ -26,26 +31,11 @@
     <table class="proposal-card__evidence">
       <caption>What the evaluation measured</caption>
       <tbody>
-        <tr>
-          <th scope="row">Baseline rate</th>
-          <td>{{ "%.3f"|format(item.evidence.baseline_rate) }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Proposed rate</th>
-          <td>{{ "%.3f"|format(item.evidence.proposed_rate) }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Change</th>
-          <td>{{ "%+.3f"|format(item.evidence.delta) }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Historical cases</th>
-          <td>{{ item.evidence.n_historical }}</td>
-        </tr>
-        <tr>
-          <th scope="row">Simulated cases</th>
-          <td>{{ item.evidence.n_simulated }}</td>
-        </tr>
+        <tr><th scope="row">Baseline rate</th><td>{{ "%.3f"|format(item.evidence.baseline_rate) }}</td></tr>
+        <tr><th scope="row">Proposed rate</th><td>{{ "%.3f"|format(item.evidence.proposed_rate) }}</td></tr>
+        <tr><th scope="row">Change</th><td>{{ "%+.3f"|format(item.evidence.delta) }}</td></tr>
+        <tr><th scope="row">Historical cases</th><td>{{ item.evidence.n_historical }}</td></tr>
+        <tr><th scope="row">Simulated cases</th><td>{{ item.evidence.n_simulated }}</td></tr>
       </tbody>
     </table>
     {% else %}
@@ -93,8 +83,13 @@
   </article>
   {% endfor %}
   {% else %}
-  <p class="card">Nothing is waiting. A promotion appears here once somebody asks for their rule to
-    go company-wide.</p>
+  <div class="empty">
+    <p class="empty__title">Nothing is waiting.</p>
+    <p class="empty__body">
+      A promotion lands here once somebody asks for their own approved rule to
+      apply company-wide. Until then, their rule stays theirs.
+    </p>
+  </div>
   {% endif %}
 </div>
 {% endblock %}

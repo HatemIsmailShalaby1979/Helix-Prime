@@ -1,15 +1,20 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Cockpit — Helix Codex{% endblock %}
 {% block content %}
 <div class="cockpit-page">
-  <div class="calendar-page__header">
-    <h1>The Cockpit</h1>
-    {% include "partials/data_mode_badge.html" %}
-  </div>
+  {% call head.page_head("The Cockpit", "The numbers that matter, computed fresh each time you open this page — never cached, never stale.", "Governance") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
 
   {% if error %}
-  <p class="card">The cockpit could not be computed, so nothing is shown rather than something
-    stale. {{ error.error.message }}</p>
+  <div class="callout callout--warn">
+    <span>
+      <strong>Nothing is shown rather than something stale.</strong>
+      The cockpit could not be computed. {{ error.error.message }}
+    </span>
+  </div>
   {% else %}
 
   <section class="cockpit-cards">
@@ -18,9 +23,11 @@
     {% endfor %}
   </section>
 
-  <p class="card">
-    <a href="/app/cockpit/owner">Open the full owner board</a>
-  </p>
+  <a class="card engine-row" href="/app/cockpit/owner">
+    <strong>Owner board</strong>
+    <span class="home-greet__role">Sessions, at-risk athletes and the approval queue</span>
+    <span class="engine-row__go" aria-hidden="true">{{ icons.icon("arrow-right") }}</span>
+  </a>
 
   {% if sections %}
   <section class="memory-section">
@@ -28,8 +35,13 @@
     <ul class="section-list">
       {% for section in sections %}
       <li class="section-link">
-        {% if section.route %}<a href="{{ section.route }}">{{ section.label }}</a>{% else %}{{ section.label }}{% endif %} — {{ section.pack }}
-        {% if section.simulated_only %} (simulated data only){% endif %}
+        {% if section.route %}
+        <a href="{{ section.route }}">{{ section.label }}</a>
+        {% else %}
+        <span>{{ section.label }}</span>
+        {% endif %}
+        <span class="badge">{{ section.pack }}</span>
+        {% if section.simulated_only %}<span class="badge">simulated only</span>{% endif %}
       </li>
       {% endfor %}
     </ul>

@@ -1,15 +1,25 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Org units — Admin — Helix Codex{% endblock %}
+{% block breadcrumbs %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="/app/admin">Admin</a>
+  <span class="crumbs__sep" aria-hidden="true">/</span>
+  <span>Org units</span>
+</nav>
+{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Org units</h1>
-  <p>Teams inside your domain. A manager administers only their own unit.</p>
-  {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
-  {% if flash == "created" %}<p class="form-flash">Org unit created.</p>{% endif %}
-</section>
+{% call head.page_head("Org units", "Teams inside your domain, nested however your organisation actually works. A manager administers only their own unit.", "Administration") %}
+<a class="btn btn--ghost" href="/app/admin/users">{{ icons.icon("admin") }} Users</a>
+<a class="btn btn--ghost" href="/app/admin/domains">{{ icons.icon("shield") }} Domains</a>
+{% endcall %}
 
-<section class="card">
-  <h2>Create an org unit</h2>
+{% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+{% if flash == "created" %}<p class="form-flash">Org unit created.</p>{% endif %}
+
+<details class="card card--quiet">
+  <summary>{{ icons.icon("plus") }} Create an org unit</summary>
   <form method="post" action="/app/admin/org-units"
         hx-post="/app/admin/org-units"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
@@ -34,10 +44,11 @@
         <option value="{{ unit.unit_id }}">{{ unit.name }}</option>
         {% endfor %}
       </select>
+      <span class="field__hint">Leave as None for a top-level unit.</span>
     </label>
     <button class="btn btn--primary" type="submit">Create org unit</button>
   </form>
-</section>
+</details>
 
 <section class="card">
   <h2>Units</h2>
@@ -46,12 +57,19 @@
     {% for unit in units %}
     <div class="admin-card">
       <strong class="admin-card__title">{{ unit.name }}</strong>
-      <span class="admin-card__meta">{{ unit.kind }} · {{ unit.path }}</span>
+      <span class="admin-card__meta">{{ unit.kind }}</span>
+      <span class="admin-card__meta workflow-card__corr">{{ unit.path }}</span>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p>No org units yet.</p>
+  <div class="empty">
+    <p class="empty__title">No org units yet.</p>
+    <p class="empty__body">
+      An org unit is how you scope a manager's reach. Without one, they
+      administer the whole domain.
+    </p>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

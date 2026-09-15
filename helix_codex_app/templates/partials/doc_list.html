@@ -1,13 +1,26 @@
-<section id="docs-section" class="card" aria-label="Documents">
-  <div class="doc-list__header">
-    <h1>Documents</h1>
-    <a class="doc-editor__back" href="/app/kb">Knowledge base</a>
-  </div>
+{% import "partials/icons.html" as icons %}
+<section id="docs-section" class="docs-section" aria-label="Documents">
+  <header class="page-head">
+    <div class="page-head__text">
+      <span class="page-head__eyebrow">Knowledge</span>
+      <h1>Documents</h1>
+      <p class="page-head__sub">
+        Notes, SOPs and policies. Every edit is versioned, so you can always put
+        a document back the way it was.
+      </p>
+    </div>
+    <div class="page-head__actions">
+      <a class="btn btn--ghost" href="/app/kb">{{ icons.icon("kb") }} Knowledge base</a>
+    </div>
+  </header>
+
   <form class="doc-new" hx-post="/app/api/documents"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
         hx-target="#docs-section" hx-swap="outerHTML">
-    <input name="title" placeholder="Document title" required>
-    <select name="doc_type" class="doc-new__type" aria-label="Document type">
+    <label class="visually-hidden" for="doc-title">Document title</label>
+    <input id="doc-title" name="title" placeholder="Document title" required>
+    <label class="visually-hidden" for="doc-type">Document type</label>
+    <select id="doc-type" name="doc_type" class="doc-new__type">
       <option value="note">Note</option>
       <option value="kb">KB</option>
       {% if is_manager %}
@@ -15,12 +28,15 @@
       <option value="policy">Policy</option>
       {% endif %}
     </select>
-    <button class="btn btn--primary" type="submit">New document</button>
+    <button class="btn btn--primary" type="submit">{{ icons.icon("plus") }} New document</button>
   </form>
-  <form class="doc-search" hx-get="/app/docs"
-        hx-target="#docs-section" hx-swap="outerHTML">
-    <input name="q" placeholder="Search documents" value="{{ q }}">
+
+  <form class="doc-search" hx-get="/app/docs" hx-target="#docs-section" hx-swap="outerHTML"
+        role="search">
+    <label class="visually-hidden" for="doc-query">Search documents</label>
+    <input id="doc-query" type="search" name="q" placeholder="Search documents" value="{{ q }}">
   </form>
+
   <div id="doc-list">
     {% if documents %}
     <div class="doc-list">
@@ -32,7 +48,14 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="doc-list__empty">No documents yet. Create the first one.</p>
+    <div class="empty">
+      <p class="empty__title">No documents yet.</p>
+      <p class="empty__body">
+        Start with the thing you explain most often. Write it once here and the
+        next person who asks can be pointed at it — with a version history that
+        shows exactly what changed and when.
+      </p>
+    </div>
     {% endif %}
   </div>
 </section>

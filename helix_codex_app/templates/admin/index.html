@@ -1,16 +1,32 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Admin — Helix Codex{% endblock %}
 {% block content %}
-<section class="card">
-  <h1>Admin</h1>
-  <p>Accounts, domains, org units, capabilities, and limits.</p>
-</section>
-<section class="card">
-  <h2>Screens</h2>
-  <nav class="section-list" aria-label="Admin screens">
-    <a class="section-link" href="/app/admin/users">Users</a>
-    <a class="section-link" href="/app/admin/domains">Domains</a>
-    <a class="section-link" href="/app/admin/org-units">Org units</a>
-  </nav>
-</section>
+{% call head.page_head("Admin", "Accounts, domains, org units, capabilities and limits — the shape of your workspace.", "Administration") %}
+{% include "partials/data_mode_badge.html" %}
+{% endcall %}
+
+<div class="home-tiles">
+  <a class="home-tile" href="/app/admin/users">
+    {{ icons.icon("admin") }}
+    <span>Users</span>
+  </a>
+  <a class="home-tile" href="/app/admin/domains">
+    {{ icons.icon("shield") }}
+    <span>Domains</span>
+  </a>
+  <a class="home-tile" href="/app/admin/org-units">
+    {{ icons.icon("apps") }}
+    <span>Org units</span>
+  </a>
+</div>
+
+<div class="callout callout--info">
+  <span>
+    <strong>A domain is a tenant.</strong> Usernames are scoped to their domain,
+    and a manager only ever administers their own org unit. Nothing on these
+    screens reaches outside your workspace.
+  </span>
+</div>
 {% endblock %}

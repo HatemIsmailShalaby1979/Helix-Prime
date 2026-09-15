@@ -1,32 +1,110 @@
+/* Helix Codex design tokens.
+   One dark theme, tuned for long sessions and low visual noise: warm plum
+   near-blacks instead of pure black, soft off-white text instead of #fff, and
+   a single rose accent spent only on state (active, focus, primary action).
+   Supporting hues carry meaning — gold is "waiting on a decision", sage is
+   "verified", clay is "stop" — so colour is information, never decoration. */
+
 :root {
-  --accent: #e94560;
-  --accent-strong: #c73350;
-  --ink: #14161c;
-  --ink-2: #3b3f4a;
-  --muted: #7a7f8c;
-  --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --surface-3: #eceef2;
-  --border: #dfe2e8;
-  --danger: #c0392b;
-  --success: #1e8e5a;
-  --warn: #b7791f;
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  color-scheme: dark;
+
+  /* Surfaces: five steps, each a small lift so elevation reads without glow */
+  --bg: #100e12;
+  --bg-deep: #0b090d;
+  --surface: #17151b;
+  --surface-2: #1d1a22;
+  --surface-3: #26222c;
+  --surface-hover: #221f28;
+  --border: #2c2833;
+  --border-strong: #3d3746;
+
+  /* Text: three weights of emphasis, all above 4.5:1 on --surface */
+  --ink: #ece8f0;
+  --ink-2: #b3acbd;
+  --muted: #8b8496;
+
+  /* Accent: rose. --accent for text and icons, --accent-solid for fills */
+  --accent: #ff6b85;
+  --accent-hover: #ff8ea1;
+  --accent-press: #e94560;
+  --accent-solid: #c92a4d;
+  --accent-solid-hover: #db3159;
+  --accent-soft: rgba(255, 107, 133, 0.13);
+  --accent-line: rgba(255, 107, 133, 0.3);
+  --accent-ring: rgba(255, 107, 133, 0.45);
+
+  /* Semantic state */
+  --danger: #f0786e;
+  --danger-soft: rgba(240, 120, 110, 0.14);
+  --success: #7cc79a;
+  --success-soft: rgba(124, 199, 154, 0.14);
+  --warn: #e3ac63;
+  --warn-soft: rgba(227, 172, 99, 0.14);
+  --info: #8fa8d8;
+  --info-soft: rgba(143, 168, 216, 0.14);
+
+  /* Type */
+  --font-display: "Instrument Serif", Iowan Old Style, Palatino, Georgia, serif;
+  --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: clamp(0.9375rem, 0.9rem + 0.15vw, 1rem);
+  --text-lg: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  --text-xl: clamp(1.25rem, 1.1rem + 0.55vw, 1.5rem);
+  --text-2xl: clamp(1.5rem, 1.25rem + 0.9vw, 2rem);
+  --text-3xl: clamp(1.875rem, 1.45rem + 1.6vw, 2.75rem);
+
+  /* Space */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
   --radius-lg: 16px;
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-md: 15px;
-  --text-lg: 18px;
-  --text-xl: 22px;
-  --text-2xl: 28px;
+  --radius-xl: 22px;
+  --radius-full: 999px;
+
+  /* Depth: shadows stay near-black so they read as shadow, not glow */
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-2: 0 10px 26px -12px rgba(0, 0, 0, 0.7);
+  --shadow-3: 0 28px 70px -24px rgba(0, 0, 0, 0.8);
+
+  /* Motion: short, decelerating, never bouncy */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 340ms;
+
+  /* Layout */
   --tap-min: 44px;
-  --nav-h: 56px;
+  --header-h: 58px;
+  --rail-w: 15.5rem;
+  --bottom-h: 62px;
+  --content-max: 60rem;
+
+  /* Legacy aliases kept so older class names resolve */
+  --surface-2-legacy: var(--surface-2);
+  --nav-h: var(--header-h);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --border: #4a4354;
+    --border-strong: #655d72;
+    --ink-2: #cdc7d6;
+    --muted: #a9a2b4;
+    --accent-soft: rgba(255, 107, 133, 0.24);
+    --accent-line: rgba(255, 107, 133, 0.55);
+  }
 }

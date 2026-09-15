@@ -1,75 +1,112 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/nav_data.html" as nav %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Home — Helix Codex{% endblock %}
 {% block content %}
-{% set name = account.display_name if account and account.display_name else "operator" %}
-{% set role = account.role_id if account else "" %}
-<section class="card">
-  <div class="home-greet">
-    <div>
-      <h1>Hello, {{ name }}.</h1>
-      <p class="home-greet__role">{{ role or "member" }}</p>
-    </div>
-    {% if account %}
-    <form hx-post="/app/auth/logout"
-          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}' class="home-signout">
-      <button class="btn btn--ghost" type="submit">Sign out</button>
-    </form>
-    {% endif %}
-  </div>
-  <p>
-    Helix Codex keeps your workflows, documents, and governed AI on
-    hardware you control. Nothing leaves your network without an audit
-    trail you can point to.
-  </p>
-</section>
-{% if oncall %}
-<section class="card">
-  <h2>On call</h2>
-  {% if oncall.coverage and oncall.coverage.covered %}
-  {% set current = oncall.coverage.shift %}
-  <p>
-    <strong>{{ name_map.get(current.primary_account_id, current.primary_account_id) }}</strong>
-    is the on-call primary until {{ current.ends_at }}.
-  </p>
-  <p class="home-greet__role">
-    Backup: {{ name_map.get(current.backup_account_id, current.backup_account_id) }}
-  </p>
-  {% elif oncall.coverage %}
-  <p>A coverage gap is open right now — no one is rostered.</p>
-  {% else %}
-  <p>On-call coverage is unavailable.</p>
-  {% endif %}
-  {% if oncall.next_shift %}
-  {% set next = oncall.next_shift %}
-  <p>
-    Next up: {{ name_map.get(next.primary_account_id, next.primary_account_id) }}
-    starting {{ next.starts_at }}.
-  </p>
-  {% endif %}
-  {% if oncall.my_shifts %}
-  <p class="home-greet__role">Your upcoming shifts:</p>
-  <ul class="section-list">
-    {% for shift in oncall.my_shifts %}
-    <li class="section-link">
-      {{ shift.starts_at }} – {{ shift.ends_at }}
-      {% if shift.primary_account_id == account.account_id %}(primary){% else %}(backup){% endif %}
-    </li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-</section>
+{#- `acct` is assigned by base.html, which has already run by the time a block is
+    rendered. Reading it at this template's top level would run too early and
+    greet everybody as "operator", so the greeting is derived inside the block. -#}
+{% set name = acct.display_name if acct and acct.display_name else "operator" %}
+{% set role = acct.role_id if acct else "" %}
+
+{% call head.page_head("Hello, " ~ name ~ ".", "Where everything stands, and the fastest way into it.", "Home") %}
+{% if acct %}
+<form method="post" action="/app/auth/logout" hx-post="/app/auth/logout"
+      hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'>
+  <button class="btn btn--ghost" type="submit">{{ icons.icon("logout") }} Sign out</button>
+</form>
 {% endif %}
-<section class="card">
-  <h2>Sections</h2>
-  <nav class="section-list" aria-label="App sections">
-    <a class="section-link" href="/app">Home</a>
-    <a class="section-link" href="/app/chat">Chat</a>
-    <a class="section-link" href="/app/tasks">Tasks</a>
-    <a class="section-link" href="/app/calendar">Calendar</a>
-    <a class="section-link" href="/app/attendance">Attendance</a>
-    <a class="section-link" href="/app/docs">Documents</a>
-    <a class="section-link" href="/app/kb">Knowledge base</a>
-    <a class="section-link" href="/app/notifications">Notifications</a>
-  </nav>
+{% endcall %}
+
+{% include "partials/guide.html" %}
+
+<div class="home-grid">
+  <section class="card" aria-labelledby="oncall-title">
+    <h2 id="oncall-title">On call</h2>
+    {% if oncall %}
+    {% if oncall.coverage and oncall.coverage.covered %}
+    {% set current = oncall.coverage.shift %}
+    <div class="oncall">
+      <div class="oncall__now">
+        <span class="oncall__dot" aria-hidden="true"></span>
+        <span>
+          <strong class="oncall__who">{{ name_map.get(current.primary_account_id, current.primary_account_id) }}</strong>
+          is the on-call primary until {{ current.ends_at }}.
+        </span>
+      </div>
+      <p class="home-greet__role">
+        Backup: {{ name_map.get(current.backup_account_id, current.backup_account_id) }}
+      </p>
+    </div>
+    {% elif oncall.coverage %}
+    <div class="oncall">
+      <div class="oncall__now">
+        <span class="oncall__dot oncall__dot--gap" aria-hidden="true"></span>
+        <span>A coverage gap is open — nobody is rostered right now.</span>
+      </div>
+    </div>
+    {% else %}
+    <p class="empty__body">On-call coverage is unavailable.</p>
+    {% endif %}
+
+    {% if oncall.next_shift %}
+    {% set next = oncall.next_shift %}
+    <p class="home-greet__role" style="margin-top: var(--space-4)">
+      Next up: {{ name_map.get(next.primary_account_id, next.primary_account_id) }}
+      starting {{ next.starts_at }}.
+    </p>
+    {% endif %}
+
+    {% if oncall.my_shifts %}
+    <p class="guide__eyebrow" style="margin-top: var(--space-5)">Your upcoming shifts</p>
+    <ul class="section-list">
+      {% for shift in oncall.my_shifts %}
+      <li class="section-link">
+        <span>{{ shift.starts_at }} – {{ shift.ends_at }}</span>
+        <span class="badge">
+          {% if shift.primary_account_id == acct.account_id %}primary{% else %}backup{% endif %}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% else %}
+    <p class="empty__body">The rota is not available on this screen.</p>
+    {% endif %}
+  </section>
+
+  <section class="card" aria-labelledby="go-title">
+    <h2 id="go-title">Go to</h2>
+    <div class="home-tiles">
+      {% for group in nav.NAV_GROUPS %}
+      {% for item in group["items"] %}
+      {% if item.key != "home" and (not item.roles or role in item.roles) %}
+      <a class="home-tile" href="{{ item.href }}" title="{{ item.note }}">
+        {{ icons.icon(item.icon) }}
+        <span>{{ item.label }}</span>
+      </a>
+      {% endif %}
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+<section class="card card--quiet">
+  <h2>What this app guarantees</h2>
+  <p class="home-greet__role">
+    Helix Codex keeps your workflows, documents and governed AI on hardware you
+    control. Nothing leaves your network without an audit trail you can point to.
+  </p>
+  <div class="callout callout--info" style="margin-top: var(--space-4)">
+    <span>
+      <strong>Two keys, always.</strong> Anything that changes shared state is
+      proposed by one person and approved by another. Both decisions are written
+      to the ledger, and you can re-verify the chain from
+      <a href="/app/memory">Memory</a> at any time.
+    </span>
+  </div>
 </section>
+
 {% endblock %}

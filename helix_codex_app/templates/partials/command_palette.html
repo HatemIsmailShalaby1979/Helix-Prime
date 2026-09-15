@@ -1,0 +1,37 @@
+{% import "partials/icons.html" as icons %}
+{% import "partials/nav_data.html" as nav %}
+{% set here = active_nav | default("") %}
+{% set role = acct.role_id if acct else "" %}
+<dialog class="palette" id="command-palette" aria-label="Jump to a screen">
+  <div class="palette__field">
+    {{ icons.icon("search") }}
+    <label class="visually-hidden" for="palette-input">Jump to a screen</label>
+    <input class="palette__input" id="palette-input" type="text" autocomplete="off"
+           spellcheck="false" placeholder="Jump to a screen or action…">
+  </div>
+  <ul class="palette__list" id="palette-list">
+    {% for group in nav.NAV_GROUPS %}
+    {% for item in group["items"] %}
+    {% if not item.roles or role in item.roles %}
+    <li>
+      <a class="palette__item" href="{{ item.href }}"
+         data-palette-item data-search="{{ (item.label ~ ' ' ~ item.note ~ ' ' ~ group['label'] ~ ' ' ~ item.key) | lower }}">
+        {{ icons.icon(item.icon) }}
+        <span class="palette__group">{{ item.label }}</span>
+        <span class="palette__hint">{{ item.note }}</span>
+      </a>
+    </li>
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+    <li>
+      <a class="palette__item" href="/app/memory" data-palette-item
+         data-search="verify ledger audit chain integrity memory">
+        {{ icons.icon("check") }}
+        <span class="palette__group">Verify the audit chain</span>
+        <span class="palette__hint">Re-check that the ledger has not been altered</span>
+      </a>
+    </li>
+  </ul>
+  <p class="palette__empty" id="palette-empty" hidden>Nothing matches that. Try a section name.</p>
+</dialog>

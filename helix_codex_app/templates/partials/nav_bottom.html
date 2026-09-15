@@ -1,13 +1,19 @@
+{% import "partials/icons.html" as icons %}
+{% import "partials/nav_data.html" as nav %}
+{% set here = active_nav | default("") %}
+{% set role = acct.role_id if acct else "" %}
 <nav class="nav-bottom" aria-label="Primary">
-  <a class="nav-bottom__item{% if active_nav == 'home' %} nav-bottom__item--active{% endif %}" href="/app">Home</a>
-  {% if account and account.role_id in ('owner', 'manager') %}
-  <a class="nav-bottom__item{% if active_nav == 'admin' %} nav-bottom__item--active{% endif %}" href="/app/admin">Admin</a>
-  {% endif %}
-  <a class="nav-bottom__item{% if active_nav == 'chat' %} nav-bottom__item--active{% endif %}" href="/app/chat">Chat</a>
-  <a class="nav-bottom__item{% if active_nav == 'notifications' %} nav-bottom__item--active{% endif %}" href="/app/notifications">Notifications</a>
-  <a class="nav-bottom__item{% if active_nav == 'docs' %} nav-bottom__item--active{% endif %}" href="/app/docs">Docs</a>
-  <a class="nav-bottom__item{% if active_nav == 'tasks' %} nav-bottom__item--active{% endif %}" href="/app/tasks">Tasks</a>
-  <a class="nav-bottom__item{% if active_nav == 'calendar' %} nav-bottom__item--active{% endif %}" href="/app/calendar">Calendar</a>
-  <a class="nav-bottom__item{% if active_nav == 'attendance' %} nav-bottom__item--active{% endif %}" href="/app/attendance">Attendance</a>
-  <span class="nav-bottom__item nav-bottom__item--disabled" aria-disabled="true">More</span>
+  {% for key in nav.BOTTOM_KEYS %}
+  {% for group in nav.NAV_GROUPS %}{% for item in group["items"] %}{% if item.key == key %}
+  <a class="nav-bottom__item{% if here == item.key %} nav-bottom__item--active{% endif %}"
+     href="{{ item.href }}"{% if here == item.key %} aria-current="page"{% endif %}>
+    {{ icons.icon(item.icon) }}
+    <span>{{ item.short }}</span>
+  </a>
+  {% endif %}{% endfor %}{% endfor %}
+  {% endfor %}
+  <button class="nav-bottom__item" type="button" data-more-open aria-haspopup="dialog">
+    {{ icons.icon("apps") }}
+    <span>More</span>
+  </button>
 </nav>

@@ -1,14 +1,22 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Owner board — Cockpit{% endblock %}
+{% block breadcrumbs %}
+<nav class="crumbs" aria-label="Breadcrumb">
+  <a href="/app/cockpit">Cockpit</a>
+  <span class="crumbs__sep" aria-hidden="true">/</span>
+  <span>Owner board</span>
+</nav>
+{% endblock %}
 {% block content %}
 <div class="cockpit-page">
-  <div class="calendar-page__header">
-    <h1>Owner board</h1>
-    {% include "partials/data_mode_badge.html" %}
-  </div>
+  {% call head.page_head("Owner board", "The whole academy at a glance: attendance, who is drifting, and anything waiting on your decision.", "Governance") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
 
   {% if error %}
-  <p class="card">{{ error.error.message }}</p>
+  <div class="callout callout--warn"><span>{{ error.error.message }}</span></div>
   {% else %}
 
   <section class="cockpit-cards">
@@ -29,13 +37,17 @@
     <ul class="section-list">
       {% for athlete in at_risk %}
       <li class="section-link">
-        {{ athlete.athlete_id }} — {{ "%.0f"|format(athlete.attendance_rate * 100) }}%
-        ({{ athlete.attended }}/{{ athlete.expected }})
+        <span>{{ athlete.athlete_id }}</span>
+        <span class="badge">{{ "%.0f"|format(athlete.attendance_rate * 100) }}%</span>
+        <span class="home-greet__role">{{ athlete.attended }}/{{ athlete.expected }} sessions</span>
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p class="card">Nobody is flagged right now.</p>
+    <div class="empty">
+      <p class="empty__title">Nobody is flagged right now.</p>
+      <p class="empty__body">An athlete appears here when their attendance drops below the threshold the pack sets.</p>
+    </div>
     {% endif %}
   </section>
 
@@ -46,7 +58,7 @@
     {% include "partials/workflow_card.html" %}
     {% endfor %}
     {% else %}
-    <p class="card">Nothing is waiting at the gate.</p>
+    <p class="empty__body">Nothing is waiting at the gate.</p>
     {% endif %}
   </section>
 

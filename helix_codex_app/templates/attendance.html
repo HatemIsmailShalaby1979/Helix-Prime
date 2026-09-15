@@ -1,39 +1,54 @@
 {% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
 {% block title %}Attendance — Helix Codex{% endblock %}
 {% block content %}
 <div class="attendance-page">
-  <div class="calendar-page__header">
-    <h1>Attendance</h1>
-  </div>
+  {% call head.page_head("Attendance", "One button, one record. Every punch is written down, so the week's hours are never in dispute.", "Work") %}
+  <a class="btn btn--ghost" href="/app/calendar">{{ icons.icon("calendar") }} Calendar</a>
+  {% endcall %}
+
   {% include "partials/punch.html" %}
+
   <section class="card">
     <h2>This week</h2>
     {% if weekly.days %}
     <ul class="section-list">
       {% for day in weekly.days %}
       <li class="section-link">
-        {{ day.date }} — {{ day.minutes }} min
+        <span>{{ day.date }}</span>
+        <span class="badge">{{ day.minutes }} min</span>
       </li>
       {% endfor %}
     </ul>
-    <p class="home-greet__role">Total: {{ weekly.total_minutes }} min</p>
+    <p class="attendance-total">
+      Total this week <strong>{{ weekly.total_minutes }}</strong> min
+    </p>
     {% else %}
-    <p>No completed punches this week.</p>
+    <div class="empty">
+      <p class="empty__title">No completed punches this week.</p>
+      <p class="empty__body">
+        A day appears here once you have clocked out of it. Clock in with the
+        button above and it will show up.
+      </p>
+    </div>
     {% endif %}
   </section>
+
   <section class="card">
     <h2>Today's punches</h2>
     {% if today_records %}
     <ul class="section-list">
       {% for record in today_records %}
       <li class="section-link">
-        {% if record.account_id == account.account_id %}You{% else %}Another account{% endif %}
-        — {{ record.punch_type }} at {{ record.punched_at }}
+        <span>{% if record.account_id == account.account_id %}You{% else %}Another account{% endif %}</span>
+        <span class="badge">{{ record.punch_type }}</span>
+        <span class="agenda-item__time">{{ record.punched_at }}</span>
       </li>
       {% endfor %}
     </ul>
     {% else %}
-    <p>No punches recorded today.</p>
+    <p class="empty__body">No punches recorded today.</p>
     {% endif %}
   </section>
 </div>

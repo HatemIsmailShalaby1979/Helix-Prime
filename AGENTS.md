@@ -1,10 +1,12 @@
 # AGENTS.md — Helix Codex OS Build Ledger
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
-> **ACTIVE WORK: §1 — Production Hardening Task (H0–H3).** The sports-academy pack
-> (S0–S7) is COMPLETE — §2–§5 are completed history / reference material. Do not
-> restart them. Read this file top-to-bottom, then work ONLY on the next incomplete
-> step in §1. Update this file immediately after completing each step.
+> **NO ACTIVE WORK — everything recorded here is COMPLETE.** §1 (Production Hardening,
+> H0–H3) and §1A (app UI modernization, UI-1) are both done; the sports-academy pack
+> (S0–S7) is COMPLETE and §2–§5 are completed history / reference material. Do not
+> restart them. Read this file top-to-bottom, then pick the next task from §5
+> ("Suggested next work") or ask the user. Update this file immediately after
+> completing each step.
 
 ---
 
@@ -51,7 +53,7 @@
 
 ---
 
-## 1. Production Hardening Task (H0–H3) ← ACTIVE
+## 1. Production Hardening Task (H0–H3) — COMPLETE
 
 **Recorded:** 2026-09-11 · **Based on:** `docs/audits/2026-09-10_full_audit_production_plan.md`
 
@@ -59,9 +61,9 @@
 
 | Field | Value |
 |---|---|
-| Current step | **ALL H-STEPS COMPLETE — production hardening task H0–H3 awaits full-suite gate re-verification** |
+| Current step | **ALL H-STEPS COMPLETE.** Superseded in time by §1A (app UI modernization, UI-1) — also COMPLETE. No active work. |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **621 passed, 0 failed** (2026-09-12; re-verified after H1.3 F1/F3 + F2/F4/F5) |
+| Last full-suite result | **UI-1, 2026-09-16: 1393 passed, 2 failed, of 1395 collected.** Both failures are WorkBuddy sandbox artifacts, not repo failures — the sandbox's bulk-delete guard blocks `observability/logs.jsonl` deletion and `evidence/baseline/smoke.log` writes, so `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers` and `test_c5_vertical_slice::test_existing_c0_c4_regression` cannot pass here. See §1A "Gate". **Note the suite has grown well past the 621 recorded above.** |
 | Last commit | `b760b46` chore(release): regenerate release manifest at d7b6015 |
 | Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, **H1.3 ✅ (F1 + F3: drift AST + mypy)**, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)**, **H3.3 ✅ (G36 + G37)**, **H3.4 ✅ (G38 + G40 + G41)** |
 | Post-task doc-sync | **COMPLETE (2026-09-12)** — marketing + docs aligned to current repo state: 9-agent roster (role-catalog), 621-test suite, Python 3.12, `helix-api` canonical, kill switch/metrics/audit-chain real, tenancy.py deletion, Scoach pack BUILT, PCV 18/24, LICENSE resolved; dated handoff records banner-marked SUPERSEDED; 0 broken relative links; no code changed |
@@ -398,7 +400,123 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
 - **Ruff config:** `pyproject.toml [tool.ruff]` line-length=100, **select = E4/E7/E9/F/I/B/S** (widened in G28, commit `4ad6bdb`). The whole repo is ruff-clean and `ruff format --check` is clean — CI runs both. Deliberate legacy debt (S110 best-effort wrappers, legacy S113/S310, path-bootstrap E402, test-idiomatic rules) is documented in `[tool.ruff.lint.per-file-ignores]`; the rules stay ON for all new code. **Rule for new code: `ruff check` on your changed paths must be 0 and format-clean.**
 - **Windows gotcha:** any test opening SQLite inside `tempfile.TemporaryDirectory()` MUST close stores/connections before the `with` block exits, or teardown fails with WinError 32 after passing assertions. If a Store leaks in a *pack test*, use `tests/support/sqlite_harness.py::sqlite_store` fixture or close explicitly.
 - **The restaurant pack itself** imports `SourceRef` from `connectors.contracts` — new pack does the same.
-- Full-suite runtime ≈ 20 min on this machine. Run targeted modules during steps; full suite only at gate time (H-steps) or S7.
+- Full-suite runtime ≈ 20 min on this machine. **Observed 2026-09-16: ≈30 min.** Run
+  targeted modules during steps; full suite only at gate time (H-steps) or S7.
+- **pytest's summary line is swallowed in this environment.** `pytest tests/ -q … > log`
+  yields the progress dots but no "N passed, M failed" line. For a reliable count, run
+  with `--junitxml=<path>` and parse the XML (count `testcase` elements with a
+  `failure`/`error` child).
+- **The suite rewrites the tracked `release/release-manifest.json`.** Three tests call
+  `release.gate.run_gate(...)` without `write_evidence=False`
+  (`tests/test_command_center_integration.py:294`, `tests/test_capabilities_restaurant.py:286`,
+  `tests/test_pilot.py:276`); `write_evidence` defaults to `True`, and `release/gate.py:609`
+  then writes the real manifest. It also creates `evidence/releases/<ts>/`, which is
+  gitignored. **After any full-suite run, `git checkout -- release/release-manifest.json`
+  before committing.** Proper fix (not done): pass `write_evidence=False` in those three tests.
+
+---
+
+## 1A. App UI modernization (UI-1) — COMPLETE
+
+**Recorded:** 2026-09-16 · **Scope:** the `helix_codex_app/` presentation layer only.
+No governed-core file touched, no test file changed, no route/permission/schema/service
+behaviour altered. One app-side Python line changed (`modules/cockpit/router.py`, see below).
+
+### What changed
+
+| Area | Before | After |
+|---|---|---|
+| Theme | light-ish default tokens | single **dark** theme (`color-scheme: dark`), warm plum near-blacks (`--bg #100e12`), never `#000`/`#fff` |
+| Type | system stack | self-hosted Instrument Sans / Instrument Serif / JetBrains Mono (5 `.woff2`) — no third-party origin at runtime, so the "nothing leaves your network" claim still holds |
+| Logo | none | `helix-mark.svg` (two anti-phase strands, 1.5 turns, no rungs), `helix-lockup.svg`, `helix-watermark.svg`; PNG PWA icons regenerated from the same geometry |
+| Background | flat | `.app-atmosphere` fixed layer with two thin helix watermarks (opacity 0.055 / 0.035, radial-masked, rotated); hidden under `prefers-contrast: more` |
+| Navigation | flat list | 5 grouped rail sections + 4-slot mobile bottom bar + "More" sheet + command palette (`Ctrl/Cmd+K`, `/`) |
+| Guidance | none | dismissible first-run checklist (`data-guide`) with progress counter, role-aware (5 steps for owner/manager, 4 otherwise), persisted in `localStorage` |
+| Consistency | ad-hoc per page | every screen gets `.page-head` (eyebrow / title / sub / actions) plus breadcrumbs on detail views |
+
+### ADHD-friendly decisions (deliberate, not cosmetic)
+
+One primary action per screen · create forms folded behind native `<details>` until
+needed · explicit `.empty` states that say what the screen is *for* and what to do next ·
+mute-by-role colour rather than opacity-on-text · visible focus rings ·
+`prefers-reduced-motion` and `prefers-contrast: more` honoured · `aria-live` on the punch
+clock, chat log and toasts · htmx failures surface a toast instead of failing silently.
+
+### Architecture notes for the next agent
+
+- **`partials/icons.html` is an SVG sprite.** `{{ icons.sprite() }}` renders the `<symbol>`
+  set once at the top of `<body>`; `icon()` / `mark()` emit only `<use href="#i-*">`.
+  Inlining the paths directly blew the home page to ~43.7 KB; the sprite brought it to
+  ~35.9 KB. Keep the sprite, do not inline.
+- **`partials/nav_data.html` is the single source of truth** for navigation
+  (`NAV_GROUPS`, `BOTTOM_KEYS`, `label_for()`). Rail, bottom bar, More sheet and palette
+  all iterate it — add a screen by adding one item here.
+- **Jinja gotchas that cost cycles here:**
+  1. A top-level `{% set %}` in an *imported* template is namespace-private; only macros
+     are exported. That is why `label_for()` is a macro.
+  2. In an `{% extends %}` child, the child's top-level `{% set %}` runs **before** the
+     parent's, so it cannot read variables the parent assigns. `shell/home.html` derived
+     its greeting from `base.html`'s `acct` at top level and silently greeted every user
+     as "Hello, operator."; `base.html` also sets `role`, which masked the same mistake
+     for the tile filter. Derive such values **inside** a block.
+- **`static/js/shell.js`** owns the palette, sheet, guide and htmx→toast feedback.
+  `static/css/tokens.css` holds all tokens; `app.css` is the component layer.
+- **The control plane must stay form-free.** `modules/cockpit/router.py` now passes
+  `active_nav: "control"` for `/app/cockpit/control-plane` (it previously passed
+  `"cockpit"`, so the nav highlighted the wrong item). `nav_rail.html` and
+  `more_sheet.html` withhold the shared sign-out form when `active_nav == "control"`,
+  because `test_cockpit_views.py::test_the_control_plane_offers_no_write_action` asserts
+  that page carries no `hx-post` / `<form`. **Do not add a form to shared chrome without
+  checking that test.**
+
+### Gate
+
+- `ruff check helix_codex_app/` → 0 findings; `ruff format --check helix_codex_app/` → clean
+  (78 files). `gen_icons.py` needed `ruff format` (CI runs `ruff format --check .` repo-wide).
+- All 58 templates compile against the real Jinja env.
+- `python helix_codex_app/scripts/gen_icons.py` reproduces the three PNGs **byte-identically**
+  (md5 before/after).
+- Route-render smoke: 66 renders (3 roles × 22 routes) against a throwaway DB → 0 failures;
+  permission gates unchanged; 12/12 shell markers present; control plane write-free;
+  sign-out present everywhere else.
+- All 6 app release gates pass, incl. `app_pwa_assets: icons=3/valid=True start=True sw=True offline=True`.
+- CSS brace-balanced; SVGs valid XML; `shell.js`/`sw.js` pass `node --check`; all 18
+  service-worker precache paths resolve.
+- **Tests.** `tests/helix_codex_app` → **758 passed, 0 failed** (JUnit XML count). Full
+  suite → **1393 passed, 2 failed of 1395 collected**. Both failures are **environment
+  artifacts of the WorkBuddy sandbox, not repo failures** and neither is in the module
+  this task touched: the sandbox's bulk-delete guard raises `SystemExit: 1` on
+  `observability/logs.jsonl` (so `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers`
+  dies at its own `log_path.unlink()`) and blocks `evidence/baseline/smoke.log` writes
+  (so `test_c5_vertical_slice::test_existing_c0_c4_regression` sees empty stdout from
+  `scripts/smoke.py`). Neither can occur on a normal CI runner. Run pytest with
+  `--junitxml=` to read counts — the summary line is swallowed in this sandbox.
+
+### Regressions caught and fixed during the gate
+
+1. **`data_mode_badge.html`** — shortening it to "Simulated — not live" dropped the literal
+   `simulated_realistic`, which **three** tests assert on
+   (`test_memory_screen.py::test_the_data_mode_badge_is_never_hidden`,
+   `test_cockpit_owner.py::test_the_served_page_carries_all_five_numbers`,
+   `test_cockpit_views.py::test_the_coach_view_shows_a_coach_and_their_day`). The badge now
+   renders the plain phrase **and** the provenance token.
+2. Four more UI strings pinned by tests had been reworded and were restored: `"The Cockpit"`
+   (I had lowercased it), `"New chat"`, `"No notifications yet"`, `"on-call primary"`.
+3. **Control-plane invariant broken** — the shared sign-out form leaked onto the write-free
+   page (see architecture notes above).
+4. **Home greeting** — "Hello, operator." for everyone (see Jinja gotcha 2 above).
+5. **CSS gaps** — `.nav-rail__foot/__who/__item--button` had no rules (unstyled sign-out
+   block); `.doc-block__saved` set `display: block` while toggled with the `hidden`
+   attribute, so "Saved" could never hide (added `[hidden]` escapes); removed a dead
+   `.details-summary` class already covered by `details.card > summary`.
+
+**Lesson for this repo: before rewording any user-visible string, grep `tests/` for it —
+this app's tests pin UI copy as substrings of `response.text`.**
+
+**Files:** `helix_codex_app/static/css/{tokens,app,fonts}.css`, `static/js/shell.js`,
+`static/icons/*.svg|png`, `static/{manifest.webmanifest,sw.js,offline.html}`,
+`static/vendor/fonts/*` (5 woff2), `templates/**` (58 files),
+`scripts/gen_icons.py`, `modules/cockpit/router.py`.
 
 ---
 

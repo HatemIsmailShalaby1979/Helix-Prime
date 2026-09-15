@@ -1,0 +1,34 @@
+{% import "partials/icons.html" as icons %}
+{% import "partials/nav_data.html" as nav %}
+{% set here = active_nav | default("") %}
+{% set role = acct.role_id if acct else "" %}
+{#- The control plane promises to carry no form at all, so the shared sign-out
+    control is withheld there; every other section keeps it. -#}
+{% set may_sign_out = acct and here != "control" %}
+<dialog class="sheet" id="more-sheet" aria-label="All sections">
+  <div class="sheet__head">
+    <h2 class="sheet__title">All sections</h2>
+    <button class="btn btn--ghost btn--icon" type="button" data-sheet-close aria-label="Close">
+      {{ icons.icon("close") }}
+    </button>
+  </div>
+  <div class="sheet__grid">
+    {% for group in nav.NAV_GROUPS %}
+    {% for item in group["items"] %}
+    {% if not item.roles or role in item.roles %}
+    <a class="sheet__item{% if here == item.key %} sheet__item--active{% endif %}"
+       href="{{ item.href }}"{% if here == item.key %} aria-current="page"{% endif %}>
+      {{ icons.icon(item.icon) }}
+      <span>{{ item.short }}</span>
+    </a>
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
+  </div>
+  {% if may_sign_out %}
+  <form method="post" action="/app/auth/logout" hx-post="/app/auth/logout"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}' class="sheet__foot">
+    <button class="btn btn--ghost btn--block" type="submit">Sign out</button>
+  </form>
+  {% endif %}
+</dialog>

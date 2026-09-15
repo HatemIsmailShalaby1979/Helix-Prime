@@ -1,4 +1,5 @@
 <span class="data-mode-badge" role="note"
-      title="This figure comes from simulated data, not from a live system.">
-  Data mode: {{ data_mode | default('simulated_realistic') }} — simulated, not live
+      title="Every figure here comes from simulated data, not from a live system.">
+  Simulated — not live
+  <span class="data-mode-badge__mode">{{ data_mode|default("simulated_realistic", true) }}</span>
 </span>

@@ -1,48 +1,99 @@
+{% import "partials/icons.html" as icons %}
+{% import "partials/nav_data.html" as nav %}
+{% set acct = (account if account is defined and account else None) or request.state.account %}
+{% set here = active_nav | default("") %}
+{% set role = acct.role_id if acct else "" %}
+{% set section = nav.label_for(here) %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#e94560">
+  <meta name="theme-color" content="#100e12">
+  <meta name="color-scheme" content="dark">
   {% if csrf_token %}<meta name="csrf-token" content="{{ csrf_token }}">{% endif %}
   <link rel="manifest" href="/static/manifest.webmanifest">
   <link rel="icon" type="image/png" href="/static/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="/static/vendor/fonts/instrument-sans-var-latin.woff2">
+  <link rel="stylesheet" href="/static/css/fonts.css">
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/app.css">
   <title>{% block title %}Helix Codex{% endblock %}</title>
 </head>
 <body>
+  {{ icons.sprite() }}
   <a class="skip-link" href="#app-content">Skip to content</a>
+
+  <div class="app-atmosphere" aria-hidden="true">
+    {{ icons.mark("app-atmosphere__mark", thin=true) }}
+    {{ icons.mark("app-atmosphere__spark", thin=true) }}
+  </div>
+
   <header class="app-header">
     <div class="app-header__inner">
-      <span class="app-header__brand">Helix Codex</span>
-      <span class="badge">App</span>
-      {% if account %}
-      <a class="app-header__bell" href="/app/notifications" aria-label="Notifications"
-         data-notification-link>
-        <svg class="app-header__bell-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-        <span class="app-header__bell-count" data-notification-badge hidden>0</span>
+      <a class="app-header__brand" href="/app">
+        {{ icons.mark("app-header__brand-mark") }}
+        <span>Helix&nbsp;<span class="app-header__brand-em">Codex</span></span>
       </a>
-      {% endif %}
+      {% if section %}<span class="app-header__where">{{ section }}</span>{% endif %}
+
+      <div class="app-header__tools">
+        <button class="app-header__jump" type="button" data-command-open
+                aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K">
+          {{ icons.icon("search") }}
+          <span>Jump to…</span>
+          <kbd>Ctrl K</kbd>
+        </button>
+        {% if acct %}
+        <a class="app-header__bell" href="/app/notifications" aria-label="Notifications"
+           data-notification-link>
+          <svg class="app-header__bell-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+               focusable="false"><path d="M18 8.6a6 6 0 1 0-12 0c0 5.3-2.2 6.8-2.2 6.8h16.4S18 13.9 18 8.6Z"/><path d="M13.7 19a2 2 0 0 1-3.4 0"/></svg>
+          <span class="app-header__bell-count" data-notification-badge hidden>0</span>
+        </a>
+        {% set can_admin = acct.role_id in ("owner", "manager") %}
+        {% if can_admin %}
+        <a class="identity-chip" href="/app/admin/users/{{ acct.account_id }}"
+           title="Your account settings">
+          <span class="identity-chip__name">{{ acct.display_name or acct.username }}</span>
+          <span class="identity-chip__role">{{ acct.role_id or "member" }}</span>
+        </a>
+        {% else %}
+        <span class="identity-chip">
+          <span class="identity-chip__name">{{ acct.display_name or acct.username }}</span>
+          <span class="identity-chip__role">{{ acct.role_id or "member" }}</span>
+        </span>
+        {% endif %}
+        {% endif %}
+      </div>
     </div>
   </header>
+
   {% include "partials/nav_rail.html" %}
+
   <main class="app-content" id="app-content">
+    {% block breadcrumbs %}{% endblock %}
     {% block content %}{% endblock %}
   </main>
+
   {% include "partials/nav_bottom.html" %}
+  {% include "partials/more_sheet.html" %}
+  {% include "partials/command_palette.html" %}
+
   <div id="toast-host" class="toast-host" aria-live="polite"></div>
   <div id="install-banner" class="install-banner" hidden>
     <p class="install-banner__title">Install Helix Codex</p>
     <p class="install-banner__text">It launches standalone and keeps working offline.</p>
     <button type="button" class="btn btn--primary" data-install>Install</button>
   </div>
+
   <script defer src="/static/vendor/htmx.min.js"></script>
   <script defer src="/static/vendor/alpine.min.js"></script>
   <script defer src="/static/js/pwa.js"></script>
   <script defer src="/static/js/notifications.js"></script>
+  <script defer src="/static/js/shell.js"></script>
 </body>
 </html>

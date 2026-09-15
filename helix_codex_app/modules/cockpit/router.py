@@ -124,13 +124,13 @@ def cockpit_control_plane(request: Request) -> HTMLResponse:
         return render(
             request,
             "cockpit_control_plane.html",
-            {"active_nav": "cockpit", "account": account, "error": exc.to_dict()},
+            {"active_nav": "control", "account": account, "error": exc.to_dict()},
             status_code=exc.status_code,
         )
     return render(
         request,
         "cockpit_control_plane.html",
-        {"active_nav": "cockpit", "account": account, **context},
+        {"active_nav": "control", "account": account, **context},
     )
 
 

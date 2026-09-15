@@ -1,7 +1,16 @@
-<section id="chat-section" class="card" aria-label="Chat">
-  <h1>Chat</h1>
+{% import "partials/icons.html" as icons %}
+<section id="chat-section" class="chat-section" aria-label="Chat">
+  <header class="page-head">
+    <div class="page-head__text">
+      <span class="page-head__eyebrow">Work</span>
+      <h1>Chat</h1>
+      <p class="page-head__sub">Direct conversations with the people in your workspace.</p>
+    </div>
+  </header>
+
   {% if peers %}
-  <h2>New chat</h2>
+  <h2 class="chat-section__sub">New chat</h2>
+  <p class="chat-section__hint">Pick someone to start a conversation with.</p>
   <div class="chat-peers">
     {% for peer in peers %}
     <div class="peer">
@@ -14,13 +23,14 @@
               hx-vals='{"account_id": "{{ peer.account_id }}"}'
               hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
               hx-target="#chat-section"
-              hx-swap="outerHTML">Chat</button>
+              hx-swap="outerHTML">{{ icons.icon("chat") }} Message</button>
     </div>
     {% endfor %}
   </div>
   {% endif %}
+
   <div id="chat-list">
-    <h2>Conversations</h2>
+    <h2 class="chat-section__sub">Conversations</h2>
     {% if conversations %}
     <div class="chat-list">
       {% for conversation in conversations %}
@@ -31,7 +41,13 @@
       {% endfor %}
     </div>
     {% else %}
-    <p class="chat-list__empty">No conversations yet. Start one with a teammate.</p>
+    <div class="empty">
+      <p class="empty__title">No conversations yet.</p>
+      <p class="empty__body">
+        Pick someone above to start one. Messages are kept with the workspace, not
+        on somebody else's server.
+      </p>
+    </div>
     {% endif %}
   </div>
 </section>

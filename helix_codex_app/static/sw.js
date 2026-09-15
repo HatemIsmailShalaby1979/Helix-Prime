@@ -1,13 +1,19 @@
-const CACHE_NAME = "helix-codex-shell-v1";
+const CACHE_NAME = "helix-codex-shell-v2";
 
 const PRECACHE = [
   "/",
   "/app",
+  "/static/css/fonts.css",
   "/static/css/tokens.css",
   "/static/css/app.css",
   "/static/js/pwa.js",
+  "/static/js/shell.js",
   "/static/vendor/htmx.min.js",
   "/static/vendor/alpine.min.js",
+  "/static/vendor/fonts/instrument-sans-var-latin.woff2",
+  "/static/vendor/fonts/instrument-serif-400-latin.woff2",
+  "/static/vendor/fonts/jetbrains-mono-var-latin.woff2",
+  "/static/icons/helix-mark.svg",
   "/static/icons/icon-192.png",
   "/static/icons/icon-512.png",
   "/static/icons/maskable-512.png",
@@ -65,6 +71,22 @@ self.addEventListener("fetch", (event) => {
           return response;
         })
         .catch(() => caches.match("/static/offline.html")),
+    );
+    return;
+  }
+
+  // Fonts are immutable: serve from cache first, then fill the cache.
+  if (url.pathname.startsWith("/static/vendor/fonts/")) {
+    event.respondWith(
+      caches.match(event.request).then(
+        (cached) =>
+          cached ||
+          fetch(event.request).then((response) => {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+            return response;
+          }),
+      ),
     );
     return;
   }

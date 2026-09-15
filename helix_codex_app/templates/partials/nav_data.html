@@ -1,0 +1,69 @@
+{#- The navigation model. One source of truth for the rail, the mobile bar, the
+    "More" sheet and the command palette, so a new screen only has to be added
+    here.
+
+    Each item:
+      key   — matches the `active_nav` value the router passes
+      roles — optional allow-list checked against account.role_id
+      note  — the one-line explanation the command palette shows
+
+    Import it and read NAV_GROUPS / BOTTOM_KEYS off the module. -#}
+
+{% set NAV_GROUPS = [
+  {"label": "Overview", "items": [
+    {"key": "home", "short": "Home", "label": "Home", "href": "/app", "icon": "home",
+     "note": "Today's picture and the on-call rota"},
+  ]},
+  {"label": "Work", "items": [
+    {"key": "tasks", "short": "Tasks", "label": "Tasks", "href": "/app/tasks", "icon": "tasks",
+     "note": "Board of everything open, doing and done"},
+    {"key": "calendar", "short": "Calendar", "label": "Calendar", "href": "/app/calendar", "icon": "calendar",
+     "note": "Events, invites and your RSVP"},
+    {"key": "chat", "short": "Chat", "label": "Chat", "href": "/app/chat", "icon": "chat",
+     "note": "Direct conversations with teammates"},
+    {"key": "attendance", "short": "Attendance", "label": "Attendance", "href": "/app/attendance", "icon": "attendance",
+     "note": "Clock in and out, and this week's hours"},
+    {"key": "notifications", "short": "Alerts", "label": "Notifications", "href": "/app/notifications", "icon": "bell",
+     "note": "Mentions, messages and approvals"},
+  ]},
+  {"label": "Knowledge", "items": [
+    {"key": "docs", "short": "Docs", "label": "Documents", "href": "/app/docs", "icon": "docs",
+     "note": "Notes, SOPs and policies, with version history"},
+    {"key": "kb", "short": "KB", "label": "Knowledge base", "href": "/app/kb", "icon": "kb",
+     "note": "Search everything written down"},
+    {"key": "memory", "short": "Memory", "label": "Memory", "href": "/app/memory", "icon": "memory",
+     "note": "Your proposals and the records behind them"},
+    {"key": "promotions", "short": "Promos", "label": "Promotion queue", "href": "/app/memory/promotions",
+     "icon": "promotions", "roles": ["owner", "manager"],
+     "note": "Rules waiting to become company-wide"},
+  ]},
+  {"label": "Governance", "items": [
+    {"key": "ops", "short": "Ops", "label": "Operations", "href": "/app/ops", "icon": "ops",
+     "note": "Requests, engines and the approval gate"},
+    {"key": "cockpit", "short": "Cockpit", "label": "Cockpit", "href": "/app/cockpit", "icon": "cockpit",
+     "roles": ["owner", "manager"], "note": "The numbers, as the owner sees them"},
+    {"key": "control", "short": "Control", "label": "Control plane", "href": "/app/cockpit/control-plane",
+     "icon": "shield", "roles": ["owner", "manager"],
+     "note": "Read-only: engines, halt state and the audit chain"},
+  ]},
+  {"label": "Administration", "items": [
+    {"key": "admin", "short": "Admin", "label": "Admin", "href": "/app/admin", "icon": "admin",
+     "roles": ["owner", "manager"],
+     "note": "Accounts, domains, org units and limits"},
+  ]},
+] %}
+
+
+{#- Mobile bottom bar: four fixed slots, then the "More" sheet. -#}
+{% set BOTTOM_KEYS = ["home", "tasks", "chat", "docs"] %}
+
+
+{#- The human name of the section an `active_nav` key belongs to, so the header
+    can say where you are without repeating the page title. -#}
+{% macro label_for(key) -%}
+{%- for group in NAV_GROUPS -%}
+{%- for item in group["items"] -%}
+{%- if item["key"] == key -%}{{ item["label"] }}{%- endif -%}
+{%- endfor -%}
+{%- endfor -%}
+{%- endmacro %}

@@ -1,11 +1,13 @@
 {
   "name": "Helix Codex",
   "short_name": "Codex",
+  "description": "Governed operations, on hardware you control.",
   "start_url": "/app",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#e94560",
+  "orientation": "any",
+  "background_color": "#100e12",
+  "theme_color": "#100e12",
   "icons": [
     {
       "src": "/static/icons/icon-192.png",

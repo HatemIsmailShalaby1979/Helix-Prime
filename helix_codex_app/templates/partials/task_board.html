@@ -1,83 +1,46 @@
+{#- One board column. Written once and called three times so the card markup
+    cannot drift between Open, Doing and Done. -#}
+{% macro column(status, label, tasks, members) %}
+{% set tally = namespace(n=0) %}
+{% for task in tasks if task.status == status %}{% set tally.n = tally.n + 1 %}{% endfor %}
+<div class="task-board__column"
+     @dragover.prevent="dragOver(event)"
+     @drop.prevent="drop(event, '{{ status }}')">
+  <h2 class="task-board__heading task-board__heading--{{ status }}">
+    {{ label }}<span class="task-board__count">{{ tally.n }}</span>
+  </h2>
+  {% for task in tasks if task.status == status %}
+  <article class="task-card task-card--{{ status }}"
+           draggable="true"
+           @dragstart="dragStart(event, '{{ task.task_id }}')"
+           @dragend="dragEnd()">
+    <a class="task-card__title" href="/app/tasks/{{ task.task_id }}">{{ task.title }}</a>
+    <div class="task-card__meta">
+      <span class="task-card__assignee">
+        {% if task.assignee_account_id %}{{ members.get(task.assignee_account_id, task.assignee_account_id) }}{% else %}unassigned{% endif %}
+      </span>
+      {% if task.due_at %}<span class="task-card__due">due {{ task.due_at[:10] }}</span>{% endif %}
+    </div>
+    <div class="task-card__status-wrap">
+      <label class="sr-only" for="status-{{ status }}-{{ task.task_id }}">Move to status</label>
+      <select id="status-{{ status }}-{{ task.task_id }}" class="task-card__status"
+              aria-label="Move to status"
+              x-on:change="move($event, '{{ task.task_id }}')">
+        <option value="open"{% if status == 'open' %} selected{% endif %}>Open</option>
+        <option value="doing"{% if status == 'doing' %} selected{% endif %}>Doing</option>
+        <option value="done"{% if status == 'done' %} selected{% endif %}>Done</option>
+      </select>
+    </div>
+  </article>
+  {% endfor %}
+  {% if tally.n == 0 %}
+  <p class="task-board__empty">Nothing here.</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
 <div id="task-board" class="task-board" x-data="tasksBoard()">
-  <div class="task-board__column"
-       @dragover.prevent="dragOver(event)"
-       @drop.prevent="drop(event, 'open')">
-    <h2 class="task-board__heading task-board__heading--open">Open</h2>
-    {% for task in tasks if task.status == 'open' %}
-    <div class="task-card task-card--open"
-         draggable="true"
-         @dragstart="dragStart(event, '{{ task.task_id }}')"
-         @dragend="dragEnd()">
-      <a class="task-card__title" href="/app/tasks/{{ task.task_id }}">{{ task.title }}</a>
-      <div class="task-card__meta">
-        {% if task.assignee_account_id %}<span class="task-card__assignee">{{ members.get(task.assignee_account_id, task.assignee_account_id) }}</span>{% endif %}
-        {% if task.due_at %}<span class="task-card__due">{{ task.due_at[:10] }}</span>{% endif %}
-      </div>
-      <div class="task-card__status-wrap">
-        <label class="sr-only" for="status-open-{{ task.task_id }}">Move to status</label>
-        <select id="status-open-{{ task.task_id }}" class="task-card__status"
-                aria-label="Move to status"
-                x-on:change="move($event, '{{ task.task_id }}')">
-          <option value="open" selected>Open</option>
-          <option value="doing">Doing</option>
-          <option value="done">Done</option>
-        </select>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="task-board__column"
-       @dragover.prevent="dragOver(event)"
-       @drop.prevent="drop(event, 'doing')">
-    <h2 class="task-board__heading task-board__heading--doing">Doing</h2>
-    {% for task in tasks if task.status == 'doing' %}
-    <div class="task-card task-card--doing"
-         draggable="true"
-         @dragstart="dragStart(event, '{{ task.task_id }}')"
-         @dragend="dragEnd()">
-      <a class="task-card__title" href="/app/tasks/{{ task.task_id }}">{{ task.title }}</a>
-      <div class="task-card__meta">
-        {% if task.assignee_account_id %}<span class="task-card__assignee">{{ members.get(task.assignee_account_id, task.assignee_account_id) }}</span>{% endif %}
-        {% if task.due_at %}<span class="task-card__due">{{ task.due_at[:10] }}</span>{% endif %}
-      </div>
-      <div class="task-card__status-wrap">
-        <label class="sr-only" for="status-doing-{{ task.task_id }}">Move to status</label>
-        <select id="status-doing-{{ task.task_id }}" class="task-card__status"
-                aria-label="Move to status"
-                x-on:change="move($event, '{{ task.task_id }}')">
-          <option value="open">Open</option>
-          <option value="doing" selected>Doing</option>
-          <option value="done">Done</option>
-        </select>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="task-board__column"
-       @dragover.prevent="dragOver(event)"
-       @drop.prevent="drop(event, 'done')">
-    <h2 class="task-board__heading task-board__heading--done">Done</h2>
-    {% for task in tasks if task.status == 'done' %}
-    <div class="task-card task-card--done"
-         draggable="true"
-         @dragstart="dragStart(event, '{{ task.task_id }}')"
-         @dragend="dragEnd()">
-      <a class="task-card__title" href="/app/tasks/{{ task.task_id }}">{{ task.title }}</a>
-      <div class="task-card__meta">
-        {% if task.assignee_account_id %}<span class="task-card__assignee">{{ members.get(task.assignee_account_id, task.assignee_account_id) }}</span>{% endif %}
-        {% if task.due_at %}<span class="task-card__due">{{ task.due_at[:10] }}</span>{% endif %}
-      </div>
-      <div class="task-card__status-wrap">
-        <label class="sr-only" for="status-done-{{ task.task_id }}">Move to status</label>
-        <select id="status-done-{{ task.task_id }}" class="task-card__status"
-                aria-label="Move to status"
-                x-on:change="move($event, '{{ task.task_id }}')">
-          <option value="open">Open</option>
-          <option value="doing">Doing</option>
-          <option value="done" selected>Done</option>
-        </select>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
+  {{ column("open", "Open", tasks, members) }}
+  {{ column("doing", "Doing", tasks, members) }}
+  {{ column("done", "Done", tasks, members) }}
 </div>

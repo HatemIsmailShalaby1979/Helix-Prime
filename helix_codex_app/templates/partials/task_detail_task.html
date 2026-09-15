@@ -2,9 +2,7 @@
   <h1 class="task-detail__title">{{ task.title }}</h1>
   <dl class="task-detail__fields">
     <dt>Status</dt>
-    <dd>
-      <span class="task-detail__status task-detail__status--{{ task.status }}">{{ task.status }}</span>
-    </dd>
+    <dd><span class="task-detail__status task-detail__status--{{ task.status }}">{{ task.status }}</span></dd>
     <dt>Priority</dt>
     <dd>{{ task.priority }}</dd>
     <dt>Created</dt>
@@ -18,9 +16,9 @@
     <dt>Assignee</dt>
     <dd>
       {% if task.assignee_account_id %}
-        {{ members.get(task.assignee_account_id, task.assignee_account_id) }}
+      {{ members.get(task.assignee_account_id, task.assignee_account_id) }}
       {% else %}
-        <span class="task-detail__unassigned">unassigned</span>
+      <span class="task-detail__unassigned">unassigned</span>
       {% endif %}
     </dd>
   </dl>

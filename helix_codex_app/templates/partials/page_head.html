@@ -1,0 +1,19 @@
+{#- Consistent page opening for every screen: an optional eyebrow, a title, a
+    one-line explanation of what the screen is for, and the screen's actions.
+
+    Use the plain form when the screen has no actions:
+
+      {% call head.page_head("Tasks", "Everything open, doing and done.", "Work") %}…{% endcall %}
+
+    or pass actions inside the call block. The eyebrow carries the section so a
+    reader always knows where they are without looking at the rail. -#}
+{% macro page_head(title, sub="", eyebrow="") %}
+<header class="page-head">
+  <div class="page-head__text">
+    {% if eyebrow %}<span class="page-head__eyebrow">{{ eyebrow }}</span>{% endif %}
+    <h1>{{ title }}</h1>
+    {% if sub %}<p class="page-head__sub">{{ sub }}</p>{% endif %}
+  </div>
+  {% if caller is defined %}<div class="page-head__actions">{{ caller() }}</div>{% endif %}
+</header>
+{% endmacro %}

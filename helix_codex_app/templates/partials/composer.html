@@ -1,3 +1,4 @@
+{% import "partials/icons.html" as icons %}
 <form class="composer"
       x-data="{}"
       hx-post="/app/api/conversations/{{ conversation.conversation_id }}/messages"
@@ -10,5 +11,5 @@
   <input class="composer__input" id="composer-body-{{ conversation.conversation_id }}"
          name="body" type="text" maxlength="8000"
          placeholder="Type a message" autocomplete="off" required>
-  <button class="btn btn--primary" type="submit">Send</button>
+  <button class="btn btn--primary" type="submit">{{ icons.icon("arrow-right") }} Send</button>
 </form>

@@ -1,0 +1,72 @@
+{% import "partials/icons.html" as icons %}
+{% set role = acct.role_id if acct else "" %}
+{% set can_admin = role in ("owner", "manager") %}
+<section class="guide" data-guide data-guide-here="home" aria-labelledby="guide-title">
+  <div class="guide__head">
+    <div>
+      <span class="guide__eyebrow">Start here</span>
+      <h2 class="guide__title" id="guide-title">Helix Codex in four moves</h2>
+      <p class="guide__body">
+        Everything you do here is recorded, and anything that changes shared state
+        waits for a second person to approve it. That is the whole shape of the
+        product. Walk these four screens once and you have seen all of it.
+      </p>
+    </div>
+    <button class="btn btn--ghost btn--icon" type="button" data-guide-dismiss
+            aria-label="Dismiss this checklist">
+      {{ icons.icon("close") }}
+    </button>
+  </div>
+
+  <ol class="guide__steps">
+    {% if can_admin %}
+    <li class="guide__step" data-guide-step="admin">
+      <div class="guide__step-body">
+        <p class="guide__step-title"><a href="/app/admin/users">Set up your people</a></p>
+        <p class="guide__step-text">Create accounts, assign roles and decide what each role may touch.</p>
+      </div>
+    </li>
+    {% endif %}
+    <li class="guide__step" data-guide-step="docs">
+      <div class="guide__step-body">
+        <p class="guide__step-title"><a href="/app/docs">Write down how things work</a></p>
+        <p class="guide__step-text">Notes, SOPs and policies. Every edit keeps a version you can restore.</p>
+      </div>
+    </li>
+    <li class="guide__step" data-guide-step="tasks">
+      <div class="guide__step-body">
+        <p class="guide__step-title"><a href="/app/tasks">Put the work on the board</a></p>
+        <p class="guide__step-text">Open, doing, done. Drag a card or use the status control on touch.</p>
+      </div>
+    </li>
+    <li class="guide__step" data-guide-step="ops">
+      <div class="guide__step-body">
+        <p class="guide__step-title"><a href="/app/ops">Watch the approval gate</a></p>
+        <p class="guide__step-text">Requests arrive here, wait for a decision, and only then run.</p>
+      </div>
+    </li>
+    <li class="guide__step" data-guide-step="memory">
+      <div class="guide__step-body">
+        <p class="guide__step-title"><a href="/app/memory">See what is remembered about you</a></p>
+        <p class="guide__step-text">Propose a change to your own memory and follow it through review.</p>
+      </div>
+    </li>
+  </ol>
+
+  <div class="guide__foot">
+    <span class="guide__progress" data-guide-progress>0 of {{ 5 if can_admin else 4 }} explored</span>
+    <button class="btn btn--ghost btn--small" type="button" data-guide-dismiss>
+      Hide this
+    </button>
+    <a class="btn btn--ghost btn--small" href="/app/kb">
+      {{ icons.icon("kb") }} Browse the knowledge base
+    </a>
+  </div>
+</section>
+<script>
+  try {
+    if (localStorage.getItem("helix-codex:guide-dismissed")) {
+      document.currentScript.parentElement.hidden = true;
+    }
+  } catch (e) {}
+</script>

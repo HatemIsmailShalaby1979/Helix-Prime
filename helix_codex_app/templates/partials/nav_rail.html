@@ -1,14 +1,45 @@
-<nav class="nav-rail" aria-label="Sections">
-  <span class="nav-rail__label">Sections</span>
-  <a class="nav-rail__item{% if active_nav == 'home' %} nav-rail__item--active{% endif %}" href="/app">Home</a>
-  {% if account and account.role_id in ('owner', 'manager') %}
-  <a class="nav-rail__item{% if active_nav == 'admin' %} nav-rail__item--active{% endif %}" href="/app/admin">Admin</a>
+{% import "partials/icons.html" as icons %}
+{% import "partials/nav_data.html" as nav %}
+{% set here = active_nav | default("") %}
+{% set role = acct.role_id if acct else "" %}
+{#- The control plane promises to carry no form at all, so the shared sign-out
+    control is withheld there; every other section keeps it. -#}
+{% set may_sign_out = acct and here != "control" %}
+<nav class="nav-rail" aria-label="All sections">
+  {% for group in nav.NAV_GROUPS %}
+  {% set gate = namespace(shown=0) %}
+  {% for item in group["items"] %}{% if not item.roles or role in item.roles %}{% set gate.shown = gate.shown + 1 %}{% endif %}{% endfor %}
+  {% if gate.shown %}
+  <div class="nav-rail__group">
+    <span class="nav-rail__label">{{ group["label"] }}</span>
+    {% for item in group["items"] %}
+    {% if not item.roles or role in item.roles %}
+    <a class="nav-rail__item{% if here == item.key %} nav-rail__item--active{% endif %}"
+       href="{{ item.href }}"
+       title="{{ item.note }}"{% if here == item.key %} aria-current="page"{% endif %}>
+      {{ icons.icon(item.icon) }}
+      <span>{{ item.label }}</span>
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
   {% endif %}
-  <a class="nav-rail__item{% if active_nav == 'chat' %} nav-rail__item--active{% endif %}" href="/app/chat">Chat</a>
-  <a class="nav-rail__item{% if active_nav == 'notifications' %} nav-rail__item--active{% endif %}" href="/app/notifications">Notifications</a>
-  <a class="nav-rail__item{% if active_nav == 'docs' %} nav-rail__item--active{% endif %}" href="/app/docs">Docs</a>
-  <a class="nav-rail__item{% if active_nav == 'tasks' %} nav-rail__item--active{% endif %}" href="/app/tasks">Tasks</a>
-  <a class="nav-rail__item{% if active_nav == 'calendar' %} nav-rail__item--active{% endif %}" href="/app/calendar">Calendar</a>
-  <a class="nav-rail__item{% if active_nav == 'attendance' %} nav-rail__item--active{% endif %}" href="/app/attendance">Attendance</a>
-  <span class="nav-rail__item nav-rail__item--disabled" aria-disabled="true">More</span>
+  {% endfor %}
+
+  {% if may_sign_out %}
+  <div class="nav-rail__group nav-rail__foot">
+    <span class="nav-rail__label">Signed in</span>
+    <p class="nav-rail__who">
+      <strong>{{ acct.display_name or acct.username }}</strong>
+      <span>{{ acct.role_id or "member" }}</span>
+    </p>
+    <form method="post" action="/app/auth/logout" hx-post="/app/auth/logout"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'>
+      <button class="nav-rail__item nav-rail__item--button" type="submit">
+        {{ icons.icon("logout") }}
+        <span>Sign out</span>
+      </button>
+    </form>
+  </div>
+  {% endif %}
 </nav>

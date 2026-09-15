@@ -5,6 +5,7 @@
     <p class="punch-clock__since">Since {{ punch.punched_at }}</p>
     {% else %}
     <p class="punch-clock__status punch-clock__status--off">You are off the clock.</p>
+    <p class="punch-clock__since">Clock in to start today's record.</p>
     {% endif %}
   </div>
   <form class="punch-clock__form" hx-post="/app/api/attendance/punch"
@@ -14,5 +15,5 @@
     <input type="hidden" name="source" value="web">
     <button class="punch-clock__button" type="submit">{{ punch.label }}</button>
   </form>
-  <p class="punch-clock__total">Today: <strong>{{ today_minutes }}</strong> min</p>
+  <p class="punch-clock__total">Today <strong>{{ today_minutes }}</strong> min</p>
 </section>

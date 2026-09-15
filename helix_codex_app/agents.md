@@ -48,7 +48,7 @@ App-specific rules:
 | Field | Value |
 |---|---|
 | Current step | **P5 IN PROGRESS** — P5.1 and P5.2 complete; next prompt P5.3 |
-| Baseline test count | 1182 (full suite **1182 passed, 0 failed** at P4.4). P5.1 adds 6 tests, P5.2 adds 13 → **1201 expected**; the full-suite re-run is still pending, so the P5 figure is computed, not yet observed. |
+| Baseline test count | 1182 (full suite **1182 passed, 0 failed** at P4.4). P5.1 adds 6 tests, P5.2 adds 13 → **1201 expected**; the full-suite re-run is still pending, so the P5 figure is computed, not yet observed. See the P5.1 note on why the full suite could not be run in that session. |
 | Last commit | `8e6b79d` feat(app): add per-account governed memory stores |
 | Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1**, **P5.2** |
 
@@ -894,6 +894,15 @@ App-specific rules:
       fail-closed guarantees are asserted in one place each.
 
 ### P5 — Per-user metacognitive memory (status: IN PROGRESS — P5.1, P5.2 done)
+
+> **Verification note for P5.1/P5.2 (2026-09-15).** The full suite could not be run in the session
+> that wrote these two steps: this environment kills detached processes and caps a single command at
+> 10 minutes, while the suite needs roughly 26. What was run instead: the two parent modules P5.1
+> touches (`tests/test_metacognition.py` + `tests/test_governed_memory.py`) — **31/31 pass**, and
+> proven to fail 4/4 before the fix; the new P5.2 module — **13/13 pass**; and `tests/helix_codex_app/`
+> to a 9-minute cutoff, reaching ~40% with **zero failures**. Ruff check and format are clean on every
+> touched file. **The next session should run the full suite and record the real number here** — the
+> 1201 above is arithmetic, not an observation.
 
 - [x] **P5.1** Fix the two parent defects (Prompt 24) — **COMPLETE.**
       **Scoping correction — the prompt pack was wrong here.** Prompt 24 scoped both fixes to

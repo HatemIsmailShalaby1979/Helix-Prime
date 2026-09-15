@@ -48,7 +48,7 @@ App-specific rules:
 | Field | Value |
 |---|---|
 | Current step | **P6 COMPLETE** — next prompt P7.1 (low-code capability loader) |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed, 1326 collected (36 min)** — 689 in `tests/helix_codex_app/`, 637 in the parent suite. The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
 | Last commit | `bb4c3af` test(app): prove cockpit gating and ops lifecycle, close phase p6 |
 | Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3**, **P6.4**, **P6.5** |
 
@@ -1099,14 +1099,14 @@ App-specific rules:
       `8017219`.
 - [x] **P6.5** Close out P6 (Prompt 34) — **COMPLETE.**
       Three proof modules, all through the real app with real sessions on a temporary
-      database: `test_cockpit_requires_permission.py` (14), `test_cockpit_cross_tenant.py`
+      database: `test_cockpit_requires_permission.py` (4), `test_cockpit_cross_tenant.py`
       (4), `test_ops_lifecycle.py` (6). The cockpit gate is exercised at all three layers
       — the router dependency, the service re-check, and the bridge's own `policy_bridge`
       call — and the cross-tenant proof pins the workspace state the cockpit reads
       alongside the numbers, because the pack's synthetic aggregates are seeded from a
       fixed RNG and "the numbers differ" would be a test that passes for the wrong reason.
       `governance.md` §7 entry 22 and `repomap.md` updated with the pointers.
-      Full suite **1326 passed, 0 failed** (1326 collected, 36 min); ruff check + format
+      Full suite **1326 passed, 0 failed** (30:37); ruff check + format
       clean on the three new modules. Commit `bb4c3af`, recorded in the status table by
       `docs(app): record the p6.5 checkpoint`.
 

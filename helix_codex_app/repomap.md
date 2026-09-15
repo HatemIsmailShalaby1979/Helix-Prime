@@ -301,7 +301,7 @@ correlation-id contract), `test_cockpit_owner.py` (P6.3: the five owner KPIs, th
 at-risk list, the approval queue, the data-mode badge, and the foreign-tenant empty
 queue), `test_cockpit_views.py` (P6.4: coach, parent, and control-plane selectors and
 the audit panel's tenant filter), and the three P6.5 close-out modules:
-`test_cockpit_requires_permission.py` (14: every cockpit route returns 403 for an
+`test_cockpit_requires_permission.py` (4: every cockpit route returns 403 for an
 employee, a contractor, and an external account, and 200 for a manager and an owner;
 a refused role gets the same refusal with or without a session and on every path
 shape), `test_cockpit_cross_tenant.py` (4: the connector context is built from the
@@ -311,7 +311,7 @@ by tenant id), and `test_ops_lifecycle.py` (6: submit → approve → close keep
 correlation id, a refusal stops the workflow to dead_letter with the id intact, a
 refused workflow cannot be executed, the submitter cannot decide their own, each
 workflow gets its own correlation id, and the correlation id lands in the audit
-trail). Suite at the P6.5 checkpoint: **1216 passed, 0 failed**.
+trail). Suite at the P6.5 checkpoint: **1326 passed, 0 failed**.
 
 ## How to add a module
 Follow the proven `router → service → repository` shape from `server/features/workflows/`. Add

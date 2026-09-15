@@ -28,6 +28,12 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   parent migration head.
 - `scripts/check_app_migration_drift.py` — builds one database via `db.py` and one via
   `alembic upgrade head` and proves their `sqlite_master` contents agree, exit 0 or 1.
+- `scripts/backup_app.py` and `scripts/restore_app.py` (P7.3) — backup copies `app.db` +
+  `memory_stores/` into `target/state/helix_codex_app/` with a `backup-manifest.json`
+  (node count + memory-chain hashes), reusing `release/backup._sqlite_backup`;
+  restore copies the backup into a CLEAN target, then re-verifies the node count
+  and each memory chain via `integration.memory_bridge.verify_store_file`, failing
+  loudly (exit 1) on any mismatch.
 - `security/` — the app-local identity and permission layer. `passwords.py` (stdlib scrypt, SOC-less
   `scrypt$n$r$p$salt$hash` envelope), `accounts.py` (Domain, OrgUnit, Account dataclasses plus
   `AccountRepository`; every account read takes tenant scope from the owning domain, never the
@@ -54,9 +60,12 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   baseline with `owning_role_id="ops_gm"`, lazily imported at call time, and raises
   `EngineUnavailableError` on import failure, a non-None `result.error`, or a missing
   `optimal_agents` figure — an unavailable engine never yields an empty/degraded answer).
-  `memory_bridge.py` (live, P5.3: `AccountMemoryStore`, the per-account governed memory
+  `memory_bridge.py` (live, P5.3 + P7.3: `AccountMemoryStore`, the per-account governed memory
   provider — `resolve_store_path`, `safe_component`, the store's read/verify/record/
-  rollback surface; the org store is the same class with `account_id=None`).
+  rollback surface; the org store is the same class with `account_id=None`. `verify_store_file`
+  is the one function that opens a `GovernedMemory` by explicit path without an Account — it
+  serves the evidence export and backup/restore verification, keeping all other memory access
+  behind the Account scoping).
   `metacognition_bridge.py` (live, P5.3: `AccountMetacognition`, the per-account proposal
   engine — `propose`, `evaluate`, `approve`, `reject`, `rollback`,
   `generate_evidence_report`, `verify_chain`).
@@ -77,7 +86,12 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
 - `modules/` — the feature modules, one folder per vertical. `identity` (live: the `/app/auth`
   login/me/logout/password surface plus LoginService), `admin` (live: the `/app/admin`
   users/domains/org-units/capabilities/limits surface plus AdminService, owner whole-domain,
-  manager own-org-unit only, every write through record_node), `messaging` (live, P2.2:
+  manager own-org-unit only, every write through record_node; plus `evidence.py` (P7.3):
+  `build_evidence_zip(conn, *, tenant_id, db_path)` builds the owner-only
+  `/app/admin/evidence/export` dossier — the tenant's governed `nodes` audit trail
+  (insertion-ordered), node counts by kind, every registered memory store's chain
+  verification through `verify_store_file`, and the release manifest, zipped with a
+  plain-text README; never a password hash, session token, or raw secret), `messaging` (live, P2.2:
   the `/app/chat` list + thread screens, the conversations/messages/read JSON API, and the
   conversation SSE stream, all `router → service → repository` over the P2.1 schemas) and
   `notifications` (live, P2.3: the `/app/notifications` screen, the notifications/read/read-all
@@ -164,7 +178,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | App home (live) | `/app` | session |
 | Static (live) | `/static` | none |
 | Auth (live) | `/app/auth/login`, `/me`, `/logout`, `/password` | none for GET/POST `/login`; session + CSRF for the rest |
-| Admin (live, P1.6) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units` | `admin.users` |
+| Admin (live, P1.6; evidence P7.3) | `/app/admin`, `/users`, `/users/{id}`, `/domains`, `/org-units`, `/evidence/export` | `admin.users`; the evidence export is owner-only (inline role check → `PermissionDenied`, no new permission key) |
 | Messaging (live, P2.2) | `/app/chat`, `/app/chat/{id}`, `/app/api/conversations`, `/app/api/conversations/{id}/messages`, `/app/api/conversations/{id}/read`, `/app/api/conversations/{id}/stream` | session; CSRF on posts; membership per route (stream = 403 for non-members) |
 | Notifications (live, P2.3) | `/app/notifications`, `/app/api/notifications`, `/app/api/notifications/read-all`, `/app/api/notifications/{id}/read`, `/app/api/notifications/stream` | session; CSRF on the read/read-all posts |
 | Docs (live, P3.2) | `/app/docs`, `/app/kb`, `/app/api/documents`, `/app/api/documents/{id}`, `/app/api/documents/{id}/blocks`, `/app/api/documents/{id}/blocks/{block_id}`, `/app/api/documents/{id}/versions`, `/app/api/documents/{id}/versions/{n}/restore` | `docs.read` at the boundary; `docs.write` + CSRF on the mutating routes; sop/policy doc_type is manager-or-owner only; published (sop/kb/policy) visible to all tenant members, notes owner/manager only |
@@ -323,6 +337,21 @@ correlation id, a refusal stops the workflow to dead_letter with the id intact, 
 refused workflow cannot be executed, the submitter cannot decide their own, each
 workflow gets its own correlation id, and the correlation id lands in the audit
 trail). Suite at the P6.5 checkpoint: **1326 passed, 0 failed**.
+
+P7 added `test_pack_loader.py` (P7.1: 16 — every loader invariant raises its typed error
+and loads on its positive case; ownership clash; manifest structure refusals; register-node
+envelope; the real sports_academy manifest gating owner/coach; the two admin POSTs)
+and `test_evidence_backup_restore.py` (P7.3: 18 — the zip contains all expected entries
+with the schema-version README and never a password hash/session token/raw secret;
+the audit trail round-trips insertion-ordered with envelope + run + workflow fields intact;
+node counts match; the memory-store verification section reports chain results per store,
+the release manifest is present, an empty tenant still gets a valid dossier; the HTTP route
+is 200 with the right Content-Disposition for an owner, 403 for a manager, 401 unauth;
+`verify_store_file` handles an intact chain, a missing file (trivially verifies as empty),
+and a tampered chain (fails); backup writes `backup-manifest.json` with the node count and
+reports every memory chain verified; restore round-trips the node count and the backup
+created under a pre-existing target dir still has its manifest readable). Suite at the
+P7.3 checkpoint: **1377 passed, 0 failed** (740 in `tests/helix_codex_app/`, 637 parent).
 
 ## How to add a module
 Follow the proven `router → service → repository` shape from `server/features/workflows/`. Add

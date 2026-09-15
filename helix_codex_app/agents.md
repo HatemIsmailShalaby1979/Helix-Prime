@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P7.2 COMPLETE** — next prompt P7.3 (evidence export, backup, restore) |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
-| Last commit | (commit SHA set at P7.2 feature commit) |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, **P7.2** |
+| Current step | **P7.3 COMPLETE** — next prompt P7.4 (package and deploy) |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). Full-suite re-run at the P7.3 checkpoint: **1377 passed, 0 failed** (35:14) — 740 in `tests/helix_codex_app/`, 637 in the parent suite (18 new evidence/backup/restore tests). The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
+| Last commit | `15fc1ec` feat(app): add evidence export, backup, and restore (feature commit; P7.3 docs checkpoint follows) |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, **P7.3** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1161,8 +1161,63 @@ App-specific rules:
       (newer line-length split decisions; they were formatted by an older ruff) — left untouched
       to keep this step's diff minimal. The seam rule holds: `modules/lowcode` imports only
       app-local packages plus `integration/` (the packs seam), never a parent internal directly.
-- [ ] P7.2 App release gates (Prompt 36)
-- [ ] P7.3 Evidence export, backup, and restore (Prompt 37)
+- [x] **P7.2** App release gates + pilot profile (Prompt 36) — **COMPLETE.**
+      `release/gate.py` gained six app gates behind app-import guards (each builds a temporary
+      app and answers bool+detail): `app_auth_boundary` (every `/app` route except healthz and
+      the static mount runs the guard), `app_session_fail_closed` (a revoked AND an expired
+      session both fail, a live one passes, exercised through the real `SessionStore`),
+      `app_tenant_isolation` (two tenants never see each other's rows and a cross-tenant login
+      fails), `app_memory_store_isolation` (one account's governed memory never appears in
+      another's store, through `integration.memory_bridge`), `app_migration_drift`
+      (`helix_codex_app/scripts/check_app_migration_drift.py::check_drift`, token-for-token
+      db.py vs alembic head), and `app_pwa_assets` (manifest, icons, service worker, offline
+      page present). `release/profiles.py` + `release/release-profiles.yaml` (the YAML is the
+      hand-editable source, the module falls back to inline defaults) register the **`app_pilot`**
+      profile — required gates: repository_state, configuration_validation, startup_readiness,
+      data_isolation, audit_integrity + the six app gates; the `production` profile explicitly
+      adds production-only gates (signed_production_evidence, certified_data_isolation,
+      external_observer_audit, …) that C8 does NOT satisfy, so the gate can only ever emit
+      CONTROLLED_PILOT_READY or PRODUCTION_CANDIDATE, never an unqualified production label.
+      Tests: `tests/helix_codex_app/test_app_release_gates.py` (17) covering every app gate's
+      pass AND can-fail path plus the profile wiring. Full suite **1359 passed, 0 failed**
+      (26:40); ruff check clean + format clean. Feature commit `0a95860`.
+- [x] **P7.3** Evidence export, backup, and restore (Prompt 37) — **COMPLETE.**
+      `helix_codex_app/modules/admin/evidence.py` — `build_evidence_zip(conn, *, tenant_id,
+      db_path) -> bytes`; the tenant's evidence dossier zipped as: README.txt (schema version
+      1.0 + what is inside + the never-includes note), app-audit-trail.json (the governed
+      `nodes` rows, tenant-scoped, insertion-ordered, node_id/kind/classification/nature/
+      created_by/correlation_id/body intact), node-counts-by-kind.json,
+      memory-store-verification.json (every registered store in `db.list_stores`, each checked
+      through the seam's `verify_store_file` — intact, missing, or FAILED), and
+      release-manifest.json. `helix_codex_app/modules/admin/router.py` — owner-only
+      `GET /app/admin/evidence/export`: an inline `account.role_id != "owner"` check raises
+      `PermissionDenied` before anything is built (a manager who manages users still cannot
+      read the whole dossier); response is `application/zip` with
+      `Content-Disposition: attachment; filename="evidence-export.zip"`. No new permission
+      key (avoided the 65-pair permission-test churn); the admin router keeps
+      `admin.users` at the boundary and the route's owner check rides on top. The zip is a
+      bundle of governed/shipped data only — it never contains a password hash, session
+      token, or raw secret (asserted by test). `integration/memory_bridge.py` gained
+      `verify_store_file(path)` — the ONE function that opens a `GovernedMemory` by explicit
+      path without an Account, kept out of `control_plane`/`engine` imports (it opens the
+      store file directly through the seam, satisfying the prompt's "verify the memory chain"
+      requirement while the seam rule holds). `helix_codex_app/scripts/backup_app.py` —
+      copies `app.db` via `release.backup._sqlite_backup` + the `memory_stores/` tree into
+      `target/state/helix_codex_app/`, writes `backup-manifest.json` (backup_version 1.0,
+      created_at via `scripts.export_evidence_pack.now_iso`, captured_state, node_count,
+      memory_chains with per-store verified + chain_head); exit 0/1. `restore_app.py` —
+      restores into a CLEAN target (`release.backup.restore_state`), then VERIFIES the
+      restored node count and every memory chain against the manifest via `verify_store_file`,
+      exiting 1 loudly on any mismatch — an unverified restore is a failure, not a warning.
+      (Parent imports are module-level-stdlib + function-local, matching
+      `check_app_migration_drift.py`, so no E402.) Tests:
+      `tests/helix_codex_app/test_evidence_backup_restore.py` (18) — zip entries + schema
+      README, round-tripped audit rows, node counts, store verification section, release
+      manifest present, empty tenant still gets a valid dossier, never-contains-secret,
+      HTTP owner 200 + manager 403 + unauth 401, `verify_store_file` intact/missing/tampered,
+      backup manifest + chains verified, restore node-count round-trip. Full suite
+      **1377 passed, 0 failed** (35:14); ruff check clean + format clean on all touched
+      files. Feature commit `15fc1ec`.
 - [ ] P7.4 Package and deploy (Prompt 38)
 - [ ] P7.5 Signoff: the full gate and the v1 record (Prompt 39)
 

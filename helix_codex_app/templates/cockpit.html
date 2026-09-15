@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Cockpit — Helix Codex{% endblock %}
+{% block content %}
+<div class="cockpit-page">
+  <div class="calendar-page__header">
+    <h1>The Cockpit</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">The cockpit could not be computed, so nothing is shown rather than something
+    stale. {{ error.error.message }}</p>
+  {% else %}
+
+  <section class="cockpit-cards">
+    {% for card in cards %}
+    {% include "partials/cockpit_card.html" %}
+    {% endfor %}
+  </section>
+
+  <p class="card">
+    <a href="/app/cockpit/owner">Open the full owner board</a>
+  </p>
+
+  {% if sections %}
+  <section class="memory-section">
+    <h2>Sections from installed packs</h2>
+    <ul class="section-list">
+      {% for section in sections %}
+      <li class="section-link">
+        {{ section.label }} — {{ section.pack }}
+        {% if section.simulated_only %} (simulated data only){% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% endif %}
+</div>
+{% endblock %}

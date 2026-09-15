@@ -26,6 +26,7 @@ from helix_codex_app.modules.admin.router import admin_router
 from helix_codex_app.modules.attendance.router import attendance_router
 from helix_codex_app.modules.calendar.router import calendar_router
 from helix_codex_app.modules.calendar.service import CalendarService
+from helix_codex_app.modules.cockpit.router import cockpit_router
 from helix_codex_app.modules.docs.router import docs_router
 from helix_codex_app.modules.identity.router import identity_router
 from helix_codex_app.modules.memory.router import memory_router
@@ -142,6 +143,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app.include_router(attendance_router)
     app.include_router(memory_router)
     app.include_router(ops_router)
+    app.include_router(cockpit_router)
     app.include_router(app_router)
     app.include_router(csrf_router)
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

@@ -1,0 +1,9 @@
+<article class="card cockpit-card">
+  <p class="cockpit-card__value">{{ card.value }}</p>
+  <h3 class="cockpit-card__label">{{ card.label }}</h3>
+  <p class="home-greet__role">
+    target {{ card.target }}{% if card.met is not none %} ·
+    {{ "on target" if card.met else "below target" }}{% endif %}
+  </p>
+  {% include "partials/data_mode_badge.html" %}
+</article>

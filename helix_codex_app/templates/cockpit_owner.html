@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Owner board — Cockpit{% endblock %}
+{% block content %}
+<div class="cockpit-page">
+  <div class="calendar-page__header">
+    <h1>Owner board</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">{{ error.error.message }}</p>
+  {% else %}
+
+  <section class="cockpit-cards">
+    {% for card in cards %}
+    {% include "partials/cockpit_card.html" %}
+    {% endfor %}
+  </section>
+
+  <p class="home-greet__role">
+    {{ sessions_total }} sessions in the window · as of {{ summary.as_of }}
+    {% if enrollment %}· enrollment: {{ enrollment.inquiry }} inquiry,
+    {{ enrollment.trial }} trial{% endif %}
+  </p>
+
+  <section class="memory-section">
+    <h2>At-risk athletes</h2>
+    {% if at_risk %}
+    <ul class="section-list">
+      {% for athlete in at_risk %}
+      <li class="section-link">
+        {{ athlete.athlete_id }} — {{ "%.0f"|format(athlete.attendance_rate * 100) }}%
+        ({{ athlete.attended }}/{{ athlete.expected }})
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card">Nobody is flagged right now.</p>
+    {% endif %}
+  </section>
+
+  <section class="memory-section">
+    <h2>Waiting on a decision</h2>
+    {% if approval_queue %}
+    {% for card in approval_queue %}
+    {% include "partials/workflow_card.html" %}
+    {% endfor %}
+    {% else %}
+    <p class="card">Nothing is waiting at the gate.</p>
+    {% endif %}
+  </section>
+
+  {% endif %}
+</div>
+{% endblock %}

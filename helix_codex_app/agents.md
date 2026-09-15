@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P6 COMPLETE** — next prompt P7.1 (low-code capability loader) |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
-| Last commit | `bb4c3af` test(app): prove cockpit gating and ops lifecycle, close phase p6 |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3**, **P6.4**, **P6.5** |
+| Current step | **P7.1 COMPLETE** — next prompt P7.2 (app release gates) |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
+| Last commit | `dceab76` feat(app): add capability pack loader with enforced invariants (feature commit; P7.1 docs checkpoint follows) |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, **P7.1** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1110,9 +1110,57 @@ App-specific rules:
       clean on the three new modules. Commit `bb4c3af`, recorded in the status table by
       `docs(app): record the p6.5 checkpoint`.
 
-### P7 — Low-code, release, packaging, signoff (status: NOT STARTED)
+### P7 — Low-code, release, packaging, signoff (status: P7.1 COMPLETE)
 
-- [ ] P7.1 The low-code capability loader (Prompt 35)
+- [x] **P7.1** The low-code capability loader (Prompt 35) — **COMPLETE.**
+      `capabilities/sports_academy/capability.yaml` — the first capability manifest, verbatim to
+      master plan §10: schema_version 1.0, min_core_version 0.9.0, read_only_start,
+      synthetic_data_only, production_readiness NOT_ESTABLISHED; sections **owner** and **coach**
+      (both gated by `cockpit.view`); roles/workflows/policies/connector_contracts empty.
+      `helix_codex_app/modules/lowcode/{__init__,pack_loader,section_registry,router}.py` — the
+      loader. `pack_loader.py` parses the YAML into `CapabilityManifest` (frozen dataclass with
+      `SectionDecl`/`RoleDecl`/`WorkflowDecl`; ontology from unregistered ids answers
+      `DeclaredEntity`, metrics and runtime RAISE, so an unimplemented surface refuses loudly,
+      never serves a stub), validates semver for version/min_core_version, and enforces FIVE
+      invariants before anything may register, each a typed `PackValidationError(AppError)` → 400:
+      (1) a pack role may not declare a `max_financial_amount` wider than the same id's core role
+      (`RoleLimitExceedsCoreError`; `integration/packs.py::core_role_financial_limit` reads
+      `organization/role_catalog.py` — ops_gm is 20000, a widening 50000 is refused);
+      (2) a capability may be owned by the core or ONE registered pack, never two
+      (`CapabilityAlreadyOwnedError`; ownership = declared `owned_capabilities` across roles,
+      tracked per registered pack in module state; a section's `required_capability` is a
+      dependency, not ownership); (3) live data requires production_readiness established
+      (`LiveDataBelowEstablishedError`); (4) a manifest asking for a newer core than
+      `CORE_VERSION="0.9.0"` is refused (`CoreVersionTooOldError`); (5) a workflow may not
+      require approval from its own actor (`SelfReviewError`). Structural failures (missing key,
+      non-semver) raise `ManifestStructureError`. `register_pack` upserts the `capability_packs`
+      row, one `sections` row per declared section, one governed `capability_pack` node and one
+      `section` node per section through `record_node()` with `pack-`/`section-` correlation ids
+      and the account envelope (fallback "platform"/"capability_loader"). `section_registry.
+      sections_for_permissions(conn, perms)` replaces the P6.1 hardcoded section list, LEFT
+      JOINing `capability_packs` so a `simulated_only` pack's sections render honestly flagged;
+      `cockpit.service.sections` uses it. Routes (all behind `current_account`, writes also
+      `require_csrf`): GET `/app/api/sections`, GET `/app/api/packs`, POST `/app/admin/sections`
+      `{pack}` and POST `/app/admin/packs/reload` — both writes gated `packs.manage`
+      (owner-only). `integration/packs.py` gained `pack_manifest_path`, `manifest_packs`
+      (`["sports_academy"]`), `packs_without_manifest` (`["restaurant"]` — it has no
+      capability.yaml yet), `core_role_financial_limit`. Tests:
+      `tests/helix_codex_app/test_pack_loader.py` (16) — every invariant raises its typed error
+      AND loads on its positive case; the cross-pack ownership clash (two ids, one owned
+      capability); missing-key and non-semver refusals; a throwaway `print_shop` manifest
+      registering its pack row, sections, and both node kinds with the full envelope and the
+      right permission set; the REAL sports_academy manifest registers and its owner/coach
+      sections serve with the correct gates (employee 403, manager 200); the two admin POSTs are
+      owner-only and CSRF-gated (403 for employee/manager/no-CSRF, 201 for the owner, 404
+      unknown pack, reload → registered `["sports_academy"]`, section_count 2, skipped
+      `["restaurant"]`); the low-code surface is 401 unauth. Full suite **1342 passed, 0 failed**
+      (26:46); ruff check clean + format clean on every touched file. Feature commit `dceab76`.
+      **Open findings (pre-existing, not caused here):** three P6.5 test modules
+      (`test_cockpit_cross_tenant.py`, `test_cockpit_requires_permission.py`,
+      `test_ops_lifecycle.py`) are NOT `ruff format --check`-clean under the installed ruff
+      (newer line-length split decisions; they were formatted by an older ruff) — left untouched
+      to keep this step's diff minimal. The seam rule holds: `modules/lowcode` imports only
+      app-local packages plus `integration/` (the packs seam), never a parent internal directly.
 - [ ] P7.2 App release gates (Prompt 36)
 - [ ] P7.3 Evidence export, backup, and restore (Prompt 37)
 - [ ] P7.4 Package and deploy (Prompt 38)

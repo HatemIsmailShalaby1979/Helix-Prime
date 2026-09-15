@@ -64,9 +64,12 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `picker_options`, `as_of_now`, `_context` — calls the pack's own `compute_*` functions
   and hands the dicts to Jinja, so no dashboard logic is rewritten; the data-mode badge
   is the pack's responsibility and the bridge never fabricates a live figure).
-  `packs.py` (live, P6.1: `pack_names`, `pack_metadata`, `list_packs`,
+  `packs.py` (live, P6.1 + P7.1: `pack_names`, `pack_metadata`, `list_packs`,
   `pack_sections`, `all_sections` — discovers packs by reading each pack's own metadata
-  function and derives a section per cockpit view, each gated by `cockpit.view`).
+  function and derives a section per cockpit view, each gated by `cockpit.view`; P7.1 adds
+  the manifest surface `pack_manifest_path`, `manifest_packs`, `packs_without_manifest`,
+  and `core_role_financial_limit(role_id)` reading `organization/role_catalog.py` for the
+  loader's limit invariant).
 - `templating.py` — the one shared template renderer. Reads the CSRF token from
   `request.state.session` and the settings off `request.app.state`, so every route renders with
   the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,
@@ -117,8 +120,16 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   first), doc_type note/sop/kb/policy with manager-only sop/policy and note
   owner/manager visibility; router → service → repository, one governed
   `document`/`block`/`version` node per write with a fresh `doc-<uuid4>`
-  correlation id. Leaves `memory`, `ops`, `cockpit`,
-  `lowcode` arriving with their phases. `rooms/` and `mail/` are v2 stubs.
+  correlation id. Also `lowcode` (live, P7.1: the capability loader — `pack_loader.py`
+  parses `capability.yaml` manifests into `CapabilityManifest` and enforces the five
+  invariants before registration, `section_registry.py` serves `sections_for_permissions`
+  from the `sections` + `capability_packs` tables (the table-driven section list the cockpit
+  now reads), `router.py` exposes GET `/app/api/sections`, GET `/app/api/packs`, POST
+  `/app/admin/sections` and POST `/app/admin/packs/reload` — the two writes gated
+  `packs.manage`, owner-only — and the first real manifest
+  `capabilities/sports_academy/capability.yaml` registers `owner` + `coach`). Leaves
+  `memory`, `ops`, `cockpit`
+  arriving with their phases. `rooms/` and `mail/` are v2 stubs.
 - `templates/` — the Jinja shell. `base.html`, `shell/`, `partials/`, `auth/` (login,
   password, me), and `admin/` (index, users, user_detail, domains, org_units) exist. The
   per-module pages: `tasks.html` + `task_detail.html`, `calendar.html` +
@@ -164,7 +175,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Memory (live, P5.3–P5.6) | `/app/memory`, `/app/memory/proposals`, `/app/memory/proposals/{id}`, `/app/memory/ledger/verify`, `/app/memory/promotions`, `/app/api/memory/proposals`, `/app/api/memory/proposals/{id}/evaluate`, `/approve`, `/reject`, `/rollback`, `/app/api/memory/promotions`, `/app/api/memory/promotions/{id}/approve`, `/reject`, `/rollback` | `memory.propose` at the boundary; `memory.review` + CSRF on the review and promotion routes. A proposal is only readable by its author, or by a reviewer in a different role; a same-role peer is told it does not exist. Promotion needs a manager or owner who is not the author |
 | Ops (live, P6.2) | `/app/ops`, `/app/ops/{engine}`, `/app/api/ops/workflows`, `/app/api/ops/workflows/{id}`, `/app/api/ops/workflows/{id}/approve`, `/app/api/ops/stream/{id}` | `ops.view` at the boundary; CSRF on the submit and decide routes; the stream is a tenant check before it opens, then a keep-alive loop |
 | Cockpit (live, P6.3–P6.4) | `/app/cockpit`, `/app/cockpit/owner`, `/app/cockpit/coach`, `/app/cockpit/parent`, `/app/cockpit/control-plane`, `/app/api/cockpit/summary` | `cockpit.view` at the boundary, re-checked in the service, and enforced by the bridge's own `policy_bridge` call |
-| Low-code (planned, P7) | `/app/api/sections`, `/app/api/packs` | `packs.manage` for writes |
+| Low-code (live, P7.1) | `/app/api/sections`, `/app/api/packs`, `/app/admin/sections`, `/app/admin/packs/reload` | session at the router boundary; the two admin POSTs also carry `packs.manage` (owner-only) + CSRF |
 
 Every `/app` route except health and static runs the account guard. Every non-GET `/app` route runs
 the CSRF check. Both are wired once at the router boundary, not per handler.

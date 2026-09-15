@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P6 IN PROGRESS** — P6.1 and P6.2 done; next prompt P6.3 |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests and P6.2 adds 10. A full-suite re-run is still owed. |
-| Last commit | `68bcd6a` feat(app): add operations section with governed approvals |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2** |
+| Current step | **P6 IN PROGRESS** — P6.1–P6.3 done; next prompt P6.4 |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests, P6.2 adds 10, P6.3 adds 9. A full-suite re-run is still owed. |
+| Last commit | `da166ca` feat(app): add owner cockpit cards behind role gate |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1064,7 +1064,23 @@ App-specific rules:
       database, real sessions) — a submit lands at the gate, a second person's approval moves it on,
       the submitter cannot approve their own, a refusal without a reason is refused, and the
       correlation id survives submit → approve → fetch. Commit `68bcd6a`.
-- [ ] P6.3 The cockpit, part one: owner cards (Prompt 32)
+- [x] **P6.3** The cockpit, part one: owner cards (Prompt 32) — **COMPLETE.**
+      `integration/cockpit_bridge.py` calls the pack's own `compute_*` functions and hands the
+      dictionaries to Jinja, so no dashboard logic is rewritten. `owner_summary`, `coach_summary`,
+      `parent_summary` and `picker_options` are all built; P6.3 wires the owner view, and the coach
+      and parent routes land in P6.4 as its own "wire the remaining routes" instruction says.
+      `modules/cockpit/{service,router}.py` — the landing, the owner board, and the summary API.
+      Templates `cockpit.html`, `cockpit_owner.html`, `partials/cockpit_card.html`; the data-mode
+      badge is on every card, and the at-risk list and the approval queue sit under the numbers.
+      **`cockpit.view` is enforced in all three places the prompt asked for:** the router dependency,
+      a re-check in the service before anything is computed, and a `policy_bridge` call inside the
+      bridge itself (riding on the ops GM's authority, since the cockpit is the operations surface
+      for the people accountable for it).
+      **No Streamlit import anywhere under `helix_codex_app/`** — verified by grep.
+      Tests: 9, including that the bridge returns *exactly* what a direct `compute_owner_dashboard`
+      call returns (so the numbers cannot drift from the pack), that an employee gets 403 on every
+      route, that the five labels render, and that a foreign tenant's owner sees an empty approval
+      queue. Commit `da166ca`.
 - [ ] P6.4 The cockpit, part two: coach, parent, control plane (Prompt 33)
 - [ ] P6.5 Close out P6 (Prompt 34)
 

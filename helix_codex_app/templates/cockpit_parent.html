@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Family view — Cockpit{% endblock %}
+{% block content %}
+<div class="cockpit-page">
+  <div class="calendar-page__header">
+    <h1>Family view</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">{{ error.error.message }}</p>
+  {% else %}
+
+  <form class="card" method="get" action="/app/cockpit/parent">
+    <label for="family_id">Family</label>
+    <select id="family_id" name="family_id">
+      {% for option in options %}
+      <option value="{{ option.id }}"{% if option.id == selected %} selected{% endif %}>
+        {{ option.label }}
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit">Show</button>
+  </form>
+
+  <section class="card">
+    <h2>{{ summary.family.primary_contact_name }}</h2>
+    <p class="home-greet__role">as of {{ summary.as_of }}</p>
+  </section>
+
+  <section class="memory-section">
+    <h2>Athletes</h2>
+    {% if summary.athletes %}
+    <ul class="section-list">
+      {% for athlete in summary.athletes %}
+      <li class="section-link">
+        {{ athlete.name }} · {{ athlete.program_id }} · {{ athlete.enrollment_status }}
+        {% set figures = summary.attendance_by_athlete.get(athlete.athlete_id) %}
+        {% if figures %}
+        — {{ figures.attended }}/{{ figures.expected }}
+        ({{ "%.0f"|format(figures.rate * 100) }}%)
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card">No athletes on this account.</p>
+    {% endif %}
+  </section>
+
+  <section class="memory-section">
+    <h2>Schedule</h2>
+    {% if summary.schedule %}
+    <ul class="section-list">
+      {% for session in summary.schedule %}
+      <li class="section-link">
+        {{ session.date }} · {{ session.start }}–{{ session.end }} · {{ session.program_id }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card">Nothing scheduled.</p>
+    {% endif %}
+  </section>
+
+  <section class="memory-section">
+    <h2>Fees</h2>
+    {% if summary.fees %}
+    <ul class="section-list">
+      {% for fee in summary.fees %}
+      <li class="section-link">
+        {{ fee.due_date }} · {{ "%.2f"|format(fee.amount) }} · {{ fee.status }}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card">Nothing outstanding.</p>
+    {% endif %}
+  </section>
+
+  {% endif %}
+</div>
+{% endblock %}

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from helix_codex_app.errors import PermissionDenied
+from helix_codex_app.errors import NotFoundError, PermissionDenied
 from helix_codex_app.integration import cockpit_bridge, engine_bridge, packs
 from helix_codex_app.modules.ops.service import workflow_card
 from helix_codex_app.security.accounts import Account
@@ -20,6 +20,8 @@ from helix_codex_app.security.permissions import has_permission
 
 COCKPIT_PERMISSION = "cockpit.view"
 APPROVAL_QUEUE_LIMIT = 10
+AUDIT_ENTRY_LIMIT = 20
+AUDIT_SCAN_LIMIT = 200
 
 KPI_LABELS: dict[str, str] = {
     "active_athletes": "Active athletes",
@@ -123,6 +125,64 @@ class CockpitService:
             "cards": owner["cards"],
             "sections": self.sections(account),
             "data_mode": owner["data_mode"],
+        }
+
+    def coach(self, account: Account, *, coach_id: str | None = None) -> dict[str, Any]:
+        """One coach's day. With no coach chosen, the first one on the list."""
+        self._require(account)
+        options = cockpit_bridge.picker_options(account)["coaches"]
+        selected = coach_id or (options[0]["id"] if options else "")
+        if not selected:
+            raise NotFoundError("no coaches are available in this workspace")
+        summary = cockpit_bridge.coach_summary(account, coach_id=selected)
+        return {
+            "summary": summary,
+            "options": options,
+            "selected": selected,
+            "data_mode": summary.get("data_mode", cockpit_bridge.DATA_MODE),
+        }
+
+    def parent(self, account: Account, *, family_id: str | None = None) -> dict[str, Any]:
+        """One family's view. With no family chosen, the first one on the list."""
+        self._require(account)
+        options = cockpit_bridge.picker_options(account)["families"]
+        selected = family_id or (options[0]["id"] if options else "")
+        if not selected:
+            raise NotFoundError("no families are available in this workspace")
+        summary = cockpit_bridge.parent_summary(account, family_id=selected)
+        return {
+            "summary": summary,
+            "options": options,
+            "selected": selected,
+            "data_mode": summary.get("data_mode", cockpit_bridge.DATA_MODE),
+        }
+
+    def control_plane(self, account: Account) -> dict[str, Any]:
+        """Engine status, the halt state, and this workspace's recent audit rows.
+
+        The audit panel is scoped to the account's own tenant by filtering the
+        core's audit rows down to the correlation ids this workspace actually
+        owns. The core keeps one audit store for the whole install, so an
+        unfiltered panel would show one client another client's activity.
+        """
+        self._require(account)
+        engine_bridge.authorize_read(account)
+        owned = {
+            workflow.correlation.correlation_id
+            for workflow in engine_bridge.list_workflows(account, limit=AUDIT_SCAN_LIMIT)
+        }
+        entries = [
+            row
+            for row in engine_bridge.recent_audit_entries(limit=AUDIT_SCAN_LIMIT)
+            if row.get("tenant_id") == account.tenant_id
+            and (row.get("correlation_id") in owned or row.get("workflow_id") is None)
+        ][:AUDIT_ENTRY_LIMIT]
+        return {
+            "engines": engine_bridge.list_engines(),
+            "kill_switch": engine_bridge.kill_switch_status(account.tenant_id),
+            "audit_entries": entries,
+            "audit_chain_verified": engine_bridge.audit_chain_verified(),
+            "data_mode": cockpit_bridge.DATA_MODE,
         }
 
     @staticmethod

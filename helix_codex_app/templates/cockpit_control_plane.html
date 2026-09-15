@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Control plane — Cockpit{% endblock %}
+{% block content %}
+<div class="cockpit-page">
+  <div class="calendar-page__header">
+    <h1>Control plane</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">{{ error.error.message }}</p>
+  {% else %}
+
+  <p class="card">This panel only reads. Engaging or releasing the halt is not offered here, and the
+    page has no form: a state change belongs in the operations section, behind its approval rail.</p>
+
+  <section class="memory-section">
+    <h2>Engines</h2>
+    {% for engine in engines %}
+    <div class="card engine-row">
+      <span class="proposal-card__state proposal-card__state--{{ engine.status }}">
+        {{ engine.status }}
+      </span>
+      <strong>{{ engine.name }}</strong>
+      <span class="home-greet__role">
+        {{ engine.registered_capabilities | length }} of {{ engine.capabilities | length }}
+        capabilities registered
+      </span>
+    </div>
+    {% endfor %}
+  </section>
+
+  <section class="card">
+    <h2>Halt state</h2>
+    <dl class="workflow-card__meta">
+      <dt>Engaged</dt>
+      <dd>{{ "yes" if kill_switch.engaged else "no" }}</dd>
+      <dt>Scope</dt>
+      <dd>{{ kill_switch.scope }}</dd>
+      {% if kill_switch.reason %}
+      <dt>Reason</dt>
+      <dd>{{ kill_switch.reason }}</dd>
+      {% endif %}
+      {% if kill_switch.actor %}
+      <dt>Engaged by</dt>
+      <dd>{{ kill_switch.actor }}</dd>
+      {% endif %}
+      {% if kill_switch.engaged_at %}
+      <dt>Since</dt>
+      <dd>{{ kill_switch.engaged_at }}</dd>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="card">
+    <h2>Audit chain</h2>
+    <p class="home-greet__role">
+      {{ "verified" if audit_chain_verified else "NOT verified" }}
+    </p>
+  </section>
+
+  <section class="memory-section">
+    <h2>Recent audit rows for this workspace</h2>
+    {% if audit_entries %}
+    <ul class="section-list">
+      {% for entry in audit_entries %}
+      <li class="section-link">
+        {{ entry.event_type or "audit" }} · {{ entry.correlation_id }}
+        {% if entry.created_at %} · {{ entry.created_at }}{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card">Nothing audited in this workspace yet.</p>
+    {% endif %}
+  </section>
+
+  {% endif %}
+</div>
+{% endblock %}

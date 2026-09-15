@@ -24,6 +24,7 @@ WFM_OWNING_ROLE = "ops_gm"
 OPS_CAPABILITY = "ops_execution"
 OPS_OWNING_ROLE = "ops_gm"
 ENGINE_IDS: tuple[str, ...] = ("wfm", "rta", "cx", "b2b", "personnel", "crm")
+AUDIT_SCAN_LIMIT = 500
 DEFAULT_APPROVAL_DECISION = "approve"
 # The app says approve/reject; the core's contract says approved/denied. The
 # translation lives here, at the boundary, so neither side has to learn the
@@ -45,6 +46,21 @@ def _engine() -> Any:
         return deps.get_provider().engine
     except RuntimeError as exc:
         raise EngineUnavailableError(f"the governed engine is not running: {exc}") from exc
+
+
+def authorize_read(account: Account) -> None:
+    """Policy gate for read-only core surfaces.
+
+    The cockpit service calls this before the control-plane panel reads the
+    process-wide engines and audit trail. It keeps the third gate in the bridge,
+    rather than relying only on the router and service checks.
+    """
+    policy_bridge.authorize_engine_call(
+        account,
+        capability=OPS_CAPABILITY,
+        action="read",
+        owning_role_id=OPS_OWNING_ROLE,
+    )
 
 
 def capability_map() -> dict[str, tuple[str, ...]]:
@@ -229,14 +245,42 @@ def kill_switch_status(tenant_id: str | None = None) -> dict[str, Any]:
     return _engine().kill_switch.status(tenant_id=tenant_id)
 
 
+def _audit_trail() -> Any:
+    """The core's tamper-evident audit trail — the ledger the engine writes to.
+
+    The control-plane store keeps its own `audit_events` table, but the engine's
+    ordinary path writes to `security/audit.py` instead. Reading the other one
+    would show an empty panel and a trivially "verified" chain, which is worse
+    than showing nothing, because it looks like an answer.
+    """
+    try:
+        from security.audit import AuditTrail
+    except ImportError as exc:
+        raise EngineUnavailableError(f"audit trail unavailable: {exc}") from exc
+    return AuditTrail(db_path=_engine().audit_db_path)
+
+
 def recent_audit_entries(*, limit: int = 20) -> list[dict[str, Any]]:
-    """The most recent audit rows, read-only."""
-    return list(_engine().store.list_audit_events(limit=limit))
+    """The most recent audit rows, read-only.
+
+    The trail lists oldest-first, so this reads a wider window and keeps the tail.
+    """
+    trail = _audit_trail()
+    try:
+        records = trail.list_records(limit=max(limit, AUDIT_SCAN_LIMIT))
+        return [record.to_dict() for record in records[-limit:]]
+    finally:
+        trail.close()
 
 
 def audit_chain_verified() -> bool:
     """Whether the core's audit hash chain verifies right now."""
-    return bool(_engine().store.verify_audit_chain())
+    trail = _audit_trail()
+    try:
+        ok, _detail = trail.verify_chain()
+        return bool(ok)
+    finally:
+        trail.close()
 
 
 def wfm_coverage(

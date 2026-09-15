@@ -65,6 +65,71 @@ def cockpit_owner(request: Request) -> HTMLResponse:
     )
 
 
+@cockpit_router.get("/cockpit/coach", response_model=None)
+def cockpit_coach(request: Request) -> HTMLResponse:
+    """One coach's day: sessions, attendance, and their four numbers."""
+    account = _account(request)
+    try:
+        context = CockpitService().coach(account, coach_id=request.query_params.get("coach_id"))
+    except AppError as exc:
+        return render(
+            request,
+            "cockpit_coach.html",
+            {"active_nav": "cockpit", "account": account, "error": exc.to_dict()},
+            status_code=exc.status_code,
+        )
+    return render(
+        request,
+        "cockpit_coach.html",
+        {"active_nav": "cockpit", "account": account, **context},
+    )
+
+
+@cockpit_router.get("/cockpit/parent", response_model=None)
+def cockpit_parent(request: Request) -> HTMLResponse:
+    """One family's read-only view: athletes, schedule, attendance, fees."""
+    account = _account(request)
+    try:
+        context = CockpitService().parent(account, family_id=request.query_params.get("family_id"))
+    except AppError as exc:
+        return render(
+            request,
+            "cockpit_parent.html",
+            {"active_nav": "cockpit", "account": account, "error": exc.to_dict()},
+            status_code=exc.status_code,
+        )
+    return render(
+        request,
+        "cockpit_parent.html",
+        {"active_nav": "cockpit", "account": account, **context},
+    )
+
+
+@cockpit_router.get("/cockpit/control-plane", response_model=None)
+def cockpit_control_plane(request: Request) -> HTMLResponse:
+    """Engine status, the halt state, and this workspace's recent audit rows.
+
+    Read-only by construction: this handler has no POST counterpart, and the
+    template carries no form. A state change belongs in the ops section, behind
+    its approval rail, not on a panel that only displays.
+    """
+    account = _account(request)
+    try:
+        context = CockpitService().control_plane(account)
+    except AppError as exc:
+        return render(
+            request,
+            "cockpit_control_plane.html",
+            {"active_nav": "cockpit", "account": account, "error": exc.to_dict()},
+            status_code=exc.status_code,
+        )
+    return render(
+        request,
+        "cockpit_control_plane.html",
+        {"active_nav": "cockpit", "account": account, **context},
+    )
+
+
 @cockpit_router.get("/api/cockpit/summary", response_model=None)
 def cockpit_summary(request: Request) -> JSONResponse:
     """The owner summary as JSON, for the same numbers without the page."""

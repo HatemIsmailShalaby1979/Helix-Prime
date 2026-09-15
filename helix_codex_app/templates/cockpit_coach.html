@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Coach board — Cockpit{% endblock %}
+{% block content %}
+<div class="cockpit-page">
+  <div class="calendar-page__header">
+    <h1>Coach board</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">{{ error.error.message }}</p>
+  {% else %}
+
+  <form class="card" method="get" action="/app/cockpit/coach">
+    <label for="coach_id">Coach</label>
+    <select id="coach_id" name="coach_id">
+      {% for option in options %}
+      <option value="{{ option.id }}"{% if option.id == selected %} selected{% endif %}>
+        {{ option.label }}
+      </option>
+      {% endfor %}
+    </select>
+    <button type="submit">Show</button>
+  </form>
+
+  <section class="card">
+    <h2>{{ summary.coach.name }}</h2>
+    <p class="home-greet__role">{{ summary.date }} · as of {{ summary.as_of }}</p>
+  </section>
+
+  <section class="memory-section">
+    <h2>Today's sessions</h2>
+    {% if summary.today_sessions %}
+    <ul class="section-list">
+      {% for session in summary.today_sessions %}
+      <li class="section-link">
+        {{ session.start }}–{{ session.end }} · {{ session.program_id }} ·
+        {{ session.roster_size }} on the roster
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="card">No sessions today.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Attendance today</h2>
+    {% if summary.today_attendance %}
+    <ul class="section-list">
+      {% for session_id, figures in summary.today_attendance.items() %}
+      <li class="section-link">
+        {{ session_id }} — {{ figures.present }}/{{ figures.roster_size }}
+        {% if figures.attendance_rate is defined %}
+        ({{ "%.0f"|format(figures.attendance_rate * 100) }}%)
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="home-greet__role">Nothing recorded yet today.</p>
+    {% endif %}
+  </section>
+
+  <section class="memory-section">
+    <h2>Coach numbers</h2>
+    <div class="cockpit-cards">
+      {% for key, kpi in summary.kpis.items() %}
+      <article class="card cockpit-card">
+        <p class="cockpit-card__value">
+          {{ "%.2f"|format(kpi.value) if kpi.value is number else kpi.value }}
+        </p>
+        <h3 class="cockpit-card__label">{{ key }}</h3>
+        <p class="home-greet__role">
+          target {{ "%.2f"|format(kpi.target) if kpi.target is number else kpi.target }}
+          {% if kpi.met is not none %} · {{ "on target" if kpi.met else "below target" }}{% endif %}
+        </p>
+        {% include "partials/data_mode_badge.html" %}
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% endif %}
+</div>
+{% endblock %}

@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P5 COMPLETE** — all six P5 steps done; next prompt P6.1 |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P5.2–P5.6 add 73 app tests. The ten P5 modules run together give **104 passed, 0 failed**. A full-suite re-run is still owed before P6. |
-| Last commit | `6e90835` test(app): prove memory isolation and approval rules, close phase p5 |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1–P5.6** |
+| Current step | **P6 IN PROGRESS** — P6.1 and P6.2 done; next prompt P6.3 |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests and P6.2 adds 10. A full-suite re-run is still owed. |
+| Last commit | `68bcd6a` feat(app): add operations section with governed approvals |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1032,10 +1032,38 @@ App-specific rules:
       the proposals chain, so the screen could report "verified" while the memory ledger was broken —
       it now verifies both. `governance.md` §6 and `repomap.md` updated with the pointers.
 
-### P6 — Operations and the cockpit (status: NOT STARTED)
+### P6 — Operations and the cockpit (status: IN PROGRESS — P6.1, P6.2 done)
 
-- [ ] P6.1 The engine bridge, done properly (Prompt 30)
-- [ ] P6.2 The Operations section (Prompt 31)
+- [x] **P6.1** The engine bridge, done properly (Prompt 30) — **COMPLETE.**
+      `integration/engine_bridge.py` now carries the whole core surface: `submit_workflow`,
+      `get_workflow`, `list_workflows`, `list_approvals`, `approve_workflow`, `engine_status`,
+      `list_engines`, `workflow_events`, plus the read-only `kill_switch_status`,
+      `recent_audit_entries` and `audit_chain_verified` that P6.4 will need. The existing
+      `wfm_coverage` is unchanged, so P4.2's fail-closed tests still pass.
+      `integration/packs.py` discovers packs by reading each pack's own metadata function and derives
+      a section per cockpit view, each gated by `cockpit.view`.
+      **Two design decisions, both forced by what was already pinned:**
+      (1) `to_identity()` deliberately yields no catalog role for an app-only role and P1.4 pins that,
+      so the engine needed its own identity — `to_engine_identity()` maps owner → `sami` and
+      manager → `ops_gm`, while an employee gets no catalog role and is refused before the engine is
+      ever consulted. (2) The app says approve/reject and the core's contract says approved/denied,
+      so the translation lives at the bridge boundary in `DECISION_TO_CONTRACT`.
+      Tests: 27, including that a dead engine raises rather than returning an empty list, and that a
+      refused account never reaches the engine at all. Commit `f91f6c5`.
+- [x] **P6.2** The Operations section (Prompt 31) — **COMPLETE.**
+      `modules/ops/{service,router}.py` — engine overview, one engine's detail, governed submission,
+      approval and refusal, and the per-workflow SSE stream (the same shape as the chat stream: a
+      tenant check before the stream opens, then a keep-alive loop). `ops.view` gates the whole
+      router at the boundary, so an employee gets 403 on every route including the screens.
+      Templates `ops.html`, `ops_engine.html` and `partials/workflow_card.html`; the card shows the
+      submitter, the decider, the note and — always — the correlation id, which is the thread back to
+      the audit trail.
+      **Workflow state changes are deliberately not duplicated into `nodes`:** the core's audit trail
+      is the authoritative record, and a second copy would be two truths that could drift apart.
+      Tests: 10, driven through the real stack (a real app, a real governed engine on a temporary
+      database, real sessions) — a submit lands at the gate, a second person's approval moves it on,
+      the submitter cannot approve their own, a refusal without a reason is refused, and the
+      correlation id survives submit → approve → fetch. Commit `68bcd6a`.
 - [ ] P6.3 The cockpit, part one: owner cards (Prompt 32)
 - [ ] P6.4 The cockpit, part two: coach, parent, control plane (Prompt 33)
 - [ ] P6.5 Close out P6 (Prompt 34)

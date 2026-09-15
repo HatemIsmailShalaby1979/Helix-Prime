@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P4 COMPLETE** — all P4 steps done; next prompt P5.1 |
-| Baseline test count | 1182 (full suite **1182 passed, 0 failed** at P4.4) |
-| Last commit | `13aab0b` test(app): prove calendar/attendance/bridge fail-closed rules, close phase p4 — **RECOVERY** of lost P4-era commits (see P4.4); manifest follow-up `197af32` |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1, P3.2, P3.3, P3.4, P4.1, P4.2, P4.3, **P4.4** |
+| Current step | **P5 IN PROGRESS** — P5.1 and P5.2 complete; next prompt P5.3 |
+| Baseline test count | 1182 (full suite **1182 passed, 0 failed** at P4.4). P5.1 adds 6 tests, P5.2 adds 13 → **1201 expected**; the full-suite re-run is still pending, so the P5 figure is computed, not yet observed. |
+| Last commit | `8e6b79d` feat(app): add per-account governed memory stores |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1**, **P5.2** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -893,10 +893,50 @@ App-specific rules:
       dedicated proof modules (one per phase invariant) so the isolation and
       fail-closed guarantees are asserted in one place each.
 
-### P5 — Per-user metacognitive memory (status: NOT STARTED)
+### P5 — Per-user metacognitive memory (status: IN PROGRESS — P5.1, P5.2 done)
 
-- [ ] P5.1 Fix the two parent defects (Prompt 24)
-- [ ] P5.2 The per-account memory store (Prompt 25)
+- [x] **P5.1** Fix the two parent defects (Prompt 24) — **COMPLETE.**
+      **Scoping correction — the prompt pack was wrong here.** Prompt 24 scoped both fixes to
+      `metacognition/improvement.py`. The blueprint's own defect register (§1.3) says otherwise:
+      **D12** is in `metacognition/improvement.py`, but **D11** — `GovernedMemory.correct/supersede/
+      delete` mutate in-memory flags and never rewrite the persisted JSONL line, so the flags are
+      lost on reload — is in `memory/governed_memory.py`. Both were fixed in their real files.
+      **D12:** `_APPROVABLE` tightened from `(EVALUATED, DRAFT)` to `(EVALUATED,)`, and `approve()`
+      on any non-approvable state now raises the new typed `ProposalNotApprovableError` instead of
+      returning an `ApprovalDecision` a caller could ignore. Separation-of-duties denials are
+      deliberately unchanged — still returned as decisions, as the prompt required.
+      **D11:** added `_rebuild_flags()`, replayed on load right after `_rebuild_supersession()`. It
+      reconstructs `retention_status` for corrections and supersessions, and the `deleted` reason,
+      from the marker records already sitting in the ledger. Additive only: the append-only chain is
+      untouched and no existing line is rewritten. Also added two small public accessors,
+      `GovernedMemory.record_count()` and `chain_head()`, so the app bridge never reaches into
+      private state.
+      **Can-fail proof:** with the fixes reverted, all 4 new reload tests in
+      `tests/test_governed_memory.py` fail with the right assertions (`'active' != 'superseded'`,
+      `None != 'oops'`, and a duplicate delete marker at `3 == 2`), and
+      `tests/test_metacognition.py` cannot even import `ProposalNotApprovableError`. Restored, both
+      modules pass **31/31**.
+      **Deliberate test updates:** `test_failed_evaluation` and `test_rejection` asserted a `denied`
+      decision before; they now assert the raise, and the rejected case moved into its own named
+      test. Commit `16eee4c`.
+- [x] **P5.2** The per-account memory store (Prompt 25) — **COMPLETE.**
+      `helix_codex_app/integration/memory_bridge.py` — `AccountMemoryStore`.
+      `resolve_store_path()` is the single place a path is built and it takes server-side values
+      only: `memory_root/<tenant_id>/<account_id>/governed_memory.jsonl`, with `_org` standing in
+      for the tenant's shared store. `record`/`read`/`verify_chain` are account-scoped;
+      `record_org`/`read_org`/`verify_org_chain` are tenant-scoped. The API takes an `Account`,
+      never an account id, so there is no parameter through which a caller could name a foreign
+      store — isolation holds by construction, not by a filter someone could forget.
+      `helix_codex_app/db.py` — `store_id_for`, `register_store`, `touch_store`, `list_stores`, and
+      `get_store` keep the `memory_stores` projection current on every write, so the index can never
+      run ahead of the ledger. No DDL change was needed: P1.1 already created the table.
+      `helix_codex_app/deps.py` — `memory_store_for(account, conn=...)`, the provider.
+      Tests: `tests/helix_codex_app/test_memory_store.py`, **13 tests** — distinct paths per
+      account, one account's record never visible in another's store, a foreign tenant sees nothing,
+      the org store deliberately shared between two accounts of one tenant, full provenance on every
+      record, an unknown kind rejected, the index counts and chain head tracking the ledger, the org
+      store indexed separately, the chain verifying on a fresh store, a tampered line failing, and a
+      record surviving a reopen. Commit `8e6b79d`.
 - [ ] P5.3 Proposals, reviews, and the projection tables (Prompt 26)
 - [ ] P5.4 The memory screen (Prompt 27)
 - [ ] P5.5 Promotion into org memory (Prompt 28)

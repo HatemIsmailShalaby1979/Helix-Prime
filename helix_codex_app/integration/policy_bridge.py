@@ -34,6 +34,84 @@ def to_identity(account: Account) -> Identity:
     )
 
 
+# Which catalog role an app role speaks with when it reaches a governed engine.
+# This is not the app permission matrix: it answers "what may this account do
+# inside the core". A role with no entry has no engine voice at all, which is
+# what keeps an employee out of the ops and cockpit sections.
+APP_ROLE_ENGINE_CATALOG_ROLE: dict[str, str] = {
+    "owner": "sami",
+    "manager": "ops_gm",
+}
+
+
+def to_engine_identity(account: Account) -> Identity:
+    """The identity an account uses when it calls a governed engine.
+
+    Separate from to_identity() on purpose. to_identity() answers "what is this
+    account in the app" and deliberately yields no catalog role for an app-only
+    role — the P1.4 tests pin that. This answers "what may this account do in
+    the core": an owner speaks as the executive, a manager as the ops GM, and
+    anybody else gets no catalog role and is refused by construction.
+    """
+    if account.role_id in PRIVILEGED_CATALOG_ROLE_IDS:
+        role_id: str | None = account.role_id
+    else:
+        role_id = APP_ROLE_ENGINE_CATALOG_ROLE.get(account.role_id or "")
+    return Identity(
+        actor=account.account_id,
+        actor_type="human",
+        tenant_id=account.tenant_id,
+        client_id=account.client_id,
+        role_id=role_id,
+    )
+
+
+def authorize_engine_call(
+    account: Account,
+    *,
+    capability: str,
+    action: str,
+    tool: str | None = None,
+    owning_role_id: str | None = None,
+    requires_approval: bool = False,
+) -> _policy.AuthorizationDecision:
+    """Authorize one engine call for an account, or raise PermissionDenied.
+
+    The target is always the account's own tenant and client, so a caller cannot
+    name a foreign scope. Deny by default: a blank capability, an app role with
+    no engine catalog role, or a policy deny all raise.
+    """
+    if not capability or not capability.strip():
+        raise PermissionDenied("policy bridge: capability is required")
+    identity = to_engine_identity(account)
+    if identity.role_id is None:
+        raise PermissionDenied(
+            "no catalog role: the policy engine denies by construction",
+            payload={"account_id": account.account_id, "role_id": account.role_id},
+        )
+    scoped = _policy.AuthorizationRequest(
+        identity=identity,
+        capability=capability,
+        tool=tool,
+        action=action,
+        requires_approval=requires_approval,
+        owning_role_id=owning_role_id,
+        target_tenant_id=account.tenant_id,
+        target_client_id=account.client_id,
+    )
+    decision = _policy.authorize(scoped)
+    if not decision.allowed:
+        raise PermissionDenied(
+            f"policy denied: {decision.reason}",
+            payload={
+                "account_id": account.account_id,
+                "capability": capability,
+                "code": decision.code,
+            },
+        )
+    return decision
+
+
 def authorize_engine_action(
     account: Account, request: _policy.AuthorizationRequest
 ) -> _policy.AuthorizationDecision:

@@ -24,6 +24,23 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Runtime: approval queue behind SOD, read-only phase, evidence pack, hash-chained governed memory, all `simulated_realistic`
   - Full suite 571/571 ≥ baseline 527; ruff clean on all pack paths
 
+- **Helix Codex App v1.0.0** (2026-09-15; P0.1–P7.5) — the first daily-use product layer on top of
+  the governed core, shipping as one `docker compose up` on the client's own hardware:
+  - Identity: `username@domain` login, scrypt password hashing, opaque session cookies, CSRF on
+    every mutating route, lockout after five failures, and a role permission matrix
+    (owner/manager/employee/contractor/external)
+  - Collaboration: chat with live streams, notifications, documents with append-only versions and
+    a knowledge base, tasks, calendar with recurrence + on-call rosters, and an attendance punch
+    clock with the server as the time authority
+  - Governance: per-user governed memory with proposals under separation of duties, promotion into
+    org memory requiring a second approver, tenant-scoped evidence export, and scripted
+    backup/restore that verifies hash chains before reporting success
+  - Operations: workflow submission/approval and a read-only cockpit (owner/coach/parent and
+    control-plane) reusing the sports-academy pack compute functions
+  - Extensibility: low-code capability loader with five hard invariants, an installable PWA shell
+  - Release: `app_pilot` gate profile with six app gates; first sign-off `CONTROLLED_PILOT_READY`
+    (full suite 1395 passed, 0 failed; ruff clean under the pinned 0.1.15)
+
 ---
 
 ## [0.9.0-c8] — 2026-08-29

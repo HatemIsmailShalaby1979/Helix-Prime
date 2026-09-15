@@ -144,9 +144,7 @@ def test_a_foreign_owner_cannot_fetch_another_tenants_workflow(client, ctx):
     """The workflow detail route scopes by tenant: a foreign id is NotFound."""
     card = _submit(client, ctx, ctx.manager_a)
     foreign_cookies, _ = _session(ctx, ctx.owner_b)
-    response = client.get(
-        f"/app/api/ops/workflows/{card['workflow_id']}", cookies=foreign_cookies
-    )
+    response = client.get(f"/app/api/ops/workflows/{card['workflow_id']}", cookies=foreign_cookies)
     assert response.status_code == 404
 
 

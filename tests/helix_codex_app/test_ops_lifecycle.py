@@ -125,7 +125,12 @@ def test_submit_approve_and_close_keeps_the_correlation_id_throughout(client, ct
     assert submitted["state"] == "awaiting_approval"
 
     approved = _decide(
-        client, ctx, ctx.owner, submitted["workflow_id"], decision="approve", reason="evidence holds"
+        client,
+        ctx,
+        ctx.owner,
+        submitted["workflow_id"],
+        decision="approve",
+        reason="evidence holds",
     )
     assert approved["state"] == "executing"
     assert approved["correlation_id"] == correlation
@@ -148,7 +153,12 @@ def test_a_refusal_stops_the_workflow_and_keeps_the_correlation_id(client, ctx):
     correlation = submitted["correlation_id"]
 
     refused = _decide(
-        client, ctx, ctx.owner, submitted["workflow_id"], decision="reject", reason="not this quarter"
+        client,
+        ctx,
+        ctx.owner,
+        submitted["workflow_id"],
+        decision="reject",
+        reason="not this quarter",
     )
     assert refused["state"] == "dead_letter"
     assert refused["correlation_id"] == correlation
@@ -166,9 +176,7 @@ def test_a_refused_workflow_cannot_be_executed_afterwards(client, ctx):
     from server.deps import get_provider
 
     submitted = _submit(client, ctx, ctx.manager)
-    _decide(
-        client, ctx, ctx.owner, submitted["workflow_id"], decision="reject", reason="no"
-    )
+    _decide(client, ctx, ctx.owner, submitted["workflow_id"], decision="reject", reason="no")
     engine = get_provider().engine
     with pytest.raises(ValueError):
         engine.execute(submitted["workflow_id"])
@@ -186,9 +194,7 @@ def test_the_submitter_cannot_close_their_own_request(client, ctx):
     )
     assert response.status_code >= 400
     cookies, _ = _session(ctx, ctx.manager)
-    still = client.get(
-        f"/app/api/ops/workflows/{submitted['workflow_id']}", cookies=cookies
-    ).json()
+    still = client.get(f"/app/api/ops/workflows/{submitted['workflow_id']}", cookies=cookies).json()
     assert still["state"] == "awaiting_approval"
 
 

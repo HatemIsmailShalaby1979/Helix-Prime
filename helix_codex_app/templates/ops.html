@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Operations — Helix Codex{% endblock %}
+{% block content %}
+<div class="ops-page">
+  <div class="calendar-page__header">
+    <h1>Operations</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">The governed core could not be read, so nothing is shown rather than something
+    stale. {{ error.error.message }}</p>
+  {% else %}
+
+  <section class="card">
+    <h2>Where things stand</h2>
+    <ul class="section-list">
+      <li class="section-link">{{ counts.total }} requests in this workspace</li>
+      <li class="section-link">{{ counts.awaiting_approval }} waiting on a decision</li>
+      <li class="section-link">{{ counts.open }} still open</li>
+      <li class="section-link">{{ counts.closed }} closed or cancelled</li>
+      <li class="section-link">
+        Audit chain: {{ "verified" if audit_chain_verified else "NOT verified" }}
+      </li>
+    </ul>
+  </section>
+
+  <section class="memory-section">
+    <h2>Engines</h2>
+    {% for engine in engines %}
+    <a class="card engine-row" href="/app/ops/{{ engine.engine_id }}">
+      <span class="proposal-card__state proposal-card__state--{{ engine.status }}">
+        {{ engine.status }}
+      </span>
+      <strong>{{ engine.name }}</strong>
+      <span class="home-greet__role">
+        {{ engine.registered_capabilities | length }} of {{ engine.capabilities | length }}
+        capabilities registered
+      </span>
+    </a>
+    {% endfor %}
+  </section>
+
+  <section class="memory-section">
+    <h2>Recent requests</h2>
+    {% if recent %}
+    {% for card in recent %}
+    {% include "partials/workflow_card.html" %}
+    {% endfor %}
+    {% else %}
+    <p class="card">Nothing submitted yet. A request goes to the governance gate first; it only runs
+      once somebody approves it.</p>
+    {% endif %}
+  </section>
+
+  {% endif %}
+</div>
+{% endblock %}

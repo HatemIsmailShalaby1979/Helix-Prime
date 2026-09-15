@@ -11,6 +11,7 @@ engines/.
 """
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timezone
 from typing import Any
 
@@ -24,6 +25,10 @@ OPS_CAPABILITY = "ops_execution"
 OPS_OWNING_ROLE = "ops_gm"
 ENGINE_IDS: tuple[str, ...] = ("wfm", "rta", "cx", "b2b", "personnel", "crm")
 DEFAULT_APPROVAL_DECISION = "approve"
+# The app says approve/reject; the core's contract says approved/denied. The
+# translation lives here, at the boundary, so neither side has to learn the
+# other's vocabulary.
+DECISION_TO_CONTRACT: dict[str, str] = {"approve": "approved", "reject": "denied"}
 
 
 def _engine() -> Any:
@@ -188,6 +193,11 @@ def approve_workflow(
     if the account submitted the workflow, the core refuses and this raises.
     """
     workflow = get_workflow(account, workflow_id)
+    contract_decision = DECISION_TO_CONTRACT.get(decision)
+    if contract_decision is None:
+        raise ValueError(
+            f"decision must be one of {sorted(DECISION_TO_CONTRACT)}, got {decision!r}"
+        )
     policy_bridge.authorize_engine_call(
         account,
         capability=workflow.capability,
@@ -195,14 +205,18 @@ def approve_workflow(
         owning_role_id=workflow.owning_role_id or OPS_OWNING_ROLE,
     )
     try:
-        from control_plane.workflow import Approval
+        from contracts.task import Approval
     except ImportError as exc:
-        raise EngineUnavailableError(f"workflow contracts unavailable: {exc}") from exc
+        raise EngineUnavailableError(f"approval contract unavailable: {exc}") from exc
     approval = Approval(
-        approver_id=account.account_id,
-        approver_role=policy_bridge.to_engine_identity(account).role_id or "",
-        decision=decision,
-        note=note,
+        approval_id=f"apr_{uuid.uuid4().hex[:20]}",
+        correlation_id=workflow.correlation.correlation_id,
+        subject_id=workflow.workflow_id,
+        approver_actor=account.account_id,
+        approver_role_id=policy_bridge.to_engine_identity(account).role_id or "",
+        decision=contract_decision,
+        reason=note or f"{contract_decision} from the app",
+        timestamp=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     )
     try:
         return _engine().approve(workflow_id, approval)

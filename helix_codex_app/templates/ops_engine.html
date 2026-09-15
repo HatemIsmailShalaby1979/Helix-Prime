@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ engine.name }} — Operations{% endblock %}
+{% block content %}
+<div class="ops-page">
+  <div class="calendar-page__header">
+    <h1>{{ engine.name }}</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  {% if error %}
+  <p class="card">{{ error.error.message }}</p>
+  {% else %}
+
+  <section class="card">
+    <h2>Status</h2>
+    <dl class="workflow-card__meta">
+      <dt>Engine</dt>
+      <dd>{{ engine.engine_id }}</dd>
+      <dt>Status</dt>
+      <dd>{{ engine.status }}</dd>
+      <dt>Capabilities registered</dt>
+      <dd>{{ engine.registered_capabilities | length }} of {{ engine.capabilities | length }}</dd>
+    </dl>
+    {% if engine.status != "ready" %}
+    <p class="home-greet__role">Some capabilities have no handler registered, so this engine is
+      reported as partial rather than ready.</p>
+    {% endif %}
+  </section>
+
+  <section class="memory-section">
+    <h2>Requests on this engine</h2>
+    {% if workflows %}
+    {% for card in workflows %}
+    {% include "partials/workflow_card.html" %}
+    {% endfor %}
+    {% else %}
+    <p class="card">No requests on this engine yet.</p>
+    {% endif %}
+  </section>
+
+  {% endif %}
+</div>
+{% endblock %}

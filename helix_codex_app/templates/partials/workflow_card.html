@@ -1,0 +1,48 @@
+<article class="card workflow-card" id="workflow-{{ card.workflow_id }}">
+  <header class="proposal-card__head">
+    <span class="proposal-card__state proposal-card__state--{{ card.state }}">{{ card.state }}</span>
+    <h3 class="proposal-card__title">{{ card.capability }}</h3>
+    <p class="home-greet__role">{{ card.workflow_id }}</p>
+  </header>
+
+  <dl class="workflow-card__meta">
+    <dt>Submitted by</dt>
+    <dd>{{ card.requesting_actor }}</dd>
+    <dt>Decided by</dt>
+    <dd>{{ card.approver_id or "—" }}</dd>
+    <dt>Correlation id</dt>
+    <dd class="workflow-card__corr">{{ card.correlation_id }}</dd>
+    {% if card.approval_note %}
+    <dt>Note</dt>
+    <dd>{{ card.approval_note }}</dd>
+    {% endif %}
+    {% if card.error %}
+    <dt>Error</dt>
+    <dd>{{ card.error }}</dd>
+    {% endif %}
+  </dl>
+
+  {% if can_decide %}
+  <div class="proposal-card__actions">
+    <form hx-post="/app/api/ops/workflows/{{ card.workflow_id }}/approve"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          hx-target="#workflow-{{ card.workflow_id }}" hx-swap="outerHTML">
+      <input type="hidden" name="decision" value="approve">
+      <button class="proposal-card__button proposal-card__button--approve" type="submit">
+        Approve — the engine runs it
+      </button>
+    </form>
+    <form class="proposal-card__reject"
+          hx-post="/app/api/ops/workflows/{{ card.workflow_id }}/approve"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          hx-target="#workflow-{{ card.workflow_id }}" hx-swap="outerHTML">
+      <input type="hidden" name="decision" value="reject">
+      <label for="reason-{{ card.workflow_id }}">Why not?</label>
+      <input id="reason-{{ card.workflow_id }}" name="reason" type="text" required>
+      <button class="proposal-card__button proposal-card__button--reject" type="submit">
+        Refuse — it stops here
+      </button>
+    </form>
+  </div>
+  {% endif %}
+</article>

@@ -31,6 +31,7 @@ from helix_codex_app.modules.identity.router import identity_router
 from helix_codex_app.modules.memory.router import memory_router
 from helix_codex_app.modules.messaging.router import messaging_router
 from helix_codex_app.modules.notifications.router import notifications_router
+from helix_codex_app.modules.ops.router import ops_router
 from helix_codex_app.modules.tasks.router import tasks_router
 from helix_codex_app.security.accounts import AccountRepository
 from helix_codex_app.security.guard import current_account, require_csrf
@@ -140,6 +141,7 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     app.include_router(calendar_router)
     app.include_router(attendance_router)
     app.include_router(memory_router)
+    app.include_router(ops_router)
     app.include_router(app_router)
     app.include_router(csrf_router)
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")

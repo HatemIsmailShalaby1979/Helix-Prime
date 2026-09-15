@@ -49,7 +49,7 @@ App-specific rules:
 |---|---|
 | Current step | **P5 COMPLETE** — all six P5 steps done; next prompt P6.1 |
 | Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P5.2–P5.6 add 73 app tests. The ten P5 modules run together give **104 passed, 0 failed**. A full-suite re-run is still owed before P6. |
-| Last commit | `afe2175` feat(app): add governed promotion into org memory (P5.5); the P5.6 close-out follows |
+| Last commit | `6e90835` test(app): prove memory isolation and approval rules, close phase p5 |
 | Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1–P5.6** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4

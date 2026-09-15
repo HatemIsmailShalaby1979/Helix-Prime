@@ -22,6 +22,7 @@ from helix_codex_app.errors import AppError
 from helix_codex_app.modules.memory.service import MemoryService
 from helix_codex_app.security.accounts import Account
 from helix_codex_app.security.guard import current_account, require_csrf, require_permission
+from helix_codex_app.security.permissions import has_permission
 from helix_codex_app.templating import render
 
 memory_router = APIRouter(
@@ -171,6 +172,7 @@ async def rollback_proposal(request: Request, proposal_id: str) -> JSONResponse:
 async def _review_action(request: Request, proposal_id: str, action: str) -> JSONResponse:
     account = _account(request)
     conn = _conn(request)
+    fragment = None
     try:
         raw = await _payload(request)
         reason = str(raw.get("reason", "")).strip() or request.query_params.get("reason", "")
@@ -181,25 +183,66 @@ async def _review_action(request: Request, proposal_id: str, action: str) -> JSO
             proposal = service.reject(account, proposal_id, reason=reason)
         else:
             proposal = service.rollback(account, proposal_id, reason=reason)
+        if request.headers.get("hx-request") == "true":
+            card = _card(service, account, proposal_id)
+            if card is not None:
+                fragment = render(request, "partials/proposal_card.html", {"card": card})
     except AppError as exc:
         return JSONResponse(exc.to_dict(), status_code=exc.status_code)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     finally:
         close(conn)
+    if fragment is not None:
+        return fragment
     return JSONResponse({"proposal_id": proposal.proposal_id, "state": proposal.approval_state})
 
 
 def _page_context(service: MemoryService, account: Account) -> dict[str, Any]:
-    proposals = service.list_proposals(account)
+    own_cards = []
+    for row in service.list_proposals(account):
+        card = _card(service, account, row.proposal_id)
+        if card is not None:
+            own_cards.append(card)
+    review_cards = []
+    if has_permission(account, "memory.review"):
+        for item in service.review_queue(account):
+            card = _card(service, account, item["row"].proposal_id)
+            if card is not None:
+                review_cards.append(card)
     return {
         "active_nav": "memory",
         "account": account,
         "records": service.stores.read(account, limit=20),
-        "proposals": proposals,
-        "proposal_rows": [_row_dict(row) for row in proposals],
+        "own_cards": own_cards,
+        "review_cards": review_cards,
         "ledger": service.verify_ledger(account),
         "data_mode": "simulated_realistic",
+    }
+
+
+def _card(service: MemoryService, account: Account, proposal_id: str) -> dict[str, Any] | None:
+    """Shape one proposal for the card partial, with the actions it allows.
+
+    The actions are decided by the proposal's state and by whether it is the
+    account's own. An approve button is never shown on your own proposal, because
+    the engine would refuse it and a button that can only fail is a lie.
+    """
+    view = service.card_view(account, proposal_id)
+    if view is None:
+        return None
+    report = view["proposal"]
+    state = report.get("approval_state")
+    own = bool(view["is_own"])
+    return {
+        "proposal": report,
+        "evidence": report.get("evaluation_results") or {},
+        "author_name": view["author_name"],
+        "can_evaluate": own and state == "draft",
+        "can_approve": (not own) and state == "evaluated",
+        "can_reject": (not own) and state == "evaluated",
+        "can_rollback": own and state == "approved",
+        "data_mode": report.get("data_mode") or "simulated_realistic",
     }
 
 

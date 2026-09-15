@@ -1,0 +1,37 @@
+{% set proposal = card.proposal %}
+{% set evidence = card.evidence %}
+<article class="card proposal-card" id="proposal-{{ proposal.proposal_id }}">
+  <header class="proposal-card__head">
+    <span class="proposal-card__state proposal-card__state--{{ proposal.approval_state }}">
+      {{ proposal.approval_state }}
+    </span>
+    <h3 class="proposal-card__title">{{ proposal.kind }} — {{ proposal.target }}</h3>
+    <p class="home-greet__role">
+      v{{ proposal.version }}
+      {% if card.author_name %} · proposed by {{ card.author_name }}{% else %} · yours{% endif %}
+    </p>
+  </header>
+
+  <p class="proposal-card__hypothesis">{{ proposal.hypothesis }}</p>
+
+  {% if evidence %}
+  <table class="proposal-card__evidence">
+    <caption>What the evaluation measured</caption>
+    <tbody>
+      <tr><th scope="row">Baseline rate</th><td>{{ "%.3f"|format(evidence.baseline_rate) }}</td></tr>
+      <tr><th scope="row">Proposed rate</th><td>{{ "%.3f"|format(evidence.proposed_rate) }}</td></tr>
+      <tr><th scope="row">Change</th><td>{{ "%+.3f"|format(evidence.delta) }}</td></tr>
+      <tr><th scope="row">Historical cases</th><td>{{ evidence.n_historical }}</td></tr>
+      <tr><th scope="row">Simulated cases</th><td>{{ evidence.n_simulated }}</td></tr>
+    </tbody>
+  </table>
+  {% else %}
+  <p class="home-greet__role">Not evaluated yet, so there are no numbers to show.</p>
+  {% endif %}
+
+  <p class="proposal-card__risk"><strong>Risk.</strong> {{ proposal.risk_assessment }}</p>
+  <p class="proposal-card__rollback"><strong>If it goes wrong.</strong> {{ proposal.rollback_plan }}</p>
+  <p class="proposal-card__chain">Ledger: {{ proposal.audit_chain }}</p>
+
+  {% include "partials/proposal_actions.html" %}
+</article>

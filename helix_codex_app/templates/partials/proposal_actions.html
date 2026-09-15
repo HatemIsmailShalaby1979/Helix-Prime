@@ -1,0 +1,50 @@
+{% set proposal = card.proposal %}
+<div class="proposal-card__actions">
+  {% if card.can_evaluate %}
+  <form hx-post="/app/api/memory/proposals/{{ proposal.proposal_id }}/evaluate"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#proposal-{{ proposal.proposal_id }}" hx-swap="outerHTML">
+    <button class="proposal-card__button" type="submit">
+      Evaluate — score this against your records
+    </button>
+  </form>
+  {% endif %}
+
+  {% if card.can_approve %}
+  <form hx-post="/app/api/memory/proposals/{{ proposal.proposal_id }}/approve"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#proposal-{{ proposal.proposal_id }}" hx-swap="outerHTML">
+    <button class="proposal-card__button proposal-card__button--approve" type="submit">
+      Approve — this rule starts applying to this memory
+    </button>
+  </form>
+  {% endif %}
+
+  {% if card.can_reject %}
+  <form class="proposal-card__reject"
+        hx-post="/app/api/memory/proposals/{{ proposal.proposal_id }}/reject"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#proposal-{{ proposal.proposal_id }}" hx-swap="outerHTML">
+    <label for="reason-{{ proposal.proposal_id }}">Why not?</label>
+    <input id="reason-{{ proposal.proposal_id }}" name="reason" type="text" required>
+    <button class="proposal-card__button proposal-card__button--reject" type="submit">
+      Reject — the rule stays as it is
+    </button>
+  </form>
+  {% endif %}
+
+  {% if card.can_rollback %}
+  <form hx-post="/app/api/memory/proposals/{{ proposal.proposal_id }}/rollback"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+        hx-target="#proposal-{{ proposal.proposal_id }}" hx-swap="outerHTML">
+    <button class="proposal-card__button proposal-card__button--rollback" type="submit">
+      Roll back — restore the previous rule
+    </button>
+  </form>
+  {% endif %}
+
+  {% if not card.can_evaluate and not card.can_approve and not card.can_reject
+        and not card.can_rollback %}
+  <p class="home-greet__role">Nothing to do here in this state.</p>
+  {% endif %}
+</div>

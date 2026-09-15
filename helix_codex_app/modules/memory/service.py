@@ -268,6 +268,67 @@ class MemoryService:
             "store_id": db.store_id_for(path=self.engines.resolve_path(account)),
         }
 
+    # ------------------------------------------------------------- reviewing
+    def review_queue(self, account: Account) -> list[dict[str, Any]]:
+        """Proposals in this tenant waiting for this account's review.
+
+        Excludes the account's own proposals and any author sharing the account's
+        role, because the engine would refuse those anyway. Showing a button that
+        can only fail is worse than not showing it.
+        """
+        out: list[dict[str, Any]] = []
+        for row in self.repo.list_proposals(account.tenant_id, state="evaluated"):
+            if row.created_by == account.account_id:
+                continue
+            author = self.accounts.get_account_by_id(row.created_by)
+            if author is None or (author.role_id or "") == (account.role_id or ""):
+                continue
+            out.append({"row": row, "author": author})
+        return out
+
+    def review_report(self, account: Account, proposal_id: str) -> dict:
+        """The evidence report for a proposal this account may review.
+
+        Separate from evidence_report() on purpose: that one is the author's own
+        view, this one is the reviewer's, and it re-checks that the reviewer is
+        allowed before handing anything over.
+        """
+        owner = self._owner_of(account, proposal_id)
+        if owner.account_id == account.account_id:
+            raise NotFoundError(
+                f"no such proposal {proposal_id}", payload={"proposal_id": proposal_id}
+            )
+        if (owner.role_id or "") == (account.role_id or ""):
+            raise PermissionDenied(
+                "same-role review is not allowed",
+                payload={"proposal_id": proposal_id},
+            )
+        return self.engines.evidence_report(owner, self.engines.get(owner, proposal_id))
+
+    def card_view(self, account: Account, proposal_id: str) -> dict[str, Any] | None:
+        """The proposal as this account is allowed to see it, or None.
+
+        The author's own view first, then the reviewer's. None means the account
+        may not see this proposal at all, and the caller should show nothing.
+        """
+        try:
+            return {
+                "proposal": self.evidence_report(account, proposal_id),
+                "author_name": None,
+                "is_own": True,
+            }
+        except NotFoundError:
+            pass
+        try:
+            owner = self._owner_of(account, proposal_id)
+            return {
+                "proposal": self.review_report(account, proposal_id),
+                "author_name": owner.display_name or owner.username,
+                "is_own": False,
+            }
+        except (NotFoundError, PermissionDenied):
+            return None
+
     # ------------------------------------------------------------ projection
     def rebuild_projection(self, account: Account) -> int:
         """Rebuild the projection from the account's ledger.

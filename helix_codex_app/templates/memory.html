@@ -4,6 +4,7 @@
 <div class="memory-page">
   <div class="calendar-page__header">
     <h1>Your memory</h1>
+    {% include "partials/data_mode_badge.html" %}
   </div>
 
   <section class="card">
@@ -11,21 +12,26 @@
     <p class="home-greet__role">{{ ledger.detail }}</p>
   </section>
 
-  <section class="card">
+  <section class="memory-section">
     <h2>Your proposals</h2>
-    {% if proposal_rows %}
-    <ul class="section-list">
-      {% for row in proposal_rows %}
-      <li class="section-link">
-        {{ row.kind }} — {{ row.target }} ({{ row.state }}, v{{ row.version }})
-      </li>
-      {% endfor %}
-    </ul>
+    {% if own_cards %}
+    {% for card in own_cards %}
+    {% include "partials/proposal_card.html" %}
+    {% endfor %}
     {% else %}
-    <p>No proposals yet. A proposal is how you suggest a change to your own memory, and it only
-      takes effect once somebody else approves it.</p>
+    <p class="card">No proposals yet. A proposal is how you suggest a change to your own memory.
+      It only takes effect once somebody else approves it.</p>
     {% endif %}
   </section>
+
+  {% if review_cards %}
+  <section class="memory-section">
+    <h2>Waiting for your review</h2>
+    {% for card in review_cards %}
+    {% include "partials/proposal_card.html" %}
+    {% endfor %}
+  </section>
+  {% endif %}
 
   <section class="card">
     <h2>Recent records</h2>

@@ -272,6 +272,25 @@ class AccountMemoryStore:
         return self.org_store_for(account).verify_chain()
 
 
+def verify_store_file(path: str) -> dict[str, Any]:
+    """Verify the hash chain of a governed-memory store at an explicit path.
+
+    This is the only function in the app that opens a GovernedMemory directly
+    by file path without going through an Account. It serves the evidence
+    export and backup/restore verification. All other memory access stays
+    behind the Account scoping on AccountMemoryStore.
+    """
+    store = GovernedMemory(path=path)
+    verified, message = store.verify_chain()
+    return {
+        "path": path,
+        "verified": bool(verified),
+        "message": message,
+        "record_count": store.record_count(),
+        "chain_head": store.chain_head(),
+    }
+
+
 def _tail(records: list[MemoryRecord], limit: int) -> list[MemoryRecord]:
     if limit <= 0:
         return []

@@ -10,10 +10,11 @@ both behave the same way.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from helix_codex_app.db import close, connect
 from helix_codex_app.errors import NotFoundError, PermissionDenied
+from helix_codex_app.modules.admin.evidence import build_evidence_zip
 from helix_codex_app.modules.admin.service import AdminService
 from helix_codex_app.security.accounts import Account
 from helix_codex_app.security.guard import require_csrf, require_permission
@@ -299,6 +300,37 @@ async def create_org_unit(request: Request) -> HTMLResponse | RedirectResponse:
     finally:
         close(conn)
     return RedirectResponse("/app/admin/org-units?flash=created", status_code=303)
+
+
+@admin_router.get("/evidence/export", response_model=None)
+def evidence_export(request: Request) -> Response:
+    """Download the tenant's evidence dossier as a zip.
+
+    Owner-only: the export contains the whole governed audit trail for the
+    tenant, node counts by kind, every registered memory store's chain
+    verification, and the release manifest. A manager can administer users
+    but cannot read the full dossier.
+    """
+    account = _account(request)
+    if account.role_id != "owner":
+        raise PermissionDenied(
+            "only an owner may export the evidence pack",
+            payload={"account_id": account.account_id},
+        )
+    conn = _conn(request)
+    try:
+        payload = build_evidence_zip(
+            conn,
+            tenant_id=account.tenant_id,
+            db_path=request.app.state.settings.db_path,
+        )
+    finally:
+        close(conn)
+    return Response(
+        content=payload,
+        media_type="application/zip",
+        headers={"Content-Disposition": 'attachment; filename="evidence-export.zip"'},
+    )
 
 
 def _account(request: Request) -> Account:

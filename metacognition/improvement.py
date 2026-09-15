@@ -119,7 +119,16 @@ class ProposalTamperError(Exception):
     pass
 
 
-class ProposalNotApprovableError(Exception):
+class ProposalStateError(Exception):
+    """Raised when a proposal transition is attempted from a disallowed state.
+
+    Every transition has a set of states it may start from. Attempting one from
+    anywhere else is a caller bug or a bypass attempt, and is refused rather than
+    quietly applied.
+    """
+
+
+class ProposalNotApprovableError(ProposalStateError):
     """Raised when approve() is called on a proposal that has not passed evaluation.
 
     A draft, a proposal still evaluating, a proposal that failed evaluation, and a
@@ -300,7 +309,17 @@ class MetacognitionEngine:
         """Compare proposed policy vs baseline over historical + simulated cases.
 
         Pure and deterministic: never touches runtime. On failure the proposal
-        transitions to EVALUATED_FAILED (and can no longer be approved)."""
+        transitions to EVALUATED_FAILED (and can no longer be approved).
+
+        Only a DRAFT or an already-EVALUATED proposal may be evaluated. Without
+        that guard a rejected or rolled-back proposal could be evaluated again and
+        would then be approvable, which would quietly undo the rejection."""
+        prev = self._latest.get(proposal.proposal_id)
+        if prev is not None and prev.approval_state not in (DRAFT, EVALUATED):
+            raise ProposalStateError(
+                f"{proposal.proposal_id}: cannot evaluate a proposal in state "
+                f"{prev.approval_state!r}"
+            )
         all_cases = list(historical_cases) + list(simulated_cases)
 
         def _rate(policy: Mapping[str, Any]) -> float:

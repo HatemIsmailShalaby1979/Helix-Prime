@@ -62,3 +62,10 @@ class EngineUnavailableError(AppError):
 
     code = "engine_unavailable"
     status_code = 503
+
+
+class InvalidStateError(AppError):
+    """The object exists but is not in a state that allows this action."""
+
+    code = "invalid_state"
+    status_code = 409

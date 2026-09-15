@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Memory — Helix Codex{% endblock %}
+{% block content %}
+<div class="memory-page">
+  <div class="calendar-page__header">
+    <h1>Your memory</h1>
+  </div>
+
+  <section class="card">
+    <h2>Ledger</h2>
+    <p class="home-greet__role">{{ ledger.detail }}</p>
+  </section>
+
+  <section class="card">
+    <h2>Your proposals</h2>
+    {% if proposal_rows %}
+    <ul class="section-list">
+      {% for row in proposal_rows %}
+      <li class="section-link">
+        {{ row.kind }} — {{ row.target }} ({{ row.state }}, v{{ row.version }})
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>No proposals yet. A proposal is how you suggest a change to your own memory, and it only
+      takes effect once somebody else approves it.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Recent records</h2>
+    {% if records %}
+    <ul class="section-list">
+      {% for record in records %}
+      <li class="section-link">{{ record.kind }} — {{ record.nature }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p>Nothing recorded yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

@@ -38,7 +38,7 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _safe_component(value: str, *, field: str) -> str:
+def safe_component(value: str, *, field: str) -> str:
     """A path component that cannot escape its own directory.
 
     Rejects separators, absolute paths, and anything containing "..", so a value
@@ -58,8 +58,8 @@ def resolve_store_path(*, memory_root: str, domain_id: str, account_id: str | No
     account_id None means the domain's shared org store. This is the single
     place a path is built; every caller goes through it.
     """
-    domain = _safe_component(domain_id, field="domain_id")
-    key = _safe_component(account_id, field="account_id") if account_id else ORG_KEY
+    domain = safe_component(domain_id, field="domain_id")
+    key = safe_component(account_id, field="account_id") if account_id else ORG_KEY
     return str(pathlib.Path(memory_root) / domain / key / STORE_FILENAME)
 
 

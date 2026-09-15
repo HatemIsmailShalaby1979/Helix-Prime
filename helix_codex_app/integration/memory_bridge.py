@@ -14,6 +14,7 @@ the ledger.
 from __future__ import annotations
 
 import pathlib
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timezone
@@ -30,20 +31,36 @@ ACCOUNT_STORE_KIND = "account"
 ORG_STORE_KIND = "org"
 DEFAULT_CLASSIFICATION = "client_confidential"
 DEFAULT_DATA_MODE = "simulated_realistic"
+_SAFE_COMPONENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def resolve_store_path(*, memory_root: str, tenant_id: str, account_id: str | None) -> str:
+def _safe_component(value: str, *, field: str) -> str:
+    """A path component that cannot escape its own directory.
+
+    Rejects separators, absolute paths, and anything containing "..", so a value
+    that arrived from a form can never address another tenant's store.
+    """
+    if not value or not _SAFE_COMPONENT.match(value) or ".." in value:
+        raise ValueError(f"memory store: unsafe {field} {value!r}")
+    return value
+
+
+def resolve_store_path(*, memory_root: str, domain_id: str, account_id: str | None) -> str:
     """Compute a store path from server-side values.
 
-    account_id None means the tenant's shared org store. This is the single
+    The key is the server-generated domain id, never the caller-supplied
+    tenant_id: two domains that happen to be given the same tenant_id still get
+    separate stores, so a store cannot be shared by accident or on purpose.
+    account_id None means the domain's shared org store. This is the single
     place a path is built; every caller goes through it.
     """
-    key = account_id or ORG_KEY
-    return str(pathlib.Path(memory_root) / tenant_id / key / STORE_FILENAME)
+    domain = _safe_component(domain_id, field="domain_id")
+    key = _safe_component(account_id, field="account_id") if account_id else ORG_KEY
+    return str(pathlib.Path(memory_root) / domain / key / STORE_FILENAME)
 
 
 class AccountMemoryStore:
@@ -62,21 +79,21 @@ class AccountMemoryStore:
     # ------------------------------------------------------------ resolution
     def resolve_store(self, account: Account) -> str:
         """The account's own store path. Derived from the account, never a request."""
-        if not account.tenant_id or not account.account_id:
-            raise ValueError("memory store: tenant_id and account_id are required")
+        if not account.domain_id or not account.account_id:
+            raise ValueError("memory store: domain_id and account_id are required")
         return resolve_store_path(
             memory_root=self._root,
-            tenant_id=account.tenant_id,
+            domain_id=account.domain_id,
             account_id=account.account_id,
         )
 
     def resolve_org_store(self, account: Account) -> str:
-        """The tenant's shared org store path."""
-        if not account.tenant_id:
-            raise ValueError("memory store: tenant_id is required")
+        """The domain's shared org store path."""
+        if not account.domain_id:
+            raise ValueError("memory store: domain_id is required")
         return resolve_store_path(
             memory_root=self._root,
-            tenant_id=account.tenant_id,
+            domain_id=account.domain_id,
             account_id=None,
         )
 

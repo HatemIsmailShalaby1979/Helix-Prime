@@ -120,6 +120,23 @@ def test_unevaluated_draft_cannot_be_approved(tmp_path):
     assert eng.approve(p.proposal_id, "human-1", "ict_gm").decision == "allowed"
 
 
+# --- an evaluated proposal survives a reload ----------------------------------
+def test_an_evaluated_proposal_survives_a_reload(tmp_path):
+    """A reload must not drop a proposal back to draft and block approval.
+
+    evaluate() appends a snapshot. If that snapshot does not advance the
+    version, the reload's highest-version-wins rule keeps the earlier draft, and
+    the proposal becomes unapprovable the moment the process restarts.
+    """
+    p = str(tmp_path / "prop.jsonl")
+    eng = MetacognitionEngine(path=p)
+    proposal = _propose(eng, 0.3)
+    eng.evaluate(proposal, historical_cases=_cases(), simulated_cases=_cases(), simulate=_simulate)
+    reloaded = MetacognitionEngine(path=p)
+    assert reloaded.get_proposal(proposal.proposal_id).approval_state == EVALUATED
+    assert reloaded.approve(proposal.proposal_id, "human-1", "ict_gm").decision == "allowed"
+
+
 # --- an already-rejected proposal cannot be approved --------------------------
 def test_rejected_proposal_cannot_be_approved(tmp_path):
     eng = MetacognitionEngine(path=str(tmp_path / "prop.jsonl"))

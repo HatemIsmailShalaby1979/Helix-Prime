@@ -69,11 +69,23 @@ def ctx(tmp_path):
 # --- paths -------------------------------------------------------------------
 def test_resolve_store_path_separates_accounts_from_the_org_store(tmp_path):
     root = str(tmp_path / "memory")
-    account_path = resolve_store_path(memory_root=root, tenant_id="t1", account_id="acc-1")
-    org_path = resolve_store_path(memory_root=root, tenant_id="t1", account_id=None)
+    account_path = resolve_store_path(memory_root=root, domain_id="dom-1", account_id="acc-1")
+    org_path = resolve_store_path(memory_root=root, domain_id="dom-1", account_id=None)
     assert account_path != org_path
     assert "acc-1" in account_path
     assert ORG_KEY in org_path
+
+
+def test_a_path_component_cannot_escape_its_directory(tmp_path):
+    root = str(tmp_path / "memory")
+    with pytest.raises(ValueError):
+        resolve_store_path(memory_root=root, domain_id="../../etc", account_id="acc-1")
+    with pytest.raises(ValueError):
+        resolve_store_path(memory_root=root, domain_id="..", account_id=None)
+    with pytest.raises(ValueError):
+        resolve_store_path(memory_root=root, domain_id="dom", account_id="../../escape")
+    with pytest.raises(ValueError):
+        resolve_store_path(memory_root=root, domain_id="dom/../other", account_id=None)
 
 
 def test_two_accounts_in_one_tenant_get_different_store_paths(ctx):
@@ -86,7 +98,28 @@ def test_two_accounts_in_one_tenant_get_different_store_paths(ctx):
 
 def test_a_foreign_tenant_account_gets_its_own_path(ctx):
     assert ctx.store.resolve_store(ctx.outsider) != ctx.store.resolve_store(ctx.nadia)
-    assert ctx.outsider.tenant_id not in ctx.store.resolve_store(ctx.nadia)
+    assert ctx.outsider.domain_id not in ctx.store.resolve_store(ctx.nadia)
+
+
+def test_two_domains_sharing_a_tenant_id_still_get_separate_stores(ctx):
+    """A caller-supplied tenant_id must not be able to address another store.
+
+    tenant_id arrives from a form when a domain is created, so it is not safe to
+    key a store path on. The path is keyed on the server-generated domain id
+    instead, and this is the case that proves it.
+    """
+    clash = ctx.repo.create_domain(
+        "clash.test", tenant_id=ctx.domain.tenant_id, client_id="client-a"
+    )
+    intruder = ctx.repo.create_account(
+        clash.domain_id,
+        "intruder",
+        role_id="owner",
+        password_hash=hash_password("your-password"),
+    )
+    ctx.store.record_org(ctx.nadia, kind="policy", nature="user_claim", body={"rule": "private"})
+    assert ctx.store.resolve_org_store(intruder) != ctx.store.resolve_org_store(ctx.nadia)
+    assert ctx.store.read_org(intruder) == []
 
 
 # --- isolation ---------------------------------------------------------------

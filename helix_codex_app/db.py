@@ -508,13 +508,14 @@ def record_node(
     return resolved_node_id
 
 
-def store_id_for(*, tenant_id: str, account_id: str | None) -> str:
+def store_id_for(*, path: str) -> str:
     """The stable id for one governed memory store.
 
-    Derived from server-side values only, so registering the same store twice
-    updates the same row instead of creating a second one.
+    Keyed on the resolved path, which is derived from the server-generated
+    domain id. Two domains can therefore never collide on one index row, and
+    registering the same store twice updates that row instead of adding one.
     """
-    return f"store::{tenant_id}::{account_id or '_org'}"
+    return f"store::{path}"
 
 
 def register_store(
@@ -535,7 +536,7 @@ def register_store(
         raise ValueError("register_store: tenant_id must not be blank")
     if not path or not path.strip():
         raise ValueError("register_store: path must not be blank")
-    store_id = store_id_for(tenant_id=tenant_id, account_id=account_id)
+    store_id = store_id_for(path=path)
     conn.execute(
         """
         INSERT INTO memory_stores (

@@ -437,6 +437,30 @@ def test_second_delete_after_reload_is_still_a_no_op(tmp_path):
     assert m2._by_id[r.record_id].deleted == "first"
 
 
+def test_a_forged_delete_body_does_not_delete_on_reload(tmp_path):
+    """Only a real delete marker may delete. add() accepts an arbitrary body.
+
+    Keying the reload replay on body content would let any record that happens
+    to carry an "action"/"target" pair mark another record deleted, and only
+    after a reload — which is the worst time to find out.
+    """
+    p = str(tmp_path / "m.jsonl")
+    m = GovernedMemory(path=p)
+    innocent = _add(m, body={"text": "innocent"})
+    _add(
+        m,
+        kind="workflow_history",
+        nature="verified_outcome",
+        source="some_other_writer",
+        body={"action": "delete", "target": innocent.record_id, "reason": "injected"},
+    )
+    assert m._by_id[innocent.record_id].deleted is None
+    m2 = GovernedMemory(path=p)
+    assert m2._by_id[innocent.record_id].deleted is None
+    assert m2._by_id[innocent.record_id].retention_status == "active"
+    assert any(x.record_id == innocent.record_id for x in m2.retrieve(tenant_id="t1"))
+
+
 # --- no automatic policy/behavior change -------------------------------------
 def test_no_auto_policy_change():
     m = GovernedMemory()

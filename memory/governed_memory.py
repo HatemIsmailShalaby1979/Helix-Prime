@@ -199,15 +199,19 @@ class GovernedMemory:
         correct(), supersede(), and delete() set fields on the target record in
         memory. The ledger is append-only, so the target's own line is never
         rewritten and those fields would be lost on the next load. Each marker
-        record already carries what is needed to reconstruct them, so replay
-        every marker in ledger order. The last marker for a record wins.
+        record carries what is needed to reconstruct them, so replay every marker
+        in ledger order. The last marker for a record wins.
+
+        Markers are identified by ``source``, which those three methods set, and
+        never by the body: ``add()`` accepts an arbitrary caller body, so keying
+        on body content would let an ordinary record mark another record deleted.
         """
         for rec in self._records:
-            if rec.corrects and rec.corrects in self._by_id:
+            if rec.source == "memory_correction" and rec.corrects in self._by_id:
                 self._by_id[rec.corrects].retention_status = "corrected"
-            if rec.supersedes and rec.supersedes in self._by_id:
+            if rec.source == "memory_supersession" and rec.supersedes in self._by_id:
                 self._by_id[rec.supersedes].retention_status = "superseded"
-            if rec.body.get("action") == "delete":
+            if rec.source == "memory_delete":
                 target_id = rec.body.get("target")
                 if target_id and target_id in self._by_id:
                     self._by_id[target_id].deleted = rec.body.get("reason")

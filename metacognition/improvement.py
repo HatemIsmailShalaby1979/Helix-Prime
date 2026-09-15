@@ -161,7 +161,7 @@ class MetacognitionEngine:
             rec = ImprovementProposal(**env["record"])
             # keep the highest version per proposal_id
             cur = self._latest.get(rec.proposal_id)
-            if cur is None or rec.version > cur.version:
+            if cur is None or rec.version >= cur.version:
                 self._latest[rec.proposal_id] = rec
 
     def _append(self, proposal: ImprovementProposal) -> None:
@@ -327,9 +327,12 @@ class MetacognitionEngine:
             ),
         )
         new_state = EVALUATED if passed else EVALUATED_FAILED
+        prev = self._latest.get(proposal.proposal_id, proposal)
         updated = ImprovementProposal(
             **{
                 **proposal.to_dict(),
+                "version": prev.version + 1,
+                "supersedes": prev.proposal_id,
                 "evaluation_results": asdict(result),
                 "approval_state": new_state,
             },

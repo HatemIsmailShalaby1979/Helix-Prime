@@ -48,7 +48,7 @@ App-specific rules:
 | Field | Value |
 |---|---|
 | Current step | **P5 IN PROGRESS** — P5.1 and P5.2 complete; next prompt P5.3 |
-| Baseline test count | 1182 (full suite **1182 passed, 0 failed** at P4.4). P5.1 adds 6 tests, P5.2 adds 13 → **1201 expected**; the full-suite re-run is still pending, so the P5 figure is computed, not yet observed. See the P5.1 note on why the full suite could not be run in that session. |
+| Baseline test count | P4.4: 1182 passed / 0 failed. **P5.1 checkpoint, full suite: 1186 passed, 2 failed, 1188 collected (29 min).** Both failures are pre-existing flakes in unrelated modules — `test_structured_logs_contain_identifiers` races on the shared `observability/logs.jsonl`, and `test_existing_c0_c4_regression` shells out to a smoke run. Both pass in isolation, and the same 2 were already failing at the P4.4 checkpoint. P5.2's 15 tests are not yet included in a full run. |
 | Last commit | `8e6b79d` feat(app): add per-account governed memory stores |
 | Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, **P5.1**, **P5.2** |
 
@@ -895,14 +895,21 @@ App-specific rules:
 
 ### P5 — Per-user metacognitive memory (status: IN PROGRESS — P5.1, P5.2 done)
 
-> **Verification note for P5.1/P5.2 (2026-09-15).** The full suite could not be run in the session
-> that wrote these two steps: this environment kills detached processes and caps a single command at
-> 10 minutes, while the suite needs roughly 26. What was run instead: the two parent modules P5.1
-> touches (`tests/test_metacognition.py` + `tests/test_governed_memory.py`) — **31/31 pass**, and
-> proven to fail 4/4 before the fix; the new P5.2 module — **13/13 pass**; and `tests/helix_codex_app/`
-> to a 9-minute cutoff, reaching ~40% with **zero failures**. Ruff check and format are clean on every
-> touched file. **The next session should run the full suite and record the real number here** — the
-> 1201 above is arithmetic, not an observation.
+> **P5 verification (2026-09-15).** Full suite at the P5.1 checkpoint: **1186 passed, 2 failed,
+> 1188 collected, 29 min**. The two failures are pre-existing flakes in unrelated modules — see the
+> baseline row above; both pass in isolation and both were already failing at the P4.4 checkpoint.
+> Targeted evidence: the two parent modules P5.1 touches pass 31/31 and were proven to fail 4/4
+> before the fix; `tests/helix_codex_app/test_memory_store.py` passes 15/15. Ruff check and format
+> are clean on every touched file.
+>
+> **Independent review found three real defects, all fixed in `d57053f`, each with a regression test
+> proven to fail beforehand.** Two of the three were mine. See the P5.1 and P5.2 entries below for
+> what each one was. One further issue was found and is left open deliberately — it is recorded under
+> "Open finding" at the end of this phase.
+>
+> **Environment note.** This sandbox caps a single command at 10 minutes and kills detached
+> processes, so the 29-minute suite only completed when it happened to survive a background slot.
+> Expect to run it in pieces, or on the local machine.
 
 - [x] **P5.1** Fix the two parent defects (Prompt 24) — **COMPLETE.**
       **Scoping correction — the prompt pack was wrong here.** Prompt 24 scoped both fixes to
@@ -946,6 +953,40 @@ App-specific rules:
       record, an unknown kind rejected, the index counts and chain head tracking the ledger, the org
       store indexed separately, the chain verifying on a fresh store, a tampered line failing, and a
       record surviving a reopen. Commit `8e6b79d`.
+> **Independent review of P5.1/P5.2 — three defects found, all fixed in `d57053f`.**
+>
+> **R1 — a regression P5.1 itself introduced (the serious one).** `evaluate()` appended its evaluated
+> snapshot without advancing the version, and `_reindex()` kept the *first* record on a version tie.
+> So on reload an evaluated proposal reverted to `draft`. That was harmless while `DRAFT` was
+> approvable — which is exactly what P5.1 removed — so tightening the gate turned a dormant bug into
+> "every proposal becomes unapprovable after a restart". Both halves fixed: `evaluate()` now advances
+> the version (and records `supersedes`, matching `_transition`), and `_reindex()` uses `>=` so the
+> last entry wins a tie. Regression test `test_an_evaluated_proposal_survives_a_reload` fails pre-fix
+> with `assert 'draft' == 'evaluated'`.
+>
+> **R2 — a bug in the D11 fix.** `_rebuild_flags()` keyed the delete branch on
+> `body["action"] == "delete"`, but `add()` accepts an arbitrary caller body, so any ordinary record
+> carrying that key pair marked its named target deleted — and only after a reload. Now keyed on the
+> marker's `source` (`memory_delete` / `memory_correction` / `memory_supersession`), which only the
+> three real methods set. Regression test `test_a_forged_delete_body_does_not_delete_on_reload` fails
+> pre-fix with `assert 'injected' is None`.
+>
+> **R3 — a real isolation hole in P5.2.** The store path was keyed on `tenant_id`, which arrives from
+> a form when a domain is created and carries no uniqueness constraint. Two domains could therefore
+> be given the same `tenant_id` and share one store, and `tenant_id="../../x"` escaped the memory root
+> entirely. The path is now keyed on the **server-generated `domain_id`** and every path component is
+> validated (`_safe_component`), so traversal is refused and two domains can never collide. The store
+> index id is keyed on the resolved path for the same reason. Regression tests:
+> `test_a_path_component_cannot_escape_its_directory` and
+> `test_two_domains_sharing_a_tenant_id_still_get_separate_stores`.
+>
+> **Open finding (deliberately not fixed here).** `evaluate()` has no state guard, so a proposal can be
+> taken through `evaluate → reject → evaluate → approve` and end up approved — and the same for
+> `rollback`. This predates P5.1 and is not what Prompt 24 asked for, so it was left alone rather than
+> widened in scope. It does weaken the D12 intent, and the fix is small: refuse `evaluate()` unless the
+> proposal is in `DRAFT` or `EVALUATED`. Best done in P5.3, where the proposal lifecycle is already
+> being built.
+
 - [ ] P5.3 Proposals, reviews, and the projection tables (Prompt 26)
 - [ ] P5.4 The memory screen (Prompt 27)
 - [ ] P5.5 Promotion into org memory (Prompt 28)

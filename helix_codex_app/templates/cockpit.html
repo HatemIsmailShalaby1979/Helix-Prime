@@ -28,7 +28,7 @@
     <ul class="section-list">
       {% for section in sections %}
       <li class="section-link">
-        {{ section.label }} — {{ section.pack }}
+        {% if section.route %}<a href="{{ section.route }}">{{ section.label }}</a>{% else %}{{ section.label }}{% endif %} — {{ section.pack }}
         {% if section.simulated_only %} (simulated data only){% endif %}
       </li>
       {% endfor %}

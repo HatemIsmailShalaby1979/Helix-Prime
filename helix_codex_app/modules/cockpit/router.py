@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from helix_codex_app import db
 from helix_codex_app.errors import AppError
 from helix_codex_app.modules.cockpit.service import CockpitService
 from helix_codex_app.security.accounts import Account
@@ -29,8 +30,9 @@ cockpit_router = APIRouter(
 def cockpit_landing(request: Request) -> HTMLResponse:
     """The cockpit landing: the owner's numbers and the sections on offer."""
     account = _account(request)
+    conn = db.connect(db_path=request.app.state.settings.db_path)
     try:
-        context = CockpitService().landing(account)
+        context = CockpitService().landing(account, conn)
     except AppError as exc:
         return render(
             request,
@@ -38,6 +40,8 @@ def cockpit_landing(request: Request) -> HTMLResponse:
             {"active_nav": "cockpit", "account": account, "error": exc.to_dict()},
             status_code=exc.status_code,
         )
+    finally:
+        db.close(conn)
     return render(
         request,
         "cockpit.html",

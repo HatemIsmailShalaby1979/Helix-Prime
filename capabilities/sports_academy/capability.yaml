@@ -1,0 +1,20 @@
+schema_version: "1.0"
+id: sports_academy
+name: Sports Academy Operations
+version: 1.0.0
+domain: sports_academy
+min_core_version: "0.9.0"
+read_only_start: true
+synthetic_data_only: true
+production_readiness: NOT_ESTABLISHED
+ontology: [Athlete, Session, Checkin, FacilitySlot, Program]
+sections:
+  - { key: owner, label: Owner, route: /app/cockpit/owner, required_capability: cockpit.view }
+  - { key: coach, label: Coach, route: /app/cockpit/coach, required_capability: cockpit.view }
+roles: []
+workflows: []
+policies: []
+connector_contracts: []
+data_classifications: [internal, client_confidential]
+metrics: []
+failure_modes: []

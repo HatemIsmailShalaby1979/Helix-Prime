@@ -13,10 +13,48 @@ import pathlib
 from typing import Any
 
 from helix_codex_app.errors import EngineUnavailableError, NotFoundError
+from organization import role_catalog
 
 CAPABILITIES_DIR = pathlib.Path(__file__).resolve().parents[2] / "capabilities"
+MANIFEST_NAME = "capability.yaml"
 COCKPIT_VIEW_KEYS: tuple[str, ...] = ("owner", "coach", "parent")
 COCKPIT_SECTION_CAPABILITY = "cockpit.view"
+
+
+def pack_manifest_path(pack: str) -> pathlib.Path:
+    """The capability.yaml a pack must ship to be loaded by the low-code loader."""
+    if pack not in pack_names():
+        raise NotFoundError(f"unknown capability pack {pack!r}")
+    return CAPABILITIES_DIR / pack / MANIFEST_NAME
+
+
+def manifest_packs() -> list[str]:
+    """Discoverable packs that already ship a capability manifest."""
+    return sorted(
+        pack for pack in pack_names() if (CAPABILITIES_DIR / pack / MANIFEST_NAME).is_file()
+    )
+
+
+def packs_without_manifest() -> list[str]:
+    """Discoverable packs that have not shipped a capability manifest yet."""
+    return sorted(
+        pack for pack in pack_names() if not (CAPABILITIES_DIR / pack / MANIFEST_NAME).is_file()
+    )
+
+
+def core_role_financial_limit(role_id: str) -> int | None:
+    """The core role's max_financial_amount, or None when it has no cap.
+
+    The core role catalog is the never-edited organization/role-catalog.yaml.
+    The loader compares a pack role's declared limit against this value, so a
+    manifest can never widen what the catalog grants.
+    """
+    catalog = role_catalog.load_role_catalog()
+    role = (catalog.get("roles_by_id") or {}).get(role_id)
+    if role is None:
+        return None
+    limits = role.get("approval_limits") or {}
+    return limits.get("max_financial_amount")
 
 
 def pack_names() -> list[str]:

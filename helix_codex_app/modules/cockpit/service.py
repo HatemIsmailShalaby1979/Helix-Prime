@@ -13,10 +13,11 @@ from __future__ import annotations
 from typing import Any
 
 from helix_codex_app.errors import NotFoundError, PermissionDenied
-from helix_codex_app.integration import cockpit_bridge, engine_bridge, packs
+from helix_codex_app.integration import cockpit_bridge, engine_bridge
+from helix_codex_app.modules.lowcode import section_registry
 from helix_codex_app.modules.ops.service import workflow_card
 from helix_codex_app.security.accounts import Account
-from helix_codex_app.security.permissions import has_permission
+from helix_codex_app.security.permissions import has_permission, permissions_for
 
 COCKPIT_PERMISSION = "cockpit.view"
 APPROVAL_QUEUE_LIMIT = 10
@@ -108,22 +109,18 @@ class CockpitService:
         self._require(account)
         return cockpit_bridge.owner_summary(account)
 
-    def sections(self, account: Account) -> list[dict[str, Any]]:
-        """The cockpit sections the installed packs contribute, gated as declared."""
+    def sections(self, account: Account, conn) -> list[dict[str, Any]]:
+        """The registered shell sections the account may see, gated as declared."""
         self._require(account)
-        return [
-            section
-            for section in packs.all_sections()
-            if has_permission(account, section["required_capability"])
-        ]
+        return section_registry.sections_for_permissions(conn, permissions_for(account, conn))
 
-    def landing(self, account: Account) -> dict[str, Any]:
+    def landing(self, account: Account, conn) -> dict[str, Any]:
         """Everything the cockpit landing page shows."""
         self._require(account)
         owner = self.owner(account)
         return {
             "cards": owner["cards"],
-            "sections": self.sections(account),
+            "sections": self.sections(account, conn),
             "data_mode": owner["data_mode"],
         }
 

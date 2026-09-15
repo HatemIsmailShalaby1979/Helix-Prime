@@ -1,0 +1,40 @@
+# Helix Codex App — self-hosted deployment (P7.4)
+#
+# One command to start:
+#   docker compose -f infra/docker/docker-compose.app.yml up -d
+#
+# The app binds loopback and is reachable at http://127.0.0.1:8100.
+# After startup, create the first owner with the bootstrap script:
+#   docker compose -f infra/docker/docker-compose.app.yml exec \
+#       helix-app python helix_codex_app/scripts/bootstrap_owner.py \
+#       --db-path /data/app.db --domain mycompany \
+#       --username admin --password mypassword
+#
+# Then open http://127.0.0.1:8100 and log in as admin@mycompany.
+services:
+  helix-app:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.app
+    network_mode: host
+    environment:
+      HELIX_APP_HOST: "127.0.0.1"
+      HELIX_APP_PORT: "8100"
+      HELIX_APP_DB_PATH: /data/app.db
+      HELIX_APP_MEMORY_ROOT: /data/memory_stores
+      HELIX_ENV: local
+      HELIX_SAMPLE_DATA_MODE: "false"
+      HELIX_DB_PATH: /data/workflow.db
+      HELIX_AUDIT_DB_PATH: /data/audit.db
+    volumes:
+      - helix_app_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/app/healthz')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+volumes:
+  helix_app_data:

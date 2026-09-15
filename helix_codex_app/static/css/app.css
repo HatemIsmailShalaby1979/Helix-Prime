@@ -323,7 +323,7 @@ samp,
   padding: 0 5px;
   border-radius: var(--radius-full);
   background: var(--accent-solid);
-  color: #fff;
+  color: var(--ink);
   font-size: var(--text-2xs);
   font-weight: 700;
   line-height: 18px;
@@ -755,13 +755,13 @@ a.section-link:focus-visible {
 .btn--primary {
   background: var(--accent-solid);
   border-color: transparent;
-  color: #fff;
+  color: var(--ink);
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset;
 }
 
 .btn--primary:hover {
   background: var(--accent-solid-hover);
-  color: #fff;
+  color: var(--ink);
 }
 
 .btn--ghost {
@@ -1973,7 +1973,7 @@ a.chat-list__item:hover {
 .chat-bubble--me {
   align-self: flex-end;
   background: var(--accent-solid);
-  color: #fff;
+  color: var(--ink);
   border-bottom-right-radius: var(--radius-sm);
 }
 
@@ -2594,7 +2594,7 @@ a.chat-list__item:hover {
   border: 0;
   border-radius: var(--radius-lg);
   background: var(--accent-solid);
-  color: #fff;
+  color: var(--ink);
   font-family: var(--font);
   font-size: var(--text-lg);
   font-weight: 700;
@@ -3027,7 +3027,7 @@ a.chat-list__item:hover {
 .proposal-card__button--approve {
   background: var(--accent-solid);
   border-color: transparent;
-  color: #fff;
+  color: var(--ink);
 }
 
 .proposal-card__button--approve:hover {

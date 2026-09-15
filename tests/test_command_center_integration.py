@@ -289,7 +289,7 @@ def test_governance_checker_passes():
 def test_release_gates():
     from release.gate import run_gate
 
-    pilot = run_gate(profile="controlled_pilot")
+    pilot = run_gate(profile="controlled_pilot", write_evidence=False)
     assert pilot["classification"] == "CONTROLLED_PILOT_READY"
-    prod = run_gate(profile="production")
+    prod = run_gate(profile="production", write_evidence=False)
     assert prod["classification"] == "NOT_READY"

@@ -272,8 +272,10 @@ def test_governance_checker():
 def test_release_gates():
     from release.gate import run_gate
 
-    assert run_gate("controlled_pilot")["classification"] == "CONTROLLED_PILOT_READY"
-    assert run_gate("production")["classification"] == "NOT_READY"
+    pilot = run_gate("controlled_pilot", write_evidence=False)
+    prod = run_gate("production", write_evidence=False)
+    assert pilot["classification"] == "CONTROLLED_PILOT_READY"
+    assert prod["classification"] == "NOT_READY"
 
 
 # --- invariants: read-only, min-data, no hidden jobs, no auto self-improvement

@@ -9,6 +9,7 @@ wired once, at the router boundary, not per handler.
 """
 from __future__ import annotations
 
+import mimetypes
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -114,6 +115,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 def create_app(settings: AppSettings | None = None) -> FastAPI:
     settings = settings or get_app_settings()
     settings.require_safe_defaults()
+    mimetypes.add_type("font/woff2", ".woff2")
+    mimetypes.add_type("font/woff", ".woff")
 
     app = FastAPI(
         title="Helix Codex App",

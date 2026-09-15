@@ -39,6 +39,35 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+@dataclass(frozen=True)
+class PromotionRow:
+    """One row of the promotions projection."""
+
+    promotion_id: str
+    source_store_id: str
+    org_store_id: str
+    source_proposal_id: str
+    org_proposal_id: str | None
+    state: str
+    approved_by: str | None
+    created_at: str | None
+    updated_at: str | None
+
+
+def _row_to_promotion(row: sqlite3.Row) -> PromotionRow:
+    return PromotionRow(
+        promotion_id=row["promotion_id"],
+        source_store_id=row["source_store_id"],
+        org_store_id=row["org_store_id"],
+        source_proposal_id=row["source_proposal_id"],
+        org_proposal_id=row["org_proposal_id"],
+        state=row["state"],
+        approved_by=row["approved_by"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
 def _row_to_proposal(row: sqlite3.Row) -> ProposalRow:
     return ProposalRow(
         proposal_id=row["proposal_id"],
@@ -174,3 +203,76 @@ class MemoryRepository:
                 (proposal_id,),
             ).fetchall()
         )
+
+    # ------------------------------------------------------------- promotions
+    def insert_promotion(
+        self,
+        *,
+        promotion_id: str,
+        source_store_id: str,
+        org_store_id: str,
+        source_proposal_id: str,
+        org_proposal_id: str,
+    ) -> None:
+        """Record a promotion request, linking the two proposals."""
+        now = _now()
+        self.conn.execute(
+            """
+            INSERT INTO promotions (
+                promotion_id, source_store_id, org_store_id, source_proposal_id,
+                org_proposal_id, state, approved_by, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)
+            """,
+            (
+                promotion_id,
+                source_store_id,
+                org_store_id,
+                source_proposal_id,
+                org_proposal_id,
+                "requested",
+                now,
+                now,
+            ),
+        )
+        self.conn.commit()
+
+    def update_promotion(
+        self, promotion_id: str, *, state: str, approved_by: str | None = None
+    ) -> None:
+        self.conn.execute(
+            """
+            UPDATE promotions
+               SET state = ?, approved_by = COALESCE(?, approved_by), updated_at = ?
+             WHERE promotion_id = ?
+            """,
+            (state, approved_by, _now(), promotion_id),
+        )
+        self.conn.commit()
+
+    def get_promotion(self, promotion_id: str) -> PromotionRow | None:
+        row = self.conn.execute(
+            "SELECT * FROM promotions WHERE promotion_id = ?", (promotion_id,)
+        ).fetchone()
+        return _row_to_promotion(row) if row else None
+
+    def list_promotions_for_tenant(
+        self, tenant_id: str, *, state: str | None = None
+    ) -> list[PromotionRow]:
+        """Promotions whose source proposal belongs to this tenant.
+
+        Scoped through the source proposal, because that is the row that carries
+        the tenant. Without the join a promotion could not be tenant-scoped at all.
+        """
+        if not tenant_id or not tenant_id.strip():
+            raise ValueError("list_promotions_for_tenant: tenant_id is required")
+        sql = (
+            "SELECT p.* FROM promotions p "
+            "JOIN proposals s ON s.proposal_id = p.source_proposal_id "
+            "WHERE s.tenant_id = ?"
+        )
+        params: list[Any] = [tenant_id]
+        if state is not None:
+            sql += " AND p.state = ?"
+            params.append(state)
+        sql += " ORDER BY p.created_at DESC, p.promotion_id DESC"
+        return [_row_to_promotion(row) for row in self.conn.execute(sql, params).fetchall()]

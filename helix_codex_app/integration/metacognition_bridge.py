@@ -130,6 +130,19 @@ class AccountMetacognition:
     def org_get(self, account: Account, proposal_id: str) -> ImprovementProposal:
         return self.org_engine_for(account).get_proposal(proposal_id)
 
+    def org_evaluate(
+        self,
+        account: Account,
+        proposal: ImprovementProposal,
+        *,
+        historical_cases: Sequence[Mapping[str, Any]],
+        simulated_cases: Sequence[Mapping[str, Any]],
+        simulate: Callable[[Mapping[str, Any], Mapping[str, Any]], bool],
+    ) -> EvaluationResult:
+        return self.org_engine_for(account).evaluate(
+            proposal, historical_cases, simulated_cases, simulate
+        )
+
     def org_list(self, account: Account, *, state: str | None = None) -> list[ImprovementProposal]:
         return self.org_engine_for(account).list_proposals(tenant_id=account.tenant_id, state=state)
 

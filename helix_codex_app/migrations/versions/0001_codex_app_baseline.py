@@ -466,7 +466,8 @@ def upgrade() -> None:
         state TEXT,
         approved_by TEXT,
         created_at TEXT,
-        updated_at TEXT
+        updated_at TEXT,
+        org_proposal_id TEXT
     )
     
     """

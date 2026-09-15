@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Promotions — Helix Codex{% endblock %}
+{% block content %}
+<div class="memory-page">
+  <div class="calendar-page__header">
+    <h1>Promotion queue</h1>
+    {% include "partials/data_mode_badge.html" %}
+  </div>
+
+  <p class="card">A promotion takes one person's approved rule and asks for it to apply across the
+    whole company. It always needs a second person to agree, and the two decisions are recorded
+    separately.</p>
+
+  {% if promotions %}
+  {% for item in promotions %}
+  <article class="card proposal-card" id="promotion-{{ item.promotion_id }}">
+    <header class="proposal-card__head">
+      <span class="proposal-card__state proposal-card__state--{{ item.state }}">{{ item.state }}</span>
+      <h3 class="proposal-card__title">{{ item.promotion_id }}</h3>
+      {% if item.proposal %}
+      <p class="home-greet__role">{{ item.proposal.kind }} — {{ item.proposal.target }}</p>
+      {% endif %}
+    </header>
+
+    {% if item.evidence %}
+    <table class="proposal-card__evidence">
+      <caption>What the evaluation measured</caption>
+      <tbody>
+        <tr>
+          <th scope="row">Baseline rate</th>
+          <td>{{ "%.3f"|format(item.evidence.baseline_rate) }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Proposed rate</th>
+          <td>{{ "%.3f"|format(item.evidence.proposed_rate) }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Change</th>
+          <td>{{ "%+.3f"|format(item.evidence.delta) }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Historical cases</th>
+          <td>{{ item.evidence.n_historical }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Simulated cases</th>
+          <td>{{ item.evidence.n_simulated }}</td>
+        </tr>
+      </tbody>
+    </table>
+    {% else %}
+    <p class="home-greet__role">No evidence to show for this one.</p>
+    {% endif %}
+
+    <div class="proposal-card__actions">
+      {% if item.can_approve %}
+      <form hx-post="/app/api/memory/promotions/{{ item.promotion_id }}/approve"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+            hx-target="#promotion-{{ item.promotion_id }}" hx-swap="outerHTML">
+        <button class="proposal-card__button proposal-card__button--approve" type="submit">
+          Approve — this becomes the company rule
+        </button>
+      </form>
+      {% endif %}
+
+      {% if item.can_reject %}
+      <form class="proposal-card__reject"
+            hx-post="/app/api/memory/promotions/{{ item.promotion_id }}/reject"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+            hx-target="#promotion-{{ item.promotion_id }}" hx-swap="outerHTML">
+        <label for="promo-reason-{{ item.promotion_id }}">Why not?</label>
+        <input id="promo-reason-{{ item.promotion_id }}" name="reason" type="text" required>
+        <button class="proposal-card__button proposal-card__button--reject" type="submit">
+          Reject — it stays personal
+        </button>
+      </form>
+      {% endif %}
+
+      {% if item.can_rollback %}
+      <form hx-post="/app/api/memory/promotions/{{ item.promotion_id }}/rollback"
+            hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+            hx-target="#promotion-{{ item.promotion_id }}" hx-swap="outerHTML">
+        <button class="proposal-card__button proposal-card__button--rollback" type="submit">
+          Roll back — retire the company rule
+        </button>
+      </form>
+      {% endif %}
+
+      {% if not item.can_approve and not item.can_reject and not item.can_rollback %}
+      <p class="home-greet__role">Nothing to do here in this state.</p>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  {% else %}
+  <p class="card">Nothing is waiting. A promotion appears here once somebody asks for their rule to
+    go company-wide.</p>
+  {% endif %}
+</div>
+{% endblock %}

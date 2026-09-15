@@ -29,7 +29,7 @@ from helix_codex_app.db import record_node
 from helix_codex_app.errors import InvalidStateError, NotFoundError, PermissionDenied
 from helix_codex_app.integration.memory_bridge import AccountMemoryStore
 from helix_codex_app.integration.metacognition_bridge import AccountMetacognition
-from helix_codex_app.modules.memory.repository import MemoryRepository, ProposalRow
+from helix_codex_app.modules.memory.repository import MemoryRepository, PromotionRow, ProposalRow
 from helix_codex_app.security.accounts import Account, AccountRepository
 from metacognition.improvement import (
     ApprovalDecision,
@@ -44,6 +44,8 @@ PROVENANCE_DATA_MODE = "app_runtime"
 CASE_POLICY_KEY = "value"
 MAX_EVIDENCE_CASES = 200
 ROLLBACK_STATES = ("approved", "rolled_back")
+PROMOTION_APPROVER_ROLES = ("manager", "owner")
+PROMOTED_RULE_SOURCE = "memory_promotion"
 
 
 def _now() -> str:
@@ -329,6 +331,177 @@ class MemoryService:
         except (NotFoundError, PermissionDenied):
             return None
 
+    # ------------------------------------------------------------ promotion
+    def request_promotion(self, account: Account, proposal_id: str) -> PromotionRow:
+        """Ask for an approved proposal to become a company-wide rule.
+
+        The author's own approval is never enough. This only creates the
+        org-level proposal; a manager or owner has to approve that one
+        separately, and the two approvals are recorded as two decisions.
+        """
+        source = self.get_proposal(account, proposal_id)
+        if source.approval_state != "approved":
+            raise InvalidStateError(
+                f"{proposal_id}: only an approved proposal can be promoted "
+                f"(state is {source.approval_state!r})",
+                payload={"proposal_id": proposal_id},
+            )
+        promotion_id = f"promo-{uuid.uuid4().hex}"
+        org_proposal = self.engines.org_propose(
+            account,
+            kind=source.kind,
+            target=f"promoted::{source.proposal_id}",
+            baseline=source.baseline,
+            proposed=source.proposed,
+            baseline_policy=dict(source.baseline_policy),
+            proposed_policy=dict(source.proposed_policy),
+            hypothesis=source.hypothesis,
+            evidence=[source.proposal_id, *source.evidence],
+            risk_assessment=source.risk_assessment,
+            rollback_plan=f"roll back promotion {promotion_id}",
+            tenant_id=account.tenant_id,
+            client_id=account.client_id or "",
+            created_by=account.account_id,
+            role_id=account.role_id or "",
+            correlation_id=source.correlation_id,
+            timestamp=_now(),
+            min_improvement=source.min_improvement,
+        )
+        org_cases = cases_from_memory(self.stores.read_org(account, limit=MAX_EVIDENCE_CASES))
+        self.engines.org_evaluate(
+            account,
+            org_proposal,
+            historical_cases=org_cases,
+            simulated_cases=[],
+            simulate=default_simulate,
+        )
+        self.repo.insert_promotion(
+            promotion_id=promotion_id,
+            source_store_id=db.store_id_for(path=self.engines.resolve_path(account)),
+            org_store_id=db.store_id_for(path=self.engines.resolve_org_path(account)),
+            source_proposal_id=source.proposal_id,
+            org_proposal_id=org_proposal.proposal_id,
+        )
+        row = self.repo.get_promotion(promotion_id)
+        if row is None:
+            raise NotFoundError(f"promotion {promotion_id} vanished after insert")
+        return row
+
+    def approve_promotion(
+        self, account: Account, promotion_id: str, *, reason: str = ""
+    ) -> PromotionRow:
+        """Approve a promotion. Needs a manager or owner, and a second person."""
+        promotion = self._promotion_for(account, promotion_id)
+        if promotion.state != "requested":
+            raise InvalidStateError(
+                f"{promotion_id}: not awaiting approval (state is {promotion.state!r})",
+                payload={"promotion_id": promotion_id},
+            )
+        author = self._owner_of(account, promotion.source_proposal_id)
+        if author.account_id == account.account_id:
+            raise PermissionDenied(
+                "a promotion needs a second, independent approver",
+                payload={"promotion_id": promotion_id},
+            )
+        if (account.role_id or "") not in PROMOTION_APPROVER_ROLES:
+            raise PermissionDenied(
+                "only a manager or owner may approve a promotion",
+                payload={"promotion_id": promotion_id},
+            )
+        try:
+            decision = self.engines.org_approve(
+                account,
+                promotion.org_proposal_id,
+                reviewer=account.account_id,
+                approver_role=account.role_id or "",
+            )
+        except ProposalNotApprovableError as exc:
+            raise InvalidStateError(str(exc), payload={"promotion_id": promotion_id}) from exc
+        if decision.decision != "allowed":
+            raise PermissionDenied(decision.reason, payload={"promotion_id": promotion_id})
+        self.stores.record_org(
+            account,
+            kind="policy",
+            nature="user_claim",
+            body={
+                "promotion_id": promotion_id,
+                "rule": promotion.source_proposal_id,
+                "promoted_from_account_id": author.account_id,
+                "source_proposal_id": promotion.source_proposal_id,
+            },
+            evidence_refs=[promotion.source_proposal_id],
+            source="memory_promotion",
+            correlation_id=f"promotion-{promotion_id}",
+        )
+        self.repo.update_promotion(promotion_id, state="approved", approved_by=account.account_id)
+        return self._promotion_for(account, promotion_id)
+
+    def reject_promotion(self, account: Account, promotion_id: str, *, reason: str) -> PromotionRow:
+        """Refuse a promotion. Needs a reason, and the same second-person rule."""
+        if not reason or not reason.strip():
+            raise ValueError("a rejection needs a reason")
+        promotion = self._promotion_for(account, promotion_id)
+        if promotion.state != "requested":
+            raise InvalidStateError(
+                f"{promotion_id}: not awaiting a decision (state is {promotion.state!r})",
+                payload={"promotion_id": promotion_id},
+            )
+        author = self._owner_of(account, promotion.source_proposal_id)
+        if author.account_id == account.account_id:
+            raise PermissionDenied(
+                "a promotion needs a second, independent decider",
+                payload={"promotion_id": promotion_id},
+            )
+        if (account.role_id or "") not in PROMOTION_APPROVER_ROLES:
+            raise PermissionDenied(
+                "only a manager or owner may decide a promotion",
+                payload={"promotion_id": promotion_id},
+            )
+        self.engines.org_engine_for(account).reject(
+            promotion.org_proposal_id, reviewer=account.account_id, reason=reason
+        )
+        self.repo.update_promotion(promotion_id, state="rejected", approved_by=account.account_id)
+        return self._promotion_for(account, promotion_id)
+
+    def rollback_promotion(
+        self, account: Account, promotion_id: str, *, reason: str = ""
+    ) -> PromotionRow:
+        """Undo a promotion: retire the org rule and record the reversal twice."""
+        promotion = self._promotion_for(account, promotion_id)
+        if promotion.state != "approved":
+            raise InvalidStateError(
+                f"{promotion_id}: not an approved promotion (state is {promotion.state!r})",
+                payload={"promotion_id": promotion_id},
+            )
+        author = self._owner_of(account, promotion.source_proposal_id)
+        note = reason or "promotion rolled back"
+        self.engines.org_rollback(
+            account, promotion.org_proposal_id, actor=account.account_id, reason=note
+        )
+        rule = self._promoted_rule(account, promotion_id)
+        if rule is not None:
+            self.stores.org_store_for(account).delete(
+                record_id=rule.record_id,
+                actor=account.account_id,
+                role_id=account.role_id or "",
+                reason=note,
+                timestamp=_now(),
+            )
+        self.stores.record(
+            author,
+            kind="workflow_history",
+            nature="verified_outcome",
+            body={"note": "promotion rolled back", "promotion_id": promotion_id},
+            source="promotion_reversal",
+            correlation_id=f"promotion-{promotion_id}",
+        )
+        self.repo.update_promotion(promotion_id, state="rolled_back")
+        return self._promotion_for(account, promotion_id)
+
+    def list_promotions(self, account: Account, *, state: str | None = None) -> list[PromotionRow]:
+        """Promotions raised inside this account's tenant."""
+        return self.repo.list_promotions_for_tenant(account.tenant_id, state=state)
+
     # ------------------------------------------------------------ projection
     def rebuild_projection(self, account: Account) -> int:
         """Rebuild the projection from the account's ledger.
@@ -363,6 +536,40 @@ class MemoryService:
                 f"no such proposal {proposal_id}", payload={"proposal_id": proposal_id}
             )
         return owner
+
+    def _promotion_for(self, account: Account, promotion_id: str) -> PromotionRow:
+        """One promotion, scoped to the caller's tenant."""
+        row = self.repo.get_promotion(promotion_id)
+        if row is None:
+            raise NotFoundError(
+                f"no such promotion {promotion_id}", payload={"promotion_id": promotion_id}
+            )
+        author = self._owner_of(account, row.source_proposal_id)
+        if author.tenant_id != account.tenant_id:
+            raise NotFoundError(
+                f"no such promotion {promotion_id}", payload={"promotion_id": promotion_id}
+            )
+        return row
+
+    def _promoted_rule(self, account: Account, promotion_id: str) -> Any | None:
+        """The single org record a promotion created, or None.
+
+        Found by the promotion id carried in the record body. If more than one
+        record claims the same promotion, that is ambiguous, so it is refused
+        rather than guessed at. A dedicated column would be tidier and is noted
+        as a known limitation.
+        """
+        matches = [
+            record
+            for record in self.stores.read_org(account, limit=MAX_EVIDENCE_CASES)
+            if record.body.get("promotion_id") == promotion_id
+        ]
+        if len(matches) > 1:
+            raise InvalidStateError(
+                f"{promotion_id}: more than one org rule claims this promotion",
+                payload={"promotion_id": promotion_id, "matches": len(matches)},
+            )
+        return matches[0] if matches else None
 
     def _sync(self, owner: Account, proposal: ImprovementProposal, *, actor_id: str) -> None:
         self.repo.upsert_proposal(

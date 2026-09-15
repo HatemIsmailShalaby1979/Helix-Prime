@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from helix_codex_app.db import close, connect
-from helix_codex_app.errors import AppError
+from helix_codex_app.errors import AppError, NotFoundError, PermissionDenied
 from helix_codex_app.modules.memory.service import MemoryService
 from helix_codex_app.security.accounts import Account
 from helix_codex_app.security.guard import current_account, require_csrf, require_permission
@@ -169,6 +169,98 @@ async def rollback_proposal(request: Request, proposal_id: str) -> JSONResponse:
     return await _review_action(request, proposal_id, "rollback")
 
 
+@memory_router.get("/memory/promotions", response_model=None)
+def promotions_screen(request: Request) -> HTMLResponse:
+    """The promotion queue. Managers and owners only."""
+    account = _account(request)
+    if not has_permission(account, "memory.review"):
+        raise PermissionDenied("the promotion queue is for managers and owners")
+    conn = _conn(request)
+    try:
+        service = MemoryService(conn, memory_root=_memory_root(request))
+        rows = service.list_promotions(account)
+        promotions = [_promotion_dict(service, account, row) for row in rows]
+    finally:
+        close(conn)
+    return render(
+        request,
+        "promotions.html",
+        {
+            "active_nav": "memory",
+            "account": account,
+            "promotions": promotions,
+            "data_mode": "simulated_realistic",
+        },
+    )
+
+
+@memory_router.post("/api/memory/promotions", response_model=None, dependencies=_WRITE_DEP)
+async def request_promotion(request: Request) -> JSONResponse:
+    """Ask for an approved proposal to become a company-wide rule."""
+    account = _account(request)
+    conn = _conn(request)
+    try:
+        raw = await _payload(request)
+        proposal_id = str(raw.get("proposal_id", "")).strip()
+        if not proposal_id:
+            raise ValueError("proposal_id is required")
+        service = MemoryService(conn, memory_root=_memory_root(request))
+        row = service.request_promotion(account, proposal_id)
+    except AppError as exc:
+        return JSONResponse(exc.to_dict(), status_code=exc.status_code)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    finally:
+        close(conn)
+    return JSONResponse({"promotion_id": row.promotion_id, "state": row.state}, 201)
+
+
+@memory_router.post(
+    "/api/memory/promotions/{promotion_id}/approve", response_model=None, dependencies=_REVIEW_DEP
+)
+async def approve_promotion(request: Request, promotion_id: str) -> JSONResponse:
+    """Approve a promotion. Needs a manager or owner who is not the author."""
+    return await _promotion_action(request, promotion_id, "approve")
+
+
+@memory_router.post(
+    "/api/memory/promotions/{promotion_id}/reject", response_model=None, dependencies=_REVIEW_DEP
+)
+async def reject_promotion(request: Request, promotion_id: str) -> JSONResponse:
+    """Refuse a promotion. A reason is required."""
+    return await _promotion_action(request, promotion_id, "reject")
+
+
+@memory_router.post(
+    "/api/memory/promotions/{promotion_id}/rollback", response_model=None, dependencies=_REVIEW_DEP
+)
+async def rollback_promotion(request: Request, promotion_id: str) -> JSONResponse:
+    """Undo an approved promotion."""
+    return await _promotion_action(request, promotion_id, "rollback")
+
+
+async def _promotion_action(request: Request, promotion_id: str, action: str) -> JSONResponse:
+    account = _account(request)
+    conn = _conn(request)
+    try:
+        raw = await _payload(request)
+        reason = str(raw.get("reason", "")).strip() or request.query_params.get("reason", "")
+        service = MemoryService(conn, memory_root=_memory_root(request))
+        if action == "approve":
+            row = service.approve_promotion(account, promotion_id, reason=reason)
+        elif action == "reject":
+            row = service.reject_promotion(account, promotion_id, reason=reason)
+        else:
+            row = service.rollback_promotion(account, promotion_id, reason=reason)
+    except AppError as exc:
+        return JSONResponse(exc.to_dict(), status_code=exc.status_code)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    finally:
+        close(conn)
+    return JSONResponse({"promotion_id": row.promotion_id, "state": row.state})
+
+
 async def _review_action(request: Request, proposal_id: str, action: str) -> JSONResponse:
     account = _account(request)
     conn = _conn(request)
@@ -256,6 +348,32 @@ def _row_dict(row: Any) -> dict[str, Any]:
         "created_by": row.created_by,
         "created_at": row.created_at,
         "updated_at": row.updated_at,
+    }
+
+
+def _promotion_dict(service: MemoryService, account: Account, row: Any) -> dict[str, Any]:
+    """Shape one promotion for the queue template.
+
+    The source proposal is attached when this account is allowed to review it.
+    A manager looking at a same-role promotion gets no evidence block, because
+    the engine would refuse the decision anyway.
+    """
+    report = None
+    try:
+        report = service.review_report(account, row.source_proposal_id)
+    except (NotFoundError, PermissionDenied):
+        report = None
+    return {
+        "promotion_id": row.promotion_id,
+        "state": row.state,
+        "approved_by": row.approved_by,
+        "source_proposal_id": row.source_proposal_id,
+        "proposal": report,
+        "evidence": (report or {}).get("evaluation_results") or {},
+        "can_approve": row.state == "requested" and report is not None,
+        "can_reject": row.state == "requested" and report is not None,
+        "can_rollback": row.state == "approved",
+        "data_mode": (report or {}).get("data_mode") or "simulated_realistic",
     }
 
 

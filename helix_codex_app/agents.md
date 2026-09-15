@@ -48,8 +48,8 @@ App-specific rules:
 | Field | Value |
 |---|---|
 | Current step | **P6 COMPLETE** — next prompt P7.1 (low-code capability loader) |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1 adds 27 tests, P6.2 adds 10, P6.3 adds 9, P6.4 adds 12, P6.5 adds 14. Full-suite re-run at the P6.5 checkpoint: **1216 passed, 0 failed, 1230 collected (27 min)**. |
-| Last commit | `7d04f5b` test(app): prove cockpit gating and ops lifecycle, close phase p6 |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed, 1326 collected (36 min)** — 689 in `tests/helix_codex_app/`, 637 in the parent suite. The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
+| Last commit | `bb4c3af` test(app): prove cockpit gating and ops lifecycle, close phase p6 |
 | Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, **P6.1**, **P6.2**, **P6.3**, **P6.4**, **P6.5** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
@@ -1106,8 +1106,8 @@ App-specific rules:
       alongside the numbers, because the pack's synthetic aggregates are seeded from a
       fixed RNG and "the numbers differ" would be a test that passes for the wrong reason.
       `governance.md` §7 entry 22 and `repomap.md` updated with the pointers.
-      Full suite **1216 passed, 0 failed** (1230 collected, 27 min); ruff check + format
-      clean on the three new modules. Commit `7d04f5b`, recorded in the status table by
+      Full suite **1326 passed, 0 failed** (1326 collected, 36 min); ruff check + format
+      clean on the three new modules. Commit `bb4c3af`, recorded in the status table by
       `docs(app): record the p6.5 checkpoint`.
 
 ### P7 — Low-code, release, packaging, signoff (status: NOT STARTED)

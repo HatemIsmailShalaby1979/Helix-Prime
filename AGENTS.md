@@ -64,7 +64,7 @@
 | Current step | **ALL H-STEPS COMPLETE.** Superseded in time by §1A (app UI modernization, UI-1) — also COMPLETE. No active work. |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
 | Last full-suite result | **UI-1, 2026-09-16: 1393 passed, 2 failed, of 1395 collected.** Both failures are WorkBuddy sandbox artifacts, not repo failures — the sandbox's bulk-delete guard blocks `observability/logs.jsonl` deletion and `evidence/baseline/smoke.log` writes, so `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers` and `test_c5_vertical_slice::test_existing_c0_c4_regression` cannot pass here. See §1A "Gate". **Note the suite has grown well past the 621 recorded above.** |
-| Last commit | `59f73a7` fix(app): pass WCAG AA on solid accent fills and drop pure white text |
+| Last commit | `081e4bc` fix(app): correct four visual defects found in real screenshots |
 | Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, **H1.3 ✅ (F1 + F3: drift AST + mypy)**, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)**, **H3.3 ✅ (G36 + G37)**, **H3.4 ✅ (G38 + G40 + G41)** |
 | Post-task doc-sync | **COMPLETE (2026-09-12)** — marketing + docs aligned to current repo state: 9-agent roster (role-catalog), 621-test suite, Python 3.12, `helix-api` canonical, kill switch/metrics/audit-chain real, tenancy.py deletion, Scoach pack BUILT, PCV 18/24, LICENSE resolved; dated handoff records banner-marked SUPERSEDED; 0 broken relative links; no code changed |
 

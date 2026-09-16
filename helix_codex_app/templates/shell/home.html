@@ -8,9 +8,10 @@
     rendered. Reading it at this template's top level would run too early and
     greet everybody as "operator", so the greeting is derived inside the block. -#}
 {% set name = acct.display_name if acct and acct.display_name else "operator" %}
+{% set name_stop = "" if name.endswith(".") else "." %}
 {% set role = acct.role_id if acct else "" %}
 
-{% call head.page_head("Hello, " ~ name ~ ".", "Where everything stands, and the fastest way into it.", "Home") %}
+{% call head.page_head("Hello, " ~ name ~ name_stop, "Where everything stands, and the fastest way into it.", "Home") %}
 {% if acct %}
 <form method="post" action="/app/auth/logout" hx-post="/app/auth/logout"
       hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'>

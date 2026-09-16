@@ -547,6 +547,30 @@ this app's tests pin UI copy as substrings of `response.text`.**
   `var(--ink)`: 5.16:1 base, 4.90:1 hover, with hover still lighter than base. The only
   remaining `#fff` is `background: #fff` in the `@media print` block, which is correct.
 
+- **Visual review with headless Chrome.** `agent-browser` cannot run on Windows, but plain
+  headless Chrome can and is installed at
+  `C:/Program Files/Google/Chrome/Application/chrome.exe`. Use
+  `--headless=new --screenshot=<png> --virtual-time-budget=4000 --window-size=W,H <file|url>`.
+  **Windows enforces a ~500px minimum Chrome window width**, so `--window-size=390` actually
+  lays out at 504px and merely crops the image — do not read that as a layout bug. To measure
+  a genuine narrow viewport, embed the page in a same-origin `<iframe width="390">` and launch
+  with `--allow-file-access-from-files`, then read `contentDocument.documentElement.scrollWidth`.
+  Verified that way: at 390px `htmlScrollWidth == bodyScrollWidth == viewport == 390`, i.e. **no
+  horizontal overflow**; the only element past the edge is the decorative watermark, which
+  `.app-atmosphere { overflow: hidden }` clips harmlessly.
+- **Four visual defects found by looking at real screenshots and fixed:**
+  1. the greeting rendered `Hello, Amira K..` (double stop) whenever a display name already
+     ended in a full stop — now conditional;
+  2. the guide card said "in four moves" while listing **five** steps for owners/managers —
+     the count and its word form are now derived from `can_admin`, so copy and steps agree;
+  3. the header "Jump to…" control wrapped onto two lines at desktop widths — it and its
+     label/kbd are now `flex: none` + `white-space: nowrap`;
+  4. the sign-in card sat in the top third instead of centred — `.auth-content` is now a
+     centring grid with `min-height: calc(100vh - var(--header-h))`.
+  A fifth suspected defect (the `kbd` reading "ctrl K") was checked and **dismissed**: the
+  markup is `<kbd>Ctrl K</kbd>` with no transform — it was downscaling aliasing in the
+  screenshot. Verify before "fixing".
+
 **Files:** `helix_codex_app/static/css/{tokens,app,fonts}.css`, `static/js/shell.js`,
 `static/icons/*.svg|png`, `static/{manifest.webmanifest,sw.js,offline.html}`,
 `static/vendor/fonts/*` (5 woff2), `templates/**` (58 files),

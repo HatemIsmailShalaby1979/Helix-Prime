@@ -1,15 +1,17 @@
 {% import "partials/icons.html" as icons %}
 {% set role = acct.role_id if acct else "" %}
 {% set can_admin = role in ("owner", "manager") %}
+{% set move_count = 5 if can_admin else 4 %}
+{% set move_word = "five" if can_admin else "four" %}
 <section class="guide" data-guide data-guide-here="home" aria-labelledby="guide-title">
   <div class="guide__head">
     <div>
       <span class="guide__eyebrow">Start here</span>
-      <h2 class="guide__title" id="guide-title">Helix Codex in four moves</h2>
+      <h2 class="guide__title" id="guide-title">Helix Codex in {{ move_word }} moves</h2>
       <p class="guide__body">
         Everything you do here is recorded, and anything that changes shared state
         waits for a second person to approve it. That is the whole shape of the
-        product. Walk these four screens once and you have seen all of it.
+        product. Walk these {{ move_word }} screens once and you have seen all of it.
       </p>
     </div>
     <button class="btn btn--ghost btn--icon" type="button" data-guide-dismiss
@@ -54,7 +56,7 @@
   </ol>
 
   <div class="guide__foot">
-    <span class="guide__progress" data-guide-progress>0 of {{ 5 if can_admin else 4 }} explored</span>
+    <span class="guide__progress" data-guide-progress>0 of {{ move_count }} explored</span>
     <button class="btn btn--ghost btn--small" type="button" data-guide-dismiss>
       Hide this
     </button>

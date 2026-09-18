@@ -38,6 +38,7 @@ class EngineProvider:
 
     def startup(self) -> Engine:
         from engines.registry import register_all  # local: avoids import cycle at module load
+        from security.audit import AuditTrail
 
         engine = Engine(
             db_path=self.settings.db_path,
@@ -45,6 +46,8 @@ class EngineProvider:
             log_path=self.settings.log_path,
         )
         register_all(engine)
+        trail = AuditTrail(db_path=self.settings.audit_db_path)
+        trail.close()
         self._engine = engine
         return engine
 

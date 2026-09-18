@@ -5,11 +5,17 @@ Liveness and readiness.
 a liveness probe that depends on storage turns a slow disk into a restart loop.
 
 ``/readyz`` answers "can this instance serve traffic" and therefore *does*
-check storage: workflow store reachable, schema migrated, audit chain intact.
-A broken hash chain makes the instance not-ready on purpose — serving traffic
-from a ledger that cannot be verified is worse than being down.
+check storage: workflow store reachable and the audit store present, readable,
+and chain-verified. A missing, unreadable, or broken audit store makes the
+instance not-ready on purpose — serving traffic from a ledger that cannot be
+verified is worse than being down. The probe never creates the audit store:
+fresh-install bootstrap (``server.deps.EngineProvider.startup``) initializes
+it explicitly, so a missing file at probe time means runtime loss, not first
+boot. Failure details name the failed check only, never paths or internals.
 """
 from __future__ import annotations
+
+import pathlib
 
 from fastapi import APIRouter, Response, status
 
@@ -28,36 +34,39 @@ def healthz() -> HealthResponse:
 def readyz(response: Response) -> ReadinessResponse:
     provider = deps.get_provider()
     checks: dict = {}
-    ready = True
 
     try:
         engine = provider.engine
         engine.store.list_workflows(limit=1)
         checks["workflow_store"] = True
-    except Exception as exc:  # noqa: BLE001 - readiness must never raise
+    except Exception:
         checks["workflow_store"] = False
-        ready = False
-        return _not_ready(response, checks, f"workflow store unreachable: {exc}")
+        return _not_ready(response, checks, "workflow store unavailable")
+
+    audit_path = pathlib.Path(str(provider.settings.audit_db_path))
+    if not audit_path.exists():
+        checks["audit_chain"] = False
+        return _not_ready(response, checks, "audit store missing")
+    if not audit_path.is_file():
+        checks["audit_chain"] = False
+        return _not_ready(response, checks, "audit store unreadable")
 
     try:
         from security.audit import AuditTrail
 
-        trail = AuditTrail(db_path=provider.settings.audit_db_path)
+        trail = AuditTrail(db_path=str(audit_path))
         try:
-            ok, detail = trail.verify_chain()
+            ok, _detail = trail.verify_chain()
             checks["audit_chain"] = bool(ok)
             if not ok:
-                ready = False
-                return _not_ready(response, checks, f"audit chain invalid: {detail}")
+                return _not_ready(response, checks, "audit chain invalid")
         finally:
             trail.close()
-    except Exception as exc:  # noqa: BLE001 - readiness must never raise
-        # An absent audit database on a fresh volume is expected, not fatal.
-        checks["audit_chain"] = f"unverified: {exc}"
+    except Exception:
+        checks["audit_chain"] = False
+        return _not_ready(response, checks, "audit store unreadable")
 
-    if not ready:
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    return ReadinessResponse(ready=ready, checks=checks)
+    return ReadinessResponse(ready=True, checks=checks)
 
 
 def _not_ready(response: Response, checks: dict, detail: str) -> ReadinessResponse:

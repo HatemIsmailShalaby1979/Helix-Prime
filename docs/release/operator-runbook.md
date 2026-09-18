@@ -39,6 +39,25 @@ Required components (control-plane store, event replay, capability registry,
 role catalog, filesystem) must be ready. Ollama is **optional** and reported
 separately with actionable diagnostics when absent.
 
+Liveness and readiness are separate probes with separate jobs:
+
+- `GET /healthz` (liveness) answers only "is the process alive" and never
+  touches storage. Container healthchecks and restart decisions use this
+  probe: a liveness probe that depends on storage turns a slow disk into a
+  restart loop.
+- `GET /readyz` (readiness) answers "can this instance serve traffic". It
+  returns `200` only when the workflow store is reachable **and** the audit
+  store is present, readable, and chain-verified; a missing, unreadable, or
+  chain-broken audit store answers `503` with the failed check named in the
+  `checks` object (details never carry paths or internals). Gate traffic and
+  orchestrators on this probe, never on liveness alone: a live process with
+  an unverifiable ledger must receive no traffic.
+- Fresh-install bootstrap (`server.deps.EngineProvider.startup`, mirrored by
+  `infra/docker/entrypoint.sh` for the workflow store) explicitly initializes
+  the audit store before readiness can pass, so a missing audit file at probe
+  time means runtime loss — not first boot — and stays `503` until restart
+  re-initializes it.
+
 ## 5. Release gate
 
 ```bash

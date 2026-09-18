@@ -986,3 +986,47 @@ patched out). Existing server fixtures now declare token scope
 **Focused run: 52 passed** (10 scope + 6 auth + 13 spine + 12 kill-switch + 11
 metrics). `ruff check` clean on all touched paths; `ruff format --check` clean
 (5 files reformatted).
+
+---
+
+## 9. Fail-closed readiness for the core service (RS-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `server/features/health/router.py`,
+`server/deps.py` bootstrap, deploy health docs. Policy seam, engines, and the
+release gate untouched. No production readiness claimed.
+
+**Issue:** `/readyz` treated a missing or unreadable audit database as
+"unverified" while still reporting ready — an unverifiable ledger could
+receive traffic.
+
+**Fix:**
+- `server/features/health/router.py` — `/healthz` unchanged (liveness-only,
+  no storage touch). `/readyz` now: workflow store unreachable → `503`;
+  audit file absent → `503` (`audit store missing`); path not a file →
+  `503` (`audit store unreadable`); open/verify failure → `503`
+  (`audit store unreadable`); chain invalid → `503` (`audit chain invalid`).
+  The probe never creates the store; failure details are static strings and
+  the `checks` object (`workflow_store` / `audit_chain` booleans) names the
+  failed check — no paths or exception text leave the process.
+- `server/deps.py::EngineProvider.startup` — fresh-install bootstrap now
+  explicitly opens + closes the audit trail, so the store exists and an empty
+  chain verifies before readiness can pass. A missing file at probe time
+  therefore means runtime loss, not first boot, and stays `503` until restart
+  re-initializes it.
+- Docs: `docs/release/operator-runbook.md` §4 distinguishes liveness
+  (`/healthz`, restart decisions) from readiness (`/readyz`, traffic
+  gating); `infra/docker/docker-compose.yml` + `infra/docker/Dockerfile`
+  HEALTHCHECK lines carry the same distinction.
+
+**Gate:** new `tests/test_service_readiness.py` (7) — missing store → `503`
+(plus file still absent afterwards, the can-fail proof: a recreating probe
+would fail it), unreadable (garbage bytes) → `503`, tampered chain → `503`,
+valid chain → `200`, empty-but-bootstrapped → `200`, liveness `200` while
+readiness `503`, and failure bodies carry no filesystem internals. The
+missing/broken cases fail on the old code (it answered `200` ready), which is
+the can-fail evidence.
+**Focused run: 61 passed** — 7 readiness + 13 spine + 10 tenant-scope + 6 auth
++ 12 kill-switch + 11 metrics + 2 release-gate observability unit tests
+(`test_observability_startup_slo`,
+`test_observability_readiness_required_components`). `ruff check` clean;
+`ruff format --check` clean.

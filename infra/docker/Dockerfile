@@ -57,6 +57,10 @@ USER helix
 VOLUME ["/data"]
 EXPOSE 8501 8000
 
+# Component-level health (control-plane, registries, filesystem; Ollama
+# optional). This is neither the liveness probe (GET /healthz: process alive,
+# no storage touch) nor the readiness probe (GET /readyz: workflow store
+# reachable plus audit store present, readable, and chain-verified, else 503).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD python scripts/health_check.py --db-path "$HELIX_DB_PATH" || exit 1
 

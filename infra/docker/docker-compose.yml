@@ -21,6 +21,12 @@ services:
       ollama:
         condition: service_started
     restart: unless-stopped
+    # Liveness probe: /healthz answers "is the process alive" without touching
+    # storage, so a slow disk can never cause a restart loop. Readiness (can
+    # this instance serve traffic: workflow store reachable plus audit store
+    # present, readable, and chain-verified) is the separate GET /readyz
+    # endpoint, which answers 503 while the ledger is unverifiable — gate
+    # traffic on /readyz, restarts on this /healthz check.
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
       interval: 30s

@@ -58,6 +58,13 @@ async def login_submit(request: Request) -> HTMLResponse | RedirectResponse:
         response = RedirectResponse(target, status_code=303)
         set_session_cookie(response, result.token, settings)
         return response
+    if result.code == "throttled":
+        return render(
+            request,
+            "auth/login.html",
+            {"error": result.error, "domain": domain_name, "username": username},
+            status_code=429,
+        )
     return render(
         request,
         "auth/login.html",
@@ -85,7 +92,13 @@ def logout(request: Request) -> HTMLResponse:
     finally:
         close(conn)
     response = HTMLResponse("")
-    response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(
+        SESSION_COOKIE,
+        path="/",
+        secure=settings.cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
     if request.headers.get("hx-request") == "true":
         response.headers["HX-Redirect"] = "/app/auth/login"
     return response

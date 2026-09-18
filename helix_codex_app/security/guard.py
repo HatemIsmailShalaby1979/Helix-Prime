@@ -82,6 +82,7 @@ def require_permission(key: str) -> Callable[[Request, Account], None]:
                 payload={"account_id": account.account_id, "permission_key": key},
             )
 
+    dependency._permission_key = key
     return dependency
 
 
@@ -107,6 +108,7 @@ def require_capability(key: str) -> Callable[[Request, Account], None]:
                 payload={"account_id": account.account_id, "capability_key": key},
             )
 
+    dependency._capability_key = key
     return dependency
 
 

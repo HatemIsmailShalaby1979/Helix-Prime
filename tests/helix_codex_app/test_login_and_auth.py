@@ -235,10 +235,13 @@ def test_password_screen_and_change_flow(ctx, client) -> None:
     account = ctx.repo.get_account_by_id(ctx.amira.account_id)
     assert account.must_change_password is False
     assert verify_password("brand-new-pass", account.password_hash)
+    assert ctx.store.verify(token) is None
+    fresh_token = _login(ctx, client, password="brand-new-pass")
+    fresh_session = ctx.store.verify(fresh_token)
     resp = client.post(
         "/app/auth/password",
-        cookies=_cookie(token),
-        headers={"X-CSRF-Token": session.csrf_token},
+        cookies=_cookie(fresh_token),
+        headers={"X-CSRF-Token": fresh_session.csrf_token},
         data={"old_password": "wrong", "new_password": "brand-new-pass"},
     )
     assert resp.status_code == 200

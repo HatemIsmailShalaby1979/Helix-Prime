@@ -157,4 +157,17 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
     async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
+    @app.exception_handler(Exception)
+    async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "code": "internal_error",
+                    "message": "Something went wrong.",
+                    "payload": {},
+                }
+            },
+        )
+
     return app

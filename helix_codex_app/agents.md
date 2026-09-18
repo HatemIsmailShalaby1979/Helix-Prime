@@ -1337,3 +1337,26 @@ App-specific rules:
 
 If the check-out count is below the baseline, fix it before committing. Do not commit a regression
 and promise to fix it next time.
+
+---
+
+## Auth hardening (2026-09-18) — COMPLETE
+
+**Scope:** `helix_codex_app/security/throttle.py` (new), `db.py` + alembic
+baseline (`login_throttle` table, token-identical), `modules/identity`
+(service + router), `security/guard.py` (permission markers), `app.py`
+(generic 500 handler), `docs/release/app-operator-runbook.md`
+(TLS/proxy/cookies), `governance.md` entry 25, `repomap.md` tables. No
+permission semantics changed; one deliberate test update
+(`test_password_screen_and_change_flow` re-logs in after the change because
+the old session is now revoked — the new required behavior).
+
+**Gate:** new `tests/helix_codex_app/test_auth_hardening.py` (14):
+throttling by login name and by source address, non-enumerating throttle
+message, counter reset on success, bounded table, HTTP 429 spray,
+password-change revokes every session, Secure flag follows settings,
+logout clears with matching flags, mutating-route CSRF sweep, admin/cockpit
+boundary markers + employee 403s, disabled/locked/revoked immediacy,
+unhandled-error redaction. Focused: 14 new + 20 login/auth green; adjacent
+run 123/124 with the single expected failure above (fixed by the deliberate
+update). `ruff check` + `ruff format --check` clean on all touched paths.

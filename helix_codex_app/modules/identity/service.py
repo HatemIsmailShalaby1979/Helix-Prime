@@ -19,6 +19,7 @@ from helix_codex_app.config import AppSettings, get_app_settings
 from helix_codex_app.security.accounts import Account, AccountRepository
 from helix_codex_app.security.passwords import hash_password, verify_password
 from helix_codex_app.security.sessions import Session, SessionStore
+from helix_codex_app.security.throttle import LoginThrottle, login_bucket
 
 MAX_FAILED_ATTEMPTS = 5
 LOCK_MINUTES = 15
@@ -26,6 +27,7 @@ MIN_PASSWORD_LENGTH = 8
 
 BAD_CREDENTIALS_MESSAGE = "The sign-in details did not match."
 LOCKED_MESSAGE = "Too many failed attempts. Try again in 15 minutes."
+THROTTLED_MESSAGE = "Too many sign-in attempts. Try again in a few minutes."
 
 _CREDENTIAL_FAILURES = frozenset({"no_such_domain", "no_such_account", "bad_password"})
 
@@ -56,6 +58,7 @@ class LoginService:
         self.settings = settings or get_app_settings()
         self.repo = AccountRepository(conn)
         self.sessions = SessionStore(conn, self.settings)
+        self.throttle = LoginThrottle(conn)
 
     def login(
         self,
@@ -70,16 +73,24 @@ class LoginService:
         A missing domain or account returns the same generic failure as a
         wrong password, and the single rule stated here is also the unit that
         proves it: every path in _CREDENTIAL_FAILURES renders error equal to
-        BAD_CREDENTIALS_MESSAGE. Lockout counts real accounts only; after
+        BAD_CREDENTIALS_MESSAGE. A source address or login name that fails too
+        often in a short window is throttled with a 429-shaped result before
+        any account is touched. Lockout counts real accounts only; after
         MAX_FAILED_ATTEMPTS consecutive failures the account is locked for
         LOCK_MINUTES and the lock itself is recorded in login_events.
         """
         domain = self.repo.get_domain_by_name(domain_name)
         account = self.repo.get_account_by_login(domain_name, username) if domain else None
+        bucket = login_bucket(domain_name, username)
+        if self.throttle.throttled(login_key=bucket, ip=ip) is not None:
+            self._record("throttled", None, domain.domain_id if domain else None, ip, user_agent)
+            return LoginResult(ok=False, code="throttled", error=THROTTLED_MESSAGE)
         if domain is None:
+            self.throttle.record(login_key=bucket, ip=ip)
             self._record("no_such_domain", None, None, ip, user_agent)
             return LoginResult(ok=False, code="no_such_domain", error=BAD_CREDENTIALS_MESSAGE)
         if account is None:
+            self.throttle.record(login_key=bucket, ip=ip)
             self._record("no_such_account", None, domain.domain_id, ip, user_agent)
             return LoginResult(ok=False, code="no_such_account", error=BAD_CREDENTIALS_MESSAGE)
         if self._is_locked(account):
@@ -93,6 +104,7 @@ class LoginService:
             self._record("unusable_account", account.account_id, domain.domain_id, ip, user_agent)
             return LoginResult(ok=False, code="unusable_account", error=BAD_CREDENTIALS_MESSAGE)
         if not account.password_hash or not verify_password(password, account.password_hash):
+            self.throttle.record(login_key=login_bucket(domain_name, username), ip=ip)
             updated = self.repo.record_failed_attempt(account.account_id)
             if updated.failed_attempts >= MAX_FAILED_ATTEMPTS:
                 until = (datetime.now(timezone.utc) + timedelta(minutes=LOCK_MINUTES)).isoformat()
@@ -102,6 +114,7 @@ class LoginService:
             self._record("bad_password", account.account_id, domain.domain_id, ip, user_agent)
             return LoginResult(ok=False, code="bad_password", error=BAD_CREDENTIALS_MESSAGE)
         self.repo.reset_failed_attempts(account.account_id)
+        self.throttle.clear(login_key=login_bucket(domain_name, username), ip=ip)
         self.conn.execute(
             "UPDATE accounts SET last_login_at = ? WHERE account_id = ?",
             (_now(), account.account_id),
@@ -133,7 +146,9 @@ class LoginService:
             raise ValueError(
                 f"The new password must be at least {MIN_PASSWORD_LENGTH} characters long."
             )
-        return self.repo.set_password(account.account_id, hash_password(new))
+        updated = self.repo.set_password(account.account_id, hash_password(new))
+        self.sessions.revoke_all_for(account.account_id)
+        return updated
 
     def _is_locked(self, account: Account) -> bool:
         if account.status != "locked":

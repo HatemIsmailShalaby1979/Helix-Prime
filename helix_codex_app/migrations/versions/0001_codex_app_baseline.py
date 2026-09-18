@@ -167,6 +167,17 @@ def upgrade() -> None:
 
     op.execute(
         """
+    CREATE TABLE IF NOT EXISTS login_throttle (
+        bucket TEXT PRIMARY KEY,
+        attempts INTEGER,
+        window_start TEXT
+    )
+    
+    """
+    )
+
+    op.execute(
+        """
     CREATE TABLE IF NOT EXISTS conversations (
         conversation_id TEXT PRIMARY KEY,
         tenant_id TEXT,
@@ -531,6 +542,7 @@ def downgrade() -> None:
     op.execute("DROP TABLE IF EXISTS conversation_members")
     op.execute("DROP TABLE IF EXISTS conversations")
     op.execute("DROP TABLE IF EXISTS login_events")
+    op.execute("DROP TABLE IF EXISTS login_throttle")
     op.execute("DROP TABLE IF EXISTS account_limits")
     op.execute("DROP TABLE IF EXISTS account_capabilities")
     op.execute("DROP TABLE IF EXISTS sessions")

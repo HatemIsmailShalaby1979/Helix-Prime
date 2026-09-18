@@ -201,7 +201,7 @@ Governance layer: `nodes`. Working layer: `conversations`, `conversation_members
 `event_attendees`, `oncall_shifts`, `notifications`, `punch_records`, `files`, `memory_stores`,
 `proposals`, `proposal_reviews`, `promotions`, `sections`, `capability_packs`. Identity tables:
 `domains`, `org_units`, `accounts`, `sessions`, `account_capabilities`, `account_limits`,
-`login_events`.
+`login_events`, `login_throttle`.
 
 All are created by `db.py::_init_schema()` and the app-local alembic baseline `0001_codex_app_baseline` (P1.1).
 

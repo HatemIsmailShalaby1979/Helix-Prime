@@ -1070,3 +1070,47 @@ stream.
 **Focused run: 36 passed** (9 stream + 10 tenant-scope + 13 spine + 6 auth —
   the stream file re-ran green after format). `ruff check` clean (one `B904`
   fixed); `ruff format --check` clean (both Python files reformatted).
+
+---
+
+## 11. Self-hosted app authentication hardening (AH-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `helix_codex_app/` auth surface only
+(sessions, login, CSRF, cookies, guard, app factory) + app deploy docs.
+Parent `server/`, policy seam, engines, and forbidden paths untouched. No
+production readiness claimed.
+
+**Fix:**
+- `security/throttle.py` (new) — SQLite-backed `login_throttle` table
+  (fixed 10-min windows, 20 attempts per source address / 10 per login name,
+  expired windows pruned on every check so the table stays bounded; buckets
+  never distinguish known from unknown names). `LoginService` checks before
+  any account is touched (`throttled` → shared message, HTTP `429`), records
+  on every credential failure including unknown domains/accounts, clears on
+  success. Per-account lockout (5/15 min) and the single non-enumerating
+  message are unchanged.
+- `change_password` now revokes every session for the account
+  (`revoke_all_for`); logout clears the cookie with matching
+  Secure/HttpOnly/SameSite flags; `Secure` still defaults on.
+- `guard.require_permission` / `require_capability` closures expose
+  `_permission_key` / `_capability_key` so boundary sweeps can see them.
+- `app.py` gains a generic `Exception` handler: unhandled errors answer a
+  fixed 500 (`internal_error`, "Something went wrong.") — no paths, tokens,
+  or traces.
+- DDL mirrored token-identically in `db.py` + alembic baseline (drift green).
+- Docs: `app-operator-runbook.md` gains "Remote access, TLS, and cookies"
+  (loopback-only, TLS at a same-host reverse proxy, `HELIX_APP_COOKIE_SECURE`
+  stays true over HTTPS, no `X-Forwarded-*` interpretation, throttle/lockout
+  behavior). `governance.md` entry 25, `repomap.md` tables, app ledger entry.
+
+**Gate:** new `tests/helix_codex_app/test_auth_hardening.py` (14) —
+brute-force throttling (name + address), non-enumerating throttle message,
+reset-on-success, bounded table, HTTP 429, password-change revocation,
+Secure flag, logout clearing, mutating-route CSRF sweep, admin/cockpit
+boundary markers + employee 403s, disabled/locked/revoked immediacy,
+exception redaction. One deliberate existing-test update:
+`test_password_screen_and_change_flow` re-logs in after the change (the old
+cookie is now correctly dead). **Focused: 14 new + 20 login/auth green;
+adjacent auth suites 123/124 then green after the update; migration-drift +
+app release gates green.** `ruff check` clean; `ruff format --check` clean
+(3 files reformatted, re-ran green).

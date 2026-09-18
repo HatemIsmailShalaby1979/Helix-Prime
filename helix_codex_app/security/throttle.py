@@ -32,12 +32,19 @@ class LoginThrottle:
     def __init__(self, conn: sqlite3.Connection) -> None:
         self.conn = conn
 
+    def count(self, bucket: str) -> int:
+        """Current attempts in a live window for one bucket, else zero."""
+        row = self.conn.execute(
+            "SELECT attempts FROM login_throttle WHERE bucket = ?", (bucket,)
+        ).fetchone()
+        return int(row["attempts"]) if row is not None else 0
+
     def throttled(self, *, login_key: str, ip: str | None) -> str | None:
         """Return the tripped bucket kind, or None when the attempt may proceed."""
         self._prune()
-        if ip is not None and self._count(ip_bucket(ip)) >= MAX_ATTEMPTS_PER_IP:
+        if ip is not None and self.count(ip_bucket(ip)) >= MAX_ATTEMPTS_PER_IP:
             return "ip"
-        if self._count(login_key) >= MAX_ATTEMPTS_PER_LOGIN:
+        if self.count(login_key) >= MAX_ATTEMPTS_PER_LOGIN:
             return "login"
         return None
 
@@ -54,12 +61,6 @@ class LoginThrottle:
             self.conn.execute("DELETE FROM login_throttle WHERE bucket = ?", (ip_bucket(ip),))
         self.conn.execute("DELETE FROM login_throttle WHERE bucket = ?", (login_key,))
         self.conn.commit()
-
-    def _count(self, bucket: str) -> int:
-        row = self.conn.execute(
-            "SELECT attempts FROM login_throttle WHERE bucket = ?", (bucket,)
-        ).fetchone()
-        return int(row["attempts"]) if row is not None else 0
 
     def _hit(self, bucket: str) -> None:
         now = _now()

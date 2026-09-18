@@ -28,16 +28,16 @@ from helix_codex_app import db
 from helix_codex_app.db import record_node
 from helix_codex_app.errors import InvalidStateError, NotFoundError, PermissionDenied
 from helix_codex_app.integration.memory_bridge import AccountMemoryStore
-from helix_codex_app.integration.metacognition_bridge import AccountMetacognition
-from helix_codex_app.modules.memory.repository import MemoryRepository, PromotionRow, ProposalRow
-from helix_codex_app.security.accounts import Account, AccountRepository
-from metacognition.improvement import (
+from helix_codex_app.integration.metacognition_bridge import (
+    AccountMetacognition,
     ApprovalDecision,
     EvaluationResult,
     ImprovementProposal,
     ProposalNotApprovableError,
     ProposalStateError,
 )
+from helix_codex_app.modules.memory.repository import MemoryRepository, PromotionRow, ProposalRow
+from helix_codex_app.security.accounts import Account, AccountRepository
 
 PROVENANCE_SOURCE = "helix_codex_app.memory"
 PROVENANCE_DATA_MODE = "app_runtime"

@@ -17,17 +17,16 @@ from datetime import datetime, timedelta, timezone
 
 from helix_codex_app.config import AppSettings, get_app_settings
 from helix_codex_app.integration.telemetry import record_auth_event
-from helix_codex_app.security.accounts import Account, AccountRepository
+from helix_codex_app.security.accounts import LOCK_MINS, Account, AccountRepository
 from helix_codex_app.security.passwords import hash_password, verify_password
 from helix_codex_app.security.sessions import Session, SessionStore
 from helix_codex_app.security.throttle import LoginThrottle, login_bucket
 
 MAX_FAILED_ATTEMPTS = 5
-LOCK_MINUTES = 15
 MIN_PASSWORD_LENGTH = 8
 
 BAD_CREDENTIALS_MESSAGE = "The sign-in details did not match."
-LOCKED_MESSAGE = "Too many failed attempts. Try again in 15 minutes."
+LOCKED_MESSAGE = f"Too many failed attempts. Try again in {LOCK_MINS} minutes."
 THROTTLED_MESSAGE = "Too many sign-in attempts. Try again in a few minutes."
 
 _CREDENTIAL_FAILURES = frozenset({"no_such_domain", "no_such_account", "bad_password"})
@@ -78,7 +77,7 @@ class LoginService:
         often in a short window is throttled with a 429-shaped result before
         any account is touched. Lockout counts real accounts only; after
         MAX_FAILED_ATTEMPTS consecutive failures the account is locked for
-        LOCK_MINUTES and the lock itself is recorded in login_events.
+        LOCK_MINS and the lock itself is recorded in login_events.
         """
         domain = self.repo.get_domain_by_name(domain_name)
         account = self.repo.get_account_by_login(domain_name, username) if domain else None
@@ -113,7 +112,7 @@ class LoginService:
             self.throttle.record(login_key=login_bucket(domain_name, username), ip=ip)
             updated = self.repo.record_failed_attempt(account.account_id)
             if updated.failed_attempts >= MAX_FAILED_ATTEMPTS:
-                until = (datetime.now(timezone.utc) + timedelta(minutes=LOCK_MINUTES)).isoformat()
+                until = (datetime.now(timezone.utc) + timedelta(minutes=LOCK_MINS)).isoformat()
                 self.repo.lock_account(account.account_id, until=until)
                 self._record("locked", account.account_id, domain.domain_id, ip, user_agent)
                 record_auth_event("login_locked")

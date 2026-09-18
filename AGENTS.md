@@ -1310,3 +1310,48 @@ suites, 49 across promotion/lifecycle/node suites, plus pack-readiness,
 connectors, customer-success, db-envelope, and memory-screen suites.
 `ruff check` clean; `ruff format --check` clean (3 files reformatted,
 re-ran green).
+
+---
+
+## 16. Read-only review of recently changed production paths (CR-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** read-only review of `server/auth.py`,
+`server/features`, `helix_codex_app/security`, `helix_codex_app/integration`,
+`release`, deployment scripts through five lenses (shallow modules, duplicated
+authorization, dead code, declared-vs-real boundaries, test pain). Only
+concrete, code-supported findings implemented; no speculative refactors. No
+production readiness claimed.
+
+**Accepted findings (each with claim + failure scenario + fix + test):**
+- **F1 — seam violation (declared boundary vs import reality):**
+  `helix_codex_app/modules/memory/service.py` imported
+  `metacognition.improvement` directly, contradicting rule 5 and the
+  bridge's own "only place" docstring. A parent move/split would break a
+  feature module past the single audited seam. Fix: the five names
+  re-export through `integration/metacognition_bridge.py` (`__all__`);
+  service imports from the bridge. Test: new
+  `tests/helix_codex_app/test_integration_seam.py` AST-sweeps every
+  non-integration, non-scripts app file for the seven parent packages.
+- **F2 — dead code:** `guard.require_scope` had zero callers (only its own
+  definition + historical doc mentions, which stay untouched). A dead
+  tenant gate misleads the next reader. Fix: removed + module docstring
+  updated; its two probe tests removed (tenant scoping stays pinned by
+  the isolation suites).
+- **F3 — duplicated concept:** `LOCK_MINUTES=15` (identity service) vs
+  `LOCK_MINS=15` (accounts) could drift (message says 15 min while the
+  window differs). Fix: service imports the canonical `LOCK_MINS`; the
+  lock message derives from it. Test: single-source assertion.
+- **F4 — test pain / interface bypass:** tests reached into
+  `LoginThrottle._count`. Fix: public `count()`; tests updated.
+
+**Dismissed with reason:** `server/auth.py` unused `request` param
+(harmless, pre-existing); `release/gate.py` `--soak` no-op branch
+(pre-existing, gate-sensitive, near-zero value); `helix_codex_app/app.py`
+`server.*` imports (pre-date the rule's letter, which names seven
+packages not including `server`/`observability`; refactoring the factory
+would be speculative). No TODO/stub found on any v1 route; no second
+tenant/isolation seam introduced (single readers verified).
+
+**Gate:** 4 seam tests green; **75 across** seam + sessions/guard +
+login/auth + hardening + proposals + lifecycle (incl. the two deliberate
+probe removals). `ruff check` clean; `ruff format --check` clean.

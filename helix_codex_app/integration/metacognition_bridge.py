@@ -6,7 +6,8 @@ resolved from the authenticated account exactly the way a memory store is, so a
 caller cannot name a foreign ledger.
 
 This module is the only place in the app that imports the parent metacognition
-package.
+package. Feature modules use the engine through AccountMetacognition and the
+re-exported proposal types below, never by importing the parent directly.
 """
 from __future__ import annotations
 
@@ -21,7 +22,19 @@ from metacognition.improvement import (
     EvaluationResult,
     ImprovementProposal,
     MetacognitionEngine,
+    ProposalNotApprovableError,
+    ProposalStateError,
 )
+
+__all__ = [
+    "AccountMetacognition",
+    "ApprovalDecision",
+    "EvaluationResult",
+    "ImprovementProposal",
+    "ProposalNotApprovableError",
+    "ProposalStateError",
+    "resolve_proposals_path",
+]
 
 PROPOSALS_FILENAME = "proposals.jsonl"
 

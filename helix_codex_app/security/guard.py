@@ -5,10 +5,9 @@ the sessions table, refreshes the idle timestamp, loads the account, and
 attaches session and account to request.state. It is installed once at the
 /app router boundary, so a handler can never skip it. require_csrf guards
 every mutating /app route by comparing the X-CSRF-Token header with the
-session's stored CSRF token using compare_digest. require_scope,
-require_capability, and require_permission (checked against the app
-permission catalog) gate the finer actions; an unknown permission key is
-denied, never allowed.
+session's stored CSRF token using compare_digest. require_capability and
+require_permission (checked against the app permission catalog) gate the
+finer actions; an unknown permission key is denied, never allows.
 """
 from __future__ import annotations
 
@@ -109,21 +108,4 @@ def require_capability(key: str) -> Callable[[Request, Account], None]:
             )
 
     dependency._capability_key = key
-    return dependency
-
-
-def require_scope(tenant_id: str) -> Callable[[Account], None]:
-    """Return a dependency rejecting any caller outside the given tenant."""
-
-    def dependency(account: Account = Depends(current_account)) -> None:
-        if account.tenant_id != tenant_id:
-            raise PermissionDenied(
-                f"scope {tenant_id!r} is not the caller's own tenant",
-                payload={
-                    "account_id": account.account_id,
-                    "tenant_id": account.tenant_id,
-                    "requested_scope": tenant_id,
-                },
-            )
-
     return dependency

@@ -119,8 +119,8 @@ def test_successful_login_clears_throttle_counters(ctx) -> None:
     ok = ctx.service.login("a.academy", "amira", "your-password", ip="10.9.0.4")
     assert ok.ok is True
     throttle = LoginThrottle(ctx.conn)
-    assert throttle._count(login_bucket("a.academy", "amira")) == 0
-    assert throttle._count("ip:10.9.0.4") == 0
+    assert throttle.count(login_bucket("a.academy", "amira")) == 0
+    assert throttle.count("ip:10.9.0.4") == 0
 
 
 def test_throttle_table_stays_bounded(ctx) -> None:

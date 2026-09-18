@@ -27,7 +27,6 @@ from helix_codex_app.security.guard import (
     current_account,
     require_capability,
     require_permission,
-    require_scope,
 )
 from helix_codex_app.security.sessions import (
     SESSION_COOKIE,
@@ -63,11 +62,6 @@ def _probe_capability_denied() -> dict[str, str]:
     dependencies=[Depends(require_permission("test.punch"))],
 )
 def _probe_permission_punch() -> dict[str, str]:
-    return {"ok": "true"}
-
-
-@app_router.get("/scope-tenant-a", dependencies=[Depends(require_scope("tenant-a"))])
-def _probe_scope_tenant_a() -> dict[str, str]:
     return {"ok": "true"}
 
 
@@ -255,18 +249,6 @@ def test_cookie_secure_flag_off_for_plain_http() -> None:
     set_session_cookie(response, "dummy-token", settings)
     header = response.headers["set-cookie"].lower()
     assert "secure" not in header
-
-
-def test_cross_tenant_scope_denied(ctx, client) -> None:
-    token_b, _session = ctx.store.issue_session(ctx.omar)
-    resp = client.get("/app/scope-tenant-a", cookies=_cookie(token_b))
-    assert resp.status_code == 403
-
-
-def test_own_tenant_scope_allowed(ctx, client) -> None:
-    token_a, _session = ctx.store.issue_session(ctx.amira)
-    resp = client.get("/app/scope-tenant-a", cookies=_cookie(token_a))
-    assert resp.status_code == 200
 
 
 def test_capability_granted_for_seeded_account(ctx, client) -> None:

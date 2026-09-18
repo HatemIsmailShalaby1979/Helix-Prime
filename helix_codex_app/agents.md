@@ -1429,3 +1429,19 @@ in the parent commit; this entry tracks the app side.
 **Gate:** covered by `tests/test_production_data_boundary.py` (12) plus
 the relabeled memory fixtures (casual `verified_*` without evidence is
 now `simulated_event`). `ruff check` + `ruff format --check` clean.
+
+---
+
+## Integration seam review fixes (2026-09-18) — COMPLETE
+
+**Scope:** `integration/metacognition_bridge.py` (re-export),
+`modules/memory/service.py` (bridge import), `security/guard.py`
+(dead `require_scope` removed), `modules/identity/service.py` (single
+lockout source), `security/throttle.py` (public `count()`),
+`governance.md` entry 30. Full review recorded in the parent ledger §16.
+
+**Gate:** new `tests/helix_codex_app/test_integration_seam.py` (4) —
+AST sweep over parent imports, bridge re-export identity, lockout
+single source. Two `require_scope` probe tests removed with the dead
+helper (tenant scoping stays covered by the isolation suites).
+`ruff check` + `ruff format --check` clean.

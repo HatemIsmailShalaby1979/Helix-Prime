@@ -1416,3 +1416,16 @@ docs land in the parent commit; this entry tracks the app side.
 **Gate:** covered by `tests/test_appliance_observability.py` (11) —
 auth/throttle counting, app log redaction, backup manifest verdicts.
 `ruff check` + `ruff format --check` clean.
+
+---
+
+## Production data boundary (2026-09-18) — COMPLETE
+
+**Scope:** `modules/memory/service.py` (promotion-rollback reversal now
+cites its promotion id as evidence), `governance.md` entry 29. Core
+writer, pack funnel, pilot/restaurant runtimes, and the boundary doc land
+in the parent commit; this entry tracks the app side.
+
+**Gate:** covered by `tests/test_production_data_boundary.py` (12) plus
+the relabeled memory fixtures (casual `verified_*` without evidence is
+now `simulated_event`). `ruff check` + `ruff format --check` clean.

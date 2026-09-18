@@ -66,12 +66,24 @@ class AcademyConnector(BaseConnector):
         if self._rate_limited():
             return self._rate_limited_result(ctx)
         data = tuple(self._fetch(ctx, key))
+        self._reject_live_data(data)
         return ConnectorResult(
             status="ok",
             data=data,
             provenance=self._provenance(ctx, len(data)),
             correlation_id=ctx.correlation_id,
         )
+
+    def _reject_live_data(self, data: Sequence[Any]) -> None:
+        from capabilities.sports_academy.fixtures import DATA_MODE
+
+        for obj in data:
+            mode = getattr(getattr(obj, "source", None), "data_mode", None)
+            if mode != DATA_MODE:
+                raise ValueError(
+                    "academy connector refused non-simulated data "
+                    f"(data_mode={mode!r}); the pack runs simulated_realistic only"
+                )
 
     def list_athletes(self, ctx: ConnectorContext) -> Sequence[Any]:
         return self._list_result(ctx, "athletes").data or ()

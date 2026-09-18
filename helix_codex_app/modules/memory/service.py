@@ -504,6 +504,7 @@ class MemoryService:
             body={"note": "promotion rolled back", "promotion_id": promotion_id},
             source="promotion_reversal",
             correlation_id=f"promotion-{promotion_id}",
+            evidence_refs=[promotion_id],
         )
         self.repo.update_promotion(promotion_id, state="rolled_back")
         return self._promotion_for(account, promotion_id)

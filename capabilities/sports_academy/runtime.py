@@ -153,7 +153,7 @@ class AcademyCapabilityPack:
             timestamp=as_of,
             correlation_id=correlation_id,
             confidence=1.0,
-            evidence_refs=[],
+            evidence_refs=[correlation_id],
             data_mode=DATA_MODE,
             provenance={
                 "correlation_id": correlation_id,

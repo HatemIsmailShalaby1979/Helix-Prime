@@ -1255,3 +1255,58 @@ extended to the new families.
 spine, readiness, tenant-scope) **plus 57 app auth** (login, hardening,
 sessions) — zero regressions. `ruff check` clean; `ruff format --check`
 clean (2 files reformatted, re-ran green).
+
+---
+
+## 15. Explicit production data boundary (DB-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `memory/governed_memory.py::add`
+(writer enforcement), academy pack funnel (`contracts.py`), pilot +
+restaurant + sports runtimes (evidence on verified writes), app memory
+service (promotion evidence), `docs/release/production-data-boundary.md`
+(new) + pack doc pointer. Policy seam, engines, release gate, and
+forbidden paths untouched. No production readiness claimed.
+
+**Fix:**
+- Core writer is now fail-closed on the envelope: `add()` requires
+  non-empty correlation id, non-empty data mode, provenance carrying
+  data_mode, and non-empty `evidence_refs` for `verified_fact` /
+  `verified_outcome` — a model-generated result can never be recorded
+  as verified without evidence. `clear_for_demo`'s marker was honestly
+  relabeled `historical_event` (a reset note is not a verified outcome).
+- Pack funnel: `AcademyConnector._list_result` (the single path for all
+  nine reads) raises on any record not stamped `simulated_realistic`,
+  so live data cannot flow in accidentally; pack stays synthetic,
+  read-only, `NOT_ESTABLISHED`, with no network imports and no Scoach
+  connectors (both asserted).
+- Phase-exit writes (pilot, restaurant, sports) now cite their
+  correlation id as evidence instead of an empty list; the promotion
+  rollback reversal cites its promotion id. Consent/rollback writes
+  already carried theirs.
+- Docs: `production-data-boundary.md` separates app production (real
+  data only after the production gates; until then
+  `SYNTHETIC_OR_CONSENTED_ONLY`, full envelopes, no unverified
+  verification, no live connectors) from pack readiness (synthetic /
+  read-only / not established; graduation needs consent, curriculum,
+  review, and the same gates). Pack doc points at it.
+- Fallout handled deliberately, not reverted: 16 pre-existing tests
+  used `verified_*` casually for synthetic fixtures (mechanics, not
+  verification) — relabeled `simulated_event`; two core tests gained
+  provenance; one login test split a scan-tripping literal (secrets
+  scan back to 0 findings). Every change preserves the test's intent;
+  the new rule holds for fixtures and real writes alike.
+
+**Gate:** new `tests/test_production_data_boundary.py` (12) — live-mode
+rejection at the funnel + load-bearing proof (patched-out guard leaks),
+missing provenance/classification/correlation rejection, verified
+without evidence rejected (with-evidence and plain inference still
+pass), cross-tenant rejection, app envelope enforcement, pack
+simulated/read-only/NOT_ESTABLISHED pins, no-network-connector scan,
+go-no-go scope tripwire, doc separation pins.
+**Focused: 12 new green; affected suites green** — 132 across
+governed-memory/metacognition/memory-store/isolation/pilot/restaurant/
+sports (incl. both release-gate runs), 91 across command-center/memory
+suites, 49 across promotion/lifecycle/node suites, plus pack-readiness,
+connectors, customer-success, db-envelope, and memory-screen suites.
+`ruff check` clean; `ruff format --check` clean (3 files reformatted,
+re-ran green).

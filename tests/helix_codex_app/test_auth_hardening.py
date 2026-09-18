@@ -10,6 +10,7 @@ wiring: without it the spray below answers bad_password, never throttled.
 """
 from __future__ import annotations
 
+import secrets
 from types import SimpleNamespace
 
 import pytest
@@ -252,7 +253,7 @@ def test_disabled_locked_and_revoked_accounts_fail_immediately(ctx, client) -> N
 def test_unhandled_errors_are_redacted(ctx, monkeypatch) -> None:
     import helix_codex_app.modules.identity.router as identity_router
 
-    leaked_token = "redact-me-token-value"
+    leaked_token = secrets.token_hex(16)
     leaked_path = "C:\\secrets\\app.db"
 
     def _boom(*args, **kwargs):

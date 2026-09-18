@@ -273,6 +273,15 @@ class GovernedMemory:
         _level(classification)  # validate
         if not tenant_id:
             raise ValueError("tenant_id is required")
+        if not correlation_id or not str(correlation_id).strip():
+            raise ValueError("correlation_id is required")
+        if not data_mode or not str(data_mode).strip():
+            raise ValueError("data_mode is required")
+        provenance = dict(provenance or {})
+        if not provenance.get("data_mode"):
+            raise ValueError("provenance must carry a non-empty data_mode")
+        if nature in _VERIFIED_NATURES and not evidence_refs:
+            raise ValueError(f"nature {nature!r} is a verified outcome and requires evidence_refs")
         seq = len(self._records) + 1
         rec = MemoryRecord(
             record_id=f"mem-{seq:06d}",
@@ -536,7 +545,7 @@ class GovernedMemory:
                 )
         return self.add(
             kind="workflow_history",
-            nature="verified_outcome",
+            nature="historical_event",
             tenant_id="*demo*",
             client_id="*demo*",
             actor=actor,
@@ -548,5 +557,11 @@ class GovernedMemory:
             confidence=1.0,
             evidence_refs=[],
             data_mode="simulated_realistic",
+            provenance={
+                "correlation_id": correlation_id,
+                "data_mode": "simulated_realistic",
+                "basis": "demo_reset",
+                "sources": [],
+            },
             body={"action": "reset", "reason": "synthetic demo reset"},
         )

@@ -39,7 +39,7 @@ def _seed_memory(ctx, count=2):
         ctx.service.stores.record(
             ctx.ravi,
             kind="outcome",
-            nature="verified_outcome",
+            nature="simulated_event",
             body={"note": f"record {index}"},
             confidence=0.4,
         )

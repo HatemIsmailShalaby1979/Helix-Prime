@@ -74,7 +74,7 @@ def _seed_evidence(ctx, *, confidence=0.4):
     ctx.service.stores.record(
         ctx.ravi,
         kind="outcome",
-        nature="verified_outcome",
+        nature="simulated_event",
         body={"note": "followed up"},
         confidence=confidence,
     )

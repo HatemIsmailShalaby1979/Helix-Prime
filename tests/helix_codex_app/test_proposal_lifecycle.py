@@ -54,7 +54,7 @@ def _propose(ctx):
 def test_the_whole_lifecycle_end_to_end(ctx):
     """draft -> evaluated -> approved -> rolled back, with the ledger intact."""
     ctx.service.stores.record(
-        ctx.ravi, kind="outcome", nature="verified_outcome", body={"note": "n"}, confidence=0.4
+        ctx.ravi, kind="outcome", nature="simulated_event", body={"note": "n"}, confidence=0.4
     )
     proposal = _propose(ctx)
     assert ctx.service.get_proposal(ctx.ravi, proposal.proposal_id).approval_state == "draft"

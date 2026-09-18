@@ -155,10 +155,10 @@ def test_the_data_mode_badge_is_never_hidden():
 # --- the page ----------------------------------------------------------------
 def test_the_page_shows_only_the_accounts_own_records(ctx):
     ctx.service.stores.record(
-        ctx.ravi, kind="outcome", nature="verified_outcome", body={"note": "ravi"}, confidence=0.4
+        ctx.ravi, kind="outcome", nature="simulated_event", body={"note": "ravi"}, confidence=0.4
     )
     ctx.service.stores.record(
-        ctx.layla, kind="outcome", nature="verified_outcome", body={"note": "layla"}, confidence=0.4
+        ctx.layla, kind="outcome", nature="simulated_event", body={"note": "layla"}, confidence=0.4
     )
     context = memory_router._page_context(ctx.service, ctx.ravi)
     notes = [record.body.get("note") for record in context["records"]]

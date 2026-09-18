@@ -237,6 +237,7 @@ def test_supersession(tmp_path):
         correlation_id="corr-2",
         timestamp="2026-08-29T01:00:00Z",
         confidence=0.95,
+        evidence_refs=[r.record_id],
     )
     assert sup.supersedes == r.record_id
     assert m._by_id[r.record_id].retention_status == "superseded"
@@ -273,6 +274,7 @@ def test_simulated_vs_historical_labeling():
         correlation_id="c1",
         confidence=0.0,
         data_mode="simulated_realistic",
+        provenance={"data_mode": "simulated_realistic", "basis": "test"},
         body={},
     )
     hist = m.add(
@@ -288,6 +290,7 @@ def test_simulated_vs_historical_labeling():
         correlation_id="c2",
         confidence=1.0,
         data_mode="historical_consented",
+        provenance={"data_mode": "historical_consented", "basis": "test"},
         body={},
     )
     assert sim.nature == "simulated_event" and sim.data_mode == "simulated_realistic"
@@ -385,6 +388,7 @@ def test_supersession_status_survives_reload(tmp_path):
         correlation_id="corr-2",
         timestamp="2026-08-29T01:00:00Z",
         confidence=0.95,
+        evidence_refs=[r.record_id],
     )
     assert m._by_id[r.record_id].retention_status == "superseded"
     m2 = GovernedMemory(path=p)
@@ -479,6 +483,7 @@ def test_no_auto_policy_change():
         correlation_id="corr-p",
         confidence=1.0,
         data_mode="simulated_realistic",
+        provenance={"data_mode": "simulated_realistic", "basis": "test"},
         body={"policy": "auto-approve"},
     )
     after = len(m.retrieve(tenant_id="t1"))
@@ -506,6 +511,7 @@ def test_command_center_display():
         correlation_id="corr-cc",
         confidence=1.0,
         data_mode="simulated_realistic",
+        provenance={"data_mode": "simulated_realistic", "basis": "test"},
         body={"policy": "demo"},
     )
     v = assemble_command_center(

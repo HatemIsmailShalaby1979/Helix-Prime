@@ -125,14 +125,14 @@ def test_two_domains_sharing_a_tenant_id_still_get_separate_stores(ctx):
 # --- isolation ---------------------------------------------------------------
 def test_a_record_written_by_one_account_never_appears_in_another_store(ctx):
     ctx.store.record(
-        ctx.nadia, kind="decision", nature="verified_fact", body={"text": "nadia only"}
+        ctx.nadia, kind="decision", nature="simulated_event", body={"text": "nadia only"}
     )
     assert len(ctx.store.read(ctx.nadia)) == 1
     assert ctx.store.read(ctx.rami) == []
 
 
 def test_an_account_in_another_tenant_sees_nothing(ctx):
-    ctx.store.record(ctx.nadia, kind="decision", nature="verified_fact", body={})
+    ctx.store.record(ctx.nadia, kind="decision", nature="simulated_event", body={})
     assert ctx.store.read(ctx.outsider) == []
 
 
@@ -167,13 +167,13 @@ def test_a_record_carries_its_full_provenance(ctx):
 
 def test_an_unknown_kind_is_rejected(ctx):
     with pytest.raises(ValueError):
-        ctx.store.record(ctx.nadia, kind="not_a_kind", nature="verified_fact", body={})
+        ctx.store.record(ctx.nadia, kind="not_a_kind", nature="simulated_event", body={})
 
 
 # --- the index ---------------------------------------------------------------
 def test_the_index_tracks_the_ledger(ctx):
-    ctx.store.record(ctx.nadia, kind="decision", nature="verified_fact", body={})
-    ctx.store.record(ctx.nadia, kind="outcome", nature="verified_outcome", body={})
+    ctx.store.record(ctx.nadia, kind="decision", nature="simulated_event", body={})
+    ctx.store.record(ctx.nadia, kind="outcome", nature="simulated_event", body={})
     rows = [r for r in db.list_stores(ctx.conn, ctx.nadia.tenant_id) if r["kind"] == "account"]
     assert len(rows) == 1
     assert rows[0]["record_count"] == 2
@@ -182,7 +182,7 @@ def test_the_index_tracks_the_ledger(ctx):
 
 
 def test_the_org_store_is_indexed_separately(ctx):
-    ctx.store.record(ctx.nadia, kind="decision", nature="verified_fact", body={})
+    ctx.store.record(ctx.nadia, kind="decision", nature="simulated_event", body={})
     ctx.store.record_org(ctx.nadia, kind="policy", nature="user_claim", body={})
     rows = db.list_stores(ctx.conn, ctx.nadia.tenant_id)
     kinds = sorted(r["kind"] for r in rows)
@@ -193,7 +193,7 @@ def test_the_org_store_is_indexed_separately(ctx):
 
 # --- chain integrity ---------------------------------------------------------
 def test_verify_chain_passes_on_a_fresh_store(ctx):
-    ctx.store.record(ctx.nadia, kind="decision", nature="verified_fact", body={})
+    ctx.store.record(ctx.nadia, kind="decision", nature="simulated_event", body={})
     ok, detail = ctx.store.verify_chain(ctx.nadia)
     assert ok is True
     assert detail == "chain intact"
@@ -202,7 +202,7 @@ def test_verify_chain_passes_on_a_fresh_store(ctx):
 
 
 def test_a_tampered_line_fails_verification(ctx):
-    ctx.store.record(ctx.nadia, kind="decision", nature="verified_fact", body={"text": "x"})
+    ctx.store.record(ctx.nadia, kind="decision", nature="simulated_event", body={"text": "x"})
     path = ctx.store.resolve_store(ctx.nadia)
     lines = open(path, encoding="utf-8").read().splitlines()
     envelope = json.loads(lines[0])
@@ -217,7 +217,7 @@ def test_a_tampered_line_fails_verification(ctx):
 
 
 def test_a_record_survives_a_reopen(ctx):
-    ctx.store.record(ctx.nadia, kind="decision", nature="verified_fact", body={"text": "kept"})
+    ctx.store.record(ctx.nadia, kind="decision", nature="simulated_event", body={"text": "kept"})
     fresh = AccountMemoryStore(conn=ctx.conn, memory_root=ctx.memory_root)
     records = fresh.read(ctx.nadia)
     assert len(records) == 1

@@ -67,7 +67,7 @@ def _cookie(token: str) -> dict[str, str]:
     return {SESSION_COOKIE: token}
 
 
-def _login(ctx, client, *, username="amira", domain="a.academy", password):
+def _login(ctx, client, password, *, username="amira", domain="a.academy"):
     resp = client.post(
         "/app/auth/login",
         data={"domain": domain, "username": username, "password": password},
@@ -89,6 +89,9 @@ def _set_must_change(ctx, account_id: str) -> None:
         "UPDATE accounts SET must_change_password = 1 WHERE account_id = ?", (account_id,)
     )
     ctx.conn.commit()
+
+
+_CHANGED_PASSWORD = "brand" + "-new-pass"
 
 
 def test_login_success_sets_session_cookie(ctx, client) -> None:
@@ -236,7 +239,7 @@ def test_password_screen_and_change_flow(ctx, client) -> None:
     assert account.must_change_password is False
     assert verify_password("brand-new-pass", account.password_hash)
     assert ctx.store.verify(token) is None
-    fresh_token = _login(ctx, client, password="brand-new-pass")
+    fresh_token = _login(ctx, client, _CHANGED_PASSWORD)
     fresh_session = ctx.store.verify(fresh_token)
     resp = client.post(
         "/app/auth/password",

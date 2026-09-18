@@ -63,6 +63,15 @@ registering new capabilities.
    (inherited from `BaseConnector`).
 7. Fees store no payment instruments — amount/date/method-note only.
 8. Pack roles never widen core roles and do not appear in the core catalog.
+9. The connector funnel refuses any record not stamped `simulated_realistic`
+   (`AcademyConnector._reject_live_data`); no live Scoach connector exists
+   and the pack tree carries no network client imports.
+
+Production readiness of this pack is separate from production readiness of
+the app: see `docs/release/production-data-boundary.md`. This pack stays
+synthetic, read-only, and `NOT_ESTABLISHED`; graduation needs a consented
+roster import, a client-defined curriculum, an explicit readiness review,
+and the same production gates as the app.
 
 ## Not in v1 (deliberate)
 

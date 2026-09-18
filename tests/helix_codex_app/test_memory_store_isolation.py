@@ -73,7 +73,7 @@ def _propose(service, author, target="follow_up_threshold"):
 # --- records -----------------------------------------------------------------
 def test_one_accounts_records_never_appear_in_anothers_store(ctx):
     ctx.service.stores.record(
-        ctx.ravi, kind="outcome", nature="verified_outcome", body={"note": "ravi"}, confidence=0.4
+        ctx.ravi, kind="outcome", nature="simulated_event", body={"note": "ravi"}, confidence=0.4
     )
     assert [r.body["note"] for r in ctx.service.stores.read(ctx.ravi)] == ["ravi"]
     assert ctx.service.stores.read(ctx.sam) == []
@@ -81,7 +81,7 @@ def test_one_accounts_records_never_appear_in_anothers_store(ctx):
 
 def test_an_account_in_another_tenant_sees_nothing(ctx):
     ctx.service.stores.record(
-        ctx.ravi, kind="outcome", nature="verified_outcome", body={"note": "ravi"}, confidence=0.4
+        ctx.ravi, kind="outcome", nature="simulated_event", body={"note": "ravi"}, confidence=0.4
     )
     assert ctx.service.stores.read(ctx.outsider) == []
     assert ctx.service.stores.read_org(ctx.outsider) == []
@@ -89,7 +89,7 @@ def test_an_account_in_another_tenant_sees_nothing(ctx):
 
 def test_the_two_stores_are_separate_files(ctx):
     ctx.service.stores.record(
-        ctx.ravi, kind="outcome", nature="verified_outcome", body={"note": "ravi"}, confidence=0.4
+        ctx.ravi, kind="outcome", nature="simulated_event", body={"note": "ravi"}, confidence=0.4
     )
     ravi_path = ctx.service.stores.resolve_store(ctx.ravi)
     sam_path = ctx.service.stores.resolve_store(ctx.sam)
@@ -135,10 +135,10 @@ def test_a_same_role_peer_cannot_review_you(ctx):
 # --- chains ------------------------------------------------------------------
 def test_tampering_with_one_ledger_does_not_affect_another(ctx):
     ctx.service.stores.record(
-        ctx.ravi, kind="outcome", nature="verified_outcome", body={"note": "ravi"}, confidence=0.4
+        ctx.ravi, kind="outcome", nature="simulated_event", body={"note": "ravi"}, confidence=0.4
     )
     ctx.service.stores.record(
-        ctx.sam, kind="outcome", nature="verified_outcome", body={"note": "sam"}, confidence=0.4
+        ctx.sam, kind="outcome", nature="simulated_event", body={"note": "sam"}, confidence=0.4
     )
     ravi_path = ctx.service.stores.resolve_store(ctx.ravi)
     lines = open(ravi_path, encoding="utf-8").read().splitlines()

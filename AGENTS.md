@@ -1355,3 +1355,44 @@ tenant/isolation seam introduced (single readers verified).
 **Gate:** 4 seam tests green; **75 across** seam + sessions/guard +
 login/auth + hardening + proposals + lifecycle (incl. the two deliberate
 probe removals). `ruff check` clean; `ruff format --check` clean.
+
+---
+
+## 17. Final self-hosted production-candidate validation (FV-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** full-suite re-run in chunks (JUnit
+XML, outside the repo), all four gate profiles, ruff/format/mypy/bandit/
+pip-audit/drift/build/smoke/CLI-rehearsal, docs refresh. One production
+code fix fell out (below). No production readiness claimed; no push/tag
+issued (commands withheld pending owner review).
+
+**Result:**
+- **Tests: 1483 passed, 0 failed, 0 skipped** (unique by test id: parent
+  686 = 312+224+139+11; app 797 = 153+98+103+81+97+94+171). Sandbox cap
+  forced chunking; every chunk carries its own JUnit artifact.
+- **Real regression caught:** `test_app_release_gates::
+  test_app_memory_store_isolation_passes` failed — the release gate's own
+  probe wrote a memory record without the new provenance envelope and was
+  correctly refused. Fixed in `release/gate.py` (probe passes the
+  envelope); re-ran green. No waiver.
+- **Gates** (`write_evidence=False`, tracked manifest untouched):
+  `app_pilot` → `CONTROLLED_PILOT_READY`, `controlled_pilot` →
+  `CONTROLLED_PILOT_READY`, `production_candidate` →
+  `PRODUCTION_CANDIDATE` (all exit 0, zero red); `production` →
+  `NOT_READY` (exit 1, all 9 external-only gates red — fail-closed).
+- **Static/audit:** ruff check clean; format clean on tracked files (5
+  untracked user marketing scripts excluded); mypy clean (59 files);
+  bandit no issues; pip-audit clean; dependency + both migration drifts
+  green; `python -m build` sdist+wheel; smoke `C0 SMOKE PASS`; live CLI
+  rehearsal (bootstrap → backup → verify-only → restore → prune
+  dry-run) green on synthetic data.
+- **Not performed:** container build (sandbox Docker daemon down —
+  recorded, covered statically by 32 packaging tests instead).
+- **Docs:** this entry, CHANGELOG `### Validated`, runbook health-check
+  pointer, blocker checklist Class-1 refresh (+`app_pilot` row),
+  `docs/release/handoff/final-validation-report.md` (exact counts,
+  gates, risks, approvals, verdict). Tree held clean: only the user's
+  `marketing/README.md` dirty throughout; no secrets/evidence staged.
+- **Verdict:** suitable for **controlled pilot** (supervised,
+  synthetic-or-consented data) and gate-labeled **production
+  candidate**; **not production** (Classes 2–5 open).

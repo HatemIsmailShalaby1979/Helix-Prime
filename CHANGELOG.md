@@ -38,8 +38,29 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - Operations: workflow submission/approval and a read-only cockpit (owner/coach/parent and
     control-plane) reusing the sports-academy pack compute functions
   - Extensibility: low-code capability loader with five hard invariants, an installable PWA shell
-  - Release: `app_pilot` gate profile with six app gates; first sign-off `CONTROLLED_PILOT_READY`
-    (full suite 1395 passed, 0 failed; ruff clean under the pinned 0.1.15)
+   - Release: `app_pilot` gate profile with six app gates; first sign-off `CONTROLLED_PILOT_READY`
+     (full suite 1395 passed, 0 failed; ruff clean under the pinned 0.1.15)
+
+### Validated
+
+- **Final validation 2026-09-18** (code HEAD `c00dec5`): full suite **1483 passed,
+  0 failed, 0 skipped** (parent 686 + app 797, run in chunks with JUnit XML,
+  aggregated by test id — includes one real regression caught and fixed:
+  the release gate's memory-isolation probe missed the new provenance
+  envelope, `release/gate.py` now passes it). Gates: `app_pilot` →
+  `CONTROLLED_PILOT_READY`, `controlled_pilot` → `CONTROLLED_PILOT_READY`,
+  `production_candidate` → `PRODUCTION_CANDIDATE` (all exit 0);
+  `production` → `NOT_READY` (exit 1, nine external-only gates red).
+  `ruff check` + `ruff format --check` clean (tracked files; five untracked
+  user marketing scripts excluded), mypy clean (59 files), bandit no issues,
+  `pip-audit` clean, dependency + both migration drift checks green,
+  `python -m build` produces sdist + wheel, smoke `C0 SMOKE PASS`,
+  backup→verify→restore rehearsal green via the real CLIs. Container build
+  not possible here (sandbox Docker daemon down) — recorded, not claimed.
+  Verdict: suitable for **controlled pilot** (human-supervised,
+  synthetic-or-consented data) and as a gate-defined **production
+  candidate**; **not production** — Classes 2–5 external approvals remain
+  open (see `docs/release/handoff/production-blockers-checklist.md`).
 
 ---
 

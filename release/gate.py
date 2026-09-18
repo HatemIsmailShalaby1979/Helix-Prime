@@ -456,6 +456,13 @@ def _gate_app_memory_store_isolation() -> tuple[bool, str]:
             timestamp="2026-09-15T00:00:00+00:00",
             correlation_id="app-gate-memiso",
             confidence=0.9,
+            data_mode="simulated_realistic",
+            provenance={
+                "correlation_id": "app-gate-memiso",
+                "data_mode": "simulated_realistic",
+                "basis": "release_gate_probe",
+                "sources": [],
+            },
         )
         tail = store.store_for(omar).retrieve(tenant_id="tenant-a")
         db.close(conn)

@@ -1,17 +1,22 @@
 # External Production Blockers — Verification Checklist
 
-> **STATUS: STILL LIVE (updated 2026-09-12).** Scope line refreshed for the current
-> build: Helix Prime Codex `0.9.0-c8` at HEAD `c5a88ef` (docs-only since the code HEAD
-> `ed50c9a`), full suite **621 passed / 0 failed**
-> (was 307 at the 2026-08-28 snapshot). All Class 2–5 items remain intentionally `OPEN`.
-> The fail-closed statement below is unchanged and still binding.
+> **STATUS: STILL LIVE (re-verified 2026-09-18).** Scope line refreshed for the
+> current build: Helix Prime Codex `0.9.0-c8` at HEAD `c00dec5`, full suite
+> **1483 passed / 0 failed / 0 skipped** (JUnit XML per chunk, aggregated by
+> test id; was 621 at the 2026-09-12 snapshot). Gates re-run the same day:
+> `app_pilot` → `CONTROLLED_PILOT_READY`, `controlled_pilot` →
+> `CONTROLLED_PILOT_READY`, `production_candidate` → `PRODUCTION_CANDIDATE`
+> (all exit 0, zero red gates); `production` → `NOT_READY` (exit 1, all nine
+> external-only gates red — correctly fails closed). All Class 2–5 items
+> remain intentionally `OPEN`. The fail-closed statement below is unchanged
+> and still binding.
 
 Fail-closed: for the product to reach `PRODUCTION_READY`, **every** item below must be
 independently satisfied. Any `NO`/blank answer keeps release `NOT_READY`. This checklist
 separates who/what is responsible for each class of verification and is deliberately not
 self-asserted. No value in this file is a substitute for real external evidence.
 
-Scope: Helix Prime Codex `0.9.0-c8` at HEAD `c5a88ef` (2026-09-12). The 2026-08-28
+Scope: Helix Prime Codex `0.9.0-c8` at HEAD `c00dec5` (2026-09-18). The 2026-08-28
 snapshot this checklist documents (307 tests, manifest `99f9bd37`,
 `PRODUCTION_CANDIDATE`) is superseded on Class 1 rows only; Classes 2–5 are
 version-independent external-evidence requirements and stay as written below.
@@ -22,8 +27,9 @@ version-independent external-evidence requirements and stay as written below.
 
 | # | Check | Gate | Status |
 |---|-------|------|--------|
-| 1.1 | Full regression suite passes | C0–C8 base | `PASS` (621 passed, 2026-09-12) |
+| 1.1 | Full regression suite passes | C0–C8 base | `PASS` (1483 passed, 0 failed, 2026-09-18) |
 | 1.2 | Controlled-pilot release gate green | `controlled_pilot` | `PASS` (`CONTROLLED_PILOT_READY`) |
+| 1.2b | App pilot release gate green | `app_pilot` | `PASS` (`CONTROLLED_PILOT_READY`) |
 | 1.3 | Production release gate blocks release | `production` | `PASS` (`NOT_READY`, exit 1) — correctly fails closed |
 | 1.4 | No `production_approved` fabricated | sign-off | `PASS` (False) |
 | 1.5 | Synthetic/consented data boundary enforced | data gate | `PASS` |

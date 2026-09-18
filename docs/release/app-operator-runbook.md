@@ -37,6 +37,13 @@ curl -s http://127.0.0.1:8100/app/healthz
 
 Returns HTTP 200 with an empty body when the app is running.
 
+`healthy` means liveness only (the process answers). Whether the instance
+is verified ready is a separate question: the core `/readyz` probe, the
+`infra/monitoring/README.md` alert catalog (meaning + response action per
+alert), and the release gates in `docs/release/` are the readiness story.
+After any upgrade or restore, check `healthy` here, then work through the
+restore-rehearsal checklist before letting users back in.
+
 ## Logs
 
 View the app logs:

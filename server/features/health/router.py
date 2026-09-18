@@ -19,6 +19,7 @@ import pathlib
 
 from fastapi import APIRouter, Response, status
 
+from observability.metrics import REGISTRY as metrics_registry
 from server import deps
 from server.features.health.schemas import HealthResponse, ReadinessResponse
 
@@ -41,14 +42,17 @@ def readyz(response: Response) -> ReadinessResponse:
         checks["workflow_store"] = True
     except Exception:
         checks["workflow_store"] = False
+        metrics_registry.record_readiness_failure("workflow_store")
         return _not_ready(response, checks, "workflow store unavailable")
 
     audit_path = pathlib.Path(str(provider.settings.audit_db_path))
     if not audit_path.exists():
         checks["audit_chain"] = False
+        metrics_registry.record_readiness_failure("audit_chain")
         return _not_ready(response, checks, "audit store missing")
     if not audit_path.is_file():
         checks["audit_chain"] = False
+        metrics_registry.record_readiness_failure("audit_chain")
         return _not_ready(response, checks, "audit store unreadable")
 
     try:
@@ -59,11 +63,13 @@ def readyz(response: Response) -> ReadinessResponse:
             ok, _detail = trail.verify_chain()
             checks["audit_chain"] = bool(ok)
             if not ok:
+                metrics_registry.record_readiness_failure("audit_chain")
                 return _not_ready(response, checks, "audit chain invalid")
         finally:
             trail.close()
     except Exception:
         checks["audit_chain"] = False
+        metrics_registry.record_readiness_failure("audit_chain")
         return _not_ready(response, checks, "audit store unreadable")
 
     return ReadinessResponse(ready=True, checks=checks)

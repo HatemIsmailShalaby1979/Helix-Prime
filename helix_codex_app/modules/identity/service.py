@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 from helix_codex_app.config import AppSettings, get_app_settings
+from helix_codex_app.integration.telemetry import record_auth_event
 from helix_codex_app.security.accounts import Account, AccountRepository
 from helix_codex_app.security.passwords import hash_password, verify_password
 from helix_codex_app.security.sessions import Session, SessionStore
@@ -84,17 +85,21 @@ class LoginService:
         bucket = login_bucket(domain_name, username)
         if self.throttle.throttled(login_key=bucket, ip=ip) is not None:
             self._record("throttled", None, domain.domain_id if domain else None, ip, user_agent)
+            record_auth_event("login_throttled")
             return LoginResult(ok=False, code="throttled", error=THROTTLED_MESSAGE)
         if domain is None:
             self.throttle.record(login_key=bucket, ip=ip)
             self._record("no_such_domain", None, None, ip, user_agent)
+            record_auth_event("login_failure")
             return LoginResult(ok=False, code="no_such_domain", error=BAD_CREDENTIALS_MESSAGE)
         if account is None:
             self.throttle.record(login_key=bucket, ip=ip)
             self._record("no_such_account", None, domain.domain_id, ip, user_agent)
+            record_auth_event("login_failure")
             return LoginResult(ok=False, code="no_such_account", error=BAD_CREDENTIALS_MESSAGE)
         if self._is_locked(account):
             self._record("locked", account.account_id, domain.domain_id, ip, user_agent)
+            record_auth_event("login_locked")
             return LoginResult(ok=False, code="locked", error=LOCKED_MESSAGE)
         if account.status == "locked":
             self.repo.reset_failed_attempts(account.account_id)
@@ -102,6 +107,7 @@ class LoginService:
             account = self.repo.get_account_by_id(account.account_id)
         if account.status != "active":
             self._record("unusable_account", account.account_id, domain.domain_id, ip, user_agent)
+            record_auth_event("login_failure")
             return LoginResult(ok=False, code="unusable_account", error=BAD_CREDENTIALS_MESSAGE)
         if not account.password_hash or not verify_password(password, account.password_hash):
             self.throttle.record(login_key=login_bucket(domain_name, username), ip=ip)
@@ -110,8 +116,10 @@ class LoginService:
                 until = (datetime.now(timezone.utc) + timedelta(minutes=LOCK_MINUTES)).isoformat()
                 self.repo.lock_account(account.account_id, until=until)
                 self._record("locked", account.account_id, domain.domain_id, ip, user_agent)
+                record_auth_event("login_locked")
                 return LoginResult(ok=False, code="locked", error=LOCKED_MESSAGE)
             self._record("bad_password", account.account_id, domain.domain_id, ip, user_agent)
+            record_auth_event("login_failure")
             return LoginResult(ok=False, code="bad_password", error=BAD_CREDENTIALS_MESSAGE)
         self.repo.reset_failed_attempts(account.account_id)
         self.throttle.clear(login_key=login_bucket(domain_name, username), ip=ip)
@@ -123,6 +131,7 @@ class LoginService:
         fresh = self.repo.get_account_by_id(account.account_id)
         token, session = self.sessions.issue_session(fresh, ip=ip, user_agent=user_agent)
         self._record("success", fresh.account_id, domain.domain_id, ip, user_agent)
+        record_auth_event("login_success")
         return LoginResult(
             **{
                 "ok": True,

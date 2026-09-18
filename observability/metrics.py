@@ -22,6 +22,10 @@ Metric families:
 * helix_audit_chain_verifications_total{result}      — ok/failure
 * helix_audit_chain_verification_failures            — monotonic failure gauge
 * helix_approval_queue_depth                          — awaiting_approval count
+* helix_readiness_check_failures_total{check}        — readiness probe failures
+* helix_auth_events_total{event}                      — sign-in outcomes
+* helix_kill_switch_events_total{event}              — halt engagements
+* helix_data_disk_free_bytes                          — free bytes on the data volume
 """
 from __future__ import annotations
 
@@ -36,6 +40,14 @@ GOVERNANCE_DECISIONS_METRIC = "helix_governance_decisions_total"
 AUDIT_VERIFICATIONS_METRIC = "helix_audit_chain_verifications_total"
 AUDIT_FAILURES_METRIC = "helix_audit_chain_verification_failures"
 QUEUE_DEPTH_METRIC = "helix_approval_queue_depth"
+READINESS_FAILURES_METRIC = "helix_readiness_check_failures_total"
+AUTH_EVENTS_METRIC = "helix_auth_events_total"
+KILL_SWITCH_EVENTS_METRIC = "helix_kill_switch_events_total"
+DISK_FREE_METRIC = "helix_data_disk_free_bytes"
+
+_READINESS_CHECKS = ("workflow_store", "audit_chain")
+_AUTH_EVENTS = ("login_success", "login_failure", "login_throttled", "login_locked")
+_KILL_SWITCH_EVENTS = ("engaged", "released", "denied")
 
 _DECISION_BUCKETS = ("allowed", "denied", "held", "succeeded", "failed")
 _VERIFICATION_RESULTS = ("ok", "failure")
@@ -61,6 +73,10 @@ _METRIC_HELP = {
     AUDIT_VERIFICATIONS_METRIC: "Audit hash-chain verifications, by result.",
     AUDIT_FAILURES_METRIC: "Monotonic count of audit hash-chain verification failures.",
     QUEUE_DEPTH_METRIC: "Workflows currently frozen awaiting human approval.",
+    READINESS_FAILURES_METRIC: "Readiness probe failures, by failed check.",
+    AUTH_EVENTS_METRIC: "Sign-in outcomes, by event.",
+    KILL_SWITCH_EVENTS_METRIC: "Kill-switch engagements, releases, and denials, by event.",
+    DISK_FREE_METRIC: "Free bytes on the volume holding the databases.",
 }
 
 
@@ -186,6 +202,26 @@ class MetricsRegistry:
             _METRIC_HELP[QUEUE_DEPTH_METRIC],
             (),
         )
+        self.readiness_failures = Counter(
+            READINESS_FAILURES_METRIC,
+            _METRIC_HELP[READINESS_FAILURES_METRIC],
+            ("check",),
+        )
+        self.auth_events = Counter(
+            AUTH_EVENTS_METRIC,
+            _METRIC_HELP[AUTH_EVENTS_METRIC],
+            ("event",),
+        )
+        self.kill_switch_events = Counter(
+            KILL_SWITCH_EVENTS_METRIC,
+            _METRIC_HELP[KILL_SWITCH_EVENTS_METRIC],
+            ("event",),
+        )
+        self.disk_free_bytes = Gauge(
+            DISK_FREE_METRIC,
+            _METRIC_HELP[DISK_FREE_METRIC],
+            (),
+        )
 
     def record_governance_decision(self, decision: str) -> None:
         if decision not in _DECISION_BUCKETS:
@@ -206,6 +242,36 @@ class MetricsRegistry:
                 f"metrics: approval queue depth must be a non-negative int, got {depth!r}"
             )
         self.approval_queue_depth.set(depth)
+
+    def record_readiness_failure(self, check: str) -> None:
+        if check not in _READINESS_CHECKS:
+            raise ValueError(
+                f"metrics: unknown readiness check {check!r} "
+                f"(expected one of {list(_READINESS_CHECKS)})"
+            )
+        self.readiness_failures.inc(check=check)
+
+    def record_auth_event(self, event: str) -> None:
+        if event not in _AUTH_EVENTS:
+            raise ValueError(
+                f"metrics: unknown auth event {event!r} " f"(expected one of {list(_AUTH_EVENTS)})"
+            )
+        self.auth_events.inc(event=event)
+
+    def record_kill_switch_event(self, event: str) -> None:
+        if event not in _KILL_SWITCH_EVENTS:
+            raise ValueError(
+                f"metrics: unknown kill-switch event {event!r} "
+                f"(expected one of {list(_KILL_SWITCH_EVENTS)})"
+            )
+        self.kill_switch_events.inc(event=event)
+
+    def set_data_disk_free_bytes(self, value: float) -> None:
+        if not isinstance(value, (int, float)) or value < 0:
+            raise ValueError(
+                f"metrics: disk free bytes must be a non-negative number, got {value!r}"
+            )
+        self.disk_free_bytes.set(float(value))
 
     def snapshot(self) -> Dict[str, Dict[str, float]]:
         with _LOCK:
@@ -232,6 +298,10 @@ class MetricsRegistry:
             self.audit_verifications,
             self.audit_failures,
             self.approval_queue_depth,
+            self.readiness_failures,
+            self.auth_events,
+            self.kill_switch_events,
+            self.disk_free_bytes,
         ]
 
     def reset_for_tests(self) -> None:

@@ -37,9 +37,22 @@ def _refresh_approval_queue_depth() -> None:
     REGISTRY.set_approval_queue_depth(depth)
 
 
+def _refresh_data_disk_free_bytes() -> None:
+    import pathlib
+    import shutil
+
+    db_parent = pathlib.Path(str(deps.get_provider().settings.db_path)).parent
+    try:
+        free = shutil.disk_usage(db_parent).free
+    except OSError:
+        return
+    REGISTRY.set_data_disk_free_bytes(free)
+
+
 @router.get("/metrics", response_class=PlainTextResponse)
 def metrics(response: Response) -> PlainTextResponse:
     _refresh_approval_queue_depth()
+    _refresh_data_disk_free_bytes()
     response.headers["Cache-Control"] = "no-store"
     return PlainTextResponse(
         REGISTRY.render(), media_type="text/plain; version=0.0.4; charset=utf-8"

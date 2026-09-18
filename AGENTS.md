@@ -1201,3 +1201,57 @@ refused, prune keeps newest + bound, dry-run safety, verify-only
 pass/fail. **Focused with the evidence suite: 27 passed** (9 new + 18
 existing, zero regressions). `ruff check` clean; `ruff format --check`
 clean.
+
+---
+
+## 14. Operational observability for the self-hosted appliance (OB-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `observability/metrics.py` (4 new
+families), `control_plane/` kill-switch wiring, `server/` health +
+metrics routers, `helix_codex_app/` telemetry seam + login recording +
+stdout request log, `infra/monitoring/` alerts + README, app ledger +
+`governance.md` entry 28 + `repomap.md`. Policy seam, engines (beyond one
+metric call), release gate, and forbidden paths untouched. No production
+readiness claimed.
+
+**Fix:**
+- Registry: `helix_readiness_check_failures_total{check}`
+  (`workflow_store`/`audit_chain`, unknown check raises),
+  `helix_auth_events_total{event}`
+  (`login_success`/`login_failure`/`login_throttled`/`login_locked`),
+  `helix_kill_switch_events_total{event}`
+  (`engaged`/`released`/`denied`), `helix_data_disk_free_bytes` (no
+  labels). Label vocabulary stays fixed — no caller-controlled text can
+  reach the exposition.
+- Wiring: `readyz` records on every 503 path; `KillSwitch.engage` /
+  `release` record (fail-closed import, engine precedent);
+  `Engine._enforce_not_halted` records `denied` at the single denial
+  site; `/metrics` refreshes queue depth + disk free (OSError skips,
+  never a bare pass).
+- App seam: `helix_codex_app/integration/telemetry.py` is the app's only
+  window onto the registry; `LoginService` records at every terminal
+  return; `app.py` logs one JSON `http_request` line per request to
+  stdout with correlation id, route template, method, status, duration,
+  tenant, actor — headers/cookies/query/bodies never logged, and app
+  requests count into the shared route-template metrics.
+- Alerts: `HelixReadinessCheckFailing` (critical),
+  `HelixAuthFailureSpike` (warning), `HelixKillSwitchEngaged` (warning),
+  `HelixDiskSpaceLow` (warning, 1 GiB) / `HelixDiskSpaceCritical`
+  (critical, 256 MiB). Monitoring README gains the full metric table +
+  an alert catalog (meaning + response action per alert) + the
+  queryable-store note (logs, `login_events`, backup manifest).
+- Docs state backup alerting stays scheduler-level (exit codes), since a
+  separate backup process cannot reach the in-process registry.
+
+**Gate:** new `tests/test_appliance_observability.py` (11) — secrets
+absent from core logs/metrics and app stdout, route-label normalization,
+tenant ids never leaked as labels, readiness counter + load-bearing
+sensitivity proof (patched-out recording leaves no signal), audit
+failures observable via counter and probe, auth/throttle/lock counting,
+kill-switch engaged/denied/released counting, disk gauge exported,
+manifest verdicts operator-readable. `test_metrics.py` alert-drift set
+extended to the new families.
+**Focused: 24 passed** (11 new + 13 metrics) **plus 40 core** (kill-switch,
+spine, readiness, tenant-scope) **plus 57 app auth** (login, hardening,
+sessions) — zero regressions. `ruff check` clean; `ruff format --check`
+clean (2 files reformatted, re-ran green).

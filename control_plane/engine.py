@@ -283,6 +283,7 @@ class Engine:
         if halt is None:
             return
         _metrics_registry.record_governance_decision("denied")
+        _metrics_registry.record_kill_switch_event("denied")
         self._audit_halt(
             action=action,
             actor=actor,

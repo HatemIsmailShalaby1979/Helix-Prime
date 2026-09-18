@@ -9,7 +9,10 @@ wired once, at the router boundary, not per handler.
 """
 from __future__ import annotations
 
+import json
 import mimetypes
+import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -23,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from helix_codex_app import db
 from helix_codex_app.config import AppSettings, get_app_settings
 from helix_codex_app.errors import AppError
+from helix_codex_app.integration.telemetry import record_http_request
 from helix_codex_app.modules.admin.router import admin_router
 from helix_codex_app.modules.attendance.router import attendance_router
 from helix_codex_app.modules.calendar.router import calendar_router
@@ -125,6 +129,42 @@ def create_app(settings: AppSettings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.settings = settings
+
+    @app.middleware("http")
+    async def app_request_log(request: Request, call_next):
+        correlation_id = f"req_{uuid.uuid4().hex[:20]}"
+        status_code = 500
+        started = time.perf_counter()
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        finally:
+            route = getattr(request.scope.get("route"), "path", "unmatched")
+            duration = time.perf_counter() - started
+            account = getattr(request.state, "account", None)
+            record_http_request(
+                route=route,
+                status=str(status_code),
+                method=request.method,
+                duration=duration,
+            )
+            print(
+                json.dumps(
+                    {
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "event_type": "http_request",
+                        "correlation_id": correlation_id,
+                        "route": route,
+                        "method": request.method,
+                        "status": status_code,
+                        "duration_ms": int(duration * 1000),
+                        "tenant_id": getattr(account, "tenant_id", None),
+                        "actor": getattr(account, "account_id", None),
+                    }
+                ),
+                flush=True,
+            )
 
     if settings.cors_origins:
         app.add_middleware(

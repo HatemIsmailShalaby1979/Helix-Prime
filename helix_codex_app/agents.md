@@ -1402,3 +1402,17 @@ refused, prune keeps newest + bound, dry-run safety, verify-only
 rehearsal pass/fail. Focused with the evidence suite: 27 passed
 (9 new + 18 existing). `ruff check` + `ruff format --check` clean
 (S101 replaced with an explicit newest-backup refusal).
+
+---
+
+## Appliance observability (2026-09-18) — COMPLETE
+
+**Scope:** `helix_codex_app/integration/telemetry.py` (new seam),
+`modules/identity/service.py` (auth event recording), `app.py` (stdout
+request log), `governance.md` entry 28, `repomap.md` seam list. Core
+registry, kill-switch, readiness, metrics-router, alerts, and monitoring
+docs land in the parent commit; this entry tracks the app side.
+
+**Gate:** covered by `tests/test_appliance_observability.py` (11) —
+auth/throttle counting, app log redaction, backup manifest verdicts.
+`ruff check` + `ruff format --check` clean.

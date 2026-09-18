@@ -34,6 +34,13 @@ from typing import Any, Dict, Optional
 
 from security.audit import AuditRecord, AuditTrail
 
+try:
+    from observability.metrics import REGISTRY as _metrics_registry
+except ImportError as _metrics_import_err:
+    raise RuntimeError(
+        f"kill-switch telemetry unavailable on startup: {_metrics_import_err}"
+    ) from _metrics_import_err
+
 GLOBAL_SCOPE = "*"
 DEFAULT_DB_PATH = "control_plane/workflow.db"
 DEFAULT_AUDIT_DB_PATH = "security/audit.db"
@@ -196,6 +203,7 @@ class KillSwitch:
             tenant_id=tenant_id,
             detail=reason,
         )
+        _metrics_registry.record_kill_switch_event("engaged")
         with self._connection() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO halt_state (scope, reason, actor, engaged_at)"
@@ -220,6 +228,7 @@ class KillSwitch:
             tenant_id=tenant_id,
             detail=f"was_engaged={was_engaged}",
         )
+        _metrics_registry.record_kill_switch_event("released")
         return self.status(tenant_id=tenant_id)
 
     def status(self, tenant_id: Optional[str] = None) -> Dict[str, Any]:

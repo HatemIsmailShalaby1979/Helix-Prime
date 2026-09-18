@@ -288,6 +288,10 @@ def test_alert_rules_reference_exported_metrics_only():
         "helix_audit_chain_verifications_total",
         "helix_audit_chain_verification_failures",
         "helix_approval_queue_depth",
+        "helix_readiness_check_failures_total",
+        "helix_auth_events_total",
+        "helix_kill_switch_events_total",
+        "helix_data_disk_free_bytes",
     }
     missing = sorted(
         name

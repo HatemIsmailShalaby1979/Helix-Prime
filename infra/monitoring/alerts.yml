@@ -105,3 +105,72 @@ groups:
             Informational: the governance queue is drained. Not a fault —
             recorded so an operator can distinguish "queue healthy" from
             "metrics broken".
+
+  - name: helix_readiness
+    interval: 30s
+    rules:
+      - alert: HelixReadinessCheckFailing
+        expr: increase(helix_readiness_check_failures_total[10m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Readiness probe failing (check: {{ $labels.check }})"
+          description: >-
+            /readyz reported not-ready in the last 10 minutes. Read the
+            failing check from the /readyz checks object and gate traffic
+            away until it passes: a live process with an unverifiable
+            ledger must receive no traffic.
+
+      - alert: HelixAuthFailureSpike
+        expr: >-
+          sum(rate(helix_auth_events_total{event=~"login_failure|login_throttled"}[5m])) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sign-in failure rate above 30/minute"
+          description: >-
+            Failed and throttled sign-ins exceed 30 per minute for 15
+            minutes. Either users are struggling or credentials are being
+            sprayed — check login_events for the source addresses before
+            it becomes an incident.
+
+      - alert: HelixKillSwitchEngaged
+        expr: increase(helix_kill_switch_events_total{event="engaged"}[15m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kill switch engaged"
+          description: >-
+            The emergency halt was engaged in the last 15 minutes. Verify
+            it was an intentional operator action in the audit trail; while
+            engaged, committal actions are denied by design.
+
+  - name: helix_capacity
+    interval: 30s
+    rules:
+      - alert: HelixDiskSpaceLow
+        expr: helix_data_disk_free_bytes < 1073741824
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Data volume below 1 GiB free"
+          description: >-
+            Less than 1 GiB remains on the volume holding the databases.
+            Prune aged backups and extend the volume before SQLite starts
+            failing writes.
+
+      - alert: HelixDiskSpaceCritical
+        expr: helix_data_disk_free_bytes < 268435456
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Data volume below 256 MiB free"
+          description: >-
+            Less than 256 MiB remains on the data volume. Writes can fail
+            at any moment: stop the app cleanly, free space or extend the
+            volume, then restart and verify readiness before serving.

@@ -79,6 +79,10 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   the manifest surface `pack_manifest_path`, `manifest_packs`, `packs_without_manifest`,
   and `core_role_financial_limit(role_id)` reading `organization/role_catalog.py` for the
   loader's limit invariant).
+  `telemetry.py` (live: `record_auth_event` counts sign-in outcomes and
+  `record_http_request` counts app requests into the shared process registry
+  with a fixed label vocabulary — the app's only window onto
+  `observability.metrics`).
 - `templating.py` — the one shared template renderer. Reads the CSRF token from
   `request.state.session` and the settings off `request.app.state`, so every route renders with
   the same context instead of re-assembling it. `templates/auth/` uses it too (standalone pages,

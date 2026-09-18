@@ -12,6 +12,11 @@ on http://127.0.0.1:8100. There are no external dependencies — no Redis,
 no message broker, no separate database server.
 
 Data lives in a Docker named volume (`helix_app_data`) mounted at `/data`.
+Inside the image `/data` is owned by the unprivileged `helix` user
+(uid 10001) and is the only writable application path; the app itself runs
+as that user, never as root. On the host, the volume contents are managed
+by Docker — never `chmod` or `chown` the volume files directly while the
+container is running.
 
 ## Health check
 
@@ -100,6 +105,31 @@ A mismatch exits with code 1 and the data is not applied.
 
 After a successful restore, start the app normally.
 
+## Upgrade safely (backup first)
+
+Never upgrade without a fresh backup. Upgrades only ever replace code;
+the `/data` volume is left untouched, but a backup is the only way back
+if a new image fails to start against an old database.
+
+1. Back up first (see **Backup** above) and copy the backup folder out of
+   the container.
+2. Pull or rebuild the image:
+   ```
+   docker compose -f infra/docker/docker-compose.app.yml build --pull
+   ```
+   The build installs dependencies from the pinned
+   `release/requirements.lock.txt`, so a rebuild resolves the exact same
+   dependency set.
+3. Recreate the container without removing the volume:
+   ```
+   docker compose -f infra/docker/docker-compose.app.yml up -d
+   ```
+   (`down` without `-v` also preserves the volume. Never use `down -v`
+   for an upgrade — that deletes all data.)
+4. Verify: wait for `healthy` in `ps`, then open the app and log in.
+   If the container will not turn healthy, stop it and restore from the
+   backup in step 1 (see **Restore** above).
+
 ## Evidence export
 
 Owners can export a full evidence dossier from the Admin screen
@@ -120,7 +150,10 @@ Cookie and TLS requirements:
   reach the app over HTTPS. Every session cookie is `HttpOnly`, `SameSite=Lax`,
   `Path=/`, and `Secure` under that setting. Behind plain HTTP the `Secure`
   cookie is never sent, so local plain-HTTP development is the only
-  configuration that sets it to `false`.
+  configuration that sets it to `false` — and disabling it through the
+  environment refuses to start unless `HELIX_APP_ALLOW_INSECURE_COOKIES=true`
+  is set alongside, so a production container can never drift insecure
+  silently.
 - The app does not interpret `X-Forwarded-For` or `X-Forwarded-Proto`: the
   address recorded in `login_events` and used for login throttling is the
   immediate peer, so run exactly one proxy on the same host.

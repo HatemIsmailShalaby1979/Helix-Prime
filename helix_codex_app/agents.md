@@ -1359,4 +1359,25 @@ logout clears with matching flags, mutating-route CSRF sweep, admin/cockpit
 boundary markers + employee 403s, disabled/locked/revoked immediacy,
 unhandled-error redaction. Focused: 14 new + 20 login/auth green; adjacent
 run 123/124 with the single expected failure above (fixed by the deliberate
-update). `ruff check` + `ruff format --check` clean on all touched paths.
+update). `ruff check` + `ruff format --check` clean on all
+touched paths.
+
+---
+
+## Production-safe deployment artifact (2026-09-18) — COMPLETE
+
+**Scope:** `infra/docker/Dockerfile.app`, `docker-compose.app.yml`,
+`release/requirements.lock.txt` (3 web pins appended),
+`helix_codex_app/config.py` (insecure-cookie gate),
+`docs/release/app-operator-runbook.md` (volume permissions, upgrade
+procedure), `governance.md` entry 26. No app behavior changed except the
+fail-closed cookie gate, which only trips on exported env without
+acknowledgement.
+
+**Gate:** `tests/helix_codex_app/test_app_packaging.py` grows 18 → 32:
+unsafe bind rejected, insecure cookies need explicit ack, lock pins the
+web stack above declared floors, Dockerfile installs from the lock with
+pinned hatchling, strict non-root, no-secrets scans on compose/Dockerfile,
+liveness-only healthcheck, 30 s graceful shutdown, documented upgrade,
+offline wheel build exposing `helix-app`. `check_dependencies.py` green,
+secrets scan 0 findings, `pip-audit` clean on the lock.

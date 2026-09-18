@@ -8,6 +8,7 @@ the operator explicitly accepts the risk.
 from __future__ import annotations
 
 import ipaddress
+import os
 from functools import lru_cache
 
 from pydantic import Field
@@ -36,6 +37,23 @@ class AppSettings(BaseSettings):
                 f"HELIX_APP_HOST={self.host} is not a loopback address. "
                 "Refusing to start; the app is a self-hosted box, not a public service."
             )
+        if _env_disabled("HELIX_APP_COOKIE_SECURE") and not _env_enabled(
+            "HELIX_APP_ALLOW_INSECURE_COOKIES"
+        ):
+            raise RuntimeError(
+                "HELIX_APP_COOKIE_SECURE=false without HELIX_APP_ALLOW_INSECURE_COOKIES. "
+                "Refusing to start; Secure cookies are required whenever browsers "
+                "reach the app over HTTPS. Set HELIX_APP_ALLOW_INSECURE_COOKIES=true "
+                "only for plain-HTTP local development."
+            )
+
+
+def _env_disabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"0", "false", "no", "off"}
+
+
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _is_loopback(host: str) -> bool:

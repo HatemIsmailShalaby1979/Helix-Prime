@@ -4,6 +4,11 @@
 #   docker compose -f infra/docker/docker-compose.app.yml up -d
 #
 # The app binds loopback and is reachable at http://127.0.0.1:8100.
+# Remote access terminates TLS at a reverse proxy on the same host (or an
+# SSH tunnel/VPN) — never expose the app socket directly. No secrets live
+# in this file: the first owner password is supplied at runtime through the
+# bootstrap command below, never as environment.
+#
 # After startup, create the first owner with the bootstrap script:
 #   docker compose -f infra/docker/docker-compose.app.yml exec \
 #       helix-app python helix_codex_app/scripts/bootstrap_owner.py \
@@ -29,6 +34,7 @@ services:
     volumes:
       - helix_app_data:/data
     restart: unless-stopped
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8100/app/healthz')"]
       interval: 30s

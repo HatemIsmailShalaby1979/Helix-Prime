@@ -4,6 +4,13 @@
 # as a non-root user on loopback only. SQLite stays local; /data is the
 # only writable path.
 #
+# Dependencies install from the pinned release lock, never from floating
+# ranges: release/requirements.lock.txt carries every runtime pin including
+# the web stack (the three web-only pins were appended at their proven
+# versions because uv cannot reach the network from this repo). No secrets
+# are baked into the image: the first owner password is supplied at runtime
+# through the bootstrap script, never as a build ARG or ENV.
+#
 # The app binds 127.0.0.1 by default (require_safe_defaults). Use
 # network_mode: host in compose so the operator reaches
 # http://127.0.0.1:8100 on the host.
@@ -20,11 +27,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY requirements.txt pyproject.toml ./
+COPY release/requirements.lock.txt pyproject.toml ./
 RUN python -m venv /opt/venv \
     && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r requirements.txt \
-    && /opt/venv/bin/pip install hatchling
+    && /opt/venv/bin/pip install -r requirements.lock.txt \
+    && /opt/venv/bin/pip install "hatchling==1.32.0"
 
 COPY . .
 RUN /opt/venv/bin/pip install '.[web]' \

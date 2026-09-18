@@ -1114,3 +1114,51 @@ cookie is now correctly dead). **Focused: 14 new + 20 login/auth green;
 adjacent auth suites 123/124 then green after the update; migration-drift +
 app release gates green.** `ruff check` clean; `ruff format --check` clean
 (3 files reformatted, re-ran green).
+
+---
+
+## 12. Production-safe self-hosted deployment artifact (DA-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `infra/docker/` app files,
+`release/requirements.lock.txt`, `helix_codex_app/config.py`, app deploy
+docs. Engines, policy seam, release gate, and forbidden paths untouched. No
+production readiness claimed (a live `docker build` was impossible here —
+the sandbox daemon is down — so "fresh container starts" is verified
+statically against the documented commands, stated honestly below).
+
+**Fix:**
+- Deps pinned: `release/requirements.lock.txt` gains the three missing web
+  pins (`fastapi==0.141.1`, `sse-starlette==3.4.11`,
+  `pydantic-settings==2.15.0`) at the exact proven venv versions (all other
+  pins already match the venv byte-for-byte; new pins satisfy the pyproject
+  floors). `uv pip compile --offline` cannot regenerate (fastapi not in the
+  uv cache, no network), so the pins were appended by hand in uv format —
+  recorded here. `Dockerfile.app` now installs `-r
+  release/requirements.lock.txt` instead of floating `requirements.txt`,
+  with pinned `hatchling==1.32.0`; `check_dependencies.py` stays green.
+- Fail-closed startup: `require_safe_defaults` keeps the loopback refusal
+  and now also refuses exported `HELIX_APP_COOKIE_SECURE=false` without
+  exported `HELIX_APP_ALLOW_INSECURE_COOKIES=true`. Constructor-passed
+  values (the whole test suite) are unaffected — only exported environment
+  trips the gate. The app holds no signing secrets by design (opaque
+  sessions, per-session CSRF, hashed passwords), so there is no default
+  credential to miss; scans below prove none is baked in.
+- Compose: `stop_grace_period: 30s` for clean SQLite shutdown; healthcheck
+  stays liveness-only (`/app/healthz`, never `/readyz`); header documents
+  the TLS/proxy boundary and the no-secrets rule.
+- Docs: runbook gains `/data` permissions (uid 10001, sole writable path,
+  hands off the volume while running) and "Upgrade safely (backup first)"
+  (backup → rebuild from the pinned lock → `up -d` without `-v` → verify
+  healthy + login; `down -v` is data loss). TLS section names the insecure-
+  cookie acknowledgement.
+
+**Gate:** `tests/helix_codex_app/test_app_packaging.py` grows 18 → **32
+passed** — unsafe bind rejected, insecure cookies need explicit ack,
+constructor-passed insecure still boots, lock pins the web stack above
+floors, Dockerfile from lock + pinned hatchling, strict non-root (no root/0
+USER), compose/Dockerfile secret-assignment scans, liveness-only
+healthcheck, 30 s shutdown grace, documented upgrade, offline wheel build
+exposing `helix-app`. Static assertions fail if the guarded lines are
+removed (can-fail by construction). `ruff check` clean (`S104` noqa on the
+deliberate `0.0.0.0` probe); `ruff format --check` clean. Secrets scan 0
+findings; `pip-audit` clean on the lock.

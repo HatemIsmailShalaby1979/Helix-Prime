@@ -1381,3 +1381,24 @@ pinned hatchling, strict non-root, no-secrets scans on compose/Dockerfile,
 liveness-only healthcheck, 30 s graceful shutdown, documented upgrade,
 offline wheel build exposing `helix-app`. `check_dependencies.py` green,
 secrets scan 0 findings, `pip-audit` clean on the lock.
+
+---
+
+## Verifiable backup procedure (2026-09-18) — COMPLETE
+
+**Scope:** `helix_codex_app/scripts/backup_app.py` (+ audit/metadata
+capture, hash inventory, retention prune + CLI), `scripts/restore_app.py`
+(version gate, hash/audit/metadata verification, `--verify-only`),
+`docs/release/app-operator-runbook.md` (schedule, retention, encryption,
+RPO/RTO, alerting, rehearsal verification), new
+`docs/release/restore-rehearsal-checklist.md` (empty evidence fields),
+`governance.md` entry 27. Parent `release/backup.py` untouched.
+
+**Gate:** new `tests/helix_codex_app/test_backup_procedure.py` (9):
+round trip with audit + metadata, tampered backup (count kept identical,
+the can-fail proof for the hash inventory), missing audit file,
+corrupted memory chain, incompatible version refused, non-empty target
+refused, prune keeps newest + bound, dry-run safety, verify-only
+rehearsal pass/fail. Focused with the evidence suite: 27 passed
+(9 new + 18 existing). `ruff check` + `ruff format --check` clean
+(S101 replaced with an explicit newest-backup refusal).

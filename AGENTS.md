@@ -1162,3 +1162,42 @@ exposing `helix-app`. Static assertions fail if the guarded lines are
 removed (can-fail by construction). `ruff check` clean (`S104` noqa on the
 deliberate `0.0.0.0` probe); `ruff format --check` clean. Secrets scan 0
 findings; `pip-audit` clean on the lock.
+
+---
+
+## 13. Operator-verifiable backup procedure (BR-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `helix_codex_app/scripts/backup_app.py`
+/ `restore_app.py`, app operator docs, rehearsal checklist. Parent
+`release/backup.py`, engines, policy seam, and forbidden paths untouched. No
+production readiness claimed.
+
+**Fix:**
+- `backup_app.py` — optional audit-DB + release-manifest capture, per-file
+  sha256 inventory in the manifest, `prune_backups` (keep-last 7 /
+  keep-days 30 defaults, manifest-carrying dirs only, newest never deleted,
+  `<2` backups untouched, dry-run) with CLI flags.
+- `restore_app.py` — `SUPPORTED_BACKUP_VERSIONS={"1.0"}` gate, hash +
+  audit-chain + metadata-hash verification added to the node-count/memory
+  proof, `--verify-only` rehearsal mode, non-empty target still refused via
+  the shared `restore_state` discipline. Old manifests (no new keys) verify
+  exactly as before.
+- Docs: runbook gains scheduled backups (cron/launchd/Task Scheduler with
+  timestamped dirs), retention policy, platform-level encryption guidance
+  (no app crypto invented), RPO ≤ 24 h / RTO-minutes, backup-failure
+  alert + escalation, and the five restore verification dimensions; new
+  `docs/release/restore-rehearsal-checklist.md` ships with empty evidence
+  fields. `governance.md` entry 27, app ledger entry.
+- Debugging note: the first green-looking run verified `target/state`
+  instead of `target` (restore lays out at `target/<rel>`), so every check
+  trivially passed on nothing — caught by the tampered-backup test failing
+  closed the wrong way, fixed, re-ran green.
+
+**Gate:** new `tests/helix_codex_app/test_backup_procedure.py` (9) —
+round trip with audit + metadata, tampered backup with identical node
+count (can-fail proof for the hash inventory), missing audit file,
+corrupted memory chain, incompatible version refused, non-empty target
+refused, prune keeps newest + bound, dry-run safety, verify-only
+pass/fail. **Focused with the evidence suite: 27 passed** (9 new + 18
+existing, zero regressions). `ruff check` clean; `ruff format --check`
+clean.

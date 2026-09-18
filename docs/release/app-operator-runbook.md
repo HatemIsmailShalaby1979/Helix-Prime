@@ -78,6 +78,73 @@ status. A chain that fails verification is flagged in the manifest.
 
 **Schedule:** Run a backup daily if the app is in active use.
 
+## Scheduled backups
+
+Backups are taken from outside the container so a dead app can still be
+backed up. Name every backup directory with a timestamp so retention can
+sort it (`helix-backup-YYYYMMDD-HHMMSS`). The examples below capture the
+app database, the memory stores, the audit database, and the release
+manifest — the full verifiable set.
+
+Linux (cron, daily at 02:00):
+
+```
+0 2 * * * docker compose -f /opt/helix/infra/docker/docker-compose.app.yml exec -T helix-app python helix_codex_app/scripts/backup_app.py --db-path /data/app.db --memory-root /data/memory_stores --audit-db-path /data/audit.db --release-manifest /data/release-manifest.json --target /tmp/helix-backup-$(date +\%Y\%m\%d-\%H\%M\%S) && docker cp $(docker compose -f /opt/helix/infra/docker/docker-compose.app.yml ps -q helix-app):/tmp/helix-backup-$(date +\%Y\%m\%d-\%H\%M\%S) /srv/backups/ && python helix_codex_app/scripts/backup_app.py --prune-root /srv/backups --keep-last 7 --keep-days 30
+```
+
+macOS: the same commands under `launchd` (a `StartCalendarInterval` plist
+calling the script above). Windows: Task Scheduler running
+`docker compose ... exec` plus the prune command with the same flags.
+
+## Retention policy
+
+Keep the last **7** daily backups and everything from the last **30** days
+(`--keep-last 7 --keep-days 30`, the prune defaults). Pruning only ever
+deletes directories that carry their own `backup-manifest.json`, never
+deletes the newest backup, and leaves a root with fewer than two backups
+alone — run it with `--dry-run` first after any change. Retention runs
+after the backup in the same scheduled job, so a failed backup never
+deletes its predecessors.
+
+## Encrypted destinations
+
+The app performs no application-level cryptography on backups, by design.
+Protect them with the platform instead: BitLocker (Windows), FileVault
+(macOS), or LUKS (Linux) on the volume that holds `/srv/backups`, or wrap
+each backup directory for off-site copies with a file-level tool you
+already trust:
+
+```
+age -r <recipient> -o helix-backup-20260918-020000.tar.age <backup-dir>
+```
+
+Store the decryption key offline, separate from the backups. A backup you
+cannot decrypt is not a backup — rehearsal (below) must include a decrypt.
+
+## RPO / RTO assumptions
+
+- **RPO ≤ 24 hours** with the daily schedule above: a total loss loses at
+  most one day of chats, documents, tasks, and memory. Shorten the cron
+  interval if the team cannot re-create a day of work.
+- **RTO is minutes, not hours:** stop the app, restore into a clean
+  directory, verify (automatic), swap the volume contents, start, log in.
+  The restore command refuses to run long: verification is local SQLite
+  and file hashing, so even a large backup verifies in minutes.
+
+## Backup failure alert and escalation
+
+`backup_app.py` exits non-zero and prints `app backup failed: <reason>`
+when nothing was captured or a write fails. Wire the scheduler to alert
+on a non-zero exit (cron mail, Task Scheduler event, or your monitor
+watching the job log). On a backup failure:
+
+1. Do **not** upgrade, restart, or prune. The previous backups are still
+   valid — a failed backup must never delete its predecessors.
+2. Check disk space on the backup destination and the `/data` volume.
+3. Re-run the backup by hand. If it still fails, escalate to the operator
+   with the exact stderr line, the backup directory name, and the last
+   known-good backup (name + date).
+
 ## Restore
 
 Restoring requires the app to be stopped and the target to be clean:
@@ -102,6 +169,33 @@ python helix_codex_app/scripts/restore_app.py \
 
 The restore verifies node counts and memory chains against the manifest.
 A mismatch exits with code 1 and the data is not applied.
+
+Restore success requires verification, never merely file copying. After
+the copy, `restore_app.py` proves five things and refuses the restore
+(exit 1) if any of them fails:
+
+1. The app database holds exactly the manifest's node count.
+2. Every governed memory chain verifies.
+3. Every captured file matches the manifest's sha256 inventory
+   (a tampered backup fails here even when the counts still match).
+4. The captured audit database chain verifies (when captured).
+5. The captured release manifest matches its recorded hash (when captured).
+
+The restore also refuses before copying when the backup version is
+unsupported or the target directory is not empty — restoring into a
+non-empty target is never allowed, because it could mix live data with
+backup data.
+
+Rehearse a restore without touching live data first:
+
+```
+python helix_codex_app/scripts/restore_app.py --backup <backup-dir> --verify-only
+```
+
+Exit 0 means the backup would restore clean; exit 1 names the failing
+dimension. Rehearse quarterly and after every upgrade, and record the run
+in `docs/release/restore-rehearsal-checklist.md` — the checklist ships
+with empty evidence fields for the operator to fill in.
 
 After a successful restore, start the app normally.
 

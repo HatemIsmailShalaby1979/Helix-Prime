@@ -51,6 +51,14 @@ target tenant, target client, route, and correlation id.
 - Chat, docs, tasks create/list/get/update resolve the effective tenant from
   the identity; cross-tenant writes answer `403`, cross-tenant reads answer
   `404` or an empty list scoped to the caller.
+- `GET /api/chat/stream/{correlation_id}` is a tenant-scoped EventSource
+  (`text/event-stream`, keep-alive comments, clean unsubscribe on
+  disconnect). The subscription key carries tenant and correlation id, and
+  only frames matching both — plus the caller client scope when the token
+  carries one — are emitted; a created message is published to its tenant
+  channel. The tenant inbox channel (`chat_{tenant}`) always exists; any
+  other correlation id without stored history answers `404`, and a foreign
+  tenant answers `403`.
 - Workflow submit rejects payload tenant/client values outside the identity
   scope with `403`; workflow get/events/execute/result and approval decide
   answer `404` for foreign tenants so existence is not disclosed.

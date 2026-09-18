@@ -1030,3 +1030,43 @@ the can-fail evidence.
 (`test_observability_startup_slo`,
 `test_observability_readiness_required_components`). `ruff check` clean;
 `ruff format --check` clean.
+
+---
+
+## 10. Tenant-scoped chat streaming for the headless API (CS-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `server/features/chat/router.py` (stream
+endpoint + create publish), `docs/release/api-token-scope.md`,
+`tests/test_chat_stream.py`. Policy seam, engines, release gate untouched. No
+production readiness claimed.
+
+**Issue:** `stream_messages` returned `None` despite advertising an SSE
+stream.
+
+**Fix:**
+- `chat_event_stream` generator split out from the route (same seam as the
+  workflow stream in `server/features/stream/router.py`: `server.sse`
+  `EventBus`, `text/event-stream` `StreamingResponse` with no-cache /
+  keep-alive / no-buffer headers, `: keep-alive` comments every 15 s, clean
+  `unsubscribe` on disconnect). Deliberately the existing `StreamingResponse`
+  idiom, not a second one via `sse-starlette` — one SSE pattern in this
+  service.
+- Scope: subscription key `chat:{tenant}:{correlation}` plus per-frame
+  tenant/client filtering (a frame naming another tenant is skipped, never
+  emitted). `create_message` publishes each stored node to its tenant
+  channel. Unknown correlation (anything but the always-present
+  `chat_{tenant}` inbox without stored history) → typed `404`; foreign
+  tenant → `403`. Create/list isolation from TI-1 unchanged and re-pinned.
+- Doc: `api-token-scope.md` endpoint behavior now describes the stream
+  contract, matching the implementation.
+
+**Gate:** new `tests/test_chat_stream.py` (9) — response content type +
+  headers, authorized stream receives its own event, created message reaches
+  the tenant stream end-to-end, foreign-tenant event never emitted,
+  per-frame filter can-fail proof (a smuggled foreign payload on the caller
+  key yields keep-alives only), `403` foreign / `404` unknown, keep-alive
+  while idle, disconnect cleanup (subscriber count back to 0), list/create
+  isolation.
+**Focused run: 36 passed** (9 stream + 10 tenant-scope + 13 spine + 6 auth —
+  the stream file re-ran green after format). `ruff check` clean (one `B904`
+  fixed); `ruff format --check` clean (both Python files reformatted).

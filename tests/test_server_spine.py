@@ -34,6 +34,8 @@ _TEST_TOKEN = secrets.token_urlsafe(24)
 def _token_env(monkeypatch):
     monkeypatch.setenv("HELIX_API_TOKEN", _TEST_TOKEN)
     monkeypatch.setenv("HELIX_API_TOKEN_ROLE", "sami")
+    monkeypatch.setenv("HELIX_API_TOKEN_TENANT_ID", "tenant-spine")
+    monkeypatch.setenv("HELIX_API_TOKEN_CLIENT_ID", "client-spine")
 
 
 @pytest.fixture()

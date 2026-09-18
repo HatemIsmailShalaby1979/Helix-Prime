@@ -58,6 +58,11 @@ helix-cockpit                  # Streamlit dashboard (secondary)
 
 `launch.py` / `launch.bat` remain as a legacy path.
 
+API tokens are tenant-scoped: set `HELIX_API_TOKEN_TENANT_ID` (and optionally
+`HELIX_API_TOKEN_CLIENT_ID`) for the tenant the instance serves. See
+`docs/release/api-token-scope.md` for the binding contract, the fail-closed
+matrix, and the explicit global-operator opt-in.
+
 ## 7. Operational limits
 
 - DBs: `control_plane/workflow.db`, `security/audit.db` (local SQLite).

@@ -248,6 +248,9 @@ WRONG = secrets.token_urlsafe(24)
 def _token_env(monkeypatch):
     monkeypatch.setenv("HELIX_API_TOKEN", TOKEN)
     monkeypatch.setenv("HELIX_API_TOKEN_ROLE", "sami")
+    monkeypatch.setenv("HELIX_API_TOKEN_TENANT_ID", "helix-prime")
+    monkeypatch.setenv("HELIX_API_TOKEN_CLIENT_ID", "Account Alpha")
+    monkeypatch.setenv("HELIX_API_ALLOW_GLOBAL_OPERATOR", "true")
 
 
 @pytest.fixture()

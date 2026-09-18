@@ -14,10 +14,13 @@ loop (engine calls driven from SSE) is pushed to a worker thread.
 """
 from __future__ import annotations
 
+import contextlib
+from pathlib import Path
 from typing import Iterator
 
 from control_plane.engine import Engine
 from server.config import Settings, get_settings
+from server.models.store import NodeStore
 
 
 class EngineProvider:
@@ -86,3 +89,14 @@ def get_provider() -> EngineProvider:
 
 def get_engine() -> Engine:
     return get_provider().engine
+
+
+@contextlib.contextmanager
+def node_store() -> Iterator[NodeStore]:
+    db_path = Path(str(get_provider().settings.db_path)).parent / "nodes.db"
+    store = NodeStore(db_path)
+    store.connect()
+    try:
+        yield store
+    finally:
+        store.close()

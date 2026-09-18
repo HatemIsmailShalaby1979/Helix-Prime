@@ -9,10 +9,13 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
+from security.identity import Identity
 from server import deps
+from server import scope as api_scope
+from server.auth import current_identity
 from server.errors import NotFound
 from server.features.workflows.repository import WorkflowRepository
 from server.sse import encode, get_bus
@@ -60,10 +63,25 @@ async def stream(request: Request, correlation_id: str) -> StreamingResponse:
 
 
 @router.get("/api/stream/{correlation_id}/workflow")
-def workflow_for_correlation(correlation_id: str) -> dict:
+def workflow_for_correlation(
+    correlation_id: str,
+    request: Request,
+    identity: Identity = Depends(current_identity),
+) -> dict:
     """Convenience lookup so the console can render a stream without a second call."""
     repo = WorkflowRepository(deps.get_engine())
     for workflow in repo.list_recent(limit=200):
-        if workflow.correlation.correlation_id == correlation_id:
-            return repo.to_response(workflow)
+        if workflow.correlation.correlation_id != correlation_id:
+            continue
+        if not api_scope.is_global(identity) and workflow.tenant_id != identity.tenant_id:
+            continue
+        if api_scope.is_global(identity):
+            api_scope.audit_global_access(
+                identity,
+                target_tenant=workflow.tenant_id,
+                target_client=workflow.client_id,
+                route="GET /api/stream/{correlation_id}/workflow",
+                request=request,
+            )
+        return repo.to_response(workflow)
     raise NotFound(f"no workflow for correlation {correlation_id!r}")

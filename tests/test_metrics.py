@@ -23,6 +23,8 @@ WRONG = secrets.token_urlsafe(24)
 def _token_env(monkeypatch):
     monkeypatch.setenv("HELIX_API_TOKEN", TOKEN)
     monkeypatch.setenv("HELIX_API_TOKEN_ROLE", "sami")
+    monkeypatch.setenv("HELIX_API_TOKEN_TENANT_ID", "tenant-metrics")
+    monkeypatch.setenv("HELIX_API_TOKEN_CLIENT_ID", "client-metrics")
     REGISTRY.reset_for_tests()
 
 
@@ -206,11 +208,11 @@ def test_audit_verification_success_is_counted(tmp_path):
 
 
 def test_approval_queue_depth_reflected_in_metrics(client):
-    client.post(
+    submitted = client.post(
         "/api/workflows",
         json={
-            "tenant_id": "tenant-obs",
-            "client_id": "client-obs",
+            "tenant_id": "tenant-metrics",
+            "client_id": "client-metrics",
             "capability": "wfm_forecast",
             "requesting_actor": "suby",
             "owning_role_id": "ops_gm",
@@ -223,6 +225,7 @@ def test_approval_queue_depth_reflected_in_metrics(client):
         },
         headers=_auth(),
     )
+    assert submitted.status_code == 409
     resp = client.get("/metrics", headers=_auth())
     for line in resp.text.splitlines():
         if line.startswith("helix_approval_queue_depth "):

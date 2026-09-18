@@ -24,6 +24,8 @@ ROLE = "sami"
 def _token_env(monkeypatch):
     monkeypatch.setenv("HELIX_API_TOKEN", TOKEN)
     monkeypatch.setenv("HELIX_API_TOKEN_ROLE", ROLE)
+    monkeypatch.setenv("HELIX_API_TOKEN_TENANT_ID", "tenant-auth")
+    monkeypatch.setenv("HELIX_API_TOKEN_CLIENT_ID", "client-auth")
 
 
 @pytest.fixture()

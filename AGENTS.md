@@ -935,3 +935,54 @@ production readiness is claimed (see gate status below).
   this baseline re-ran nothing.
 - **Ruff / format:** N/A — the only file touched by this baseline is this
   `AGENTS.md` (Markdown; no Python changed, no tests added, nothing to lint).
+
+---
+
+## 8. API tenant isolation for the headless FastAPI spine (TI-1) — COMPLETE
+
+**Recorded:** 2026-09-18 · **Scope:** `server/` HTTP surface only. Policy seam
+(`security/policy.py`) untouched; no second isolation implementation in
+storage; forbidden catalog/governance/registry paths untouched. No production
+readiness claimed.
+
+**Issue:** `server.auth.current_identity` minted an identity with no
+`tenant_id`/`client_id`, while chat, docs, tasks, halt, and related routes
+accepted tenant identifiers from request input — caller-supplied ids were the
+sole boundary.
+
+**Fix:**
+- `server/auth.py` — token scope from `HELIX_API_TOKEN_TENANT_ID` /
+  `HELIX_API_TOKEN_CLIENT_ID`; non-global token without tenant scope fails
+  closed (`500`); client-without-tenant fails closed; global-operator identity
+  only for a universal-approver role (catalog-driven via shared
+  `universal_approver_roles()`, fail-closed `503`) plus explicit
+  `HELIX_API_ALLOW_GLOBAL_OPERATOR`. Halt router now reuses the shared reader.
+- `server/scope.py` (new) — `require_tenant` / `require_client` derive the
+  effective scope from the identity (mismatch → `403`, omitted → identity
+  scope); `audit_global_access` logs every global access with actor, target
+  tenant/client, route, correlation id.
+- Routes scope-safe: chat, docs, tasks (create/list/get/update), halt
+  (status/engage/release), workflows (submit/list/get/events/execute/result),
+  approvals (queue/decide — scope checked *before* the decision lands),
+  stream correlation lookup, console pages/partials. Cross-tenant workflow and
+  approval reads answer `404` (no existence oracle). `/healthz` + `/readyz`
+  stay public; `/metrics` stays behind any-valid-token.
+- Latent bugs fixed en route (required to prove isolation): chat/docs/tasks
+  called `deps.get_store()`, which never existed (every such route `500`d),
+  and console `_get_store` did `str / str`. One construction site added:
+  `deps.node_store()` context manager (connect/close per request; no storage
+  semantics changed, no isolation logic in storage).
+- Contract doc: `docs/release/api-token-scope.md`, linked from
+  `docs/release/operator-runbook.md` §6.
+
+**Gate:** new `tests/test_api_tenant_scope.py` (10) — cross-tenant read/write/
+halt denied, global requires explicit config, missing/empty/orphan scope fails
+closed, health public, omitted-tenant defaults to scope, workflows/approvals
+scope-safe, global access audited, can-fail proof
+(`test_scope_enforcement_is_load_bearing` observes the leak with enforcement
+patched out). Existing server fixtures now declare token scope
+(`test_server_auth`, `test_server_spine`, `test_kill_switch` + global flag,
+`test_metrics` incl. queue-depth payload aligned to scope).
+**Focused run: 52 passed** (10 scope + 6 auth + 13 spine + 12 kill-switch + 11
+metrics). `ruff check` clean on all touched paths; `ruff format --check` clean
+(5 files reformatted).

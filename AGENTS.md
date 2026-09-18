@@ -873,3 +873,65 @@ re-verified green — zero core breakage.
 2. `cd E:\Helix-Prime` (or set workdir), run git log --oneline -5 to confirm last commit.
 3. Continue at the first unchecked task in the current step's ledger.
 4. Obey non-negotiable rules. Do not skip ruff/tests/commit/ledger-update.
+
+---
+
+## 7. Production-hardening baseline (2026-09-18) — READ-ONLY, no behavior change
+
+**Scope:** read-only baseline only. No application code, test, config, or
+governed-core file changed. The prompt's implement/test steps are N/A by
+design; verification is collection + inspection, not a suite run. No
+production readiness is claimed (see gate status below).
+
+- **Commit / branch:** `565ea660284e636aba2fbfd866f768626ad142cf` on `main`
+  (`docs: stamp the visual-defect commit sha in the ledger`). HEAD verified
+  before and after inspection — inspection left no trace.
+- **Dirty files (preserved, untouched):** `M marketing/README.md` (+133 lines:
+  user-authored 5-minute-film + stills docs for `helix-codex-deck`; repository
+  source, modified in worktree, left as-is).
+- **Untracked worktree items (all preserved, none read for content except by
+  name/size):**
+  - `cookies.txt` (239 bytes) → **possible secret** (name-pattern only;
+    contents never opened; left untouched — recommend the owner delete it or
+    confirm it is gitignored).
+  - `docs/HELIX_CODEX_APP_AGENT_PROMPTS.pdf` (85,700 bytes),
+    `docs/Helix_Codex_System_Analysis_and_Design.pdf` (2,037,291 bytes) →
+    **unrelated user work** (reference docs).
+  - `marketing/helix-codex-deck/images/01..03-{one-app,ai-organization,
+    governance}.html/.png` → **unrelated user work** (authored stills) /
+    **generated artifact** (rendered 4K PNGs).
+  - `marketing/helix-codex-deck/slides/output/Helix_Codex_App_Deck.pdf` →
+    **generated artifact** (deck build output).
+  - `marketing/helix-codex-deck/video/` (`Helix_Codex_5Min_Animated.html`,
+    `.vtt`, `audio/beat-001..057.mp3`, `build_*.py`, `retime_beats.py`,
+    `export_video.py`, `verify_*.mjs/py`, `capture_frames.mjs`, `.gitignore`)
+    → build/verify scripts = **unrelated user work**, rendered
+    `.mp3`/`.vtt` = **generated artifact**. (The `slides/*.js`, `.mp4`,
+    `.pptx` siblings are gitignored and do not appear in `git status`.)
+  - Forbidden paths (`organization/role-catalog.yaml`,
+    `control_plane/governance.py`, `organization/capability-registry.yaml` +
+    mirrors) were not touched.
+- **Gate profile status (read, not executed):** `release/profiles.py` +
+  `release-profiles.yaml` agree — 14 C8 gates; `controlled_pilot` and
+  `production_candidate` require all 14; `production` adds the 9 external-only
+  gates (`signed_production_evidence` … `legal_privacy_review`), each
+  fail-closed red locally, so a bare `PRODUCTION` label is unreachable here.
+  `release/go-no-go.json` approves candidate/pilot scope only
+  (`SYNTHETIC_OR_CONSENTED_ONLY`). The tracked `release/release-manifest.json`
+  records `app_pilot` / `CONTROLLED_PILOT_READY` at the older commit
+  `b6b954e` (2026-09-15) — a historical artifact, **not** a claim about the
+  current HEAD. `docs/release/production-blockers.md` + handoff checklist
+  confirm Classes 2–5 remain `OPEN`. **No production claim made.**
+- **Test/lint config (read):** no `pytest.ini` (config lives in
+  `pyproject.toml [tool.pytest.ini_options]`; `testpaths=["tests"]`,
+  `-m "not smoke"` in CI). CI (`.github/workflows/ci.yml`) runs ruff check on
+  the governed scope + `ruff format --check .` + mypy + full suite with
+  coverage + bandit/pip-audit + dependency/migration-drift checks. Pinned
+  toolchain verified: ruff `0.1.15`, Python `3.12.10`.
+- **Test collection counts (collect-only, zero tests executed, zero writes):**
+  **1395 collected** (`tests/` = 637 parent + 758 `tests/helix_codex_app`;
+  637 + 758 = 1395, consistent with the §1A ledger). Last *executed* full
+  result stands as recorded in §1A (1393 passed / 2 sandbox-artifact failures);
+  this baseline re-ran nothing.
+- **Ruff / format:** N/A — the only file touched by this baseline is this
+  `AGENTS.md` (Markdown; no Python changed, no tests added, nothing to lint).

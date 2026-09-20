@@ -1,0 +1,10 @@
+# Build artifacts (re-generate with export_video.py)
+_export/
+_check/
+_export.log
+__pycache__/
+*.pyc
+
+# The exported film is a build output, like assets/*.mp4 — the film itself is the
+# HTML plus the narration pack, and export_video.py rebuilds this in one command.
+Helix_Codex_5Min_Animated.mp4

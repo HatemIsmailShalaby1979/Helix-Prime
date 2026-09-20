@@ -1,0 +1,265 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Helix Codex OS — How a Change Earns the Right to Ship",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "views": [
+      {
+        "id": "code-to-evidence",
+        "label": "Code to evidence",
+        "focus": [
+          "change",
+          "gates",
+          "suite",
+          "evidence"
+        ],
+        "note": "Nothing is believed because a file says so; a green run has to produce an artifact."
+      },
+      {
+        "id": "evidence-to-label",
+        "label": "Evidence to release label",
+        "focus": [
+          "evidence",
+          "verdict",
+          "label",
+          "claim"
+        ],
+        "note": "The gate verdict decides which label, and therefore which claims, are permitted."
+      },
+      {
+        "id": "stop-conditions",
+        "label": "Stop conditions",
+        "focus": [
+          "gates",
+          "red",
+          "verdict",
+          "refused"
+        ],
+        "note": "Two hard stops: a red CI gate, and a production label nobody has earned."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "engineer",
+      "label": "Engineer"
+    },
+    {
+      "id": "ci",
+      "label": "CI Gates"
+    },
+    {
+      "id": "governance",
+      "label": "Release Governance"
+    },
+    {
+      "id": "gtm",
+      "label": "Claims and Go-to-Market"
+    }
+  ],
+  "phases": [
+    {
+      "id": "produce",
+      "label": "Produce",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "prove",
+      "label": "Prove",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "permit",
+      "label": "Permit",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "groups": [
+    {
+      "id": "blocking",
+      "label": "Blocking gates",
+      "lane": "ci",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    }
+  ],
+  "mainPath": [
+    "change",
+    "gates",
+    "suite",
+    "evidence",
+    "verdict",
+    "label",
+    "claim"
+  ],
+  "nodes": [
+    {
+      "id": "change",
+      "lane": "engineer",
+      "col": 0,
+      "type": "frontend",
+      "label": "Change",
+      "sublabel": "code or doc"
+    },
+    {
+      "id": "red",
+      "lane": "engineer",
+      "col": 1,
+      "type": "security",
+      "label": "Gate Fails",
+      "sublabel": "build is red"
+    },
+    {
+      "id": "gates",
+      "lane": "ci",
+      "col": 1,
+      "type": "security",
+      "label": "CI Gates",
+      "sublabel": "ruff, mypy",
+      "tag": "blocking"
+    },
+    {
+      "id": "suite",
+      "lane": "ci",
+      "col": 2,
+      "type": "backend",
+      "label": "Test Suite",
+      "sublabel": "1,483 tests"
+    },
+    {
+      "id": "evidence",
+      "lane": "governance",
+      "col": 3,
+      "type": "database",
+      "label": "Evidence Pack",
+      "sublabel": "signed artifacts"
+    },
+    {
+      "id": "verdict",
+      "lane": "governance",
+      "col": 4,
+      "type": "security",
+      "label": "Gate Verdict",
+      "sublabel": "14 release gates",
+      "tag": "human gate"
+    },
+    {
+      "id": "label",
+      "lane": "governance",
+      "col": 5,
+      "type": "security",
+      "label": "Release Label",
+      "sublabel": "pilot or candidate"
+    },
+    {
+      "id": "refused",
+      "lane": "gtm",
+      "col": 4,
+      "type": "security",
+      "label": "Production Refused",
+      "sublabel": "exit 1 by design",
+      "width": 150
+    },
+    {
+      "id": "claim",
+      "lane": "gtm",
+      "col": 5,
+      "type": "external",
+      "label": "Public Claim",
+      "sublabel": "deck, one-pager",
+      "width": 150
+    }
+  ],
+  "edges": [
+    {
+      "from": "change",
+      "to": "gates",
+      "label": "commit"
+    },
+    {
+      "from": "gates",
+      "to": "suite",
+      "label": "green",
+      "variant": "emphasis"
+    },
+    {
+      "from": "suite",
+      "to": "evidence",
+      "label": "record proof"
+    },
+    {
+      "from": "evidence",
+      "to": "verdict",
+      "label": "gate run",
+      "variant": "emphasis"
+    },
+    {
+      "from": "verdict",
+      "to": "label",
+      "label": "award",
+      "variant": "emphasis"
+    },
+    {
+      "from": "label",
+      "to": "claim",
+      "label": "permits",
+      "variant": "emphasis"
+    },
+    {
+      "from": "gates",
+      "to": "red",
+      "label": "red",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "from": "red",
+      "to": "change",
+      "label": "fix",
+      "variant": "dashed",
+      "role": "return"
+    },
+    {
+      "from": "verdict",
+      "to": "refused",
+      "label": "production",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "The one rule",
+      "items": [
+        "A feature is not verified because a file says it is",
+        "Verification needs evidence that survives review"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Stop conditions",
+      "items": [
+        "A red CI gate blocks promotion, no exceptions",
+        "Production refuses to start without external evidence"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "What this means for marketing",
+      "items": [
+        "Every public number must trace to a test run",
+        "The demo video still carries retracted claims"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Helix Codex — One app for the whole company</title>
+<style>
+  :root{
+    --bg:#06060b; --panel:#0e0e19; --panel2:#13131f;
+    --line:rgba(255,255,255,.085); --line2:rgba(255,255,255,.16);
+    --accent:#e94560; --accent2:#ff7d92;
+    --light:#f2f4f8; --muted:#8d99ae; --dim:#5b6b82;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+  body{
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+    color:var(--light);-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;padding:70px 88px 52px;position:relative;
+  }
+  .glow{position:absolute;width:1500px;height:1100px;left:-260px;top:-460px;border-radius:50%;
+    background:radial-gradient(circle,rgba(233,69,96,.20),transparent 62%);filter:blur(28px)}
+  .glow2{position:absolute;width:1200px;height:1000px;right:-360px;bottom:-480px;border-radius:50%;
+    background:radial-gradient(circle,rgba(93,120,255,.13),transparent 64%);filter:blur(30px)}
+  .grid{position:absolute;inset:0;opacity:.4;
+    background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:96px 96px;
+    mask-image:radial-gradient(ellipse 78% 68% at 50% 38%,#000 42%,transparent 100%)}
+  .wrap{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:70px}
+  .brand{display:flex;align-items:center;gap:17px}
+  .mark{width:46px;height:46px}
+  .mark path{fill:none;stroke-width:5.5;stroke-linecap:round}
+  .mark .a{stroke:var(--accent)} .mark .b{stroke:#6b7a92}
+  .word{font-size:26px;font-weight:750;letter-spacing:-.015em}
+  .word span{color:var(--accent)}
+  .tagtop{font-size:12.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);font-weight:650}
+
+  .kicker{font-size:14px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:750;margin-bottom:21px}
+  h1{font-size:92px;line-height:1.02;letter-spacing:-.042em;font-weight:800;max-width:1560px}
+  h1 em{font-style:normal;color:var(--accent)}
+  .sub{margin-top:26px;font-size:24px;line-height:1.5;color:var(--muted);max-width:1420px}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:64px}
+  .tile{background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.018));
+    border:1px solid var(--line);border-radius:16px;padding:27px 26px 25px;
+    display:flex;flex-direction:column;align-items:flex-start;gap:17px}
+  .tile svg{width:31px;height:31px;flex:none;fill:none;stroke:var(--accent2);
+    stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round}
+  .tile b{font-size:19px;font-weight:650;letter-spacing:-.012em;line-height:1.25}
+
+  .deep{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+  .card{border-radius:16px;padding:31px 30px;border:1px solid rgba(233,69,96,.34);
+    background:linear-gradient(150deg,rgba(233,69,96,.15),rgba(233,69,96,.04));
+    display:flex;align-items:center;gap:21px}
+  .card .lock{width:40px;height:40px;flex:none;fill:none;stroke:var(--accent);
+    stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .card h3{font-size:22px;font-weight:730;letter-spacing:-.015em;margin-bottom:6px}
+  .card p{font-size:16px;color:#c4b2b8;line-height:1.42}
+  .card .only{margin-left:auto;flex:none;font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent2);border:1px solid rgba(233,69,96,.4);border-radius:99px;padding:7px 14px;font-weight:700}
+
+  footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;
+    padding-top:26px;border-top:1px solid var(--line);font-size:14.5px;color:var(--dim)}
+  footer b{color:var(--muted);font-weight:620}
+  .pill{border:1px solid var(--line2);border-radius:99px;padding:8px 16px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="glow"></div><div class="glow2"></div><div class="grid"></div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 120 120"><path class="a" d="M30 12 C 70 34, 70 86, 30 108"/><path class="b" d="M90 12 C 50 34, 50 86, 90 108"/><path class="a" d="M34 34 L86 34 M34 86 L86 86"/></svg>
+      <div class="word">Helix <span>Codex</span></div>
+    </div>
+    <div class="tagtop">An operations OS &middot; Built to be owned</div>
+  </header>
+
+  <div class="kicker">One app &middot; not six subscriptions</div>
+  <h1>One app for the <em>whole company</em>.</h1>
+  <p class="sub">Chat, documents, tasks, calendar, on-call, attendance and an AI organization that executes &mdash; behind an audit trail, on your own hardware.</p>
+
+  <div class="tiles">
+    <div class="tile"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.9-.9L3 21l1.9-4.6A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg><b>Chat</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg><b>Documents &amp; SOPs</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2.5"/><path d="M8 3v4M16 3v4M8 13l2.6 2.6L16 10"/></svg><b>Tasks</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><b>Calendar</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></svg><b>On-call</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5.5l3.6 2.1"/></svg><b>Attendance</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg><b>Notifications</b></div>
+    <div class="tile"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5V5.5"/></svg><b>Knowledge base</b></div>
+  </div>
+
+  <div class="deep">
+    <div class="card">
+      <svg class="lock" viewBox="0 0 24 24"><path d="M12 3l7.5 3.2v5.3c0 4.4-3 8.2-7.5 9.5-4.5-1.3-7.5-5.1-7.5-9.5V6.2z"/><path d="M9.2 12.1l2 2 3.6-3.9"/></svg>
+      <div><h3>Operations</h3><p>Engine overview and governed workflow approvals.</p></div>
+      <div class="only">Restricted</div>
+    </div>
+    <div class="card">
+      <svg class="lock" viewBox="0 0 24 24"><path d="M4 20V9M10 20V4M16 20v-7M22 20H2"/></svg>
+      <div><h3>The Cockpit</h3><p>The owner&rsquo;s numbers, enforced server-side.</p></div>
+      <div class="only">Owners only</div>
+    </div>
+  </div>
+
+  <footer>
+    <div><b>Hatem Shalaby</b> &nbsp;&middot;&nbsp; Helix Codex OS &nbsp;&middot;&nbsp; 2026</div>
+    <div class="pill">Sample data is free. Live data is paid.</div>
+  </footer>
+</div>
+</body>
+</html>

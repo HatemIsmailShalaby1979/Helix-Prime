@@ -1,0 +1,386 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Helix Codex OS — Platform and Business Landscape",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [
+      1360,
+      720
+    ],
+    "views": [
+      {
+        "id": "runtime-path",
+        "label": "Primary runtime path",
+        "focus": [
+          "operators",
+          "app",
+          "api",
+          "govcore",
+          "packs",
+          "engines"
+        ],
+        "note": "A role acts in the app, the API authorizes, the governed core dispatches, the pack reuses an engine."
+      },
+      {
+        "id": "governance-core",
+        "label": "Governed core",
+        "focus": [
+          "api",
+          "govcore",
+          "memory",
+          "stores"
+        ],
+        "note": "Every state change is authorized, hash-chained, and auditable."
+      },
+      {
+        "id": "agent-layer",
+        "label": "Agent layer",
+        "focus": [
+          "ollama",
+          "agents",
+          "govcore"
+        ],
+        "note": "Nine agents run on a local model and can only propose, never self-apply."
+      },
+      {
+        "id": "data-and-proof",
+        "label": "Data and proof",
+        "focus": [
+          "connectors",
+          "packs",
+          "stores",
+          "memory",
+          "evidence"
+        ],
+        "note": "Synthetic data in, evidence out; no live customer data exists anywhere."
+      },
+      {
+        "id": "external-edge",
+        "label": "External edge",
+        "focus": [
+          "operators",
+          "connectors",
+          "ollama"
+        ],
+        "note": "The only things outside the trust boundary: people, provider feeds, and the local model."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "operators",
+      "type": "external",
+      "label": "Operators",
+      "sublabel": "5 academy roles",
+      "tag": "people",
+      "pos": [
+        60,
+        250
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "app",
+      "type": "frontend",
+      "label": "Helix Codex App",
+      "sublabel": "HTMX PWA :8100",
+      "pos": [
+        330,
+        250
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "helix-api",
+      "sublabel": "FastAPI :8000",
+      "tag": "canonical",
+      "pos": [
+        600,
+        250
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "govcore",
+      "type": "security",
+      "label": "Governed Core",
+      "sublabel": "control_plane",
+      "tag": "fail-closed",
+      "pos": [
+        870,
+        250
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "packs",
+      "type": "backend",
+      "label": "Capability Packs",
+      "sublabel": "2 vertical packs",
+      "tag": "synthetic",
+      "pos": [
+        1140,
+        250
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "ollama",
+      "type": "external",
+      "label": "Ollama",
+      "sublabel": "local model",
+      "pos": [
+        600,
+        70
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "agents",
+      "type": "backend",
+      "label": "Nine AI Agents",
+      "sublabel": "SAMI to TOMY",
+      "pos": [
+        870,
+        70
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "connectors",
+      "type": "external",
+      "label": "Connectors",
+      "sublabel": "read-only feeds",
+      "tag": "fake only",
+      "pos": [
+        1140,
+        70
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "stores",
+      "type": "database",
+      "label": "SQLite Stores",
+      "sublabel": "workflow, audit",
+      "pos": [
+        600,
+        430
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "Governed Memory",
+      "sublabel": "hash-chained",
+      "pos": [
+        870,
+        430
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "engines",
+      "type": "backend",
+      "label": "Six Engines",
+      "sublabel": "WFM RTA CX B2B",
+      "pos": [
+        1140,
+        430
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "evidence",
+      "type": "database",
+      "label": "Evidence Store",
+      "sublabel": "2,181 files",
+      "pos": [
+        1140,
+        590
+      ],
+      "size": [
+        170,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Local-first deployment — loopback only",
+      "wraps": [
+        "app",
+        "api",
+        "govcore",
+        "packs",
+        "engines",
+        "agents",
+        "ollama",
+        "stores",
+        "memory",
+        "evidence"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Fail-closed governance",
+      "wraps": [
+        "govcore",
+        "memory"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "operators-app",
+      "from": "operators",
+      "to": "app",
+      "label": "role-scoped",
+      "variant": "emphasis"
+    },
+    {
+      "id": "app-api",
+      "from": "app",
+      "to": "api",
+      "label": "HTMX · SSE"
+    },
+    {
+      "id": "api-govcore",
+      "from": "api",
+      "to": "govcore",
+      "label": "gate + approve"
+    },
+    {
+      "id": "govcore-packs",
+      "from": "govcore",
+      "to": "packs",
+      "label": "dispatch"
+    },
+    {
+      "id": "ollama-agents",
+      "from": "ollama",
+      "to": "agents",
+      "label": "local inference"
+    },
+    {
+      "id": "packs-engines",
+      "from": "packs",
+      "to": "engines",
+      "label": "reuses RTA + CX",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "engines-evidence",
+      "from": "engines",
+      "to": "evidence",
+      "label": "computation evidence",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "agents-govcore",
+      "from": "agents",
+      "to": "govcore",
+      "label": "proposals only",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "connectors-packs",
+      "from": "connectors",
+      "to": "packs",
+      "label": "read-only ingest",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "api-stores",
+      "from": "api",
+      "to": "stores",
+      "label": "workflow + audit state",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "govcore-memory",
+      "from": "govcore",
+      "to": "memory",
+      "label": "governed records",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Where it stands",
+      "items": [
+        "1,483 tests collected; the final validation was 1483 passed / 0 failed",
+        "controlled_pilot and production_candidate gates return exit 0; production returns exit 1"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Commercial reality",
+      "items": [
+        "No revenue, no pricing, no pipeline, no certifications",
+        "Scoach Academy Hub is a pre-revenue design partner on synthetic data only"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Open gaps",
+      "items": [
+        "9 production gates need named humans, external audits, and legal review",
+        "main is 166 commits ahead of origin/main; live connectors are unimplemented"
+      ]
+    }
+  ]
+}

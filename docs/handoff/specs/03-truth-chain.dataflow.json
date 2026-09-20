@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Helix Codex OS — The Truth Chain From Synthetic Data to Public Claims",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [
+      1080,
+      560
+    ],
+    "views": [
+      {
+        "id": "origins",
+        "label": "Where data comes from",
+        "focus": [
+          "fixtures",
+          "connectors",
+          "intake"
+        ],
+        "note": "Only two origins exist: synthetic fixtures, and read-only provider feeds in fake mode."
+      },
+      {
+        "id": "compute",
+        "label": "Where work happens",
+        "focus": [
+          "intake",
+          "packs",
+          "engines"
+        ],
+        "note": "Governed intake scopes the task; the capability pack hands it to a real engine."
+      },
+      {
+        "id": "record",
+        "label": "What gets remembered",
+        "focus": [
+          "engines",
+          "state",
+          "evidence"
+        ],
+        "note": "Results land in hash-chained memory and the audit stores, then become evidence."
+      },
+      {
+        "id": "permission",
+        "label": "What may be claimed",
+        "focus": [
+          "state",
+          "evidence",
+          "gates",
+          "claims"
+        ],
+        "note": "The evidence store feeds the gates, and only the gates permit public wording."
+      }
+    ]
+  },
+  "stages": [
+    {
+      "label": "Origins"
+    },
+    {
+      "label": "Governed intake"
+    },
+    {
+      "label": "Computation"
+    },
+    {
+      "label": "Durable state"
+    },
+    {
+      "label": "Proof and permission"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "fixtures",
+      "type": "database",
+      "label": "Synthetic fixtures",
+      "sublabel": "synthetic only",
+      "stage": 0,
+      "row": 0
+    },
+    {
+      "id": "connectors",
+      "type": "external",
+      "label": "Provider feeds",
+      "sublabel": "fake mode",
+      "stage": 0,
+      "row": 1
+    },
+    {
+      "id": "intake",
+      "type": "security",
+      "label": "Governed intake",
+      "sublabel": "classify + scan",
+      "tag": "fail-closed",
+      "stage": 1,
+      "row": 0
+    },
+    {
+      "id": "packs",
+      "type": "backend",
+      "label": "Capability Packs",
+      "sublabel": "vertical packs",
+      "stage": 2,
+      "row": 0
+    },
+    {
+      "id": "engines",
+      "type": "backend",
+      "label": "Six Engines",
+      "sublabel": "real engines",
+      "stage": 2,
+      "row": 1
+    },
+    {
+      "id": "state",
+      "type": "database",
+      "label": "Governed State",
+      "sublabel": "memory + audit",
+      "stage": 3,
+      "row": 0
+    },
+    {
+      "id": "evidence",
+      "type": "database",
+      "label": "Evidence Store",
+      "sublabel": "2,181 files",
+      "stage": 4,
+      "row": 0
+    },
+    {
+      "id": "gates",
+      "type": "security",
+      "label": "Release Gates",
+      "sublabel": "14 C8 gates",
+      "tag": "human gate",
+      "stage": 4,
+      "row": 1
+    },
+    {
+      "id": "claims",
+      "type": "external",
+      "label": "Public Claims",
+      "sublabel": "deck + one-pager",
+      "stage": 4,
+      "row": 2
+    }
+  ],
+  "flows": [
+    {
+      "from": "fixtures",
+      "to": "intake",
+      "label": "synthetic records",
+      "route": "straight"
+    },
+    {
+      "from": "connectors",
+      "to": "intake",
+      "label": "read-only reads",
+      "variant": "dashed"
+    },
+    {
+      "from": "intake",
+      "to": "packs",
+      "label": "scoped task",
+      "variant": "emphasis",
+      "route": "straight"
+    },
+    {
+      "from": "packs",
+      "to": "engines",
+      "label": "engine invocation",
+      "variant": "emphasis",
+      "labelDy": 28
+    },
+    {
+      "from": "engines",
+      "to": "state",
+      "label": "result + evidence"
+    },
+    {
+      "from": "state",
+      "to": "evidence",
+      "label": "decision history",
+      "route": "straight"
+    },
+    {
+      "from": "evidence",
+      "to": "gates",
+      "label": "gate input",
+      "variant": "emphasis",
+      "labelDy": 28
+    },
+    {
+      "from": "gates",
+      "to": "claims",
+      "label": "permitted wording",
+      "variant": "security",
+      "labelDy": 28
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "The uncomfortable fact",
+      "items": [
+        "No live customer data exists anywhere in this system",
+        "Both packs run simulated_realistic and refuse live records"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Records that were retracted",
+      "items": [
+        "docs/COMMERCIAL_STORY.md voids an earlier 57-entry proof ledger",
+        "The 5-minute demo MP4 still carries that narration — do not distribute it"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What a new team can trust",
+      "items": [
+        "The audit chain is tamper-evident, not immutable — say it that way",
+        "Governed memory is append-only; retention flags rather than deletes"
+      ]
+    }
+  ]
+}

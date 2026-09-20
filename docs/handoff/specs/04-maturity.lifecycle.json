@@ -1,0 +1,282 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "Helix Codex OS — How Far the Project Actually Got",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "animation": "trace",
+    "viewBox": [
+      1080,
+      600
+    ],
+    "views": [
+      {
+        "id": "maturity-rail",
+        "label": "The maturity rail",
+        "focus": [
+          "alpha",
+          "hardening",
+          "controlled",
+          "candidate",
+          "production"
+        ],
+        "note": "Five rungs, each backed by a different level of proof."
+      },
+      {
+        "id": "evidence-lane",
+        "label": "What proves each rung",
+        "focus": [
+          "controlled",
+          "evidence_pack",
+          "candidate",
+          "gate_suite",
+          "production",
+          "external_proof"
+        ],
+        "note": "Internal proof exists and is verifiable; external proof does not exist yet."
+      },
+      {
+        "id": "actual-standing",
+        "label": "Where it actually stands",
+        "focus": [
+          "evidence_pack",
+          "pilot_go",
+          "gate_suite",
+          "gtm_hold",
+          "external_proof",
+          "blocked"
+        ],
+        "note": "Usable today for a pilot, not claimable in public, not production-ready."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Release maturity rail"
+    },
+    {
+      "id": "evidence",
+      "label": "Evidence that unblocks"
+    },
+    {
+      "id": "terminal",
+      "label": "Where it actually stands"
+    }
+  ],
+  "states": [
+    {
+      "id": "alpha",
+      "type": "start",
+      "label": "Alpha",
+      "sublabel": "internal only",
+      "lane": "main",
+      "col": 0,
+      "step": "01",
+      "tag": "shipped"
+    },
+    {
+      "id": "hardening",
+      "type": "active",
+      "label": "Hardened",
+      "sublabel": "H0 to H3 complete",
+      "lane": "main",
+      "col": 1,
+      "step": "02",
+      "tag": "shipped"
+    },
+    {
+      "id": "controlled",
+      "type": "success",
+      "label": "Controlled Pilot",
+      "sublabel": "ready today",
+      "lane": "main",
+      "col": 2,
+      "step": "03",
+      "tag": "current"
+    },
+    {
+      "id": "candidate",
+      "type": "decision",
+      "label": "Production Candidate",
+      "sublabel": "gate label only",
+      "lane": "main",
+      "col": 3,
+      "step": "04",
+      "tag": "conditional"
+    },
+    {
+      "id": "production",
+      "type": "waiting",
+      "label": "Production",
+      "sublabel": "refuses to start",
+      "lane": "main",
+      "col": 4,
+      "step": "05",
+      "tag": "NOT_READY"
+    },
+    {
+      "id": "evidence_pack",
+      "type": "waiting",
+      "label": "Evidence pack",
+      "sublabel": "2,181 files",
+      "lane": "evidence",
+      "col": 0
+    },
+    {
+      "id": "gate_suite",
+      "type": "waiting",
+      "label": "Green gate suite",
+      "sublabel": "ruff + mypy",
+      "lane": "evidence",
+      "col": 1
+    },
+    {
+      "id": "external_proof",
+      "type": "waiting",
+      "label": "External proof",
+      "sublabel": "audits + legal",
+      "lane": "evidence",
+      "col": 2
+    },
+    {
+      "id": "pilot_go",
+      "type": "success",
+      "label": "Pilot Go",
+      "sublabel": "usable today",
+      "lane": "terminal",
+      "col": 0,
+      "tag": "terminal",
+      "yOffset": -40
+    },
+    {
+      "id": "gtm_hold",
+      "type": "failure",
+      "label": "GTM Hold",
+      "sublabel": "rebuild the demo",
+      "lane": "terminal",
+      "col": 1,
+      "tag": "terminal",
+      "yOffset": -40
+    },
+    {
+      "id": "blocked",
+      "type": "failure",
+      "label": "Production Blocked",
+      "sublabel": "9 gates open",
+      "lane": "terminal",
+      "col": 2,
+      "tag": "terminal",
+      "yOffset": -40
+    }
+  ],
+  "transitions": [
+    {
+      "from": "alpha",
+      "to": "hardening",
+      "labelDy": -32
+    },
+    {
+      "from": "hardening",
+      "to": "controlled",
+      "labelDy": -32
+    },
+    {
+      "from": "controlled",
+      "to": "candidate",
+      "labelDy": -32
+    },
+    {
+      "from": "candidate",
+      "to": "production",
+      "labelDy": -32
+    },
+    {
+      "from": "controlled",
+      "to": "evidence_pack",
+      "label": "proven by",
+      "variant": "emphasis",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "from": "candidate",
+      "to": "gate_suite",
+      "label": "checked by",
+      "variant": "emphasis",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "from": "production",
+      "to": "external_proof",
+      "label": "requires",
+      "variant": "emphasis",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "from": "evidence_pack",
+      "to": "pilot_go",
+      "label": "sufficient",
+      "variant": "emphasis",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "from": "gate_suite",
+      "to": "gtm_hold",
+      "label": "claims stale",
+      "variant": "security",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    },
+    {
+      "from": "external_proof",
+      "to": "blocked",
+      "label": "missing",
+      "variant": "security",
+      "route": "straight",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 28
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "What is genuinely done",
+      "items": [
+        "1483 tests passed, 0 failed, 0 skipped",
+        "Pilot and candidate gates return exit 0"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Why production stays locked",
+      "items": [
+        "9 external gates need named humans",
+        "No live data and no certifications"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "For marketing and sales",
+      "items": [
+        "No pricing, no pipeline, no paying customer",
+        "Scoach Academy Hub is a design partner"
+      ]
+    }
+  ]
+}

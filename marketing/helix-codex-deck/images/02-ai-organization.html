@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Helix Codex — An AI organization, not a chatbot</title>
+<style>
+  :root{
+    --bg:#06060b; --line:rgba(255,255,255,.085); --line2:rgba(255,255,255,.16);
+    --accent:#e94560; --accent2:#ff7d92;
+    --light:#f2f4f8; --muted:#8d99ae; --dim:#5b6b82;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1920px;height:1080px;overflow:hidden;background:var(--bg)}
+  body{
+    font-family:"Inter","Segoe UI",system-ui,-apple-system,sans-serif;
+    color:var(--light);-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;padding:60px 84px 46px;position:relative;
+  }
+  .glow{position:absolute;width:1400px;height:1000px;left:50%;top:-380px;transform:translateX(-50%);
+    border-radius:50%;background:radial-gradient(circle,rgba(233,69,96,.17),transparent 62%);filter:blur(30px)}
+  .grid{position:absolute;inset:0;opacity:.36;
+    background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:96px 96px;
+    mask-image:radial-gradient(ellipse 80% 70% at 50% 42%,#000 40%,transparent 100%)}
+  .wrap{position:relative;z-index:2;display:flex;flex-direction:column;height:100%}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:62px}
+  .brand{display:flex;align-items:center;gap:17px}
+  .mark{width:46px;height:46px}
+  .mark path{fill:none;stroke-width:5.5;stroke-linecap:round}
+  .mark .a{stroke:var(--accent)} .mark .b{stroke:#6b7a92}
+  .word{font-size:26px;font-weight:750;letter-spacing:-.015em}
+  .word span{color:var(--accent)}
+  .tagtop{font-size:12.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);font-weight:650}
+
+  .kicker{font-size:14px;letter-spacing:.3em;text-transform:uppercase;color:var(--accent);font-weight:750;margin-bottom:20px}
+  h1{font-size:84px;line-height:1.02;letter-spacing:-.042em;font-weight:800}
+  h1 em{font-style:normal;color:var(--accent)}
+  .sub{margin-top:23px;font-size:23px;line-height:1.5;color:var(--muted);max-width:1400px}
+
+  .roles{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:78px}
+  .role{border:1px solid var(--line);border-radius:16px;padding:40px 30px;
+    background:linear-gradient(158deg,rgba(255,255,255,.055),rgba(255,255,255,.016));
+    display:flex;align-items:center;gap:24px}
+  .mono{width:86px;height:86px;flex:none;border-radius:50%;display:grid;place-items:center;
+    font-size:26px;font-weight:800;letter-spacing:.02em;color:#fff;
+    background:linear-gradient(150deg,rgba(233,69,96,.9),rgba(184,38,60,.75));
+    box-shadow:0 0 0 1px rgba(233,69,96,.5), 0 6px 18px rgba(233,69,96,.22)}
+  .role .txt{min-width:0}
+  .role .nm{font-size:27px;font-weight:780;letter-spacing:.075em}
+  .role .ti{font-size:16px;color:var(--muted);margin-top:6px;line-height:1.32}
+
+  footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;
+    padding-top:24px;border-top:1px solid var(--line);font-size:14.5px;color:var(--dim)}
+  footer b{color:var(--muted);font-weight:620}
+  .pill{border:1px solid var(--line2);border-radius:99px;padding:8px 16px;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="glow"></div><div class="grid"></div>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 120 120"><path class="a" d="M30 12 C 70 34, 70 86, 30 108"/><path class="b" d="M90 12 C 50 34, 50 86, 90 108"/><path class="a" d="M34 34 L86 34 M34 86 L86 86"/></svg>
+      <div class="word">Helix <span>Codex</span></div>
+    </div>
+    <div class="tagtop">The intelligence</div>
+  </header>
+
+  <div class="kicker">Nine roles &middot; one org chart</div>
+  <h1>An <em>AI organization</em>, not a chatbot.</h1>
+  <p class="sub">Nine roles with a named responsibility, an approval limit and an owner to escalate to.</p>
+
+  <div class="roles">
+    <div class="role"><div class="mono">SA</div><div class="txt"><div class="nm">SAMI</div><div class="ti">Executive Coordinator / CEO</div></div></div>
+    <div class="role"><div class="mono">SU</div><div class="txt"><div class="nm">SUBY</div><div class="ti">OPS GM</div></div></div>
+    <div class="role"><div class="mono">PH</div><div class="txt"><div class="nm">PHILI</div><div class="ti">HR &amp; Personnel GM</div></div></div>
+    <div class="role"><div class="mono">WI</div><div class="txt"><div class="nm">WILI</div><div class="ti">L&amp;D GM</div></div></div>
+    <div class="role"><div class="mono">MA</div><div class="txt"><div class="nm">MAYA</div><div class="ti">Marketing GM</div></div></div>
+    <div class="role"><div class="mono">LI</div><div class="txt"><div class="nm">LIZA</div><div class="ti">Sales GM</div></div></div>
+    <div class="role"><div class="mono">AN</div><div class="txt"><div class="nm">ANDY</div><div class="ti">Compliance &amp; Quality GM</div></div></div>
+    <div class="role"><div class="mono">TO</div><div class="txt"><div class="nm">TOMY</div><div class="ti">ICT GM</div></div></div>
+    <div class="role"><div class="mono">NO</div><div class="txt"><div class="nm">NONO</div><div class="ti">Fraud &amp; Revenue Assurance GM</div></div></div>
+  </div>
+
+  <footer>
+    <div><b>Hatem Shalaby</b> &nbsp;&middot;&nbsp; Helix Codex OS &nbsp;&middot;&nbsp; 2026</div>
+    <div class="pill">Nothing runs loose. Every action travels one rail.</div>
+  </footer>
+</div>
+</body>
+</html>

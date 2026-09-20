@@ -74,6 +74,12 @@ security/audit.db-*
 # Local demo media kept out of source (use release assets instead)
 marketing/assets/*.mp4
 
+# Archify scratch — regenerate from specs/*.json with the archify CLI. The
+# deliverables are the diagram .html files and their specs; these are the
+# per-run working directories and the visual-check renders they produced.
+.archify-delivery-*/
+*.visual-check.*
+
 # IDE / assistant tooling — project-local data, not source (Phase 1 W0)
 .workbuddy-ai/
 .tmp/

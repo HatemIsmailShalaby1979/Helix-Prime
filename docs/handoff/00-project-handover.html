@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Helix Codex OS — Project Handover</title>
+<style>
+  :root{
+    --bg:#f7f7f5;
+    --panel:#ffffff;
+    --ink:#16181d;
+    --ink-2:#3d424c;
+    --ink-3:#6b7280;
+    --line:#e2e2dd;
+    --line-2:#d0d0c9;
+    --accent:#2f4b8f;
+    --accent-soft:#eef1f8;
+    --pass:#1f7a4d;
+    --pass-soft:#e9f5ef;
+    --warn:#a8620a;
+    --warn-soft:#fdf3e5;
+    --stop:#a8321f;
+    --stop-soft:#fdeeea;
+    --mute:#6b7280;
+    --mute-soft:#f0f0ec;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{display:grid;grid-template-columns:274px minmax(0,1fr);max-width:1500px;margin:0 auto;gap:0}
+
+  /* ---------- sidebar ---------- */
+  .toc{
+    position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;
+    padding:26px 20px 40px;border-right:1px solid var(--line);
+    background:var(--panel);
+  }
+  .toc .brand{font-weight:700;font-size:15px;letter-spacing:-.01em;margin-bottom:2px}
+  .toc .brand small{display:block;font-weight:500;color:var(--ink-3);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;margin-top:5px}
+  .toc nav{margin-top:22px;display:flex;flex-direction:column;gap:1px}
+  .toc a{
+    display:block;padding:6px 10px;border-radius:6px;text-decoration:none;
+    color:var(--ink-2);font-size:13.5px;line-height:1.4;
+  }
+  .toc a:hover{background:var(--accent-soft);color:var(--accent)}
+  .toc .grp{margin-top:16px;padding:0 10px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+  .toc .meta{margin-top:24px;padding:12px 10px 0;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink-3);line-height:1.6}
+  .toc .meta code{font-family:var(--mono);font-size:11px;background:var(--mute-soft);padding:1px 4px;border-radius:3px;color:var(--ink-2)}
+
+  /* ---------- content ---------- */
+  main{padding:0 clamp(20px,4vw,58px) 90px;min-width:0}
+  header.hero{padding:52px 0 34px;border-bottom:2px solid var(--ink)}
+  .eyebrow{font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px}
+  h1{font-size:clamp(30px,4.4vw,46px);line-height:1.1;letter-spacing:-.025em;margin:0 0 16px;font-weight:750}
+  .hero p.sub{font-size:17.5px;color:var(--ink-2);max-width:66ch;margin:0 0 22px}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{
+    font-family:var(--mono);font-size:11.5px;padding:4px 10px;border-radius:100px;
+    background:var(--mute-soft);color:var(--ink-2);border:1px solid var(--line);
+  }
+  .chip.ok{background:var(--pass-soft);color:var(--pass);border-color:#c9e5d7}
+  .chip.warn{background:var(--warn-soft);color:var(--warn);border-color:#f0dcbe}
+  .chip.stop{background:var(--stop-soft);color:var(--stop);border-color:#f2cec5}
+
+  section{padding-top:52px;scroll-margin-top:16px}
+  h2{
+    font-size:clamp(22px,2.5vw,30px);letter-spacing:-.02em;line-height:1.2;
+    margin:0 0 8px;font-weight:720;
+  }
+  h2 .num{color:var(--ink-3);font-weight:600;font-family:var(--mono);font-size:.62em;margin-right:12px;vertical-align:.12em}
+  h3{font-size:17.5px;margin:34px 0 10px;letter-spacing:-.01em;font-weight:680}
+  h4{font-size:14px;margin:22px 0 8px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:680}
+  .lede{font-size:16.5px;color:var(--ink-2);max-width:72ch;margin:0 0 20px}
+  p{max-width:76ch}
+  a{color:var(--accent)}
+  code{font-family:var(--mono);font-size:.875em;background:var(--mute-soft);padding:1.5px 5px;border-radius:4px;color:var(--ink)}
+  strong{font-weight:660}
+  ul,ol{max-width:76ch;padding-left:22px}
+  li{margin-bottom:6px}
+
+  /* ---------- callouts ---------- */
+  .note{
+    border-left:3px solid var(--accent);background:var(--panel);
+    padding:14px 18px;border-radius:0 8px 8px 0;margin:20px 0;max-width:80ch;
+    border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .note.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+  .note.stop{border-left-color:var(--stop);background:var(--stop-soft)}
+  .note.ok{border-left-color:var(--pass);background:var(--pass-soft)}
+  .note p:last-child{margin-bottom:0}
+  .note .lbl{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px;color:var(--ink-3)}
+  .note.warn .lbl{color:var(--warn)}
+  .note.stop .lbl{color:var(--stop)}
+  .note.ok .lbl{color:var(--pass)}
+
+  /* ---------- stat board ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin:24px 0 8px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:15px 16px}
+  .stat .v{font-size:26px;font-weight:730;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+  .stat .k{font-size:11.5px;color:var(--ink-3);margin-top:5px;line-height:1.45}
+  .stat.good .v{color:var(--pass)}
+  .stat.bad .v{color:var(--stop)}
+  .stat.mid .v{color:var(--warn)}
+
+  /* ---------- tables ---------- */
+  .tblwrap{overflow-x:auto;margin:18px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:560px}
+  th{
+    text-align:left;padding:11px 14px;background:#fbfbf9;border-bottom:1px solid var(--line-2);
+    font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:700;white-space:nowrap;
+  }
+  td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td code{font-size:12px}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.05em;padding:2.5px 8px;border-radius:100px;white-space:nowrap;text-transform:uppercase}
+  .tag.pass{background:var(--pass-soft);color:var(--pass)}
+  .tag.open{background:var(--warn-soft);color:var(--warn)}
+  .tag.stop{background:var(--stop-soft);color:var(--stop)}
+  .tag.mute{background:var(--mute-soft);color:var(--mute)}
+
+  /* ---------- diagram frames ---------- */
+  figure{margin:26px 0 30px;background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  figure .bar{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:11px 16px;border-bottom:1px solid var(--line);background:#fbfbf9;flex-wrap:wrap;
+  }
+  figure .bar .t{font-size:13px;font-weight:660}
+  figure .bar .t span{font-family:var(--mono);font-size:11px;color:var(--ink-3);font-weight:500;margin-left:8px}
+  figure .bar a{
+    font-size:12px;text-decoration:none;font-weight:640;border:1px solid var(--line-2);
+    padding:5px 11px;border-radius:7px;background:var(--panel);color:var(--ink-2);white-space:nowrap;
+  }
+  figure .bar a:hover{border-color:var(--accent);color:var(--accent)}
+  figure .frame{height:min(74vh,660px);background:var(--bg)}
+  figure .frame.tall{height:min(90vh,940px)}
+  figure iframe{width:100%;height:100%;border:0;display:block}
+  figcaption{padding:13px 16px;font-size:13px;color:var(--ink-2);border-top:1px solid var(--line);max-width:none}
+
+  /* ---------- audience split ---------- */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}
+  .split .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:17px 19px}
+  .split .card h4{margin-top:0}
+  .split .card ul{padding-left:19px;margin:8px 0 0}
+  .split .card li{font-size:13.8px;margin-bottom:5px}
+
+  /* ---------- path list ---------- */
+  .paths{display:flex;flex-direction:column;gap:9px;margin:18px 0}
+  .path{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:13px 16px}
+  .path .h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .path .h b{font-size:14.5px;font-weight:660}
+  .path .h em{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .path p{font-size:13.8px;margin:5px 0 0;color:var(--ink-2)}
+
+  /* ---------- footer ---------- */
+  footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-3)}
+  footer p{max-width:76ch}
+
+  @media (max-width:1000px){
+    .wrap{grid-template-columns:1fr}
+    .toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line)}
+    .toc nav{flex-direction:row;flex-wrap:wrap;gap:4px}
+    .toc .meta{display:none}
+    .split{grid-template-columns:1fr}
+  }
+  @media print{
+    .toc{display:none}
+    .wrap{grid-template-columns:1fr;max-width:none}
+    body{background:#fff;font-size:11pt}
+    figure .frame{height:auto}
+    figure iframe{height:520px}
+    section{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<aside class="toc">
+  <div class="brand">Helix Codex OS<small>Project Handover</small></div>
+  <nav>
+    <div class="grp">Start here</div>
+    <a href="#read-first">Read this first</a>
+    <a href="#board">The status board</a>
+    <div class="grp">Orientation</div>
+    <a href="#nontech">For non-technical readers</a>
+    <a href="#commercial">The commercial reality</a>
+    <div class="grp">The four diagrams</div>
+    <a href="#d1">1 · Platform landscape</a>
+    <a href="#d2">2 · Release gate</a>
+    <a href="#d3">3 · Truth chain</a>
+    <a href="#d4">4 · Maturity ladder</a>
+    <div class="grp">Working here</div>
+    <a href="#structure">Repository structure</a>
+    <a href="#rules">The rules you must not break</a>
+    <a href="#landmines">Landmines and open risks</a>
+    <a href="#first30">Your first 30 days</a>
+  </nav>
+  <div class="meta">
+    HEAD <code>1c176d3</code><br>
+    Validated 2026-09-18<br>
+    Suite 1483 passed<br>
+    Profile <code>0.9.0-c8</code>
+  </div>
+</aside>
+
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Outgoing team → incoming team</div>
+  <h1>Helix Codex OS: everything we know, written down</h1>
+  <p class="sub">
+    This is the handover for the team picking up <code>E:\Helix-Prime</code>. It assumes you know
+    nothing about the project. It covers the code, the governance, the release process, and the
+    commercial situation, including the parts that are uncomfortable. Four interactive diagrams
+    carry the structure; this document is the spine that connects them.
+  </p>
+  <div class="hero-meta">
+    <span class="chip">HEAD <code style="background:none;padding:0">1c176d3</code></span>
+    <span class="chip ok">1483 tests passing</span>
+    <span class="chip ok">9 / 9 code checks green</span>
+    <span class="chip warn">CONTROLLED_PILOT_READY</span>
+    <span class="chip stop">release_approved: false</span>
+    <span class="chip stop">166 commits never pushed</span>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<section id="read-first">
+  <h2><span class="num">00</span>Read this first</h2>
+  <p class="lede">
+    Helix Prime is a governed AI operations platform, being commercialised under the name
+    <strong>Helix Codex OS</strong>. It models the work of a business operations floor: forecasting,
+    scheduling, adherence, onboarding, and quality. Six business engines do the calculation. Nine
+    named AI agents act as department heads. A governance layer sits underneath all of them and
+    refuses to let anything happen without a record of who authorised it.
+  </p>
+  <p>
+    The engineering is in good shape. 1,483 tests pass, the linters and security scanners are clean,
+    and the release gate does exactly what it was designed to do. The commercial side is not started.
+    There is no revenue, no pricing, and no sales pipeline. There is one named design partner who has
+    never run a pilot. If you are joining to build, you are joining a well-built engine with no
+    market attached to it yet. That is the honest summary, and the rest of this document supports it.
+  </p>
+
+  <div class="note stop">
+    <span class="lbl">Three things to know before anything else</span>
+    <p>
+      <strong>1. Nothing has been pushed.</strong> <code>main</code> is 166 commits ahead of
+      <code>origin/main</code> and 0 behind. The public repository does not contain the current work.
+      If the machine is lost, the work is lost. Push is a human decision that has been deliberately
+      withheld, and it is the single highest-value thing to resolve.
+    </p>
+    <p>
+      <strong>2. The shipped demo video still contains fabricated narration.</strong> The script was
+      rewritten to remove invented claims, but the rendered <code>.mp4</code> and <code>.vtt</code>
+      were never rebuilt. It must not be distributed.
+    </p>
+    <p>
+      <strong>3. "Production ready" is false and the system says so itself.</strong> Twenty-one
+      external verification items are open. The <code>production</code> gate returns exit 1 by
+      design. Do not let anyone, inside or outside the team, describe this as production ready.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="board">
+  <h2><span class="num">01</span>The status board</h2>
+  <p class="lede">Every number below was read from the repository, not from documentation about it.</p>
+
+  <div class="stats">
+    <div class="stat good"><div class="v">1483</div><div class="k">Tests passed, 0 failed, 0 skipped (2026-09-18)</div></div>
+    <div class="stat good"><div class="v">202</div><div class="k">Total commits on <code>main</code></div></div>
+    <div class="stat bad"><div class="v">166</div><div class="k">Commits ahead of <code>origin/main</code>. Never pushed.</div></div>
+    <div class="stat good"><div class="v">9/9</div><div class="k">Ruff, mypy, bandit, pip-audit, drift checks clean</div></div>
+    <div class="stat mid"><div class="v">0.9.0</div><div class="k">Version, release profile <code>0.9.0-c8</code></div></div>
+    <div class="stat mid"><div class="v">21</div><div class="k">External verification items open (Classes 2–5)</div></div>
+    <div class="stat bad"><div class="v">0</div><div class="k">Revenue. No pricing, no pipeline, no contracts.</div></div>
+    <div class="stat mid"><div class="v">18/24</div><div class="k">Perceived Created Value score, by the author's own assessment</div></div>
+  </div>
+
+  <h3>What is real and what is not</h3>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th style="width:34%">Claim</th><th style="width:14%">Verdict</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td>Six engines, nine agents, working orchestrator</td><td><span class="tag pass">Real</span></td><td><code>engines/</code> (6 packages), <code>organization/role-catalog.yaml</code> (9 roles), content-based routing tested</td></tr>
+        <tr><td>Governance that fails closed</td><td><span class="tag pass">Real</span></td><td><code>GovernanceControlUnavailable</code> raised at import and validation time; silent skips removed in H1.1</td></tr>
+        <tr><td>Hash-chained audit trail</td><td><span class="tag pass">Real</span></td><td>Audit chain integrity verified; tenant isolation enforced cross-tenant denied</td></tr>
+        <tr><td>Controlled pilot is ready to run</td><td><span class="tag pass">Real</span></td><td><code>app_pilot</code> and <code>controlled_pilot</code> gates both emit <code>CONTROLLED_PILOT_READY</code>, exit 0, zero red gates</td></tr>
+        <tr><td>Production ready</td><td><span class="tag stop">False</span></td><td><code>production</code> profile returns <code>NOT_READY</code>, exit 1, all nine external gates red</td></tr>
+        <tr><td>Paying customers</td><td><span class="tag stop">False</span></td><td>No deployments, no revenue. One design partner, pre-revenue.</td></tr>
+        <tr><td>"57-entry auditable proof ledger"</td><td><span class="tag stop">Retracted</span></td><td>Invented. Publicly retracted in <code>docs/COMMERCIAL_STORY.md</code>.</td></tr>
+        <tr><td>Customer accounts (VF UK, Lufthansa)</td><td><span class="tag stop">Retracted</span></td><td>Invented. Named as void in <code>docs/COMMERCIAL_STORY.md</code>.</td></tr>
+        <tr><td>"$1M/year preventable waste", "50–70% savings"</td><td><span class="tag stop">Retracted</span></td><td>Invented figures. Declared void in <code>docs/COMMERCIAL_STORY.md</code>.</td></tr>
+        <tr><td>Container image builds</td><td><span class="tag mute">Unverified</span></td><td>Never built. Docker daemon was down at validation. 32 static packaging tests cover the surface instead.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <span class="lbl">Documentation is stale in two places</span>
+    <p>
+      <code>AGENTS.md</code> §1.1 still records 1,395 collected tests and last commit
+      <code>081e4bc</code>. The real figures are 1,483 and <code>1c176d3</code>. The build ledger's
+      <em>history</em> is accurate; only that one summary table drifted. Also,
+      <code>release/release-manifest.json</code> pins commit <code>b6b954e</code> and a build
+      timestamp of 2026-09-15, so it describes a build three commits behind HEAD. Regenerate it
+      before any release action.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="nontech">
+  <h2><span class="num">02</span>For non-technical readers</h2>
+  <p class="lede">
+    If your job is marketing, sales, partnerships, or running the business, this section is yours.
+    You do not need to read the rest, though the four diagrams are written to be readable without
+    any engineering background.
+  </p>
+
+  <h3>What the product actually does</h3>
+  <p>
+    A sports academy, a contact centre, or any operation with staff and shifts has the same
+    recurring problems. How many people do we need on Tuesday afternoon? Who is running late, and
+    does it matter? Is the new hire actually trained, or just scheduled? Helix models those questions
+    as a set of connected engines, then puts an AI agent in charge of each department: operations,
+    HR, marketing, sales, compliance, IT, fraud, learning, and one coordinator above them all.
+  </p>
+  <p>
+    The part that makes it different from a dashboard is the layer underneath. Every action an agent
+    takes is recorded, attributed, and either approved by a human or refused. The system is built so
+    that it would rather stop working than do something unauthorised. That is a deliberate
+    engineering choice, and it is the reason the production gate refuses to open.
+  </p>
+
+  <h3>Who the nine agents are</h3>
+  <p>
+    These are the characters in the product story. Each maps to a real role with real approval
+    limits, readable data domains, and KPIs, defined in <code>organization/role-catalog.yaml</code>.
+  </p>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>Agent</th><th>Role</th><th>Agent class</th></tr></thead>
+      <tbody>
+        <tr><td><strong>SAMI</strong></td><td>Executive Coordinator / CEO</td><td><code>SAMIAgent</code></td></tr>
+        <tr><td><strong>SUBY</strong></td><td>OPS GM</td><td><code>SUBYAgent</code></td></tr>
+        <tr><td><strong>PHILI</strong></td><td>HR &amp; Personnel GM</td><td><code>PHILIAgent</code></td></tr>
+        <tr><td><strong>MAYA</strong></td><td>Marketing GM</td><td><code>MarketingAgent</code></td></tr>
+        <tr><td><strong>LIZA</strong></td><td>Sales GM</td><td><code>SalesAgent</code></td></tr>
+        <tr><td><strong>ANDY</strong></td><td>Compliance &amp; Quality GM</td><td><code>ComplianceQualityAgent</code></td></tr>
+        <tr><td><strong>TOMY</strong></td><td>ICT GM</td><td><code>ICTAgent</code></td></tr>
+        <tr><td><strong>NONO</strong></td><td>Fraud Analysis &amp; Revenue Assurance GM</td><td><code>FraudAgent</code></td></tr>
+        <tr><td><strong>WILI</strong></td><td>L&amp;D GM</td><td><code>WILIAgent</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Two agents hold universal approval authority: <strong>SAMI</strong> and <strong>ANDY</strong>
+    (compliance and quality). Everything else needs one of them to sign off. This is the
+    segregation-of-duties rule, and it is enforced in code, not in a policy document.
+  </p>
+
+  <div class="note">
+    <span class="lbl">One product, two names</span>
+    <p>
+      The repository, the license, the domain concepts, and most documentation call it
+      <strong>Helix Prime</strong>. The commercial and release layer calls it
+      <strong>Helix Codex OS</strong>, and the release manifest records the product as
+      <code>Helix-Prime-Codex</code>. They are the same thing. Decide which name is the public one
+      and make it consistent, because right now external material uses both.
+    </p>
+  </div>
+
+  <h3>What you can and cannot say publicly today</h3>
+  <div class="split">
+    <div class="card">
+      <h4>Safe to say</h4>
+      <ul>
+        <li>It is a working, tested platform: 1,483 automated tests, clean security scans.</li>
+        <li>It is designed to be governed and auditable, and it refuses unsafe actions by default.</li>
+        <li>It has been validated as suitable for a supervised controlled pilot.</li>
+        <li>It is built by an operator with 28 years in the domain, with a public repository.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Do not say</h4>
+      <ul>
+        <li>Anything implying production readiness.</li>
+        <li>Any customer name other than the design partner, and never imply they pay.</li>
+        <li>Any ROI, savings, or waste-reduction figure. All earlier ones were invented.</li>
+        <li>Any reference to a proof ledger, or to a completed pilot. Neither exists.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="commercial">
+  <h2><span class="num">03</span>The commercial reality</h2>
+  <p class="lede">
+    This is the weakest part of the project, and the incoming team should treat it as the main
+    opportunity rather than a footnote.
+  </p>
+
+  <h3>Where things stand</h3>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>Dimension</th><th style="width:16%">State</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Revenue</td><td><span class="tag stop">None</span></td><td>No sales, no contracts, no invoicing.</td></tr>
+        <tr><td>Pricing</td><td><span class="tag stop">None</span></td><td>No pricing model exists. An earlier draft had one for a product with no customers; it was voided.</td></tr>
+        <tr><td>Sales pipeline</td><td><span class="tag stop">None</span></td><td>No CRM pipeline, no prospects list, no commercial terms.</td></tr>
+        <tr><td>Design partner</td><td><span class="tag open">Pre-revenue</span></td><td>Scoach Academy Hub, a private sports academy. Contractually optional. One vertical pack built for them, on synthetic data.</td></tr>
+        <tr><td>Pilot executed</td><td><span class="tag stop">No</span></td><td>The pack is built and tested; the pilot has never been run on real data.</td></tr>
+        <tr><td>Marketing site</td><td><span class="tag open">Built</span></td><td><code>marketing/index.html</code>, a deck, three 4K stills, and 57 narration audio files.</td></tr>
+        <tr><td>Demo video</td><td><span class="tag stop">Unusable</span></td><td>Rendered MP4 and captions contain retracted fabricated narration. Rebuild required.</td></tr>
+        <tr><td>Client one-pager</td><td><span class="tag open">Incomplete</span></td><td>Contact line is still <code>[your email] | [your phone]</code>.</td></tr>
+        <tr><td>Certifications</td><td><span class="tag stop">None</span></td><td>No SOC 2, no ISO, no security certification, no independent audit.</td></tr>
+        <tr><td>License</td><td><span class="tag pass">MIT</span></td><td>Resolved. Earlier license claims were inconsistent; that is fixed.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note warn">
+    <span class="lbl">Read the retraction before you write any marketing copy</span>
+    <p>
+      <code>docs/COMMERCIAL_STORY.md</code> is the authoritative commercial statement. It opens by
+      publicly retracting a fabricated "57-entry proof ledger", invented customer accounts (VF UK,
+      Lufthansa), invented ROI figures, and a pricing model for a product with no customers. Anyone
+      writing external material must read that file first. The project has already paid a credibility
+      cost for those claims once. Do not reopen that wound.
+    </p>
+  </div>
+
+  <h3>What a commercial person should do first</h3>
+  <ol>
+    <li>Rebuild the demo video from the corrected script, or delete it from the marketing surface so nobody ships it by accident.</li>
+    <li>Fill in the one-pager contact fields and remove anything that overstates readiness.</li>
+    <li>Turn the Scoach design partner into a real, dated pilot with a named operator and a consent record. That is the single gate that unlocks every commercial conversation.</li>
+    <li>Decide the public product name: Helix Prime or Helix Codex OS.</li>
+    <li>Do not build pricing until a pilot has produced real numbers. Anything earlier is guesswork dressed as strategy.</li>
+  </ol>
+</section>
+
+<!-- ============================================================ -->
+<section id="d1">
+  <h2><span class="num">04</span>Diagram 1 · The platform landscape</h2>
+  <p class="lede">
+    What the system is made of, how the pieces connect, and where the commercial layer sits relative
+    to the governed core. Read this one first if you are new to the codebase.
+  </p>
+
+  <figure>
+    <div class="bar">
+      <div class="t">Platform and business landscape<span>architecture</span></div>
+      <a href="01-platform-landscape.html" target="_blank" rel="noopener">Open full screen ↗</a>
+    </div>
+    <div class="frame"><iframe src="01-platform-landscape.html" loading="lazy" title="Platform and business landscape diagram"></iframe></div>
+    <figcaption>
+      Twelve components across five columns. Two boundaries are drawn: a deployment boundary
+      (local-first, loopback only) and a security boundary (fail-closed governance). Five guided
+      views step through the layers.
+    </figcaption>
+  </figure>
+
+  <h3>How to read it</h3>
+  <p>
+    The diagram is organised left to right by trust. On the far left is the outside world: the
+    interfaces and connectors. In the middle sit the six engines and nine agents that do the work.
+    Underneath them is the governed core, which is the part that cannot be bypassed. On the right is
+    the commercial surface, which today is a marketing site and a deck rather than a revenue channel.
+  </p>
+  <p>
+    Two lines matter more than the boxes. The <strong>deployment boundary</strong> marks the fact that
+    everything currently runs on one machine, bound to <code>127.0.0.1</code>. There is no cloud
+    redundancy and no external identity provider. The <strong>security boundary</strong> wraps the
+    governed core and the audit trail, and it is the reason the product behaves conservatively: a
+    request that cannot be verified is refused rather than allowed through.
+  </p>
+
+  <div class="note ok">
+    <span class="lbl">For engineers</span>
+    <p>
+      The governed core is <code>control_plane/</code> plus the security and audit modules. Engines
+      are reused through existing capability ids; vertical packs such as
+      <code>capabilities/restaurant/</code> and <code>capabilities/sports_academy/</code> are
+      consumers, not forks. The reference pattern for any new pack is
+      <code>capabilities/restaurant/</code>, and copying its shape is a hard rule rather than a
+      preference.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="d2">
+  <h2><span class="num">05</span>Diagram 2 · How a change earns the right to ship</h2>
+  <p class="lede">
+    The release workflow, from a code change to a public claim. This is the process that produced the
+    current validation state, and it is the process you will be running.
+  </p>
+
+  <figure>
+    <div class="bar">
+      <div class="t">How a change earns the right to ship<span>workflow</span></div>
+      <a href="02-release-gate.html" target="_blank" rel="noopener">Open full screen ↗</a>
+    </div>
+    <div class="frame tall"><iframe src="02-release-gate.html" loading="lazy" title="Release gate workflow diagram"></iframe></div>
+    <figcaption>
+      Four lanes: Engineer, CI Gates, Release Governance, and Claims and Go-to-Market. Nine nodes and
+      nine transitions, with a single blocking group. The main path runs from a code change through
+      the gate suite to a verdict, a release label, and finally a public claim. The fourth lane sits
+      below the frame; scroll inside it, or use <em>Open full screen</em>.
+    </figcaption>
+  </figure>
+
+  <div class="note warn">
+    <span class="lbl">Known limitation, stated plainly</span>
+    <p>
+      This is the one diagram of the four whose desktop containment check does not pass. At a 1440×900
+      window its content needs 1,304px of height; at 2048×1320 it needs 1,461px. The workflow layout
+      engine enforces a minimum canvas of 896×668 for this density, and the required label text size
+      cannot be preserved inside a shorter frame. The diagram is fully readable and internally
+      correct, but on a smaller laptop it will scroll rather than fit. Fixing it means splitting the
+      four lanes across two diagrams. The other three diagrams fit at every tested viewport.
+    </p>
+  </div>
+
+  <h3>The workflow states</h3>
+  <p>
+    Work items move through eleven states defined in <code>control_plane/workflow.py</code>. The
+    transition map is explicit, and an unknown state returns false rather than being allowed.
+  </p>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>State</th><th>Meaning</th><th>Can move to</th></tr></thead>
+      <tbody>
+        <tr><td><code>PROPOSED</code></td><td>A change has been raised</td><td><code>VALIDATED</code>, <code>FAILED</code>, <code>CANCELLED</code>, <code>DEAD_LETTER</code></td></tr>
+        <tr><td><code>VALIDATED</code></td><td>Passed structural checks</td><td><code>AWAITING_APPROVAL</code>, <code>FAILED</code>, <code>CANCELLED</code></td></tr>
+        <tr><td><code>AWAITING_APPROVAL</code></td><td>Waiting on a human with authority</td><td><code>APPROVED</code>, <code>FAILED</code>, <code>CANCELLED</code></td></tr>
+        <tr><td><code>APPROVED</code></td><td>Authorised to execute</td><td><code>EXECUTING</code>, <code>CANCELLED</code></td></tr>
+        <tr><td><code>EXECUTING</code></td><td>Running</td><td><code>SUCCEEDED</code>, <code>FAILED</code>, <code>COMPENSATED</code></td></tr>
+        <tr><td><code>SUCCEEDED</code></td><td>Completed</td><td><code>CLOSED</code></td></tr>
+        <tr><td><code>FAILED</code></td><td>Errored</td><td><code>DEAD_LETTER</code>, <code>CANCELLED</code></td></tr>
+        <tr><td><code>COMPENSATED</code></td><td>Rolled back after partial work</td><td><code>CLOSED</code></td></tr>
+        <tr><td><code>DEAD_LETTER</code></td><td>Needs a human, not a retry</td><td><code>CLOSED</code></td></tr>
+        <tr><td><code>CANCELLED</code></td><td>Deliberately abandoned</td><td><code>CLOSED</code></td></tr>
+        <tr><td><code>CLOSED</code></td><td>Terminal</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>The gate profiles</h3>
+  <p>
+    <code>release/gate.py</code> runs fourteen gates against a named profile. Re-run on 2026-09-18:
+  </p>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>Profile</th><th>Classification</th><th>Exit</th><th>Red gates</th></tr></thead>
+      <tbody>
+        <tr><td><code>app_pilot</code></td><td><span class="tag pass">CONTROLLED_PILOT_READY</span></td><td>0</td><td>none</td></tr>
+        <tr><td><code>controlled_pilot</code></td><td><span class="tag pass">CONTROLLED_PILOT_READY</span></td><td>0</td><td>none</td></tr>
+        <tr><td><code>production_candidate</code></td><td><span class="tag open">PRODUCTION_CANDIDATE</span></td><td>0</td><td>none</td></tr>
+        <tr><td><code>production</code></td><td><span class="tag stop">NOT_READY</span></td><td>1</td><td>all nine external-only gates</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    The <code>production_candidate</code> label is a classification emitted by the gate. It is not a
+    readiness claim, and it should never be quoted as one. The <code>production</code> profile
+    returning exit 1 is correct behaviour, not a bug to fix. It fails because the nine gates that
+    require real external evidence have no evidence to check.
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<section id="d3">
+  <h2><span class="num">06</span>Diagram 3 · The truth chain</h2>
+  <p class="lede">
+    How a number travels from a synthetic fixture to a public claim, and where it can be stopped.
+    This is the diagram that explains why the project refuses to overstate itself.
+  </p>
+
+  <figure>
+    <div class="bar">
+      <div class="t">The truth chain from synthetic data to public claims<span>dataflow</span></div>
+      <a href="03-truth-chain.html" target="_blank" rel="noopener">Open full screen ↗</a>
+    </div>
+    <div class="frame"><iframe src="03-truth-chain.html" loading="lazy" title="Truth chain dataflow diagram"></iframe></div>
+    <figcaption>
+      Five stages: Origins, Governed intake, Computation, Durable state, and Proof and permission.
+      Nine nodes and eight flows, with governed state serving both memory and audit.
+    </figcaption>
+  </figure>
+
+  <h3>Why this matters more than it looks</h3>
+  <p>
+    Most systems are happy to move a number from a database into a dashboard and then into a
+    sales deck. This one inserts checkpoints. Data arrives from fixtures or connectors, passes a
+    governed intake that classifies it and attaches provenance, gets computed by an engine, lands in
+    durable state that is both memory and audit trail, and only then can it become evidence or a
+    permission. Each hop carries the correlation id, the data mode, the basis, and the source.
+  </p>
+  <p>
+    The practical consequence: you cannot produce a claim that is not traceable. That is why the
+    project's own commercial document reads as a list of retractions. The system makes dishonesty
+    expensive, and that discipline is worth preserving when you extend it.
+  </p>
+
+  <div class="note">
+    <span class="lbl">The four fields on every governed record</span>
+    <p>
+      <code>tenant_id</code>, <code>client_id</code>, a provenance block
+      (<code>correlation_id</code>, <code>data_mode</code>, <code>basis</code>, <code>sources</code>),
+      and <code>classification</code>. A record missing the provenance envelope is refused. This is
+      not theoretical: during the 2026-09-18 validation the release gate's own
+      <code>app_memory_store_isolation</code> probe failed because it wrote a record without the
+      envelope. The fix was to the probe, not to the rule.
+    </p>
+  </div>
+
+  <h3>The data discipline you inherit</h3>
+  <ul>
+    <li><code>DATA_MODE = "simulated_realistic"</code>. Nothing in the pilot path is real data.</li>
+    <li><code>production_readiness = "NOT_ESTABLISHED"</code>, carried on every record.</li>
+    <li>Connectors are read-only. There are no live writes to any external system.</li>
+    <li>Pilot data must be synthetic or explicitly consented. The data scope is recorded as <code>SYNTHETIC_OR_CONSENTED_ONLY</code>.</li>
+    <li>No autonomous irreversible, financial, personnel, compliance, or external-communication action.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ -->
+<section id="d4">
+  <h2><span class="num">07</span>Diagram 4 · How far the project actually got</h2>
+  <p class="lede">
+    The maturity ladder, and the evidence required at each rung. This is the honest map of where the
+    project stands and what remains.
+  </p>
+
+  <figure>
+    <div class="bar">
+      <div class="t">How far the project actually got<span>lifecycle</span></div>
+      <a href="04-maturity-ladder.html" target="_blank" rel="noopener">Open full screen ↗</a>
+    </div>
+    <div class="frame"><iframe src="04-maturity-ladder.html" loading="lazy" title="Maturity ladder lifecycle diagram"></iframe></div>
+    <figcaption>
+      Three lanes: the release maturity rail, the evidence that unblocks each step, and where the
+      project actually stands. Eleven states and ten transitions, with the cross-lane hops showing
+      which piece of evidence moves the project forward.
+    </figcaption>
+  </figure>
+
+  <h3>The 21 open items</h3>
+  <p>
+    Class 1 is verifiable by the coding agent and is complete. Classes 2 through 5 require humans or
+    external parties, and every one of them is open. This is the real backlog.
+  </p>
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th style="width:8%">Class</th><th style="width:22%">Owned by</th><th style="width:12%">Count</th><th>Items</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1</strong></td><td>Coding agent</td><td><span class="tag pass">10 pass</span></td><td>Regression suite, all three pilot gates, no fabricated approval, data boundary, evidence isolation, audit chain, tenant isolation, secret scan, backup and restore</td></tr>
+        <tr><td><strong>2</strong></td><td>Project owner / operator</td><td><span class="tag open">6 open</span></td><td>Pilot operator, independent reviewer (SOD), data controller, go/no-go consent, success metrics over a real window, exit review</td></tr>
+        <tr><td><strong>3</strong></td><td>Independent external reviewer</td><td><span class="tag open">3 open</span></td><td>Observer audit of the release pipeline, review of the pilot evidence pack, verification that outputs are synthetic or consented only</td></tr>
+        <tr><td><strong>4</strong></td><td>Legal / privacy / security</td><td><span class="tag open">4 open</span></td><td>Security review, legal and privacy review, certified tenant isolation, records compliance review</td></tr>
+        <tr><td><strong>5</strong></td><td>Real infrastructure</td><td><span class="tag open">8 open</span></td><td>Signed deployment architecture, DR evidence, network sibling transport, external IdP and cloud observability, ops ownership, on-call ownership, production smoke and soak, production sign-off</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note stop">
+    <span class="lbl">The rule that governs all 21 items</span>
+    <p>
+      <code>docs/release/handoff/production-blockers-checklist.md</code> states it directly: every
+      external owner, approval, signature, and audit field is intentionally left <code>OPEN</code> and
+      must be filled only by real humans or external parties, never fabricated. If you find yourself
+      able to close one of these items without a human or an external body doing something, you have
+      misunderstood the item.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="structure">
+  <h2><span class="num">08</span>Repository structure</h2>
+  <p class="lede">Where things live, so you do not have to grep for an hour on day one.</p>
+
+  <div class="paths">
+    <div class="path">
+      <div class="h"><b>Governed core</b><em>control_plane/ · security · audit</em></div>
+      <p>The part that cannot be bypassed. Workflow state machine, governance checks, approval authority, audit chain. <code>control_plane/governance.py</code> holds the organisation catalog and is on the never-edit list.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Business engines</b><em>engines/</em></div>
+      <p>Six packages: <code>wfm</code>, <code>rta</code>, <code>cx</code>, <code>b2b</code>, <code>personnel</code>, <code>crm</code>. Plus <code>engines/registry.py</code> and shared <code>engines/contracts.py</code>.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Agent definitions</b><em>organization/role-catalog.yaml</em></div>
+      <p>The source of truth for the nine roles: mission, approval limits, owned capabilities, allowed tools, readable data domains, KPIs, peer-call permissions, and segregation-of-duties constraints. <strong>Never edit for a pack.</strong></p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Capability packs</b><em>capabilities/</em></div>
+      <p><code>restaurant/</code> is the reference pattern, copy its shape. <code>sports_academy/</code> is the first real vertical, built for Scoach Academy Hub at v1.0.0.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>The application</b><em>helix_codex_app/</em></div>
+      <p>80 Python files, 59 HTML templates, 12 modules: admin, attendance, calendar, cockpit, docs, identity, lowcode, memory, messaging, notifications, ops, tasks. This is the user-facing surface.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Release machinery</b><em>release/</em></div>
+      <p><code>gate.py</code> (14 gates, four profiles), <code>manifest.py</code>, <code>profiles.py</code>, <code>security_gate.py</code>, <code>signoff.py</code>, <code>pilot_metrics.py</code>, <code>backup.py</code>, and the lock file with 333 pinned dependencies.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Evidence and proof</b><em>evidence/ · observability/</em></div>
+      <p>2,181 JSON evidence files, gitignored and isolated. Logs and metrics. Evidence is not committed, which is deliberate.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Commercial surface</b><em>marketing/ · docs/</em></div>
+      <p>Marketing site, deck, demo video and its builder, 57 narration audio files. <code>docs/COMMERCIAL_STORY.md</code> is the authoritative commercial statement.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Authority documents</b><em>00_CONSTITUTION.md · docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md</em></div>
+      <p>The constitution outranks everything. The blueprint governs architecture and holds the commercial record. Everything else is a subordinate record.</p>
+    </div>
+    <div class="path">
+      <div class="h"><b>Build ledger</b><em>AGENTS.md</em></div>
+      <p>91KB. The running record of every completed step, with the git protocol and the non-negotiable rules. Read it top to bottom before your first commit.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="rules">
+  <h2><span class="num">09</span>The rules you must not break</h2>
+  <p class="lede">
+    These come from <code>AGENTS.md</code> and <code>00_CONSTITUTION.md</code>. They exist because
+    breaking them breaks the governed core, and the core is the product's actual differentiator.
+  </p>
+
+  <ol>
+    <li><strong>Copy the restaurant pack.</strong> <code>capabilities/restaurant/</code> is the pattern for any vertical pack. Do not invent a new shape.</li>
+    <li><strong>Never edit three files.</strong> <code>organization/role-catalog.yaml</code>, <code>control_plane/governance.py</code> (the organisation catalog), and <code>organization/capability-registry.yaml</code> plus its mirrors. Roles stay pack-local. Engines are reused through existing capability ids.</li>
+    <li><strong>Keep the data discipline.</strong> <code>DATA_MODE = "simulated_realistic"</code>, read-only connectors, no live writes, <code>production_readiness = "NOT_ESTABLISHED"</code>.</li>
+    <li><strong>Every governed record carries its envelope.</strong> Tenant, client, provenance (correlation id, data mode, basis, sources), evidence refs, classification. No envelope, no record.</li>
+    <li><strong>No comments in code.</strong> Module docstrings are kept, mirroring the restaurant pack. Nothing else.</li>
+    <li><strong>Every step ends the same way.</strong> Tests at or above baseline, ruff clean on new files, <code>AGENTS.md</code> updated, commit made.</li>
+    <li><strong>Commit discipline.</strong> Commit after every completed step. Stage only the files you touched, never <code>git add -A</code>. Never commit <code>.db</code> files, <code>__pycache__</code>, or <code>.venv*</code>.</li>
+    <li><strong>Truth is paramount.</strong> From the constitution, and worth quoting in full: <em>"A feature is not verified because an agent, document, or generated JSON file says it is."</em></li>
+  </ol>
+
+  <div class="note">
+    <span class="lbl">The authority chain</span>
+    <p>
+      <code>00_CONSTITUTION.md</code> → <code>docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md</code> →
+      implementation. <code>MASTER_STORY.md</code>, <code>ROADMAP.md</code>, <code>CHANGELOG.md</code>,
+      and the status summaries in <code>docs/</code> are subordinate. When a subordinate record
+      contradicts the constitution or the blueprint, the subordinate record is wrong.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="landmines">
+  <h2><span class="num">10</span>Landmines and open risks</h2>
+  <p class="lede">
+    Everything in this section is a real finding from reading the repository, not a hypothetical. Each
+    one is ordered by how much damage it can do.
+  </p>
+
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th style="width:30%">Risk</th><th style="width:12%">Severity</th><th>What we found and what to do</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>166 commits exist only on this machine</strong></td>
+          <td><span class="tag stop">Critical</span></td>
+          <td><code>main</code> is 166 ahead of <code>origin/main</code>. Nothing since the early history has been pushed. Disk failure destroys the entire current state of the project. Push, or mirror to a second location, before anything else.</td>
+        </tr>
+        <tr>
+          <td><strong>Demo video carries retracted narration</strong></td>
+          <td><span class="tag stop">Critical</span></td>
+          <td><code>marketing/assets/Helix_Prime_5Min_Demo.mp4</code> and its <code>.vtt</code> still contain the fabricated claims. <code>marketing/DEMO_SCRIPT.md</code> says so in a truth note. Rebuild from the script or remove it from the distribution path.</td>
+        </tr>
+        <tr>
+          <td><strong>Release manifest describes an older build</strong></td>
+          <td><span class="tag open">High</span></td>
+          <td><code>release/release-manifest.json</code> pins commit <code>b6b954e</code> with a 2026-09-15 timestamp; HEAD is <code>1c176d3</code>. Regenerate before any release action, or you will be certifying a build that no longer exists.</td>
+        </tr>
+        <tr>
+          <td><strong>Pilot consent record has a placeholder timestamp</strong></td>
+          <td><span class="tag open">High</span></td>
+          <td><code>release/go-no-go.json</code> records <code>approved: true</code> but <code>approved_at: "PENDING-GATE-RUN"</code>, and the manifest still says <code>release_approved: false</code>. The approval is scoped to a controlled pilot only. Do not read it as a general go-ahead.</td>
+        </tr>
+        <tr>
+          <td><strong>Container image has never been built</strong></td>
+          <td><span class="tag open">High</span></td>
+          <td>The Docker daemon was unavailable during validation, so the first real <code>docker build</code> may surface problems that 32 static packaging tests cannot see. Do this early, on a machine with a working daemon.</td>
+        </tr>
+        <tr>
+          <td><strong>Full suite never ran in one process</strong></td>
+          <td><span class="tag open">Medium</span></td>
+          <td>The sandbox capped commands at ten minutes, so validation ran in seven chunks with per-test isolation. Shared-process flakiness cannot be ruled out from those runs alone. Run the whole suite once, uninterrupted, on real hardware.</td>
+        </tr>
+        <tr>
+          <td><strong><code>cookies.txt</code> in the repo root</strong></td>
+          <td><span class="tag open">Medium</span></td>
+          <td>An untracked Netscape cookie file containing a <code>helix_session</code> cookie for <code>127.0.0.1</code>. It is a loopback session cookie, so the exposure is limited, but the file is not in <code>.gitignore</code> and a careless <code>git add -A</code> would sweep it in. Add the ignore rule and delete the file.</td>
+        </tr>
+        <tr>
+          <td><strong>Working tree is dirty</strong></td>
+          <td><span class="tag mute">Low</span></td>
+          <td><code>marketing/README.md</code> is modified and unstaged. It is user-authored content, deliberately never staged. Decide whether it should be committed or reverted.</td>
+        </tr>
+        <tr>
+          <td><strong>Two documentation drifts</strong></td>
+          <td><span class="tag mute">Low</span></td>
+          <td><code>AGENTS.md</code> §1.1 still says 1,395 tests and commit <code>081e4bc</code>. The ledger's history is fine; the summary table is not. Update it.</td>
+        </tr>
+        <tr>
+          <td><strong>Two names for one product</strong></td>
+          <td><span class="tag mute">Low</span></td>
+          <td>Helix Prime in the repository, Helix Codex OS in the commercial layer, <code>Helix-Prime-Codex</code> in the manifest. Pick one for external use.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note ok">
+    <span class="lbl">What is genuinely in good shape</span>
+    <p>
+      It is worth saying clearly, because the list above is long. The test suite is large and green.
+      The linters, type checker, security scanner, and dependency audit are all clean. The release
+      gate does the right thing under pressure, including failing closed. Migration drift is zero on
+      both core (19/19) and app (61/61). Backup and restore was rehearsed end to end against real
+      CLIs. The governance layer has real teeth, and the project has already demonstrated it will
+      refuse its own code when the rules are not met. That is a stronger foundation than most
+      projects at this stage have.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="first30">
+  <h2><span class="num">11</span>Your first 30 days</h2>
+  <p class="lede">
+    A concrete order of operations, sequenced so that the riskiest items are handled before anything
+    depends on them.
+  </p>
+
+  <h3>Week 1 · Stop the bleeding, learn the shape</h3>
+  <ol>
+    <li>Push the branch, or mirror the repository to a second location. Everything else is secondary until this is done.</li>
+    <li>Read <code>00_CONSTITUTION.md</code>, then <code>docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md</code>, then <code>AGENTS.md</code> top to bottom.</li>
+    <li>Run the full suite in one process on real hardware: <code>python -m pytest tests/ -q -m "not smoke"</code>. Confirm the 1,483 figure independently.</li>
+    <li>Build the container. Record whatever breaks.</li>
+    <li>Open the four diagrams in this folder and read the sections above. They are the map.</li>
+  </ol>
+
+  <h3>Week 2 · Fix the credibility items</h3>
+  <ol>
+    <li>Rebuild or withdraw the demo video. This is a public-facing liability sitting in the repo.</li>
+    <li>Delete <code>cookies.txt</code> and add it to <code>.gitignore</code>.</li>
+    <li>Regenerate the release manifest at HEAD so it describes the real build.</li>
+    <li>Update the stale figures in <code>AGENTS.md</code> §1.1.</li>
+    <li>Fill in or remove the placeholder contact fields in <code>docs/client_one_pager.md</code>.</li>
+  </ol>
+
+  <h3>Week 3 · Decide the product's future</h3>
+  <ol>
+    <li>Decide the public name and make it consistent across the marketing surface and the manifest.</li>
+    <li>Talk to Scoach Academy Hub. Either turn the design partner into a dated pilot with a named operator and a consent record, or retire the pack honestly. A pack nobody pilots is a demo, not a product.</li>
+    <li>Choose whether the next engineering effort is the production gap (Classes 2–5) or a second vertical. The first costs external engagement; the second costs only engineering time.</li>
+  </ol>
+
+  <h3>Week 4 · Set the working contract</h3>
+  <ol>
+    <li>Agree the test baseline and the lint gate you will hold yourself to. The current baseline is 1,483 passing.</li>
+    <li>Agree who can authorise what. The role catalog already encodes this; make sure the humans match the machine.</li>
+    <li>Fix the release-gate diagram, or accept it as a two-diagram split.</li>
+    <li>Write down what you changed and why, in <code>AGENTS.md</code>. The next team will need it.</li>
+  </ol>
+
+  <div class="note">
+    <span class="lbl">The one sentence version</span>
+    <p>
+      A well-governed, well-tested platform with a genuinely unusual honesty discipline, sitting on a
+      single machine that has never been pushed, with no customers and a marketing surface that
+      still needs cleanup. The engineering is the least of your problems. Start with the push.
+    </p>
+  </div>
+</section>
+
+<footer>
+  <p>
+    <strong>Helix Codex OS — Project Handover.</strong> Prepared from a direct read of
+    <code>E:\Helix-Prime</code> at HEAD <code>1c176d3</code> on 2026-09-19. Every figure in this
+    document was read from the repository, the release manifest, the gate output, or the validation
+    report, and can be reproduced from the commands and file paths named alongside it. Where
+    something could not be verified, it is marked as unverified rather than assumed.
+  </p>
+  <p>
+    Companion diagrams in this folder: <code>01-platform-landscape.html</code>,
+    <code>02-release-gate.html</code>, <code>03-truth-chain.html</code>,
+    <code>04-maturity-ladder.html</code>. Source specifications are in
+    <code>specs/</code>. The validation record this document relies on is
+    <code>docs/release/handoff/final-validation-report.md</code>, and the open-items list is
+    <code>docs/release/handoff/production-blockers-checklist.md</code>.
+  </p>
+</footer>
+
+</main>
+</div>
+</body>
+</html>

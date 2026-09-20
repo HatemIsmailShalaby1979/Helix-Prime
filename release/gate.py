@@ -20,6 +20,7 @@ import datetime
 import json
 import os
 import pathlib
+import re
 import sys
 import tempfile
 from typing import Any, Dict, List, Optional
@@ -73,17 +74,79 @@ def _gate_repository_state() -> tuple[bool, str]:
     return True, f"repository_state: git + runtime detectable ({commit[:12]})"
 
 
-def _gate_reproducible_install() -> tuple[bool, str]:
+# A dependency lock line that pins an exact version. An optional trailing
+# environment marker is allowed, because pip-compile emits them; anything else
+# (a bare name, a range, an editable path, an include directive) is not a pin.
+_PIN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*==[^=\s]+(?:\s*;.*)?$")
+
+#: The one document that claims to describe a reproducible install.
+_SETUP_DOC = "docs/release/setup-guide.md"
+
+
+def _lock_lines() -> List[str]:
+    """Declared (non-comment, non-blank) lines of the dependency lock file.
+
+    The comment test strips leading whitespace first. `str.startswith` alone is
+    not enough: pip-compile *indents* its `# via ...` provenance comments, so
+    `line.startswith("#")` silently counted them as declarations. Measured on the
+    committed lock file before this fix: `reproducible_install` reported **337**
+    "declared deps" against **120** real pins — 217 indented comments. One parser
+    for both lock gates, because the repository's recurring defect is a rule and
+    a restatement of it drifting apart.
+    """
     p = ROOT / "release" / "requirements.lock.txt"
     if not p.exists():
-        return False, "missing release/requirements.lock.txt"
-    lines = [
-        ln
-        for ln in p.read_text(encoding="utf-8").splitlines()
-        if ln.strip() and not ln.startswith("#")
-    ]
-    ok = len(lines) > 0
-    return ok, f"reproducible_install: {len(lines)} declared deps"
+        return []
+    lines: List[str] = []
+    for raw in p.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        lines.append(line)
+    return lines
+
+
+def _gate_reproducible_install() -> tuple[bool, str]:
+    """A documented setup path exists and the lock declares a dependency set.
+
+    Two things were wrong before. It counted lines with `not ln.startswith("#")`,
+    which does not strip leading whitespace, so pip-compile's indented comments
+    were counted as declarations — 337 reported against 120 real — and a lock file
+    containing nothing but an indented comment passed. And the first half of its
+    declared purpose ("one setup path documented") was never checked at all.
+
+    The second half is now checked rather than dropped, because it is checkable:
+    `docs/release/setup-guide.md` is titled "Setup Guide (Reproducible Install)",
+    states it is the one-document path, and names this gate. A gate whose purpose
+    and behaviour disagree is the §18.2 A0.1 class, and correcting the purpose is
+    only right when the check *cannot* exist — here it can.
+    """
+    doc = ROOT / _SETUP_DOC
+    doc_ok = doc.exists() and "requirements.lock.txt" in doc.read_text(encoding="utf-8")
+    lines = _lock_lines()
+    ok = doc_ok and len(lines) > 0
+    return ok, (
+        f"reproducible_install: setup doc={doc_ok} ({_SETUP_DOC}), {len(lines)} declared deps"
+    )
+
+
+def _gate_dependency_locking() -> tuple[bool, str]:
+    """Every declared requirement must be pinned to an exact version.
+
+    It used to check only that the file existed and was non-empty, while its
+    declared purpose is "dependency versions pinned/locked". Measured before the
+    fix: a lock file containing one indented comment, and one containing the bare
+    lines `requests` / `flask`, both passed. That is a nominal control — the
+    §18.2 A0.1 class — and it was strictly weaker than `reproducible_install`, so
+    it could never be the gate that failed.
+    """
+    lines = _lock_lines()
+    unpinned = [line for line in lines if not _PIN_RE.match(line)]
+    ok = len(lines) > 0 and not unpinned
+    detail = f"dependency_locking: {len(lines) - len(unpinned)} pinned"
+    if unpinned:
+        detail += f", {len(unpinned)} unpinned (first: {unpinned[0]!r})"
+    return ok, detail
 
 
 def _gate_configuration_validation() -> tuple[bool, str]:
@@ -100,12 +163,6 @@ def _gate_configuration_validation() -> tuple[bool, str]:
         ok_schema = False
     ok = ok_gates and ok_profiles and ok_schema
     return ok, f"configuration: gates={ok_gates} profiles={ok_profiles} schema={ok_schema}"
-
-
-def _gate_dependency_locking() -> tuple[bool, str]:
-    p = ROOT / "release" / "requirements.lock.txt"
-    ok = p.exists() and p.stat().st_size > 0
-    return ok, f"dependency_locking: lock present={ok}"
 
 
 def _gate_startup_readiness() -> tuple[bool, str]:

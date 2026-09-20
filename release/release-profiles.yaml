@@ -41,7 +41,7 @@ profiles:
 # again. A gate whose purpose and behaviour disagree is the §18.2 A0.1 defect class.
 gates:
   - repository_state            # the commit is attestable — NOT repo cleanliness
-  - reproducible_install        # one setup path documented + dependency lock
+  - reproducible_install        # a documented setup path exists + the lock declares deps
   - configuration_validation    # config parses + validates before startup
   - dependency_locking          # dependency versions pinned/locked
   - startup_readiness           # health/readiness command passes

@@ -539,3 +539,135 @@ def test_repository_state_gate_does_not_claim_repo_cleanliness():
     _ok, reason = gate.GATE_IMPL["repository_state"]()
     assert "clean" not in reason.lower()
     assert "attest" in gate.GATE_IMPL["repository_state"].__doc__.lower()
+
+
+def _lock_tree(tmp_path, lock_body, setup_doc="# Setup\nsee release/requirements.lock.txt\n"):
+    """A temp repo root holding only what the two lock gates read.
+
+    `monkeypatch.setattr(gate, "ROOT", ...)` is what makes this work: both gates
+    read the module global at call time, so a probe never touches the real tree.
+    The setup document is *removed* when `setup_doc` is None, so a second call in
+    one test cannot silently inherit the first call's file.
+    """
+    (tmp_path / "release").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "release" / "requirements.lock.txt").write_text(lock_body, encoding="utf-8")
+    doc = tmp_path / "docs" / "release" / "setup-guide.md"
+    if setup_doc is None:
+        if doc.exists():
+            doc.unlink()
+    else:
+        doc.parent.mkdir(parents=True, exist_ok=True)
+        doc.write_text(setup_doc, encoding="utf-8")
+    return tmp_path
+
+
+def test_reproducible_install_counts_declarations_not_indented_comments(monkeypatch, tmp_path):
+    """It reported 337 "declared deps" for a lock file holding 120.
+
+    The filter was `not ln.startswith("#")`, which does not strip leading
+    whitespace — and pip-compile *indents* its `# via ...` provenance comments. So
+    217 comments were counted as dependencies, and a lock file containing nothing
+    but an indented comment passed the gate. This is the §18.2 A0.1 class: a
+    control reporting a quantity it never measured.
+    """
+    from release import gate
+
+    # The real file: the count is now the number of real pins.
+    ok, reason = gate.GATE_IMPL["reproducible_install"]()
+    assert ok is True
+    assert "120 declared deps" in reason
+    assert "337" not in reason
+
+    # Can-fail: a lock file whose only line is an indented comment declares
+    # nothing, and must not satisfy a gate about a dependency set.
+    monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, "    # via -r requirements.txt\n"))
+    ok, reason = gate.GATE_IMPL["reproducible_install"]()
+    assert ok is False
+    assert "0 declared deps" in reason
+
+
+def test_dependency_locking_refuses_an_unpinned_requirement(monkeypatch, tmp_path):
+    """The gate checked only that the file was non-empty.
+
+    Its declared purpose is "dependency versions pinned/locked", but a lock file
+    containing the bare lines `requests` / `flask` passed, as did one containing a
+    single comment. It is now strictly stronger than a file-existence check, which
+    it needed to be: before this fix it was *weaker* than `reproducible_install`,
+    so it could never be the gate that failed.
+    """
+    from release import gate
+
+    for body, expect in (
+        ("requests\n", "unpinned"),
+        ("requests>=2.0\n", "unpinned"),
+        ("-r requirements.txt\n", "unpinned"),
+        ("    # nothing declared here\n", "0 pinned"),
+    ):
+        monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, body))
+        ok, reason = gate.GATE_IMPL["dependency_locking"]()
+        assert ok is False, f"{body!r} should not satisfy the locking gate"
+        assert expect in reason
+
+    # And a real pin set still passes.
+    monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, "requests==2.31.0\n"))
+    ok, reason = gate.GATE_IMPL["dependency_locking"]()
+    assert ok is True
+    assert "1 pinned" in reason
+
+
+def test_the_two_lock_gates_are_not_the_same_check(monkeypatch, tmp_path):
+    """Both read one file, so they must not become two copies of one rule.
+
+    Independence in both directions, which is what stops one of them being
+    redundant: a declared-but-unpinned set satisfies `reproducible_install` and
+    not `dependency_locking`; a pinned set with no documented setup path does the
+    reverse. Before the fix they overlapped completely and the weaker one could
+    never fire.
+    """
+    from release import gate
+
+    monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, "requests>=2.0\n"))
+    assert gate.GATE_IMPL["reproducible_install"]()[0] is True
+    assert gate.GATE_IMPL["dependency_locking"]()[0] is False
+
+    monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, "requests==2.31.0\n", setup_doc=None))
+    assert gate.GATE_IMPL["reproducible_install"]()[0] is False
+    assert gate.GATE_IMPL["dependency_locking"]()[0] is True
+
+
+def test_reproducible_install_requires_a_setup_document_naming_the_lock(monkeypatch, tmp_path):
+    """The first half of its purpose ("one setup path documented") was never checked.
+
+    Unlike `repository_state`'s "clean-ish repo", this clause *is* checkable — the
+    document exists, is titled "Setup Guide (Reproducible Install)", and names this
+    gate — so it is implemented rather than deleted from the purpose.
+    """
+    from release import gate
+
+    monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, "requests==2.31.0\n"))
+    assert gate.GATE_IMPL["reproducible_install"]()[0] is True
+
+    # A setup document that does not name the lock is not a reproducible path.
+    monkeypatch.setattr(
+        gate,
+        "ROOT",
+        _lock_tree(tmp_path, "requests==2.31.0\n", setup_doc="# Setup\nnothing here\n"),
+    )
+    ok, reason = gate.GATE_IMPL["reproducible_install"]()
+    assert ok is False
+    assert "setup doc=False" in reason
+
+    # And no document at all is refused.
+    monkeypatch.setattr(gate, "ROOT", _lock_tree(tmp_path, "requests==2.31.0\n", setup_doc=None))
+    assert gate.GATE_IMPL["reproducible_install"]()[0] is False
+
+
+def test_the_committed_setup_guide_is_the_document_the_gate_reads():
+    """The gate and the document cannot drift: the guide names the file it is read from."""
+    from release import gate
+
+    doc = manifest.ROOT / gate._SETUP_DOC
+    assert doc.exists()
+    text = doc.read_text(encoding="utf-8")
+    assert "requirements.lock.txt" in text
+    assert "reproducible_install" in text

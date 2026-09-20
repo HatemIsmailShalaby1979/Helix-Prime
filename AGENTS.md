@@ -2493,6 +2493,15 @@ session made that file the source of truth, that one line now genuinely changes
 behaviour instead of being inert. It was deliberately **not** taken: declaring the
 sprint over is the owner's decision, exactly like the release-artifact rule above.
 
+**Gate.** 63 passed across the signoff-affected files (8 new); ruff check and format
+clean; mypy clean on both files. **Full suite: 1703 collected = 1702 passed + 1
+failed + 0 errors** — the run collected all 1703, including the 8 new tests. The one
+failure is `tests/test_c5_vertical_slice.py::test_existing_c0_c4_regression`, the
+§18.4 sandbox artifact, confirmed by re-running it alone: **1 passed in 33.30s**. It
+is intermittent — it did not fire in the previous run — which is exactly how §18.4
+describes it. Process exit is 1 only because the bulk-delete guard tripped at session
+finish (`count: 3036`).
+
 #### The GitHub remote is PUBLIC — anything committed is published
 
 `origin` is `https://github.com/HatemIsmailShalaby1979/Helix-Prime.git` and
@@ -2533,9 +2542,52 @@ ongoing exposure but does not un-publish. **Read this section before the next
 push, not after.**
 
 **Next:** Phase 6 (B2–B4) — real infrastructure, paid external parties, and
-legal/human authority. All three are owner-driven: no engineering work unblocks
-them, and B1 exists precisely so that the evidence they produce has somewhere to
-land.
+legal/human authority.
+
+**Correction (2026-09-20).** This paragraph used to claim that B2–B4 are "all
+owner-driven: no engineering work unblocks them". **That was wrong twice over**,
+and the error cost real time: it is the sentence that would have stopped anyone
+looking for the two gaps below. B1 built the evidence *consumer*, and no one could
+*produce* an artifact for it; the terminal sign-off had no way to be *created*
+either. Both were pure engineering, both are now built
+(`scripts/produce_production_evidence.py`, `scripts/record_production_signoff.py`),
+and with them production is reachable by evidence end to end — 9/9 production-only
+gates green, 23/23 gates green, classification `PRODUCTION`, terminal record valid.
+The generalisable lesson: **"blocked on an external party" is a claim about the
+world that deserves the same scepticism as any other** — check whether the external
+party would actually have a way to act before believing it.
+
+**What is genuinely left, audited 2026-09-20** rather than assumed. For each
+remaining item, the question asked was the one that found the two gaps: *if the
+human or external party showed up today, could they actually complete it?*
+
+| Item | State | Owner |
+|---|---|---|
+| Nine signed evidence artifacts | **Solvable now** — `produce_production_evidence.py` produces, checks and signs each; verified end to end | External auditors (Class 3/4/5) |
+| Terminal `production_approved` record | **Solvable now** — `record_production_signoff.py` templates and validates it; refuses while the gates are red | Named human + reviewer |
+| `allowed_final` excluding `PRODUCTION` | **One line** in `release/release-profiles.yaml`; the gate exits 1 without it even when 23/23 gates are green | Owner (policy) |
+| Class 2.1–2.3: named operator / SOD reviewer / data controller | **No structured home anywhere in the tree** — no field, no record, no reader; the pilot protocol lists the roles as prose. No machine check requires them, so this is a process record, not a code gap. If it should be machine-checked, that is a small addition, but inventing a record format is the owner's call | Owner + second human |
+| Class 2.4/2.6: pilot go/no-go and exit review | Fields exist (`go-no-go.json` `approver` / `approved_at`), unfilled; the recorder now validates whatever is written | Owner |
+| Class 5.3/5.4: network sibling transport, external IdP/observability | In `DISABLED_CAPABILITIES` as deliberate C8 non-goals. Enabling them is a product-scope decision, and the plan assigns their *validation* to B2 (operational spend) | Owner (scope + spend) |
+| Class 5.7, 5.2, 5.1: production soak, DR evidence, signed deployment architecture | Need a real environment; no code path is missing | B2 spend |
+
+Two smaller findings from the same audit, both recorded rather than changed:
+
+- **`docs/release/production-blockers.md:35` is stale.** It says the nine gates are
+  "red by construction", which stopped being true when B1 gave them a reader — they
+  are red *absent signed evidence*, and an auditor's signature can satisfy them. The
+  conclusion it draws is unchanged. **Not edited, deliberately:** the plan pins
+  `production-blockers.md:39-42` *by line number*, and correcting line 35 needs
+  more lines than it replaces, which would move the frozen range and risk a future
+  agent freezing the wrong text. The rule there — "defeating a block is a defect" —
+  is worth more than the tidier sentence.
+- The superseded env vars (`HELIX_EVIDENCE_SIGNING_KEY`, `HELIX_ISOLATION_CERT`,
+  `HELIX_OBSERVER_AUDIT`) survive only as documentation of their own removal, plus
+  a test asserting the server no longer asks for them. Consistent, not stale.
+- The nine gates are **not vacuous**: `test_pilot_readiness.py` already pins all
+  nine red with nothing declared *and* all nine green on signed fixtures, so the
+  A0.1 class of defect ("a control the ledger claims is active has never fired")
+  is covered here and needed no new test.
 
 **Do NOT touch:** `release/gate.py:250-287` bodies (beyond B1.2),
 `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,

@@ -1632,19 +1632,20 @@ TMPDIR='E:\hx' TEMP='E:\hx' TMP='E:\hx' \
 
 Use a path **outside the repo** for `--junitxml` and the log. Pointing
 `--basetemp` *inside* the repo makes it worse (the guard counts the repo tree).
-The venv `.venv-py312` is the one with `pytest` + `pyyaml`; managed Python 3.13
-has neither.
+The venv `.venv-py312` is the one with **both** `pytest` (9.1.1) and `ruff`;
+`.venv312` and `.venv` have neither, and managed Python 3.13 has neither. Find one
+rather than guess:
+`for v in .venv*; do $v/Scripts/python.exe -c "import pytest,ruff" && echo $v; done`
 
-**Preferred recipe — a basetemp genuinely inside the OS temp dir.** This needs
-*no* threshold change, because such a path is genuinely exempt:
-
-```bash
-.venv-py312/Scripts/python.exe -m pytest tests/ -q -m "not smoke" \
-  --basetemp="$LOCALAPPDATA/Temp/h/bt"
-```
-
-The path must be **strictly below** the temp dir (see addendum) — not the temp
-root itself, and **backslashes only**.
+**There is no threshold-free recipe on Windows, and I was wrong to imply one.**
+Measured this session, same suite and same commit: the **default** environment
+with no override gave **2 failed, 1746 passed**; the same suite with the
+threshold raised gave **1743 passed, 0 failed, 0 skipped**. The two failures were
+the guard artifacts. The reason no temp-root trick can work is in the addendum:
+pytest's `rm_rf` **unconditionally** prefixes `\\?\` on Windows, and that prefix
+defeats the exemption outright. **Raise the threshold for any broad run.** A
+basetemp strictly below the OS temp dir is still worth using, but for the *FS
+broker* (path length), not for the guard.
 
 **Addendum 2026-09-20 (§18.9) — the guard read from the inside, and one wrong
 belief corrected.** The guard is `cli/vendor/shim/sitecustomize.py` +
@@ -1685,6 +1686,43 @@ belief corrected.** The guard is `cli/vendor/shim/sitecustomize.py` +
   modulo case or separators. `_os_tmp_dirs` is the single lowercase entry
   `['c:\users\thomas\appdata\local\temp']`. `E:\hx` only ever worked because the
   threshold was raised.
+- **THE ACTUAL ROOT CAUSE — pytest always uses a `\\?\` path, and that defeats the
+  exemption outright.** Everything above is true but secondary. `os.path.relpath`
+  cannot compare across the two mount names a `\\?\` prefix creates:
+
+  ```
+  relpath('\\?\C:\Users\Thomas\AppData\Local\Temp\pytest-of-Thomas\garbage-abc123',
+          'c:\users\thomas\appdata\local\temp')
+    -> ValueError: path is on mount '\\?\C:', start on mount 'c:'
+  ```
+
+  `_is_under_root` catches `(TypeError, UnicodeError, ValueError)` and returns
+  `False`. Measured: `bypass('C:\…\Temp\pytest-of-Thomas\garbage-abc123')` →
+  **True**, but the same path with a `\\?\` prefix → **False**.
+
+  And pytest **always** adds that prefix on Windows. `_pytest/pathlib.py::rm_rf`
+  calls `ensure_extended_length_path()`, whose body is unconditional — it does not
+  test length, it just prepends:
+
+  ```python
+  if sys.platform.startswith("win32"):
+      path = path.resolve()
+      path = Path(get_extended_length_path_str(str(path)))
+  ```
+
+  then `shutil.rmtree(str(path), onexc=onerror)`. So **every** pytest temp cleanup
+  is non-exempt, whatever `TEMP` points at. **No temp-root choice can fix this;
+  raising `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` is the only fix.** Corroborated by
+  the guard's own signal file, which named an extended-length target:
+
+  ```json
+  {"type":"confirmRequired","payload":{"count":63,"threshold":50,
+   "targets":["\\\\?\\C:\\Users\\Thomas\\AppData\\Local\\Temp\\pytest-of-Thomas\\garbage-fd56d63d-..."]}}
+  ```
+
+  This also explains the whole-suite result directly: same commit, **default
+  environment → 2 failed, 1746 passed**; **threshold raised → 1743 passed, 0
+  failed, 0 skipped**.
 - **Why a big basetemp under a non-exempt root breaks setup — the full chain.**
   `_safe_shutil_rmtree` bypasses on exemption; otherwise it calls
   `_try_trash(path, recursive=True)`, whose binary path carries a **5 s**

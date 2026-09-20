@@ -97,6 +97,15 @@ def validate_signoff(s: SignOff) -> tuple[bool, str]:
     if not is_valid_state(s.state):
         return False, f"unknown state {s.state!r}"
 
+    # A decision time that is present but is not a time is a malformed record, not
+    # a missing field. `release/go-no-go.json` ships
+    # `approved_at: "PENDING-GATE-RUN"`, which reaches this field through
+    # `import_go_no_go()`, so without this the placeholder was accepted as a
+    # decision timestamp. Empty stays valid: a record with nothing decided has no
+    # decision time to be wrong.
+    if s.decided_at and _parse_timestamp(s.decided_at) is None:
+        return False, f"decided_at {s.decided_at!r} is not an ISO-8601 timestamp"
+
     if s.state == "unsigned":
         return True, "unsigned: no approval"
 
@@ -168,10 +177,21 @@ def _all_production_gates_satisfied() -> bool:
     return True
 
 
-def _is_expired(expires_at: str) -> bool:
+def _parse_timestamp(value: str) -> Optional[datetime.datetime]:
+    """Parse an ISO-8601 timestamp, or return None if it is not one.
+
+    One parser for every timestamp field, so `decided_at` and `expires_at` cannot
+    disagree about what a timestamp is.
+    """
     try:
-        exp = datetime.datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
+        return None
+
+
+def _is_expired(expires_at: str) -> bool:
+    exp = _parse_timestamp(expires_at)
+    if exp is None:
         return False  # unparseable expiry is treated as non-expired (still gated elsewhere)
     return datetime.datetime.now(datetime.timezone.utc) > exp
 

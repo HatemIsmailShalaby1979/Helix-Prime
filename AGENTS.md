@@ -2425,6 +2425,64 @@ signing is the one thing that must not be hand-rolled.
 Gate: 121 passed across the six evidence-touching test files (10 new); ruff check
 and format clean; mypy clean on both files.
 
+#### The terminal sign-off had no producer either — and production is now reachable by evidence
+
+Recorded 2026-09-20, immediately after the above. The same gap existed one step
+further along. `release/signoff.py` can *validate* and *serialise* a `SignOff`, and
+`import_go_no_go()` reads the local pilot-consent flag, but **nothing could create
+a record** — `sign_off_to_json` had no callers anywhere. So the step the plan calls
+terminal and non-outsourceable had no supported path: a human had to hand-write
+JSON satisfying eight cross-checked fields and find out only at gate time whether
+it was accepted.
+
+`scripts/record_production_signoff.py` closes it: `states`, `template`, `check`.
+It is smaller than the evidence producer because there is no cryptographic step to
+automate — the record *is* the artifact. Its rules are
+`signoff.validate_signoff`, the function the gate calls, so `check` and the gate
+cannot disagree; it reports the first unmet rule and says so rather than pretending
+to list them all.
+
+**A defect found while reading that path, and fixed.** `validate_signoff` required
+`decided_at` to be non-empty but never checked it was a *time*, and
+`go-no-go.json` ships `approved_at: "PENDING-GATE-RUN"`, which
+`import_go_no_go()` maps straight into that field. §18.8 previously recorded the
+placeholder as needing a human to fill it — true, but the validator accepting it
+was a separate, code-shaped gap. A present-but-unparseable `decided_at` is now
+refused; empty stays valid, because a record with nothing decided has no decision
+time to be wrong. The two timestamp parsers (`decided_at`, `expires_at`) were
+consolidated into `_parse_timestamp` so they cannot drift.
+
+Equivalence proved over the cross product of 10 fields — **24,576 records
+compared, 5,120 tightened, 0 unexpected changes**, where "unexpected" means any
+change other than accepted→refused on an unparseable `decided_at`. Where both
+refuse, the reason may name a different field now that the new check fires first;
+where both accept, the reason is unchanged. Can-fail proof: reverting the check
+fails `test_a_placeholder_decision_time_is_refused`.
+
+**And the whole chain now runs end to end.** Producing and signing all nine
+artifacts in a scratch directory outside the repo, then asking the real gate:
+
+| Step | Result |
+|---|---|
+| Nine production-only gates | **9 of 9 green** |
+| `run_gate(profile="production")` | **23 of 23 gates green**, `all_gates_green: True` |
+| classification | **`PRODUCTION`** |
+| terminal `production_approved` record | **valid** — `valid human approve`, `release_approved: True` |
+
+Before the producer existed, none of this was reachable by anyone.
+
+**The last code gate on production is one line, and it is a policy constant.** That
+run still exits **1**: `run_gate` sets `exit_code = 0 if classification in
+ALLOWED_FINAL_CLASSIFICATIONS else 1` (`gate.py:623-625`), and that set is
+`{CONTROLLED_PILOT_READY, PRODUCTION_CANDIDATE}` — its own comment reads "Final
+classification allowed by THIS sprint (never 'production')". So the door opens,
+the label is emitted, and the process still refuses, because the sprint declares it
+may not permit production. **Adding `PRODUCTION` to `allowed_final:` in
+`release/profiles.yaml` is the whole remaining code change** — and, since this
+session made that file the source of truth, that one line now genuinely changes
+behaviour instead of being inert. It was deliberately **not** taken: declaring the
+sprint over is the owner's decision, exactly like the release-artifact rule above.
+
 #### The GitHub remote is PUBLIC — anything committed is published
 
 `origin` is `https://github.com/HatemIsmailShalaby1979/Helix-Prime.git` and

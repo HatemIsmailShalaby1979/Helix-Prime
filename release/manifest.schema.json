@@ -28,11 +28,26 @@
     "product": { "type": "string", "const": "Helix-Prime-Codex" },
     "release_profile": {
       "type": "string",
-      "enum": ["alpha", "internal_pilot", "controlled_pilot", "production_candidate"]
+      "enum": [
+        "alpha",
+        "internal_pilot",
+        "controlled_pilot",
+        "production_candidate",
+        "production",
+        "app_pilot"
+      ]
     },
     "classification": {
       "type": "string",
-      "enum": ["PENDING", "CONTROLLED_PILOT_READY", "PRODUCTION_CANDIDATE", "PRODUCTION"]
+      "enum": [
+        "PENDING",
+        "NOT_READY",
+        "alpha",
+        "internal_pilot",
+        "CONTROLLED_PILOT_READY",
+        "PRODUCTION_CANDIDATE",
+        "PRODUCTION"
+      ]
     },
     "release_approved": { "type": "boolean" },
     "version": { "type": "string" },

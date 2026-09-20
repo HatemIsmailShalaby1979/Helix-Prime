@@ -81,6 +81,43 @@ def test_manifest_required_fields():
     assert m["classification"] == "PRODUCTION_CANDIDATE"
 
 
+def test_manifest_schema_accepts_every_profile_and_classification_the_code_can_produce():
+    """The schema used to be narrower than the code, so a real manifest failed it.
+
+    The committed `release/release-manifest.json` carries
+    `release_profile: "app_pilot"`, and the schema's enum omitted both `app_pilot`
+    and `production`. It also omitted `NOT_READY` and the two values
+    `classify_from_gate_results` returns for `alpha` / `internal_pilot` (it returns
+    the profile name itself). Nothing validated the file, so it sat there invalid.
+
+    The expectations are **derived from `profiles`** rather than restated here, so
+    a profile or classification added to the code cannot silently outrun the
+    schema. Equality, not containment: an enum entry the code cannot produce is
+    drift in the other direction and is just as much a defect.
+    """
+    import jsonschema
+
+    schema = json.loads(
+        (manifest.ROOT / "release" / "manifest.schema.json").read_text(encoding="utf-8")
+    )
+    profile_enum = set(schema["properties"]["release_profile"]["enum"])
+    classification_enum = set(schema["properties"]["classification"]["enum"])
+
+    assert profile_enum == set(profiles.PROFILE_ORDER)
+
+    produced = {manifest.build_manifest()["classification"]}  # the pre-run default
+    for profile in profiles.PROFILE_ORDER:
+        for green in (list(profiles.PROFILE_REQUIRED_GATES[profile]), []):
+            produced.add(profiles.classify_from_gate_results(profile, green, release_approved=True))
+    assert classification_enum == produced
+
+    # And the file that actually ships must satisfy the schema it claims to.
+    committed = json.loads(
+        (manifest.ROOT / "release" / "release-manifest.json").read_text(encoding="utf-8")
+    )
+    jsonschema.validate(committed, schema)
+
+
 def test_dependency_lock_present():
     p = manifest.ROOT / "release" / "requirements.lock.txt"
     assert p.exists()

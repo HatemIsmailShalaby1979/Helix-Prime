@@ -2198,6 +2198,27 @@ must not be paired with a manifest refresh, or the two together would turn a
 red production profile green on paper. Leave both artifacts until a real
 ceremony runs.
 
+#### The release manifest failed its own schema (fixed)
+
+Found while in the area, as the plan predicted. `release/release-manifest.json` is
+committed with `release_profile: "app_pilot"`, and
+`release/manifest.schema.json`'s enum listed only `alpha`, `internal_pilot`,
+`controlled_pilot`, `production_candidate` — so the shipped manifest **did not
+validate against the schema it claims**. Two of the six profiles the code defines
+were missing, and the `classification` enum was narrower still: it omitted
+`NOT_READY` and the two values `classify_from_gate_results` returns for `alpha` /
+`internal_pilot` (it returns the profile name itself, `release/profiles.py:197`).
+
+Nothing validated the file, which is why it sat there invalid. Both enums are now
+complete, and the committed manifest validates.
+
+The guard is **derived, not restated**: `test_c8_release_gate.py::test_manifest_schema_accepts_every_profile_and_classification_the_code_can_produce`
+reads the expectations out of `profiles` — `PROFILE_ORDER` for one enum, and for
+the other everything the classifier returns across every profile at both green
+extremes plus `build_manifest()`'s pre-run default. It asserts **equality**, so an
+enum entry the code cannot produce fails too, and it validates the committed
+manifest. Can-fail proof: restoring the old four-value enum fails the test.
+
 #### The GitHub remote is PUBLIC — anything committed is published
 
 `origin` is `https://github.com/HatemIsmailShalaby1979/Helix-Prime.git` and

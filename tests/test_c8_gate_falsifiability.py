@@ -24,6 +24,7 @@ import inspect
 import json
 import pathlib
 import re
+import tempfile
 
 import pytest
 
@@ -449,6 +450,46 @@ def test_release_approval_is_red_on_malformed_json(monkeypatch, tmp_path):
     ok, detail = gate.GATE_IMPL["release_approval"]()
     assert ok is False
     assert "release_approval" in detail
+
+
+# ── scratch space is given back ────────────────────────────────────────────
+
+#: Every gate that takes a scratch directory. All five used to call
+#: `tempfile.mkdtemp` and never remove the tree, so each release check leaked a
+#: directory holding a SQLite database.
+SCRATCH_GATES = (
+    "backup_restore",
+    "rollback",
+    "app_session_fail_closed",
+    "app_tenant_isolation",
+    "app_memory_store_isolation",
+)
+
+
+@pytest.mark.parametrize("name", SCRATCH_GATES)
+def test_the_scratch_directory_is_removed(name, monkeypatch):
+    """A gate must give its scratch space back on the success path.
+
+    The removal is best-effort (`ignore_errors=True`) because Windows may still
+    hold a handle on the failure path — so this asserts the case that must always
+    hold, rather than asserting a guarantee the platform cannot give.
+    """
+    created = []
+    real_mkdtemp = tempfile.mkdtemp
+
+    def _recording_mkdtemp(*args, **kwargs):
+        path = real_mkdtemp(*args, **kwargs)
+        created.append(path)
+        return path
+
+    monkeypatch.setattr(gate.tempfile, "mkdtemp", _recording_mkdtemp)
+    ok, detail = gate.GATE_IMPL[name]()
+    assert ok is True, detail
+
+    scratch = [p for p in created if "hp_gate_" in p]
+    assert scratch, f"{name} took no scratch space, so this probe proves nothing"
+    for path in scratch:
+        assert not pathlib.Path(path).exists(), f"{name} leaked {path}"
 
 
 # ── the four frozen gates, pinned by body rather than by line range ────────

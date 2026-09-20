@@ -1618,9 +1618,13 @@ must not be "fixed" in code.** Two consequences worth knowing:
   `tests/test_command_center_integration.py`: insert `ROOT / "cockpit"` on
   `sys.path` and import `command_center_integration` flat.
 
-**Working recipe** (short temp root → exemption applies → guard never trips):
+**Working recipe.** The recipe below still runs a whole suite, but its original
+explanation was **wrong** — see the addendum. `E:\hx` is *not* exempt from the
+guard; the run works because the threshold is raised. Keep `E:\hx` as a short
+*basetemp* only, and note the 191 MB trap the addendum describes.
 
 ```bash
+CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=100000 \
 TMPDIR='E:\hx' TEMP='E:\hx' TMP='E:\hx' \
   .venv-py312/Scripts/python.exe -m pytest tests/ -q -m "not smoke" \
   --junitxml=E:/hx/full.xml > E:/hx/full.log 2>&1; echo "EXIT=$?"
@@ -1630,6 +1634,17 @@ Use a path **outside the repo** for `--junitxml` and the log. Pointing
 `--basetemp` *inside* the repo makes it worse (the guard counts the repo tree).
 The venv `.venv-py312` is the one with `pytest` + `pyyaml`; managed Python 3.13
 has neither.
+
+**Preferred recipe — a basetemp genuinely inside the OS temp dir.** This needs
+*no* threshold change, because such a path is genuinely exempt:
+
+```bash
+.venv-py312/Scripts/python.exe -m pytest tests/ -q -m "not smoke" \
+  --basetemp="$LOCALAPPDATA/Temp/h/bt"
+```
+
+The path must be **strictly below** the temp dir (see addendum) — not the temp
+root itself, and **backslashes only**.
 
 **Addendum 2026-09-20 (§18.9) — the guard read from the inside, and one wrong
 belief corrected.** The guard is `cli/vendor/shim/sitecustomize.py` +
@@ -1649,6 +1664,42 @@ belief corrected.** The guard is `cli/vendor/shim/sitecustomize.py` +
   "budget one full run per turn"; measured this session, the *first* pytest
   invocation of a fresh turn still failed at setup. Treat the budget as
   **per-session**, and do not plan around a fresh turn resetting it.
+- **CORRECTION — `E:\hx` is NOT exempt, and the exemption rule is narrower than
+  "under the temp dir".** The old recipe claimed a "short temp root → exemption
+  applies". It does not. Asked directly:
+
+  | path | bypass? |
+  |---|---|
+  | `E:\hx` (recipe root) | **False** |
+  | `E:\hx\bt4` (recipe basetemp) | **False** |
+  | `C:\Users\Thomas\AppData\Local\Temp` (temp root) | **False** |
+  | `C:\Users\Thomas\AppData\Local\Temp\h\bt` | **True** |
+  | `C:\USERS\…\TEMP` (uppercase) | **False** |
+  | `C:/Users/…/Temp` (forward slashes) | **False** |
+  | `E:\Helix-Prime\_pytest_tmp` (in repo) | **False** |
+
+  The rule is `_is_under_root`, which compares
+  `os.path.relpath(target, root)` and requires the result to be **non-empty, not
+  `.`, and not `..`-relative**. So the path must be **strictly below** the temp
+  dir — the temp root itself is *not* exempt, and neither is anything equal to it
+  modulo case or separators. `_os_tmp_dirs` is the single lowercase entry
+  `['c:\users\thomas\appdata\local\temp']`. `E:\hx` only ever worked because the
+  threshold was raised.
+- **Why a big basetemp under a non-exempt root breaks setup — the full chain.**
+  `_safe_shutil_rmtree` bypasses on exemption; otherwise it calls
+  `_try_trash(path, recursive=True)`, whose binary path carries a **5 s**
+  `timeout`. On failure it honours `ignore_errors`, else `onerror`, **else
+  re-raises**. pytest's `make_numbered_dir` cleanup runs *before* the first
+  fixture setup and calls `rmtree` with `ignore_errors=False`, so a basetemp the
+  trash binary cannot finish in 5 s raises during setup — which is exactly the
+  `1747 passed, 1 error` run: `E:\hx\bt4` is **191 MB / 1748 subdirs** and the
+  error was `OSError: [safe-delete] 操作失败: ERROR \?\E:\hx\bt4 … Some operations
+  were aborted`, attributed to `test_accounts.py::test_create_domain_round_trip`
+  purely because it happened to be the next test collected. That test passes alone
+  in 0.86 s. **This is a basetemp-size pathology, not a repo defect.**
+  `_discard_scratch` in `release/gate.py` is deliberately written against this
+  exact chain: `ignore_errors=True` makes the shim *return* rather than raise, so
+  cleanup can never change a gate's verdict.
 - **The two "known sandbox failures" are purely guard artifacts — confirmed.**
   With the guard bypassed, `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers`
   and `test_c5_vertical_slice::test_existing_c0_c4_regression` both **pass**.
@@ -2982,20 +3033,53 @@ frozen bodies unchanged.** They were then confirmed under pytest itself —
 raised, and again as part of the full-suite run below. The standalone replay is now
 redundant; the pytest file is the durable artefact.
 
-#### Found, not fixed (deliberately)
+#### Scratch directories were never given back — found, and partly fixed
 
-`_gate_backup_restore` and `_gate_rollback` each call `tempfile.mkdtemp()` and
-**never remove the directory**. Every gate run therefore leaks a temp tree holding a
-SQLite control-plane DB and an audit DB. The full suite invokes `run_gate` from
-`test_release_gates` (three files), `test_pilot.py` and the pilot-readiness dry runs,
-so this accumulates per run rather than per release.
+**A correction to my own first note on this.** I recorded that *two* gates leaked a
+temp directory. A full grep found **eleven** `tempfile.mkdtemp` sites in the release
+path, with **no** `rmtree` anywhere except `scripts/pilot_dry_run.py:381`. The
+undercount is worth naming: I had generalised from the two gates I happened to be
+reading.
 
-Not fixed here on purpose: it is a real but low-severity hygiene defect, and any edit
-to `gate.py` would have invalidated the full-suite run that was in flight when it was
-found. The fix is a `try/finally` with `shutil.rmtree(work, ignore_errors=True)`
-(`ignore_errors` because Windows may still hold the SQLite handles on the failure
-path), and `shutil` is not yet imported in `release/gate.py`. Re-run the full suite
-after it.
+| module | sites | state |
+|---|---|---|
+| `release/gate.py` | 5 | **fixed** |
+| `release/harness.py` | 4 | still leaking |
+| `release/observability.py` | 2 | still leaking |
+
+**Fixed in `gate.py`:** `backup_restore`, `rollback`, `app_session_fail_closed`,
+`app_tenant_isolation`, `app_memory_store_isolation`. Each now carries
+`finally: _discard_scratch(work)`, a single-sourced helper defined next to
+`_write_json`. `shutil` was not previously imported in `gate.py`.
+
+**Why a helper and not a bare `rmtree`.** The first cut inlined
+`shutil.rmtree(work, ignore_errors=True)`. Two reasons that was wrong to leave
+inline. First, `ignore_errors` is load-bearing rather than cosmetic: Windows may
+still hold a SQLite handle on the failure path, and — measured this session —
+the sandbox shim routes a non-exempt deletion through a **5 s** trash subprocess
+that can genuinely time out and **re-raise** when `ignore_errors` is false. So a
+cleanup failure could have turned a gate red for a reason unrelated to the
+condition the gate tests. A gate that leaks a temp tree is a hygiene defect; a
+gate that goes red because a directory would not delete is a correctness defect,
+and the second is worse. Second, five copies of the same defensive `try` is five
+places to get it wrong. `_discard_scratch` swallows `OSError` as well, so it
+cannot raise on any path.
+
+**Can-fail proof:** the new parametrized test
+`test_the_scratch_directory_is_removed` was run against the *committed* `gate.py`
+with the fix reverted — **5 failed, 31 deselected** — then passed again once the fix
+was restored (`36 passed`). It records every `mkdtemp` the gate makes and asserts
+the tree is gone, filtering to the `hp_gate_` prefix so pytest's own temp churn
+cannot confound it. Note it asserts the scratch list is **non-empty** first: a
+gate that stopped taking scratch space would otherwise pass vacuously, which is
+the same nominal-control failure mode §18.9 exists to catch.
+
+**Not fixed, deliberately:** the six `harness.py`/`observability.py` sites are not a
+blanket `finally` away. `harness._open_store()` **returns the path to its caller**
+(`return Store(...), pathlib.Path(d)`), so that directory's lifetime is not local and
+closing it on function exit would delete a database still in use. Each site needs its
+own lifetime analysis, and `run_observability_report` runs on every gate run, so a
+mistake there is load-bearing. Recorded rather than guessed at.
 
 #### An unexplained commit with an inaccurate message
 

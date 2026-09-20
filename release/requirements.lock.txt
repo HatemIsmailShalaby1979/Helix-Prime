@@ -286,7 +286,7 @@ six==1.17.0
     # via python-dateutil
 sortedcontainers==2.4.0
     # via cyclonedx-python-lib
-sqlalchemy==2.0.52
+sqlalchemy==2.0.54
     # via alembic
 starlette==1.6.0
     # via streamlit

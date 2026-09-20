@@ -20,11 +20,14 @@
 # gate to `production` therefore makes it production-only automatically, which
 # fails tests/test_production_evidence.py until evidence for it is defined.
 #
-# IMPORTANT: The "production" profile adds production-only gates (signed
-# production evidence, certified data isolation, external observer audit)
-# that C8 does NOT satisfy. Therefore the C8 release gate can only ever emit
-# CONTROLLED_PILOT_READY or PRODUCTION_CANDIDATE — never an unqualified
-# PRODUCTION label.
+# IMPORTANT: The "production" profile adds nine production-only gates (signed
+# production evidence, certified data isolation, external observer audit, ...)
+# that no local run can satisfy on its own: each needs a signature produced by a
+# key held outside this repository. `allowed_final` therefore includes
+# PRODUCTION — but the label is reachable ONLY when all 23 gates are green on
+# genuine signed external evidence AND a valid terminal `production_approved`
+# sign-off exists. Nothing in this file makes a gate green; the gates remain the
+# block, and a bare PRODUCTION label with no evidence is still unreachable.
 
 profiles:
   - alpha
@@ -138,8 +141,12 @@ required_gates:
     - security_review
     - legal_privacy_review
 
+# Final classifications this release permits. PRODUCTION is listed because the
+# gates — not a policy constant — are what keep it unreachable without signed
+# external evidence; the owner declared the C8 sprint over on 2026-09-20.
 allowed_final:
   - CONTROLLED_PILOT_READY
   - PRODUCTION_CANDIDATE
+  - PRODUCTION
 
 default_c8: PRODUCTION_CANDIDATE

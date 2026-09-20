@@ -216,9 +216,15 @@ def test_derived_values_match_the_hardcoded_ones_they_replaced():
             "app_pwa_assets",
         ],
     }
+    # `allowed_final` is the one value that has moved since this equivalence was
+    # established: PRODUCTION was added on 2026-09-20 by owner decision, so the
+    # label is permitted when the gates are genuinely satisfied. The assertion is
+    # still kept exact rather than relaxed to a subset, so any *further* movement
+    # fails here — the point of this test is to notice movement, not to allow it.
     assert set(profiles.ALLOWED_FINAL_CLASSIFICATIONS) == {
         "CONTROLLED_PILOT_READY",
         "PRODUCTION_CANDIDATE",
+        "PRODUCTION",
     }
     assert profiles.DEFAULT_C8_CLASSIFICATION == "PRODUCTION_CANDIDATE"
 
@@ -477,16 +483,62 @@ def test_gate_controlled_pilot_ready():
     assert summary["exit_code"] == 0
 
 
-def test_gate_never_production():
+def test_gate_refuses_production_without_evidence():
     from release import gate
 
-    # Requesting the production profile must never yield a bare PRODUCTION label
-    # (production-only gates are not met); the gate fails closed as NOT_READY.
+    # Requesting the production profile with nothing declared must not yield a
+    # PRODUCTION label: the nine production-only gates are red, so the gate fails
+    # closed. (Renamed from `test_gate_never_production` on 2026-09-20 — the gate
+    # *can* now emit PRODUCTION, but only on signed external evidence; what this
+    # pins is the refusal, which is the half that must never change.)
     summary = gate.run_gate(profile="production", num_soak_workflows=3, write_evidence=False)
     assert summary["classification"] != "PRODUCTION"
     assert summary["classification"] == "NOT_READY"
     assert summary["permitted_c8_outcome"] is False
     assert summary["exit_code"] == 1
+
+
+def test_production_is_permitted_only_on_signed_evidence(monkeypatch, tmp_path):
+    """The label is reachable by evidence, and by nothing else.
+
+    Before 2026-09-20 this same run went 23/23 gates green, classified
+    `PRODUCTION`, and still exited 1 — a sprint-policy refusal sitting on top of
+    the gates. `allowed_final` now permits the label, which makes the gates the
+    *only* thing standing in the way; they need signatures from a key that is not
+    in this repository. Both halves are asserted in one test so neither can pass
+    vacuously: with no evidence the gate must refuse, with the nine signed
+    artifacts it must permit. The fixtures are synthetic and the key is a
+    throwaway, so this proves the mechanism, not an approval.
+    """
+    from release import gate
+
+    fixtures = pathlib.Path(__file__).parent / "fixtures" / "production_evidence"
+
+    # Half one: nothing declared -> refused, and no label claimed.
+    monkeypatch.delenv("HELIX_PRODUCTION_EVIDENCE_DIR", raising=False)
+    monkeypatch.delenv("HELIX_PRODUCTION_EVIDENCE_PUBKEY", raising=False)
+    summary = gate.run_gate(profile="production", num_soak_workflows=3, write_evidence=False)
+    assert summary["classification"] == "NOT_READY"
+    assert summary["permitted_c8_outcome"] is False
+    assert summary["exit_code"] == 1
+
+    # Half two: the nine signed artifacts are the only difference.
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    for artifact in fixtures.glob("*.evidence.json"):
+        shutil.copy(artifact, evidence / artifact.name)
+        shutil.copy(
+            artifact.with_suffix(artifact.suffix + ".sig"),
+            evidence / (artifact.name + ".sig"),
+        )
+    monkeypatch.setenv("HELIX_PRODUCTION_EVIDENCE_DIR", str(evidence))
+    monkeypatch.setenv("HELIX_PRODUCTION_EVIDENCE_PUBKEY", str(fixtures / "test_pub.pem"))
+
+    summary = gate.run_gate(profile="production", num_soak_workflows=3, write_evidence=False)
+    assert summary["all_gates_green"] is True
+    assert summary["classification"] == "PRODUCTION"
+    assert summary["permitted_c8_outcome"] is True
+    assert summary["exit_code"] == 0
 
 
 # ── individual gates ───────────────────────────────────────────────────────

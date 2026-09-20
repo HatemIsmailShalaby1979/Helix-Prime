@@ -1426,6 +1426,12 @@ claims.*
 > them, so read each "now" note with the original text. Production is no longer
 > unreachable by construction — it is unreachable without signed external
 > evidence. The label does not move; only the door becomes openable.
+>
+> **Updated again 2026-09-20 (owner decision).** `allowed_final` now includes
+> `PRODUCTION`, so the label *does* move once the evidence is real: 23/23 gates
+> green on signed artifacts exits **0** instead of 1. Nothing below is weakened —
+> the gates still block an unevidenced production release, and since this change
+> they are the *only* thing that does.
 
 Two independent walls made production unreachable by engineering work:
 
@@ -2127,7 +2133,9 @@ the reader, so the red reason and the green check cannot drift. Signatures stay
 `_prod_gate_reason()` is gone (dead once the gates read real input). The
 fail-closed default is the reader's *first* check: with nothing declared, all nine
 still refuse — `test_prod_gate_impls_are_registered_and_red` stays green
-**unmodified**, and `test_gate_never_production` still yields `NOT_READY`, exit 1.
+**unmodified**, and an unevidenced production run still yields `NOT_READY`, exit 1
+(the test is now `test_gate_refuses_production_without_evidence`, renamed on
+2026-09-20 when `allowed_final` began permitting the label).
 
 **B1.3 — `signoff._all_production_gates_satisfied()` derives instead of
 asserting.** It asks the nine gates and returns `True` only when all nine are
@@ -2174,10 +2182,12 @@ touched, **proven pre-existing by running the same command in a `git worktree` a
 HEAD** (same 6 files, 10 vs 11 sources checked). `release/` is not in the mypy
 gate scope; the new module itself is clean.
 
-**What this does not do.** The production label does not move: it is still
-`CONTROLLED_PILOT_READY` with `release_approved: false`. B1 made the door
-openable by evidence, and only by a signature this repository cannot produce.
-The nine gates are still red in CI because no evidence is declared there.
+**What this does not do.** B1 alone does not move the production label: it is
+still `CONTROLLED_PILOT_READY` with `release_approved: false`, because B1 only
+made the door openable — and only by a signature this repository cannot produce.
+The nine gates are still red in CI, because no evidence is declared there. (The
+label *can* now be emitted once that evidence exists — see the `allowed_final`
+subsection below, 2026-09-20.)
 
 #### Release artifacts: do NOT "refresh" them to tidy the repo
 
@@ -2481,17 +2491,19 @@ artifacts in a scratch directory outside the repo, then asking the real gate:
 
 Before the producer existed, none of this was reachable by anyone.
 
-**The last code gate on production is one line, and it is a policy constant.** That
-run still exits **1**: `run_gate` sets `exit_code = 0 if classification in
-ALLOWED_FINAL_CLASSIFICATIONS else 1` (`gate.py:623-625`), and that set is
-`{CONTROLLED_PILOT_READY, PRODUCTION_CANDIDATE}` — its own comment reads "Final
-classification allowed by THIS sprint (never 'production')". So the door opens,
-the label is emitted, and the process still refuses, because the sprint declares it
-may not permit production. **Adding `PRODUCTION` to `allowed_final:` in
-`release/profiles.yaml` is the whole remaining code change** — and, since this
-session made that file the source of truth, that one line now genuinely changes
-behaviour instead of being inert. It was deliberately **not** taken: declaring the
-sprint over is the owner's decision, exactly like the release-artifact rule above.
+**The last code gate on production was one line, and it was a policy constant.**
+That run exited **1** even at 23/23: `run_gate` sets `exit_code = 0 if
+classification in ALLOWED_FINAL_CLASSIFICATIONS else 1`, and that set was
+`{CONTROLLED_PILOT_READY, PRODUCTION_CANDIDATE}` — its own comment read "Final
+classification allowed by THIS sprint (never 'production')". So the door opened,
+the label was emitted, and the process still refused, because the sprint declared
+it may not permit production. Adding `PRODUCTION` to `allowed_final:` in
+`release/release-profiles.yaml` was the whole remaining code change — and because
+that file had just become the source of truth, the line genuinely changes
+behaviour instead of being inert. It was deliberately **not** taken at the time:
+declaring the sprint over is the owner's decision, exactly like the release-artifact
+rule above. **Taken 2026-09-20 by that decision — see "The production label is now
+permitted on evidence" below.**
 
 **Gate.** 63 passed across the signoff-affected files (8 new); ruff check and format
 clean; mypy clean on both files. **Full suite: 1703 collected = 1702 passed + 1
@@ -2565,7 +2577,7 @@ human or external party showed up today, could they actually complete it?*
 |---|---|---|
 | Nine signed evidence artifacts | **Solvable now** — `produce_production_evidence.py` produces, checks and signs each; verified end to end | External auditors (Class 3/4/5) |
 | Terminal `production_approved` record | **Solvable now** — `record_production_signoff.py` templates and validates it; refuses while the gates are red | Named human + reviewer |
-| `allowed_final` excluding `PRODUCTION` | **One line** in `release/release-profiles.yaml`; the gate exits 1 without it even when 23/23 gates are green | Owner (policy) |
+| `allowed_final` now includes `PRODUCTION` | **Done 2026-09-20** (owner decision). The gate exits 0 at 23/23 gates green on signed evidence, and still exits 1 without it — the gates are now the only block | Owner (policy) |
 | Class 2.1–2.3: named operator / SOD reviewer / data controller | **No structured home anywhere in the tree** — no field, no record, no reader; the pilot protocol lists the roles as prose. No machine check requires them, so this is a process record, not a code gap. If it should be machine-checked, that is a small addition, but inventing a record format is the owner's call | Owner + second human |
 | Class 2.4/2.6: pilot go/no-go and exit review | Fields exist (`go-no-go.json` `approver` / `approved_at`), unfilled; the recorder now validates whatever is written | Owner |
 | Class 5.3/5.4: network sibling transport, external IdP/observability | In `DISABLED_CAPABILITIES` as deliberate C8 non-goals. Enabling them is a product-scope decision, and the plan assigns their *validation* to B2 (operational spend) | Owner (scope + spend) |
@@ -2743,6 +2755,65 @@ calls — so the work would have been red on a fresh clone. This is the §18.8 r
 it is why this was not committed on the strength of the tests alone. `ruff check`
 + `ruff format --check .` (405 files), `mypy` (72 files, the CI scope) and all five
 governance checks are green; 171 tests pass across the nine gate-touching files.
+
+#### The production label is now permitted on evidence (owner decision, 2026-09-20)
+
+The owner declared the C8 sprint over. `allowed_final` in
+`release/release-profiles.yaml` gained `PRODUCTION`, which is the whole code
+change — and because `3055bb2` had just made that file the source of truth, the
+line genuinely changes behaviour rather than being inert.
+
+**Why this is not "defeating a block".** `docs/release/production-blockers.md`
+forbids "any change that makes one of these gates green locally, or that fabricates
+a `production_approved` sign-off". This does neither. **Not one gate body was
+touched**: the nine production-only gates still refuse without a signature from a
+key held outside this repository. What changed is a *sprint-scope* refusal layered
+on top of them. Measured, not asserted:
+
+| run | before | after |
+|---|---|---|
+| production profile, nothing declared | `NOT_READY`, permitted `False`, exit 1 | **identical** |
+| production profile, nine signed fixtures | `PRODUCTION`, permitted `False`, **exit 1** | `PRODUCTION`, permitted `True`, **exit 0** |
+
+**No current behaviour moved.** All four profiles × (classification,
+`all_gates_green`, `permitted_c8_outcome`, `exit_code`) are identical before and
+after, and **zero** gate `ok` flags moved across the 23 gates. The only delta is
+the fully-evidenced case, which is the case the change exists for. A bare
+`PRODUCTION` label remains unreachable: `classify_from_gate_results` returns it
+only when all nine production-only gates are green **and** `release_approved`.
+
+**Can-fail, proved by deleting the one YAML line** while keeping the tests:
+`test_production_is_permitted_only_on_signed_evidence` fails on its
+`permitted_c8_outcome is True` assertion, and the exact-equality assertion in
+`test_derived_values_match_the_hardcoded_ones_they_replaced` fails too.
+
+**Three stale claims were corrected rather than left to contradict the code** — the
+YAML header ("can only ever emit `CONTROLLED_PILOT_READY` or
+`PRODUCTION_CANDIDATE`"), the `classify_from_gate_results` docstring ("production is
+NEVER emitted"), and `production-blockers.md` lines 9-10 and 36-37. The doc edit is
+**line-count-neutral**, so the frozen range 39-42 kept its exact bytes
+(`sed -n '39,42p'` hashes identically, still 42 lines, 4 insertions / 4 deletions).
+
+**One test was renamed, not relaxed.** `test_gate_never_production` became
+`test_gate_refuses_production_without_evidence`: the gate *can* now emit the label,
+so the old name asserted something false, but the refusal it actually checks is
+unchanged and still asserted. `test_derived_values_match_the_hardcoded_ones_they_replaced`
+keeps **exact** equality on `allowed_final` (not a subset) with a comment naming
+this decision, so any further movement fails there.
+
+**Gate.** 37 passed in `test_c8_release_gate.py` (36 + 1 new); 135 across the other
+eight gate-touching files — **172 total, was 171**. `ruff check` +
+`ruff format --check .` (405 files), `mypy` (72 files) and all five governance
+checks green. `release-manifest.json` and `go-no-go.json` hash-verified untouched
+throughout — `write_evidence=False` on every probe, since the default rewrites the
+manifest and would flip `release_approved` false → true.
+
+**What this does NOT do.** It does not make production *likely*, or claim it. The
+nine gates are still red in CI and locally because no evidence is declared; a real
+production label needs nine real signatures from external parties plus a genuine
+human `production_approved` record. `go-no-go.json` still reads
+`approved_at: "PENDING-GATE-RUN"`, and the manifest still pins `b6b954e` — both are
+human acts, not code.
 
 **Do NOT touch:** `release/gate.py:250-287` bodies (beyond B1.2),
 `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,

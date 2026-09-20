@@ -6,8 +6,8 @@ C8. Source of truth: `release/release-profiles.yaml`; `release/profiles.py` deri
 
 The C8 gate (`release/gate.py`) returns `PRODUCTION` only if ALL NINE of these are
 green AND a genuine human `production_approved` sign-off exists. Locally these
-gates are fail-closed red, so the release can only ever emit `CONTROLLED_PILOT_READY`
-or `PRODUCTION_CANDIDATE` — never `PRODUCTION`.
+gates are fail-closed red, so an unevidenced release emits `CONTROLLED_PILOT_READY`
+or `PRODUCTION_CANDIDATE`; `PRODUCTION` is emitted only on that signed evidence.
 
 ## The nine production-only gates
 
@@ -33,8 +33,8 @@ or `PRODUCTION_CANDIDATE` — never `PRODUCTION`.
 ## Consequence
 
 Because blockers 1–9 are red absent signed evidence and no local `production_approved`
-sign-off is obtainable, the C8 pipeline is fail-closed against production release.
-This is deliberate: no controlled-pilot artefact may be mislabelled as production.
+sign-off is obtainable, an unevidenced production release stays fail-closed. This is
+deliberate: no controlled-pilot artefact may be mislabelled as production.
 
 ## Defeating a block is a defect
 

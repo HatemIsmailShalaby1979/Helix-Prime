@@ -642,6 +642,30 @@ def resolve_actor_role(actor_id: str, fallback_role_id: Optional[str] = None) ->
     return ""
 
 
+#: Roles whose runtime ``financial_approval_limit_usd`` is intentionally lower
+#: than the YAML org-chart authority. The runtime limits are the *enforcement*
+#: ceiling and are deliberately more conservative than the authority recorded in
+#: ``organization/role-catalog.yaml`` (which is never edited). The divergence is
+#: therefore accepted and pinned here rather than suppressed: a structural
+#: regression, a new role, or a runtime limit that drifts *above* the YAML
+#: authority still fails CI.
+#:
+#: ``sami`` is absent by design — it is the only unlimited seat, so its runtime
+#: and YAML values agree.
+ACCEPTED_FINANCIAL_DRIFT_ROLES = frozenset(
+    {
+        "ops_gm",
+        "compliance_quality_gm",
+        "fraud_revenue_gm",
+        "hr_personnel_gm",
+        "ld_gm",
+        "sales_gm",
+        "marketing_gm",
+        "ict_gm",
+    }
+)
+
+
 def detect_catalog_drift() -> List[Dict[str, Any]]:
     """
     Report divergence between this runtime catalog and organization/role-catalog.yaml.
@@ -651,6 +675,10 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
     tools, peer calls, segregation-of-duties, and the financial approval limit) so
     drift between the two is visible in CI instead of being discovered during an
     audit.
+
+    Callers that need to distinguish accepted divergence from regression should
+    compare the result against :data:`ACCEPTED_FINANCIAL_DRIFT_ROLES`; see
+    ``scripts/check_governance_drift.py``.
     """
     # The runtime catalog renamed fraud_revenue_gm after the YAML was authored; the
     # alias is documented in organization/gm_activation.py. Resolve it here so the

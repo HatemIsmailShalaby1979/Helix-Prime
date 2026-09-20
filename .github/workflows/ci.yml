@@ -31,7 +31,7 @@ jobs:
 
       - name: Run ruff (linting)
         run: |
-          ruff check server/ connectors/ control_plane/ engines/ capabilities/ security/ pilot/
+          ruff check server/ connectors/ control_plane/ engines/ capabilities/ security/ pilot/ scripts/ GOVERNANCE/
 
       - name: Run ruff format check
         run: |
@@ -57,6 +57,14 @@ jobs:
       - name: Check migration drift (store schema vs alembic head)
         run: |
           python scripts/check_migration_drift.py
+
+      - name: Check governance catalog drift (runtime catalog vs role-catalog.yaml)
+        run: |
+          python scripts/check_governance_drift.py
+
+      - name: Check governance authority (constitution + doc authority chain)
+        run: |
+          python GOVERNANCE/governance_check.py check
 
       - name: Build package
         run: |

@@ -93,7 +93,8 @@ _CATALOG_PATH = pathlib.Path(__file__).resolve().parent / "role-catalog.yaml"
 def load_role_catalog(path: str | pathlib.Path = _CATALOG_PATH) -> Dict[str, Any]:
     """
     Load and validate the canonical role catalog.
-    Returns dict with keys: schema_version, kpi_vocabulary, roles (by id), roles_list
+    Returns dict with keys: schema_version, kpi_vocabulary, roles, roles_by_id,
+    universal_approvers, source_path.
     Raises ValueError with clear message on failure.
     """
     p = pathlib.Path(path)
@@ -317,12 +318,16 @@ def validate_role_catalog(
                     f"{role_path}.segregation_of_duties.can_review: {reviewer!r} not in role ids"
                 )
 
-    # Universal approvers must reference real roles.
+    # Universal approvers must reference real roles. Validated once and then
+    # surfaced on the returned catalog, so consumers (control_plane.engine,
+    # security.policy) resolve super-approver authority from the catalog
+    # instead of carrying their own copies of these role ids.
     _universal_approvers = data.get("universal_approvers", [])
     if not isinstance(_universal_approvers, list):
         raise ValueError(
             f"{source_path}.universal_approvers: must be list, got {type(_universal_approvers).__name__}"
         )
+    universal_approvers: List[str] = []
     for _ua_id in _universal_approvers:
         if not isinstance(_ua_id, str) or not _ua_id.strip():
             raise ValueError(
@@ -333,23 +338,7 @@ def validate_role_catalog(
                 f"{source_path}.universal_approvers: {_ua_id!r} not in role ids "
                 f"{sorted(all_ids)}"
             )
-
-    # Universal approvers must reference real roles.
-    _universal_approvers = data.get("universal_approvers", [])
-    if not isinstance(_universal_approvers, list):
-        raise ValueError(
-            f"{source_path}.universal_approvers: must be list, got {type(_universal_approvers).__name__}"
-        )
-    for _ua_id in _universal_approvers:
-        if not isinstance(_ua_id, str) or not _ua_id.strip():
-            raise ValueError(
-                f"{source_path}.universal_approvers: item must be non-empty string, got {_ua_id!r}"
-            )
-        if _ua_id.strip() not in all_ids:
-            raise ValueError(
-                f"{source_path}.universal_approvers: {_ua_id!r} not in role ids "
-                f"{sorted(all_ids)}"
-            )
+        universal_approvers.append(_ua_id.strip())
 
     # SOD specific: compliance must be able to review ops, sales, hr, fraud
     compliance = roles_by_id.get("compliance_quality_gm")
@@ -367,6 +356,7 @@ def validate_role_catalog(
         "kpi_vocabulary": kpi_vocab,
         "roles": roles,
         "roles_by_id": roles_by_id,
+        "universal_approvers": universal_approvers,
         "source_path": source_path,
     }
 

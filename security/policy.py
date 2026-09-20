@@ -128,7 +128,7 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
     # For C3, we allow if:
     # - identity.role_id == owner_role (owner can act)
     # - or identity.role_id is allowed to call owner via allowed_peer_calls
-    # - or identity is sami/compliance (can act broadly? but we enforce strictly)
+    # - or identity.role_id is a universal approver per the role catalog
     # If identity has no role (service), we check tool instead
     if req.identity.role_id:
         if req.identity.role_id == owner_role:
@@ -143,9 +143,10 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
                     .get(req.identity.role_id, {})
                     .get("allowed_peer_calls", [])
                 )
-                if owner_role not in peer_allowed and req.identity.role_id not in (
-                    "sami",
-                    "compliance_quality_gm",
+                universal_approvers = set(catalog.get("universal_approvers", []))
+                if (
+                    owner_role not in peer_allowed
+                    and req.identity.role_id not in universal_approvers
                 ):
                     return AuthorizationDecision(
                         False,

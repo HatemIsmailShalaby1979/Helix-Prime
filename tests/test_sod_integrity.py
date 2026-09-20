@@ -179,3 +179,61 @@ class TestSodIntegrity:
             import os
 
             os.unlink(tmp_catalog)
+
+    def test_catalog_surfaces_universal_approvers(self):
+        """load_role_catalog must expose universal_approvers, not drop it.
+
+        Regression guard. Engine.approve reads
+        ``catalog.get("universal_approvers", [])``, so if the loader stops
+        propagating the key the super-approver branch silently reverts to dead
+        code and approvals keep working only via can_review.
+        """
+        from organization.role_catalog import load_role_catalog
+
+        catalog = load_role_catalog()
+        assert catalog["universal_approvers"] == ["sami", "compliance_quality_gm"]
+
+    def test_universal_approver_branch_is_load_bearing(self, tmp_path):
+        """A universal approver approves even when stripped from can_review.
+
+        Companion to test_super_role_authority_comes_from_catalog: that test
+        empties universal_approvers and expects denial; this one keeps sami in
+        universal_approvers while removing sami from every can_review list and
+        expects approval. Together they prove the universal_approvers branch is
+        live rather than dead code.
+        """
+        catalog_path = pathlib.Path("organization/role-catalog.yaml")
+        raw = catalog_path.read_text(encoding="utf-8")
+        modified = yaml.safe_load(raw)
+        assert "sami" in modified["universal_approvers"]
+        for role in modified["roles"]:
+            sod = role.get("segregation_of_duties", {})
+            sod["can_review"] = [r for r in sod.get("can_review", []) if r != "sami"]
+        with tempfile.NamedTemporaryFile(
+            suffix=".yaml", mode="w", delete=False, encoding="utf-8"
+        ) as f:
+            yaml.dump(modified, f)
+            tmp_catalog = f.name
+        try:
+            from organization.role_catalog import load_role_catalog
+
+            loaded = load_role_catalog(tmp_catalog)
+            assert loaded["universal_approvers"] == ["sami", "compliance_quality_gm"]
+            eng = _make_engine(tmp_path)
+            eng.catalog = loaded
+            wf = eng.submit(
+                _make_workflow_request(owning_role_id="ops_gm", capability="ops_execution")
+            )
+            assert wf.state == WorkflowState.AWAITING_APPROVAL
+            appr = _make_approval(
+                "sami",
+                role_id="sami",
+                correlation_id=wf.correlation.correlation_id,
+                subject_id=wf.workflow_id,
+            )
+            result = eng.approve(wf.workflow_id, appr)
+            assert result.state == WorkflowState.EXECUTING
+        finally:
+            import os
+
+            os.unlink(tmp_catalog)

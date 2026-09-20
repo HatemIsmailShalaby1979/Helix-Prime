@@ -995,6 +995,7 @@ def test_existing_cockpit_and_engine_behavior_preserved():
 import uuid as _uuid
 
 from control_plane.governance import (
+    ACCEPTED_FINANCIAL_DRIFT_ROLES,
     MIN_AUTONOMY_CONFIDENCE,
     ORGANIZATION_CATALOG,
     AccessDeniedError,
@@ -1139,6 +1140,52 @@ def test_catalog_drift_detector_reports_without_raising():
     assert isinstance(drift, list)
     for entry in drift:
         assert {"role_id", "field", "runtime", "yaml", "detail"} <= set(entry)
+
+
+#: The accepted drift set lives in ``control_plane.governance`` so that this
+#: test, ``scripts/check_governance_drift.py`` and the CI step all read the same
+#: pin. Two copies would let CI and the suite disagree about what "accepted"
+#: means.
+
+
+def test_catalog_drift_is_exactly_the_accepted_financial_set():
+    """Pin the accepted drift so a NEW drift fails CI instead of passing silently.
+
+    All 8 entries are ``financial_approval_limit_usd`` runtime-vs-YAML
+    mismatches and there are zero presence mismatches. A structural or presence
+    drift must break this test rather than disappear into an unasserted list.
+    """
+    drift = detect_catalog_drift()
+    fields = {e["field"] for e in drift}
+    assert fields == {"financial_approval_limit_usd"}, (
+        f"unexpected drift field(s) {sorted(fields - {'financial_approval_limit_usd'})}; "
+        "a structural or presence drift is a regression, not an accepted divergence"
+    )
+    roles = {e["role_id"] for e in drift}
+    assert roles == ACCEPTED_FINANCIAL_DRIFT_ROLES, (
+        f"drift role set changed: added={sorted(roles - ACCEPTED_FINANCIAL_DRIFT_ROLES)} "
+        f"removed={sorted(ACCEPTED_FINANCIAL_DRIFT_ROLES - roles)}"
+    )
+    assert len(drift) == len(ACCEPTED_FINANCIAL_DRIFT_ROLES)
+
+
+def test_catalog_drift_runtime_limits_never_exceed_yaml_authority():
+    """Every accepted drift must narrow authority, never widen it.
+
+    This is the property that makes the divergences defensible: runtime
+    enforcement is the stricter subset. A runtime limit above the YAML
+    org-chart limit would be a genuine governance hole, not a safety margin.
+    """
+    for entry in detect_catalog_drift():
+        runtime, yaml_value = entry["runtime"], entry["yaml"]
+        assert runtime is not None, f"{entry['role_id']}: runtime limit must be set, got None"
+        if yaml_value is None:
+            # YAML grants unlimited authority; runtime must still cap it.
+            continue
+        assert float(runtime) <= float(yaml_value), (
+            f"{entry['role_id']}: runtime limit {runtime} exceeds YAML authority "
+            f"{yaml_value} — enforcement would be looser than the org chart"
+        )
 
 
 def test_catalog_drift_detector_can_fail_on_structural_divergence():

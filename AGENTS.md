@@ -1,12 +1,13 @@
 # AGENTS.md — Helix Codex OS Build Ledger
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
-> **NO ACTIVE WORK — everything recorded here is COMPLETE.** §1 (Production Hardening,
-> H0–H3) and §1A (app UI modernization, UI-1) are both done; the sports-academy pack
-> (S0–S7) is COMPLETE and §2–§5 are completed history / reference material. Do not
-> restart them. Read this file top-to-bottom, then pick the next task from §5
-> ("Suggested next work") or ask the user. Update this file immediately after
-> completing each step.
+> **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
+> Phase 1 (A0 — correctness fixes) is COMPLETE; Phase 2 (A1 — vocabulary
+> single-sourcing) is next. Everything else is COMPLETE history: §1 (Production
+> Hardening, H0–H3), §1A (app UI modernization, UI-1), the sports-academy pack
+> (S0–S7), and §2–§17. Do not restart completed sections. Read this file
+> top-to-bottom, then pick up from §18, or §5 ("Suggested next work") if §18 is
+> closed. Update this file immediately after completing each step.
 
 ---
 
@@ -97,13 +98,20 @@ Exit gate: CI green in a clean container; no unauthenticated route; no high band
       role's `owned_capabilities` and re-running the detector reports the
       divergent field (`test_catalog_drift_detector_can_fail_on_structural_divergence`).
       **Empirical finding (audit premise "reports 0 findings" was wrong):** the
-      detector ALREADY returned 8 entries at HEAD (7 financial-limit
-      runtime-vs-YAML mismatches + 1 C-1 presence mismatch). Those are honest
-      divergence: runtime enforcement limits are deliberately far more
-      conservative than YAML org-chart authority (raising them would loosen
-      enforcement; YAML is never-edit), so they remain SURFACED, not fabricated
-      clean. Post-F3: structural drift = **0**, financial drift = **8** (known,
-      accepted). F1 also merged here: `[tool.mypy] disable_error_code` grew
+      detector returned 8 entries at HEAD. **Re-verified 2026-09-20: all 8 are
+      `financial_approval_limit_usd` runtime-vs-YAML mismatches, and there are
+      ZERO presence mismatches.** The earlier record in this file claimed "7
+      financial-limit runtime-vs-YAML mismatches + 1 C-1 presence mismatch";
+      that was wrong. The `fraud_revenue_gm`→`fraud_gm` alias resolves to a
+      financial mismatch (`yaml=75000`), not a presence gap. Roles affected:
+      `ops_gm`, `compliance_quality_gm`, `fraud_gm`, `hr_personnel_gm`, `ld_gm`,
+      `sales_gm`, `marketing_gm`, `ict_gm` (`sami` is absent — the only unlimited
+      seat). Those are honest divergence: runtime enforcement limits are
+      deliberately far more conservative than YAML org-chart authority (raising
+      them would loosen enforcement; YAML is never-edit), so they remain
+      SURFACED, not fabricated clean. Post-F3: structural drift = **0**,
+      financial drift = **8** (known, accepted, and now pinned by an explicit
+      test so a 9th drift fails CI — see A0.5). F1 also merged here: `[tool.mypy] disable_error_code` grew
       `union-attr, truthy-function, index, override` (the 20 errors were on codes
       NOT in the existing 9-code disable list; matches the repo's "mypy is largely
       cosmetic" policy while keeping H1.1 fail-closed guards intact).
@@ -1396,3 +1404,185 @@ issued (commands withheld pending owner review).
 - **Verdict:** suitable for **controlled pilot** (supervised,
   synthetic-or-consented data) and gate-labeled **production
   candidate**; **not production** (Classes 2–5 open).
+
+---
+
+## 18. Governance streamlining + minimum production track (GOV-1) — IN PROGRESS
+
+**Recorded:** 2026-09-19/20 · **Plan:** approved (user, via ExitPlanMode) ·
+**Framing:** the user's "Deployment Journey: From Code Change to Public Claim" —
+**Produce → Prove → Permit**. Motto: *evidence precedes labels; labels precede
+claims.*
+
+### 18.1 Why this exists (read this before "opening the production gate")
+
+Two independent walls make production unreachable by engineering work:
+
+1. **`release/gate.py:250-287`** — the nine production-only gates are wrappers
+   over `_prod_gate_reason()` → `return False`. They read **no file, no env var,
+   no artifact**. They are fail-closed *by construction*, not by missing
+   evidence.
+2. **`release/signoff.py:140-146`** — `_all_production_gates_satisfied()` takes
+   no arguments and always returns `False`.
+
+The production *door* itself already works: `release/profiles.py:175-188`
+returns `"PRODUCTION"` when all 23 gates are green and `release_approved` is
+set (proven by `tests/test_pilot_readiness.py:47-53`). So the blocker is
+**evidence + external authority**, not code. The nine gates are:
+
+`signed_production_evidence`, `certified_data_isolation`,
+`external_observer_audit`, `production_deployment_architecture`,
+`disaster_recovery_evidence`, `operational_ownership`,
+`incident_oncall_ownership`, `security_review`, `legal_privacy_review`.
+
+The existing precedent for what the minimum production track must build is
+**`server/config.py:63-88`** (`require_headless_safe`): it already declares
+`HELIX_EVIDENCE_SIGNING_KEY`, `HELIX_ISOLATION_CERT`, `HELIX_OBSERVER_AUDIT`
+and refuses to start without them. B1 completes that design; it does not invent
+a new one.
+
+### 18.2 Phase 1 (A0) — correctness fixes — COMPLETE
+
+These were real defects, not preferences.
+
+- [x] **A0.1 — `universal_approvers` was dead code (the big one).**
+      `organization/role_catalog.py::load_role_catalog()` returned only
+      `schema_version, kpi_vocabulary, roles, roles_by_id, source_path`. It
+      **never** propagated `universal_approvers`, so
+      `control_plane/engine.py:967` `catalog.get("universal_approvers", [])`
+      was **always `[]`** — a governance control the ledger claimed was active
+      had never once fired. Fixed: the key is now validated once and returned.
+      Verified: `universal_approvers == ['sami', 'compliance_quality_gm']`.
+- [x] **A0.2 — duplicate validation block deleted.** `role_catalog.py` carried
+      the `universal_approvers` validation logic twice, verbatim. Collapsed to
+      one validated block that builds the returned list.
+- [x] **A0.3 — hardcoded super-approver literals removed.**
+      `security/policy.py` compared `req.identity.role_id not in ("sami",
+      "compliance_quality_gm")`. Now reads
+      `catalog.get("universal_approvers", [])`. Bonus: `_load_catalog()`'s
+      fallback (`{"roles_by_id": {}}`) makes this **more** fail-closed — on a
+      catalog failure `sami` is denied rather than silently allowed. Normal-path
+      behaviour is identical.
+- [x] **A0.4 — ledger drift claim corrected.** §H1.3 previously claimed
+      "7 financial-limit mismatches + 1 C-1 presence mismatch". Measured at
+      HEAD: **8 entries, all `financial_approval_limit_usd`, zero presence
+      mismatches**. The `fraud_revenue_gm`→`fraud_gm` alias resolves to a
+      *financial* mismatch (`yaml=75000`), not a presence one. `sami` is absent
+      — it is the only unlimited seat, so runtime and YAML agree.
+- [x] **A0.5 — the drift set is pinned.** `tests/test_c1_contracts.py` gained
+      `test_catalog_drift_is_exactly_the_accepted_financial_set` (exact field
+      set + exact role set + exact count) and
+      `test_catalog_drift_runtime_limits_never_exceed_yaml_authority`
+      (runtime ≤ YAML, skipping `yaml is None`). A 9th drift — e.g. a
+      structural regression — now fails CI instead of passing silently.
+      The shared pin lives in `control_plane/governance.py` as
+      `ACCEPTED_FINANCIAL_DRIFT_ROLES` so the test, the script and CI cannot
+      disagree about what "accepted" means.
+- [x] **A0.6 — both governance controls wired into CI.**
+      New **`scripts/check_governance_drift.py`** (house style of
+      `scripts/check_migration_drift.py`: `--json`, fail-closed, exit 1 on
+      anything unexpected). It fails on: a structural field drifting, a role
+      drifting outside the accepted set, an accepted role that **no longer**
+      drifts (stale pin), a runtime limit **above** the YAML authority, an
+      unset runtime limit, or the YAML failing to load. `.github/workflows/ci.yml`
+      gained two explicit steps (`Check governance catalog drift`,
+      `Check governance authority` → `python GOVERNANCE/governance_check.py
+      check`); previously neither ran in CI at all — they only executed because
+      a test happened to import them. Also added `scripts/ GOVERNANCE/` to the
+      `ruff check` step (both were format-checked but never linted).
+
+**Can-fail proof for A0.6** (run against a monkeypatched pin, since a green
+detector proves nothing):
+
+| Mutation | Result |
+|---|---|
+| baseline | 0 errors |
+| add `sami` to the pin (does not drift) | 1 error — "listed in ACCEPTED… but no longer drifts" |
+| drop `ops_gm` from the pin (does drift) | 2 errors — "newly diverging" + stale `sami` |
+| empty pin | 8 errors |
+
+**Accepted divergence, stated honestly:** the 8 financial mismatches are *not*
+fabricated clean. Runtime enforcement limits are deliberately far more
+conservative than the YAML org-chart authority (`sami` alone is unlimited).
+They remain surfaced and pinned, never suppressed.
+
+### 18.3 Gate (Phase 1) — PASSED
+
+- **Full suite:** `tests/ -q -m "not smoke"` → **1487 collected = 1485 passed
+  + 2 failed**, 442.99s (2026-09-20). The 2 failures are the two documented
+  sandbox artifacts, **not** repo failures — re-run in isolation they both
+  **pass** (`2 passed in 35.97s`). So the effective result is
+  **1487 passed, 0 real failures**.
+- **Count reconciliation:** baseline was 1483 passed; this phase added exactly
+  4 tests (2 in `test_c1_contracts.py`, 2 in `test_sod_integrity.py`) →
+  1487 collected. No pre-existing test changed status.
+- **Governance test set** (`test_c1_contracts.py`, `test_sod_integrity.py`,
+  `test_c3_security.py`, `test_c1a_capability_discovery.py`):
+  **132 passed, exit 0**.
+- `ruff check` clean on `control_plane/governance.py`,
+  `tests/test_c1_contracts.py`, `tests/test_sod_integrity.py`, `scripts/`
+  (all 10 files), `GOVERNANCE/`; `ruff format --check` clean.
+- `mypy server/ connectors/ control_plane/` → **no issues in 59 source files**.
+- `scripts/check_governance_drift.py` → exit 0, 8 roles diverging,
+  0 structural.
+- `GOVERNANCE/governance_check.py check` → `governance=PASS` (3/3).
+
+### 18.4 Sandbox / test-run note (Windows, do not re-discover)
+
+The WorkBuddy sandbox wraps `os.remove`/`os.unlink`/`shutil.rmtree` with a
+**turn-scoped cumulative bulk-delete guard** (threshold 50 files). A full pytest
+run deletes ~2000 temp files during `tmp_path` cleanup, so the guard trips and
+raises `SystemExit(1)` **at session finish — after all tests pass but before the
+summary line prints**, which looks exactly like a failure and is not one.
+
+The guard exempts the OS temp dir, but its Windows check misses paths carrying
+the `\\?\` long-path prefix — and the default `…\AppData\Local\Temp\pytest-of-…`
+path is long enough to acquire that prefix, so the exemption does not apply.
+
+The counter is **cumulative for the turn** and the `count` in the guard's JSON
+message is that cumulative total, *not* the size of the target. So once the
+budget is blown, **any** later delete in the same turn trips it — including
+deletes of *repo* files, which is how the two suite failures above arise:
+
+- `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers`
+  unlinks `observability/logs.jsonl`;
+- `test_c5_vertical_slice::test_existing_c0_c4_regression` runs
+  `scripts/smoke.py`, which writes `evidence/baseline/smoke.log` (subprocess
+  dies → empty stdout → assertion fails).
+
+Both pass in isolation with a fresh budget. **They are not repo failures and
+must not be "fixed" in code.** Two consequences worth knowing:
+
+- `rm`/`rm -rf` in the shell can be killed mid-command, so a `&&` chain will
+  silently stop. Prefer `mv` out of the repo over deleting.
+- Do not point `--basetemp` inside the repo to dodge the guard — the guard then
+  counts the repo tree and fails tests at *setup* (observed: 88 errors from a
+  2027-file `_pytest_tmp`).
+
+**Working recipe** (short temp root → exemption applies → guard never trips):
+
+```bash
+TMPDIR='E:\hx' TEMP='E:\hx' TMP='E:\hx' \
+  .venv-py312/Scripts/python.exe -m pytest tests/ -q -m "not smoke" \
+  --junitxml=E:/hx/full.xml > E:/hx/full.log 2>&1; echo "EXIT=$?"
+```
+
+Use a path **outside the repo** for `--junitxml` and the log. Pointing
+`--basetemp` *inside* the repo makes it worse (the guard counts the repo tree).
+The venv `.venv-py312` is the one with `pytest` + `pyyaml`; managed Python 3.13
+has neither.
+
+### 18.5 Next: Phase 2 (A1) — vocabulary single-sourcing
+
+Four incompatible data-mode vocabularies (connector / pilot / engine /
+app-runtime, plus the pack manifest's `{live, simulated}`) and three
+classification vocabularies. A1 collapses each to one source. Then Phase 3 (A2,
+remove the ~300-line structural mirror), Phase 4 (A3 unify SOD — implemented 5×
+— and A4 dead-code cleanup), Phase 5 (B1 evidence loader + nine gates +
+signoff), Phase 6 (B2–B4: real infra, paid external parties, legal/human
+authority — owner-driven, not engineering).
+
+**Do NOT touch** while doing this: `release/gate.py:250-287` bodies (beyond
+B1.2), `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,
+`connectors/policy.py:57`, `capabilities/sports_academy/contracts.py:77-86`,
+`capabilities/sports_academy/fixtures.py`, `pilot/*`, `00_CONSTITUTION.md`.

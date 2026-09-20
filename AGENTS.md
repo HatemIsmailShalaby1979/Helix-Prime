@@ -2646,6 +2646,12 @@ proof: `test_repository_state_gate_refuses_when_the_commit_is_not_attestable` ma
 git undetectable and asserts the refusal; three tests added, `test_c8_release_gate.py`
 31 passed.
 
+**Full suite after `c5ab690`:** 1706 collected = 1706 passed + 0 failed + 0 errors.
+Neither the §18.4 sandbox artifacts nor the §18.5 paging flake fired — the second
+completely clean full-suite run in this ledger's history. Targeted gate-affected
+files (C8, pilot readiness, app release gates, evidence producer, sign-off recorder):
+93 passed in 196s.
+
 #### A regression I introduced: making a list derived silently dropped its comments
 
 The fourteen per-gate purpose comments used to live in `release/profiles.py` beside

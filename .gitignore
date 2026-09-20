@@ -84,3 +84,4 @@ marketing/assets/*.mp4
 .workbuddy-ai/
 .tmp/
 .claude/worktrees/
+cookies.txt

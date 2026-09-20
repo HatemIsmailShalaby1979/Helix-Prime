@@ -15,9 +15,48 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from contracts.vocabulary import (
+    GOVERNED_MEMORY_KINDS,
+    GOVERNED_MEMORY_NATURES,
+    MEMORY_CLASSIFICATIONS,
+)
 from helix_codex_app.config import get_app_settings
 
-CLASSIFICATIONS = frozenset({"public", "internal", "client_confidential", "restricted"})
+#: The four-level governed-memory classification vocabulary, single-sourced from
+#: the shared seam module (``contracts/vocabulary.py``) rather than redeclared.
+#: The local name predates the seam and is imported by tests and the node
+#: invariants, so it is kept as an alias of the one declaration.
+CLASSIFICATIONS = MEMORY_CLASSIFICATIONS
+
+#: The node kinds this app writes. Two sources, both deliberate: the platform's
+#: governed-memory vocabulary (this table is the app-local half of that same
+#: seam, so it must accept the canonical kinds) plus the app's own domain nouns.
+#: The domain nouns are measured, not invented — the union of every literal
+#: ``kind=`` passed to :func:`record_node` in this package, cross-checked against
+#: a runtime probe of the whole app suite (755 writes, exact agreement).
+NODE_KINDS = GOVERNED_MEMORY_KINDS | frozenset(
+    {
+        "admin",
+        "block",
+        "capability_pack",
+        "document",
+        "event",
+        "event_response",
+        "message",
+        "notification",
+        "oncall_shift",
+        "proposal",
+        "punch",
+        "section",
+        "task",
+        "version",
+    }
+)
+
+#: The node natures this app writes, sourced the same way. ``system_event`` is
+#: app-only and has no canonical spelling, so it is the one addition; collapsing
+#: this set onto ``GOVERNED_MEMORY_NATURES`` alone would reject three live writers.
+NODE_NATURES = GOVERNED_MEMORY_NATURES | frozenset({"system_event"})
 
 _SCHEMA_DDL: tuple[str, ...] = (
     """
@@ -459,9 +498,16 @@ def record_node(
     """Append one node row and return its node_id.
 
     This is the single writer for the nodes table. The envelope is validated
-    here and only here: a blank tenant_id, a blank correlation_id, an unknown
-    classification, a missing nature, a missing provenance data_mode, and a
-    blank created_by all raise ValueError. A caller cannot skip the envelope.
+    here and only here, and the nodes table carries no CHECK constraints, so
+    this function is the whole guard: a blank tenant_id, a blank correlation_id,
+    an unknown classification, a blank or undeclared nature, a blank provenance
+    data_mode, a blank created_by, and a blank or undeclared kind all raise
+    ValueError.
+
+    ``nature`` and ``kind`` are checked against this app's own declared
+    vocabularies (:data:`NODE_NATURES`, :data:`NODE_KINDS`) and fail closed on
+    anything undeclared, so a new writer must add its noun to the vocabulary
+    rather than write an unchecked string into governed memory.
     """
     if not tenant_id or not tenant_id.strip():
         raise ValueError("record_node: tenant_id must not be blank")
@@ -474,12 +520,20 @@ def record_node(
         )
     if not nature or not nature.strip():
         raise ValueError("record_node: nature must not be blank")
+    if nature not in NODE_NATURES:
+        raise ValueError(
+            f"record_node: unknown nature {nature!r}; expected one of {sorted(NODE_NATURES)}"
+        )
     if not provenance_data_mode or not provenance_data_mode.strip():
         raise ValueError("record_node: provenance data_mode must not be blank")
     if not created_by or not created_by.strip():
         raise ValueError("record_node: created_by must not be blank")
     if not kind or not kind.strip():
         raise ValueError("record_node: kind must not be blank")
+    if kind not in NODE_KINDS:
+        raise ValueError(
+            f"record_node: unknown kind {kind!r}; expected one of {sorted(NODE_KINDS)}"
+        )
 
     resolved_node_id = node_id or f"node-{uuid.uuid4().hex}"
     resolved_created_at = created_at or datetime.now(timezone.utc).isoformat()

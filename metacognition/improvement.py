@@ -32,6 +32,12 @@ import os
 from dataclasses import asdict, dataclass
 from typing import Any, Callable, Mapping, Optional, Sequence
 
+from contracts.segregation_of_duties import (
+    SOD_SAME_ROLE,
+    SOD_SELF_APPROVAL,
+    approval_violation,
+)
+
 GENESIS_HASH = "0" * 64
 
 # Approval-state machine -------------------------------------------------------
@@ -395,9 +401,10 @@ class MetacognitionEngine:
             raise ProposalNotApprovableError(f"{proposal_id}: {reason}")
         req_actor = requester_actor or prev.created_by
         req_role = requester_role or prev.role_id
-        if reviewer == req_actor:
+        violation = approval_violation(req_actor, reviewer, req_role, approver_role)
+        if violation == SOD_SELF_APPROVAL:
             return ApprovalDecision("denied", "Self-approval denied (separation of duties)")
-        if approver_role == req_role:
+        if violation == SOD_SAME_ROLE:
             return ApprovalDecision("denied", "Same-role approval denied (separation of duties)")
         self._transition(proposal_id, reviewer=reviewer, approval_state=APPROVED)
         return ApprovalDecision("allowed", "Cross-role approval satisfied")

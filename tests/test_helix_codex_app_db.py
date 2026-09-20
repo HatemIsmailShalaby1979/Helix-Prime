@@ -159,3 +159,128 @@ def test_record_node_writes_the_full_envelope(tmp_path):
     assert row["created_by"] == "account-owner-1"
     assert row["provenance_source"] == "app"
     assert row["provenance_data_mode"] == "simulated_realistic"
+
+
+# ── A4: the node envelope validates declared vocabularies, not just blanks ──
+
+
+def test_the_classification_vocabulary_is_the_shared_single_declaration():
+    from contracts.vocabulary import MEMORY_CLASSIFICATIONS
+
+    assert db.CLASSIFICATIONS is MEMORY_CLASSIFICATIONS
+
+
+def test_the_node_vocabulary_is_the_canonical_seam_plus_app_nouns():
+    from contracts.vocabulary import GOVERNED_MEMORY_KINDS, GOVERNED_MEMORY_NATURES
+
+    assert db.NODE_KINDS >= GOVERNED_MEMORY_KINDS
+    assert db.NODE_NATURES >= GOVERNED_MEMORY_NATURES
+    # The app adds exactly one nature of its own; anything else is a bug.
+    assert db.NODE_NATURES - GOVERNED_MEMORY_NATURES == {"system_event"}
+
+
+def test_record_node_rejects_an_undeclared_nature(tmp_path):
+    conn = _store(tmp_path)
+    try:
+        envelope = dict(**VALID_ENVELOPE)
+        envelope["nature"] = "totally_made_up"
+        with pytest.raises(ValueError, match="unknown nature"):
+            db.record_node(conn, **envelope)
+    finally:
+        db.close(conn)
+
+
+def test_record_node_rejects_an_undeclared_kind(tmp_path):
+    conn = _store(tmp_path)
+    try:
+        envelope = dict(**VALID_ENVELOPE)
+        envelope["kind"] = "totally_made_up"
+        with pytest.raises(ValueError, match="unknown kind"):
+            db.record_node(conn, **envelope)
+    finally:
+        db.close(conn)
+
+
+def test_record_node_accepts_every_declared_nature(tmp_path):
+    conn = _store(tmp_path)
+    try:
+        for nature in sorted(db.NODE_NATURES):
+            envelope = dict(**VALID_ENVELOPE)
+            envelope["nature"] = nature
+            assert db.record_node(conn, **envelope)
+    finally:
+        db.close(conn)
+
+
+def test_record_node_accepts_every_declared_kind(tmp_path):
+    conn = _store(tmp_path)
+    try:
+        for kind in sorted(db.NODE_KINDS):
+            envelope = dict(**VALID_ENVELOPE)
+            envelope["kind"] = kind
+            assert db.record_node(conn, **envelope)
+    finally:
+        db.close(conn)
+
+
+def _kinds_and_natures_written_by_the_app() -> tuple[set[str], set[str]]:
+    """Literal ``kind=`` / ``nature=`` arguments passed to record_node in the app."""
+    import ast
+    import pathlib
+
+    root = pathlib.Path(db.__file__).resolve().parent
+    kinds: set[str] = set()
+    natures: set[str] = set()
+    for path in root.rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+            if name not in ("record_node", "_record_node"):
+                continue
+            for keyword in node.keywords:
+                if not isinstance(keyword.value, ast.Constant):
+                    continue
+                if keyword.arg == "kind":
+                    kinds.add(keyword.value.value)
+                elif keyword.arg == "nature":
+                    natures.add(keyword.value.value)
+    return kinds, natures
+
+
+def test_the_declared_vocabulary_covers_every_kind_and_nature_the_app_writes():
+    """The vocabulary cannot fall behind the code that writes to it."""
+    kinds, natures = _kinds_and_natures_written_by_the_app()
+    assert kinds, "expected to find record_node call sites"
+    assert natures, "expected to find record_node call sites"
+    assert kinds <= db.NODE_KINDS, f"undeclared kinds written: {sorted(kinds - db.NODE_KINDS)}"
+    assert (
+        natures <= db.NODE_NATURES
+    ), f"undeclared natures written: {sorted(natures - db.NODE_NATURES)}"
+
+
+def test_the_vocabulary_guard_can_fail(tmp_path, monkeypatch):
+    """Can-fail proof: an undeclared literal is caught, not ignored."""
+    import pathlib
+
+    (tmp_path / "writer.py").write_text(
+        "def write(conn):\n"
+        "    return record_node(conn, kind='undeclared_noun', nature='user_claim')\n",
+        encoding="utf-8",
+    )
+    real_file = pathlib.Path(db.__file__).resolve()
+    monkeypatch.setattr(db, "__file__", str(tmp_path / "db.py"))
+    try:
+        kinds, _ = _kinds_and_natures_written_by_the_app()
+        assert kinds == {"undeclared_noun"}
+        assert not kinds <= db.NODE_KINDS
+    finally:
+        monkeypatch.undo()
+    assert real_file.exists()

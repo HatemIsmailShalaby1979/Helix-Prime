@@ -82,7 +82,23 @@ def redact_dict(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def is_secret_present(text: str) -> bool:
-    """Check if text appears to contain a secret (for validation)."""
+    """
+    Check if text appears to carry a secret, for validation.
+
+    Detects exactly two things: a secret keyword used as an assignment
+    (``token=``, ``api_key:``, …) and the word ``bearer``, both skipped when the
+    text is already marked ``[redacted]``.
+
+    High-entropy detection is deliberately **not** implemented. A previous
+    revision computed a ``\\b[A-Za-z0-9]{32,}\\b`` match, guarded it with a
+    whole-string UUID exclusion and then did nothing with the result, so the
+    branch was dead code that never returned True. Making it live is a policy
+    decision, not a cleanup: this platform's own governed records carry
+    legitimate 64-character hex digests (ledger chain hashes, ``GENESIS_HASH``,
+    evidence digests) that the pattern matches, and :func:`validate_no_secrets`
+    raises on a positive — so implementing it as written would reject valid
+    governed payloads. An allow-list for digests has to exist first.
+    """
     if not isinstance(text, str):
         return False
     lower = text.lower()
@@ -95,14 +111,6 @@ def is_secret_present(text: str) -> bool:
     # Check for bearer token pattern
     if "bearer" in lower and "[redacted]" not in lower:
         return True
-    # Check for high-entropy token-like strings (e.g., 32+ hex chars)
-    if re.search(r"\b[A-Za-z0-9]{32,}\b", text) and "[redacted]" not in lower:
-        # But ignore UUIDs which are hex with dashes
-        if not re.match(
-            r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", text.strip().lower()
-        ):
-            # If it looks like a token and not already redacted, flag
-            pass
     return False
 
 

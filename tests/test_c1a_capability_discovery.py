@@ -279,3 +279,35 @@ def test_no_regression_c1_contracts_still_green():
         client_id="c",
     )
     assert req.owning_role_id == "ops_gm"
+
+
+# ── A4: the engine-capability fallback has exactly one branch ───────────────
+
+
+def test_registry_loads_engine_capabilities_from_the_yaml_when_none_is_given():
+    """``None`` means "read the canonical registry file"."""
+    from organization.capability_registry import build_registry_from_catalog
+
+    registry = build_registry_from_catalog(load_role_catalog())
+    assert registry.engine_capability_to_engine, "expected engine capabilities from the YAML"
+
+
+def test_registry_respects_an_explicit_engine_capability_mapping():
+    from organization.capability_registry import build_registry_from_catalog
+
+    registry = build_registry_from_catalog(load_role_catalog(), {"wfm_forecast": "wfm"})
+    assert registry.engine_capability_to_engine == {"wfm_forecast": "wfm"}
+
+
+def test_registry_respects_an_explicit_empty_mapping():
+    """``{}`` is a caller saying "no engine capabilities", not "go and load them".
+
+    This is the distinction the deleted duplicate ``if engine_capabilities is None``
+    block could not make: it was unreachable, and re-adding it would have turned a
+    deliberate empty mapping back into a file load.
+    """
+    from organization.capability_registry import build_registry_from_catalog
+
+    registry = build_registry_from_catalog(load_role_catalog(), {})
+    assert registry.engine_capability_to_engine == {}
+    assert registry.engine_capability_to_engines == {}

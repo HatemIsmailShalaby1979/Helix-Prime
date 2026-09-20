@@ -202,9 +202,6 @@ def build_registry_from_catalog(
         else:
             engine_capabilities = {}
 
-    if engine_capabilities is None:
-        engine_capabilities = {}
-
     # engine: capability -> engine, check ambiguous
     eng_to_cap: Dict[str, List[str]] = {}
     cap_to_engines: Dict[str, List[str]] = {}

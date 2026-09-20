@@ -15,6 +15,8 @@ from __future__ import annotations
 
 from typing import Any, Callable, Mapping, Sequence
 
+from contracts.segregation_of_duties import self_approval_violation
+
 from .contracts import (
     ConnectorContext,
     ConnectorResult,
@@ -271,6 +273,6 @@ class BaseConnector:
         approver_role = getattr(approval, "approver_role_id", None)
         if approver_actor in (None, "", context.actor) and approver_role in (None, "", ""):
             return False
-        if approver_actor == context.actor:
+        if self_approval_violation(context.actor, approver_actor):
             return False
         return True

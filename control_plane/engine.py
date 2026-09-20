@@ -8,6 +8,13 @@ from __future__ import annotations
 import datetime
 from typing import Any, Callable, Dict, Optional
 
+from contracts.segregation_of_duties import (
+    SOD_SAME_ROLE,
+    SOD_SELF_APPROVAL,
+    approval_violation,
+    declared_reviewers,
+    reviewer_authority_violation,
+)
 from contracts.task import AgentError, Approval, TaskRequest, TaskResult
 from control_plane.events import Event
 from control_plane.kill_switch import KillSwitch, KillSwitchEngaged
@@ -938,11 +945,17 @@ class Engine:
                 f"approve: approval correlation {approval.correlation_id!r} != workflow {workflow.correlation.correlation_id!r}"
             )
         # Validate SOD: approval already validates self-approval and same-role, but we double-check
-        if approval.approver_actor == workflow.requesting_actor:
+        violation = approval_violation(
+            workflow.requesting_actor,
+            approval.approver_actor,
+            workflow.owning_role_id,
+            approval.approver_role_id,
+        )
+        if violation == SOD_SELF_APPROVAL:
             raise ValueError(
                 f"approve: self-approval forbidden: approver {approval.approver_actor!r} == requester {workflow.requesting_actor!r}"
             )
-        if approval.approver_role_id == workflow.owning_role_id:
+        if violation == SOD_SAME_ROLE:
             raise ValueError(
                 f"approve: same-role approval forbidden: {approval.approver_role_id!r} == owning {workflow.owning_role_id!r}"
             )
@@ -951,24 +964,13 @@ class Engine:
         # Use catalog to check: if workflow's must_be_reviewed_by includes approver_role, allow; else check if approver can_review
         try:
             catalog = self.catalog
-            # Check if approver_role can review workflow's owning role
-            # For simplicity, allow if approver_role is in workflow's must_be_reviewed_by or is sami/compliance
-            workflow_role_data = catalog["roles_by_id"].get(workflow.owning_role_id, {})
-            must_review = workflow_role_data.get("segregation_of_duties", {}).get(
-                "must_be_reviewed_by", []
-            )
-            can_review = (
-                self.catalog["roles_by_id"]
-                .get(approval.approver_role_id, {})
-                .get("segregation_of_duties", {})
-                .get("can_review", [])
-            )
-            # Allow if approver is in must_review, can_review includes owning role, or is a universal approver
-            universal_approvers = set(catalog.get("universal_approvers", []))
-            allowed_approvers = set(must_review) | universal_approvers
-            if (
-                approval.approver_role_id not in allowed_approvers
-                and workflow.owning_role_id not in can_review
+            roles_by_id = catalog["roles_by_id"]
+            must_review = declared_reviewers(roles_by_id, workflow.owning_role_id)
+            if reviewer_authority_violation(
+                roles_by_id,
+                catalog.get("universal_approvers", []),
+                workflow.owning_role_id,
+                approval.approver_role_id,
             ):
                 raise ValueError(
                     f"approve: role {approval.approver_role_id!r} not authorized to approve {workflow.owning_role_id!r} (must be in {must_review} or can_review {workflow.owning_role_id!r})"

@@ -21,6 +21,11 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Optional
 
 from connectors.contracts import ConnectorContext, CustomerSignal, SourceRef
+from contracts.segregation_of_duties import (
+    SOD_SAME_ROLE,
+    SOD_SELF_APPROVAL,
+    approval_violation,
+)
 from customer_success.wedge import (
     AccountContextBundle,
     AccountHealthDiagnosis,
@@ -336,8 +341,8 @@ def evaluate_approval(
     view: CommandCenterView,
     approver_actor: str,
     approver_role_id: str,
-    requver_actor: Optional[str] = None,
-    requver_role: Optional[str] = None,
+    requester_actor: Optional[str] = None,
+    requester_role: Optional[str] = None,
 ) -> ApprovalDecision:
     """Enforce separation-of-duties for the cockpit approval preview.
 
@@ -345,14 +350,20 @@ def evaluate_approval(
     * Self-approval (approver == requester actor) is denied.
     * Same-role approval is denied.
     * Cross-role approval by the required role is allowed.
+
+    The first two rules are the shared predicates; only the required-role rule
+    is local to the cockpit preview.
     """
-    requester_actor = requver_actor or view.meta.actor
-    requester_role = requver_role or view.meta.role_id
+    requester_actor = requester_actor or view.meta.actor
+    requester_role = requester_role or view.meta.role_id
     if not view.approval_preview.required:
         return ApprovalDecision("not_required", "No approval required for this advisory action")
-    if approver_actor == requester_actor:
+    violation = approval_violation(
+        requester_actor, approver_actor, requester_role, approver_role_id
+    )
+    if violation == SOD_SELF_APPROVAL:
         return ApprovalDecision("denied", "Self-approval denied (separation of duties)")
-    if approver_role_id == requester_role:
+    if violation == SOD_SAME_ROLE:
         return ApprovalDecision("denied", "Same-role approval denied (separation of duties)")
     if approver_role_id != view.approval_preview.role:
         return ApprovalDecision(

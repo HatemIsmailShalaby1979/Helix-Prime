@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
 
+from contracts.segregation_of_duties import peer_authority_violation
 from organization.capability_registry import get_agent_for_capability, is_tool_allowed
 from organization.role_catalog import load_role_catalog
 from security.identity import Identity
@@ -138,15 +139,11 @@ def authorize(req: AuthorizationRequest) -> AuthorizationDecision:
             # Check if identity's role is allowed to call owner
             try:
                 catalog = _load_catalog()
-                peer_allowed = (
-                    catalog.get("roles_by_id", {})
-                    .get(req.identity.role_id, {})
-                    .get("allowed_peer_calls", [])
-                )
-                universal_approvers = set(catalog.get("universal_approvers", []))
-                if (
-                    owner_role not in peer_allowed
-                    and req.identity.role_id not in universal_approvers
+                if peer_authority_violation(
+                    catalog.get("roles_by_id", {}),
+                    catalog.get("universal_approvers", []),
+                    req.identity.role_id,
+                    owner_role,
                 ):
                     return AuthorizationDecision(
                         False,

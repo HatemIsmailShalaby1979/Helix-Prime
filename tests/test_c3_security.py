@@ -336,6 +336,44 @@ def test_get_secret_missing_fails():
         get_secret("HELIX_MISSING_SECRET_FOR_TEST_12345")
 
 
+def test_is_secret_present_detects_assignments_and_bearer_tokens():
+    from security.secrets import is_secret_present
+
+    assert is_secret_present("api_key=sk-1234567890abcdef") is True
+    assert is_secret_present("token: abc123") is True
+    assert is_secret_present("Authorization: Bearer abc.def.ghi") is True
+    assert is_secret_present("client=Account Alpha, value=123") is False
+
+
+def test_is_secret_present_ignores_redacted_text_and_non_strings():
+    from security.secrets import is_secret_present
+
+    assert is_secret_present("api_key=[redacted]") is False
+    assert is_secret_present("bearer [redacted]") is False
+    assert is_secret_present(None) is False
+    assert is_secret_present(1234) is False
+
+
+def test_high_entropy_digests_are_deliberately_not_treated_as_secrets():
+    """A recorded decision, not an oversight.
+
+    ``is_secret_present`` used to compute a ``\\b[A-Za-z0-9]{32,}\\b`` match and
+    then do nothing with it, so the branch was dead code. It stays deleted: this
+    platform's governed records carry legitimate 64-character hex digests, and
+    ``validate_no_secrets`` raises on a positive, so reviving the branch would
+    reject valid payloads. Reviving it needs a digest allow-list first.
+    """
+    from memory.governed_memory import GENESIS_HASH
+    from security.secrets import is_secret_present, validate_no_secrets
+
+    chain_hash = "a1b2c3d4" * 8
+    assert len(chain_hash) == 64
+    assert is_secret_present(chain_hash) is False
+    assert is_secret_present(GENESIS_HASH) is False
+    # A governed payload carrying those digests must still validate.
+    validate_no_secrets({"chain_hash": chain_hash, "genesis_hash": GENESIS_HASH})
+
+
 # ── audit hash-chain creation ──────────────────────────────────────────────
 
 

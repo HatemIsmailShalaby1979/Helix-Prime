@@ -330,3 +330,54 @@ def test_validate_mirror_drift_detects_stripped_provenance(monkeypatch, tmp_path
 
     with pytest.raises(ValueError, match="provenance"):
         validate_mirror_drift()
+
+
+# ── A4: RoleSpec.to_dict projects every stored field ────────────────────────
+
+
+def test_role_spec_to_dict_projects_every_stored_field():
+    """A projection that silently drops four fields is a lie about the seat."""
+    for role_id in sorted(gov.ORGANIZATION_CATALOG):
+        spec = gov.get_role(role_id)
+        projected = spec.to_dict()
+        for field in dataclasses.fields(spec):
+            assert field.name in projected, f"{role_id}: {field.name} missing from to_dict()"
+
+
+def test_role_spec_to_dict_emits_the_yaml_shape_for_sod():
+    """``segregation_of_duties`` is emitted with the YAML's keys, not the storage pair."""
+    projected = gov.get_role("ops_gm").to_dict()
+    assert projected["segregation_of_duties"] == {
+        "must_be_reviewed_by": ["compliance_quality_gm"],
+        "can_review": [],
+    }
+
+
+def test_role_spec_to_dict_round_trips_the_structural_fields_from_the_yaml():
+    yaml_roles = load_role_catalog()["roles_by_id"]
+    for role_id in sorted(gov.ORGANIZATION_CATALOG):
+        # The runtime catalog keeps one legacy seat name; the alias is declared,
+        # so the round-trip goes through it rather than around it.
+        yaml_role = yaml_roles[gov.YAML_ROLE_ALIASES.get(role_id, role_id)]
+        projected = gov.get_role(role_id).to_dict()
+        assert projected["owned_capabilities"] == list(yaml_role["owned_capabilities"])
+        assert projected["allowed_tools"] == list(yaml_role["allowed_tools"])
+        assert projected["allowed_peer_calls"] == list(yaml_role["allowed_peer_calls"])
+        assert projected["segregation_of_duties"] == {
+            "must_be_reviewed_by": list(yaml_role["segregation_of_duties"]["must_be_reviewed_by"]),
+            "can_review": list(yaml_role["segregation_of_duties"]["can_review"]),
+        }
+
+
+def test_role_spec_to_dict_is_json_serialisable():
+    """to_dict() exists to hand JSON-shaped records to adapters."""
+    for role_id in sorted(gov.ORGANIZATION_CATALOG):
+        json.dumps(gov.get_role(role_id).to_dict())
+
+
+def test_role_spec_to_dict_can_fail():
+    """Can-fail proof: the completeness guard above catches a dropped field."""
+    spec = gov.get_role("ops_gm")
+    incomplete = {k: v for k, v in spec.to_dict().items() if k != "allowed_peer_calls"}
+    missing = [f.name for f in dataclasses.fields(spec) if f.name not in incomplete]
+    assert missing == ["allowed_peer_calls"]

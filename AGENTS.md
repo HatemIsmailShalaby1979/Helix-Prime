@@ -2,9 +2,10 @@
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
 > **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
-> Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing) and
-> 3 (A2 — structural mirror removal) are COMPLETE; Phase 4 (A3 unify SOD + A4
-> dead-code cleanup) is next. Everything else is
+> Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing),
+> 3 (A2 — structural mirror removal) and 4 (A3 unify SOD + A4 dead-code cleanup)
+> are COMPLETE; Phase 5 (B1 evidence loader + the nine gates + signoff) is next.
+> Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
 > sections. Read this file top-to-bottom, then pick up from §18, or §5
@@ -1561,6 +1562,26 @@ must not be "fixed" in code.** Two consequences worth knowing:
   counts the repo tree and fails tests at *setup* (observed: 88 errors from a
   2027-file `_pytest_tmp`).
 
+**Two more traps, added 2026-09-20 (Phase 4):**
+
+- **The guard is cumulative per *turn*, not per command.** Repeated full-suite
+  runs in one turn keep adding to the same counter, so the budget is blown long
+  before the first run finishes and *later* runs fail for reasons the earlier
+  ones did not. Budget one full run per turn, or expect to explain the noise.
+- **`-q` hides which tests failed when the guard eats the summary.** The guard
+  trips *at session finish*, before the short-summary block prints, so a `-q` run
+  shows `F`s you cannot name. Use `-v --tb=line` and grep the log for `FAILED`:
+  per-test results print inline and survive the guard. `--junitxml` does **not**
+  survive it.
+- **`cockpit/` imports flat, and getting it wrong passes alone but fails in the
+  full suite.** `cockpit/` has no `__init__.py` and ships a `cockpit.py`, so
+  `from cockpit.command_center_integration import ...` resolves only until
+  another test puts `ROOT/cockpit` on `sys.path` — then `cockpit` becomes a
+  module rather than a package and the import dies with `'cockpit' is not a
+  package`. Follow the house convention used by
+  `tests/test_command_center_integration.py`: insert `ROOT / "cockpit"` on
+  `sys.path` and import `command_center_integration` flat.
+
 **Working recipe** (short temp root → exemption applies → guard never trips):
 
 ```bash
@@ -1765,17 +1786,241 @@ this process imported the catalog*. A hit there is a restart-worthy staleness
 condition, not evidence that two copies disagree. This is documented on the function
 itself; do not "fix" it by re-introducing a mirror.
 
-### 18.7 Next: Phase 4 (A3 unify SOD + A4 dead-code cleanup)
+### 18.7 Phase 4 (A3 unify SOD + A4 dead-code cleanup) — COMPLETE
 
-A3: segregation-of-duties is implemented five times —
-`control_plane/governance.py:1350-1404`, `control_plane/engine.py:914-979`,
-`contracts/task.py:492-506`, `pilot/approval.py:137-147`, `security/policy.py:133-162`
-— and must collapse onto one implementation without changing any verdict. A4:
-`security/secrets.py:98-105` (unreachable branch), `capability_registry.py:183,197`
-(duplicate `if engine_capabilities is None:`), `RoleSpec.to_dict()` omitting the four
-structural fields it stores, and the two divergent envelope validators
-(`memory/governed_memory.py:269-284` vs `helix_codex_app/db.py:466-482`, where the app
-one is materially weaker than its docstring claims).
+**Recorded:** 2026-09-20.
+
+#### A3 — segregation of duties is implemented once
+
+**The plan's count was wrong: eight implementations, not five.** The plan named
+`control_plane/governance.py`, `control_plane/engine.py`, `contracts/task.py`,
+`pilot/approval.py` and `security/policy.py`. Two independent scans — first a
+text scan for `approver == <subject>` comparisons, then an AST scan restricted to
+`ast.Compare` nodes so docstring prose could not trip it — found **three more**:
+
+| Site | Rule it carried |
+|---|---|
+| `cockpit/command_center_integration.py::evaluate_approval` | self-approval + same-role, plus a local required-role rule |
+| `connectors/base.py::_approval_valid` | self-approval only |
+| `metacognition/improvement.py::MetacognitionEngine.approve` | self-approval + same-role |
+
+The three extra sites returned **identical reason strings** ("Self-approval denied
+(separation of duties)", "Same-role approval denied (separation of duties)",
+"Cross-role approval satisfied") — which is what copy-paste looks like.
+
+**One implementation: `contracts/segregation_of_duties.py`.** It imports nothing
+from the repository, so every layer above it (`contracts`, `control_plane`,
+`security`, `cockpit`, `connectors`, `metacognition`, `pilot`) can import it with
+no cycle; verified by importing all twelve affected modules in both orders. Four
+violation codes (`self_approval`, `same_role`, `unauthorized_reviewer`,
+`unauthorized_peer`), four predicates, two catalog readers.
+
+**Seven sites rewired; one frozen and pinned instead.** `pilot/*` is on the
+Do-NOT-touch list, so `pilot/approval.py` is **unchanged**, following the §18.5
+precedent: the new tests assert its verdicts equal the shared predicates', so
+divergence fails CI without editing a deployed artifact.
+`capabilities/restaurant/runtime.py` and `capabilities/sports_academy/runtime.py`
+inherit it through `pilot/approval.py` and needed no change.
+
+**No verdict changed, and the proof is not "the suite still passes".** Every
+rewired site gets a *delegation proof*: the test replaces that module's own
+binding of the shared predicate and shows the verdict moves. A site that had kept
+a private copy would not move. Both directions are covered — force a violation →
+the site refuses; neutralise the predicate → the site that would have refused now
+allows. 70 new tests in `tests/test_segregation_of_duties.py`; six of the seven
+sites have both directions.
+
+**Equivalence probe** (independent of the test suite; HEAD's removed expressions
+transcribed verbatim and compared against the shared predicates over every
+`(owning_role, approver_role)` pair in the real catalog):
+
+| Comparison | Cases | Mismatches |
+|---|---|---|
+| reviewer authority vs HEAD's inline block | 121 | **0** |
+| peer authority vs HEAD's inline block | 121 | **0** |
+| approval identity vs HEAD's two literals | 81 | **0** |
+| `declared_reviewers` vs HEAD's `must_review` expression | 9 roles | **0** |
+
+323 cases, zero divergence. (The first run of this probe reported 121/121 and
+110/121 mismatches — the probe compared "allowed" against "violation". Recorded
+because a probe that agrees because it is broken is worse than no probe.)
+
+**What deliberately did not change.** The governed workflow manager still does
+**not** forbid same-role approval, unlike the C1 action contract and the C2
+engine. That is now a declared parameter (`enforce_same_role=False`) and a pinned
+test rather than an accident. The reachable path is narrower than it looks: a
+same-role approver is normally blocked by the role's own financial ceiling (same
+role ⇒ same limit ⇒ a task cannot be both frozen above that limit and approved
+within it), so the divergence is observable only via `requires_approval=True`.
+Also unchanged: `cockpit`'s required-role rule stays local to the cockpit
+preview, because it is not an SOD rule.
+
+**Two honest deviations from "no behaviour change at all":**
+
+1. **Hardening, not a verdict change.** HEAD raised a bare `TypeError` when
+   `segregation_of_duties.must_be_reviewed_by` was present but `null`; the shared
+   reader treats it as empty, so the verdict is now deterministic. Unreachable
+   through the loader (`role_catalog.py` requires a list), and pinned by
+   `test_malformed_sod_block_yields_a_verdict_instead_of_a_crash`.
+2. **Out-of-band defect fixed.** `cockpit/command_center_integration.py::evaluate_approval`
+   had its parameters spelled `requver_actor` / `requver_role`. Renamed to
+   `requester_actor` / `requester_role`; no caller passed either as a keyword, so
+   nothing observable moved.
+
+**Out-of-band defect found, not fixed:** `connectors/base.py::_approval_valid`
+guards with `approver_role in (None, "", "")` — a duplicated `""`. Harmless (the
+tuple is only tested for membership) but meaningless. Left alone: it sits one
+line outside the Do-NOT-touch region and changing it is not a cleanup.
+
+**Anti-duplication guard.** The new test file pins the set of modules containing
+a hand-rolled SOD equality comparison to exactly
+`{contracts/segregation_of_duties.py, pilot/approval.py}`. It is AST-based, so a
+docstring that merely *says* `approver == requester` does not trip it — both the
+can-fail proof and a "guard ignores prose" proof are in the file.
+
+#### A4 — dead-code cleanup
+
+**A4.1 — the unreachable high-entropy branch is deleted, not implemented.**
+`security/secrets.py::is_secret_present` computed `\b[A-Za-z0-9]{32,}\b`, guarded
+it with a whole-string UUID exclusion and then did nothing with the match, so the
+branch never returned `True`. Deleting it changes nothing observable. **Making it
+live is a policy decision, not a cleanup**, and the reason is measured: the
+platform's own governed records carry legitimate 64-character hex digests (ledger
+chain hashes, `GENESIS_HASH`, evidence digests) that the pattern matches, and
+`validate_no_secrets` raises on a positive — so the branch as written would reject
+valid payloads. Reviving it needs a digest allow-list first. The docstring now
+states what the function does and does not detect, and
+`test_high_entropy_digests_are_deliberately_not_treated_as_secrets` pins it.
+
+**A4.2 — the duplicate `if engine_capabilities is None` was unreachable.**
+`organization/capability_registry.py::build_registry_from_catalog` had a second
+`if engine_capabilities is None: engine_capabilities = {}` after a block that
+already assigns on every path. Deleted. Three tests now pin the semantics it was
+obscuring — including that an explicit `{}` means "no engine capabilities" and is
+**not** a request to load the file.
+
+**A4.3 — `RoleSpec.to_dict()` dropped four fields it stored.** It projected 8 of
+12 dataclass fields, omitting the four structural ones. It now projects all 12,
+with `segregation_of_duties` emitted in the YAML's own shape
+(`must_be_reviewed_by` / `can_review`) rather than as the internal pair, so a
+consumer can round-trip the record without knowing the storage order. Five tests,
+including a completeness guard driven by `dataclasses.fields()` and a can-fail
+proof. The round-trip test resolves the declared `fraud_revenue_gm`→`fraud_gm`
+alias rather than stepping around it.
+
+**A4.4 — the app node envelope validated blanks, not vocabularies.** The largest
+A4 item, and the docstring was the smaller half of the problem.
+`helix_codex_app/db.py::record_node` is the app's single node writer and the
+`nodes` table carries **no CHECK constraints**, so it is the entire guard — yet
+`nature` and `kind` were checked only for blankness, and the app declared no
+vocabulary for either anywhere. Any caller could write an invented nature into
+governed memory.
+
+The vocabulary was **measured two ways, which agreed exactly**: an AST scan of
+every `record_node(...)` call in `helix_codex_app` (14 kinds, 3 natures), and a
+runtime probe that instrumented `record_node` and ran the whole app suite
+(755 writes; same 14 kinds, same 3 natures). The declared sets are therefore:
+
+| Set | Size | Source |
+|---|---|---|
+| `CLASSIFICATIONS` | 4 | **alias** of `contracts.vocabulary.MEMORY_CLASSIFICATIONS` — one declaration, not two |
+| `NODE_NATURES` | 7 | `GOVERNED_MEMORY_NATURES` ∪ `{system_event}` |
+| `NODE_KINDS` | 23 | `GOVERNED_MEMORY_KINDS` ∪ 14 app nouns |
+
+`contracts/vocabulary.py` gained `GOVERNED_MEMORY_KINDS` / `GOVERNED_MEMORY_NATURES`
+as **re-exports** of `memory.governed_memory`, in the same style as
+`CORE_CLASSIFICATIONS` (re-exported, not redeclared). The union is necessary, not
+decorative: the app's own suite writes nodes with the canonical
+`verified_fact` / `decision` pair, so the app envelope is the app-local half of
+the same governed-memory seam and must accept the canonical vocabulary plus its
+own nouns. `system_event` is the only app-only nature and has no canonical
+spelling. **Do not collapse `NODE_NATURES` onto the canonical set** — it would
+reject three live writers. `helix_codex_app/db.py` importing
+`contracts.vocabulary` follows the A1 precedent (the app already imports
+`APP_RUNTIME_DATA_MODE` from it in eight modules); the bridge rule in
+`helix_codex_app/integration/__init__.py` covers `control_plane`, `engines`,
+`security`, `memory`, `metacognition`, `capabilities` and `connectors`, not
+`contracts`.
+
+`tests/test_helix_codex_app_db.py` gained 8 tests, including a guard that every
+literal `kind=`/`nature=` the app writes is declared — so the vocabulary cannot
+fall behind the code that writes to it — with a can-fail proof.
+
+#### Gate (Phase 4)
+
+- **Full suite:** `tests/ -q -m "not smoke"` → **1645 collected = 1638 passed +
+  5 failed + 2 errors**, 1015.64s. One of the 5 was a *new* A4 test
+  (`test_role_spec_to_dict_round_trips_the_structural_fields_from_the_yaml`,
+  `KeyError: 'fraud_revenue_gm'` — the declared alias, now resolved); it is fixed,
+  so the expected result is **4 failures**, all pre-existing and none from this
+  work. See §18.4 for why the run cannot print a clean summary on Windows.
+- **Count reconciles exactly.** Measured at HEAD in a scratch `git worktree`:
+  **1556 collected**. This phase added exactly **89** tests → 1645:
+
+  | File | HEAD | Now | Added |
+  |---|---|---|---|
+  | `tests/test_segregation_of_duties.py` | — | 70 | 70 |
+  | `tests/test_helix_codex_app_db.py` | 8 | 16 | 8 |
+  | `tests/test_governance_catalog_source.py` | 23 | 28 | 5 |
+  | `tests/test_c3_security.py` | 22 | 25 | 3 |
+  | `tests/test_c1a_capability_discovery.py` | 14 | 17 | 3 |
+
+  No pre-existing test changed status.
+- **The 4 remaining failures are not repo failures.** Two are the documented
+  sandbox artifacts (§18.4). Two are the pre-existing tie-ambiguous paging flake
+  first recorded in §18.5 — see the corrected measurement below.
+- `ruff check` clean on every CI path (`server/`, `connectors/`,
+  `control_plane/`, `contracts/`, `security/`, `organization/`, `cockpit/`,
+  `metacognition/`, `memory/`, `helix_codex_app/`, `scripts/`, `GOVERNANCE/`,
+  `tests/`); `ruff format --check` clean on all 17 touched files.
+- `mypy server/ connectors/ control_plane/ contracts/ security/` → **no issues in
+  72 source files**.
+- `scripts/check_governance_drift.py` → exit 0, 8 roles diverging, 0 structural.
+- `GOVERNANCE/governance_check.py check` → `governance=PASS` (3/3).
+- `scripts/sync_capability_mirrors.py --check` → both mirrors exactly what the
+  canonical generates (22 engine mappings).
+
+**Re-run after the A4.3 fix (same day, post-fix confirmation).** The recorded run
+above predates the fix to the new A4.3 round-trip test, so it was re-measured on
+the frozen tree with the §18.4 recipe (`-v --tb=line`, short temp root):
+
+**1645 collected = 1643 passed + 2 failed + 0 errors**, 18m 0s. The recorded
+"expect 4 failures" is superseded — this run produced **2**, and both are
+environment-dependent rather than repo failures, proven by re-running them alone
+with `--basetemp` outside the repo: **2 passed in 11.16s**.
+
+| Failure | Class |
+|---|---|
+| `tests/helix_codex_app/test_messaging_routes.py::test_list_messages_route_pages_with_a_cursor` | pre-existing tie-ambiguous paging flake (corrected below) |
+| `tests/test_pilot_readiness.py::test_dry_run_records_no_data_violations` | sandbox denied `…/pilot/control_plane/workflow.db-journal` — the §18.4 bulk-delete-guard class |
+
+The A4.3 round-trip test that failed in the recorded run now passes. Note the
+guard tripped again at session finish (`count: 2927, threshold: 50`, target under
+`\\?\E:\hx\…`), so the short summary never printed and the `-v` per-test lines
+are the only surviving record — exactly as §18.4 warns.
+
+#### Corrected residual debt: chat paging loses a message (higher rate than recorded)
+
+§18.5 recorded this as "observed flaking once during verification (1 of 5 runs)".
+Measured now: the full suite failed **both** paging tests in one run, and
+`tests/helix_codex_app/test_messaging.py::test_list_messages_paginates_correctly`
+failed **1 of 6 runs on a pristine `git worktree` at HEAD** — so it is
+pre-existing and unrelated to Phase 4 (`git diff` on
+`helix_codex_app/modules/messaging/` is empty). The failure mode is exactly as
+described: `created_at < ?` excludes **both** messages when two share a
+`created_at`, so `page_two` comes back **empty** and a message is silently lost.
+
+The fix is still a keyset cursor on `(created_at, rowid)`, which changes the
+public signature and the router. That is an API change with a client-visible
+effect and needs its own decision — it is **not** A3/A4 scope and was not fixed
+here. It is now CI-visible at a much higher rate than previously recorded, so it
+should be scheduled rather than left as a footnote.
+
+### 18.8 Next: Phase 5 (B1 evidence loader + the nine gates + signoff)
+
+Phase 5 (B1 evidence loader + nine gates + signoff), then Phase 6 (B2–B4: real
+infra, paid external parties, legal/human authority — owner-driven, not
+engineering).
 
 Then Phase 5 (B1 evidence loader + nine gates + signoff), Phase 6 (B2–B4: real infra,
 paid external parties, legal/human authority — owner-driven, not engineering).

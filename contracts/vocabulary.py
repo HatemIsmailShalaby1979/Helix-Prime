@@ -56,6 +56,8 @@ from __future__ import annotations
 
 from typing import Dict, FrozenSet
 
+from memory.governed_memory import KINDS as _MEMORY_KINDS
+from memory.governed_memory import NATURES as _MEMORY_NATURES
 from security.classification import DataClassification
 
 # ── data modes: one declaration per seam ────────────────────────────────────
@@ -177,6 +179,16 @@ _TO_PILOT: Dict[str, str] = {
     ENGINE_SAMPLE: PILOT_SIMULATED_REALISTIC,
     PACK_SIMULATED: PILOT_SIMULATED_REALISTIC,
 }
+
+# ── governed-memory kind and nature vocabularies ────────────────────────────
+
+#: The governed-memory seam's record kinds and epistemic natures, re-exported
+#: from ``memory.governed_memory`` for the same reason as
+#: :data:`CORE_CLASSIFICATIONS`: one declaration, not two. The app database
+#: validates its node envelope against these *plus* its own domain nouns, which
+#: is why they are surfaced here rather than reached for across the app seam.
+GOVERNED_MEMORY_KINDS: FrozenSet[str] = frozenset(_MEMORY_KINDS)
+GOVERNED_MEMORY_NATURES: FrozenSet[str] = frozenset(_MEMORY_NATURES)
 
 # ── classification vocabularies ─────────────────────────────────────────────
 

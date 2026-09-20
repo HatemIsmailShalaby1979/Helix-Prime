@@ -21,6 +21,12 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from contracts.segregation_of_duties import (
+    SOD_SAME_ROLE,
+    SOD_SELF_APPROVAL,
+    approval_violation,
+)
+
 SCHEMA_VERSION = "1.0"
 
 # ── helpers ────────────────────────────────────────────────────────────────
@@ -490,13 +496,19 @@ class Action:
         # ownership boundary: if requires_approval and approval present, approver must differ from actor when SOD would apply.
         # C1 enforces: approver_actor != actor (no self-approval) when requires_approval True.
         if self.requires_approval and self.approval is not None:
-            if self.approval.approver_actor == self.actor:
+            violation = approval_violation(
+                self.actor,
+                self.approval.approver_actor,
+                self.owning_role_id,
+                self.approval.approver_role_id,
+            )
+            if violation == SOD_SELF_APPROVAL:
                 raise ValueError(
                     f"Action: approver_actor {self.approval.approver_actor!r} cannot be same as actor {self.actor!r} (self-approval forbidden)"
                 )
-            if self.approval.approver_role_id == self.owning_role_id:
-                # flag but allow if explicitly documented; for C1 we forbid same-role approval when requires_approval
-                # This enforces SOD: cannot approve own actions.
+            if violation == SOD_SAME_ROLE:
+                # C1 forbids same-role approval when requires_approval, which enforces
+                # SOD: an actor cannot approve their own role's actions.
                 raise ValueError(
                     f"Action: approver_role_id {self.approval.approver_role_id!r} cannot be same as owning_role_id {self.owning_role_id!r} (SOD violation)"
                 )

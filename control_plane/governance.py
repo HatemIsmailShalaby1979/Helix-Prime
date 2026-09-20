@@ -43,6 +43,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
+from contracts.segregation_of_duties import self_approval_violation
 from contracts.task import (
     CorrelationContext as _BaseCorrelationContext,
 )
@@ -203,6 +204,16 @@ class RoleSpec:
         return normalize_engine(engine) in {normalize_engine(e) for e in self.owned_engines}
 
     def to_dict(self) -> Dict[str, Any]:
+        """
+        Project the seat as a JSON-shaped role record.
+
+        Every stored field is projected, including the four structural ones, so a
+        seat read from the runtime catalog is shaped like the YAML entry it came
+        from. ``segregation_of_duties`` is emitted with the YAML's own keys rather
+        than as the internal ``(must_review, can_review)`` pair, so a consumer can
+        round-trip the record without knowing the storage order.
+        """
+        must_review, can_review = self.segregation_of_duties or ((), ())
         return {
             "role_id": self.role_id,
             "display_name": self.display_name,
@@ -212,6 +223,13 @@ class RoleSpec:
             "financial_approval_limit_usd": self.financial_approval_limit_usd,
             "kpis": list(self.kpis),
             "oversight_only": self.oversight_only,
+            "owned_capabilities": list(self.owned_capabilities),
+            "allowed_tools": list(self.allowed_tools),
+            "allowed_peer_calls": list(self.allowed_peer_calls),
+            "segregation_of_duties": {
+                "must_be_reviewed_by": list(must_review),
+                "can_review": list(can_review),
+            },
         }
 
     # Mapping-style access keeps the catalog convenient for adapters that consume
@@ -1346,13 +1364,18 @@ class GovernedWorkflowManager:
           * task must be in ``awaiting_approval``
           * no self-approval (segregation of duties)
           * the approver's own limit must cover the task's estimated cost
+
+        The self-approval rule is the shared predicate. This manager deliberately
+        does *not* forbid same-role approval, unlike the C1 action contract and the
+        C2 workflow engine; that scope difference is pinned in
+        ``tests/test_segregation_of_duties.py`` rather than left to drift.
         """
         record = self._load(task_id)
         if record.state != WorkflowState.AWAITING_APPROVAL:
             raise GovernanceStateError(
                 f"approve: task {task_id!r} is {record.state!r}, not awaiting_approval"
             )
-        if approver_id == record.actor_id:
+        if self_approval_violation(record.actor_id, approver_id):
             raise GovernanceStateError(
                 f"approve: segregation of duties — approver {approver_id!r} cannot approve their own task"
             )

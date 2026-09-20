@@ -2,11 +2,14 @@
 Capability registry for Helix Prime Codex C1a.
 
 Canonical source of truth:
-- organization/capability-registry.yaml is the ONE canonical file for engine capabilities.
-  Mirrors contracts/capabilities.yaml and organization/capabilities.json are GENERATED
-  and MUST have identical engine_capabilities as the canonical. Drift is detected
-  by tests/test_capability_registry_drift.py and by validate_mirrors() below.
-  Do not maintain independent hand-edited copies.
+- organization/capability-registry.yaml is the ONE canonical file for engine
+  capabilities. Nothing reads the mirrors at runtime — this module loads the
+  canonical file directly.
+- contracts/capabilities.yaml and organization/capabilities.json are *generated
+  artifacts*, written only by scripts/sync_capability_mirrors.py. They exist because
+  consumers expect those two paths. validate_mirror_drift() below checks that a
+  committed mirror is current, and CI re-runs the generator with --check.
+  Do not hand-edit them.
 
 Other canonical:
 - Agent capabilities: organization/role-catalog.yaml (owned_capabilities per role)
@@ -35,6 +38,11 @@ from organization.role_catalog import load_role_catalog
 
 DEFAULT_ROLE_CATALOG = "organization/role-catalog.yaml"
 DEFAULT_CAPABILITY_REGISTRY = "organization/capability-registry.yaml"
+
+#: Repository root (this file lives in organization/). Mirror validation resolves
+#: against it so the check does not silently pass-or-skip depending on the caller's
+#: working directory.
+_REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 class CapabilityRegistry:
@@ -286,59 +294,73 @@ def route_task_request(request: Any) -> str:
 
 def validate_mirror_drift() -> None:
     """
-    Drift detection for capability registry mirrors.
+    Check that the committed capability-registry mirrors are current.
 
     Canonical: organization/capability-registry.yaml
-    Mirrors must have identical engine_capabilities:
+    Generated mirrors (written only by scripts/sync_capability_mirrors.py):
       - contracts/capabilities.yaml
       - organization/capabilities.json
 
-    Raises ValueError with details if drift detected. Used by
-    tests/test_capability_registry_drift.py and can be called at startup.
+    Each mirror must carry the canonical's ``engine_capabilities`` *and* its
+    provenance (``schema_version`` + ``canonical_source``), so a mirror cannot
+    quietly become a hand-maintained orphan. A missing mirror fails rather than
+    being skipped: the consumer that expects the path would break, so silence here
+    would be a false pass.
+
+    Raises ValueError with details if a mirror is missing, unreadable,
+    unprovenanced or divergent. Used by tests/test_capability_registry_drift.py and
+    alongside the CI step that runs ``scripts/sync_capability_mirrors.py --check``.
     """
     import json
 
-    canonical_path = pathlib.Path(DEFAULT_CAPABILITY_REGISTRY)
+    canonical_path = _REPO_ROOT / DEFAULT_CAPABILITY_REGISTRY
     if not canonical_path.exists():
         raise ValueError(f"canonical capability registry not found at {canonical_path}")
     if yaml is None:
         raise ValueError("PyYAML not installed for drift check")
-    canonical_data = yaml.safe_load(canonical_path.read_text(encoding="utf-8"))
-    canonical_eng = (
-        (canonical_data or {}).get("engine_capabilities", {})
-        if isinstance(canonical_data, dict)
-        else {}
-    )
+    try:
+        canonical_data = yaml.safe_load(canonical_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        raise ValueError(f"failed to load canonical {canonical_path}: {e}") from e
+    if not isinstance(canonical_data, dict):
+        raise ValueError(f"{canonical_path}: top-level must be a mapping")
+    canonical_eng = canonical_data.get("engine_capabilities", {})
+    canonical_schema = canonical_data.get("schema_version")
 
-    # Check YAML mirror
-    yaml_mirror = pathlib.Path("contracts/capabilities.yaml")
-    if yaml_mirror.exists():
-        try:
-            y_data = yaml.safe_load(yaml_mirror.read_text(encoding="utf-8"))
-            y_eng = (
-                (y_data or {}).get("engine_capabilities", {}) if isinstance(y_data, dict) else {}
-            )
-        except Exception as e:
-            raise ValueError(f"failed to load YAML mirror {yaml_mirror}: {e}") from e
-        if y_eng != canonical_eng:
+    def _check(relative_path: str, *, is_json: bool) -> None:
+        mirror = _REPO_ROOT / relative_path
+        if not mirror.exists():
             raise ValueError(
-                f"drift detected: contracts/capabilities.yaml engine_capabilities != canonical "
-                f"{canonical_path} — fix by regenerating mirror from canonical"
+                f"mirror {relative_path} is missing — regenerate with "
+                f"'python scripts/sync_capability_mirrors.py'"
+            )
+        try:
+            raw = mirror.read_text(encoding="utf-8")
+            data = json.loads(raw) if is_json else yaml.safe_load(raw)
+        except Exception as e:
+            raise ValueError(f"failed to load mirror {relative_path}: {e}") from e
+        if not isinstance(data, dict):
+            raise ValueError(f"{relative_path}: top-level must be a mapping")
+        if data.get("engine_capabilities") != canonical_eng:
+            raise ValueError(
+                f"drift detected: {relative_path} engine_capabilities != canonical "
+                f"{DEFAULT_CAPABILITY_REGISTRY} — regenerate with "
+                f"'python scripts/sync_capability_mirrors.py'"
+            )
+        if data.get("schema_version") != canonical_schema:
+            raise ValueError(
+                f"drift detected: {relative_path} schema_version "
+                f"{data.get('schema_version')!r} != canonical {canonical_schema!r}"
+            )
+        if data.get("canonical_source") != DEFAULT_CAPABILITY_REGISTRY:
+            raise ValueError(
+                f"{relative_path}: canonical_source "
+                f"{data.get('canonical_source')!r} must name "
+                f"{DEFAULT_CAPABILITY_REGISTRY!r} so the mirror's provenance is explicit"
             )
 
-    # Check JSON mirror
-    json_mirror = pathlib.Path("organization/capabilities.json")
-    if json_mirror.exists():
-        try:
-            j_data = json.loads(json_mirror.read_text(encoding="utf-8"))
-            j_eng = j_data.get("engine_capabilities", {}) if isinstance(j_data, dict) else {}
-        except Exception as e:
-            raise ValueError(f"failed to load JSON mirror {json_mirror}: {e}") from e
-        if j_eng != canonical_eng:
-            raise ValueError(
-                f"drift detected: organization/capabilities.json engine_capabilities != canonical "
-                f"{canonical_path}"
-            )
+    _check("contracts/capabilities.yaml", is_json=False)
+    _check("organization/capabilities.json", is_json=True)
 
 
 # For tests that need to build from synthetic catalog + drift detection

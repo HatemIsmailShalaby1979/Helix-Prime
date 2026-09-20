@@ -1,10 +1,14 @@
 # Helix Prime — CANONICAL Capability Registry (Codex C1a) — ONE SOURCE OF TRUTH
 # Canonical: organization/capability-registry.yaml (this file)
-# Mirrors (generated/validated, do not hand-edit independently):
-#   - contracts/capabilities.yaml (YAML mirror for contracts consumers)
-#   - organization/capabilities.json (JSON mirror for JSON consumers)
-# Mirrors MUST have identical engine_capabilities as this file; drift is detected by tests/test_capability_registry_drift.py
-# Agents' capabilities are canonical in organization/role-catalog.yaml (owned_capabilities) and merged at runtime via organization/capability_registry.py
+# Mirrors (GENERATED ARTIFACTS — do not hand-edit):
+#   - contracts/capabilities.yaml (YAML view)
+#   - organization/capabilities.json (JSON view)
+# Regenerate the mirrors with: python scripts/sync_capability_mirrors.py
+# They are written only by that script; CI runs it with --check and
+# tests/test_capability_registry_drift.py validates the committed copies.
+# Nothing reads the mirrors at runtime — organization/capability_registry.py loads
+# this file directly. Agents' capabilities are canonical in
+# organization/role-catalog.yaml (owned_capabilities) and merged at runtime.
 # No capability is silently ambiguous — duplicates fail closed.
 schema_version: "1.0"
 generated: "2026-08-27"

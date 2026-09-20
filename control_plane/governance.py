@@ -18,10 +18,16 @@ B. Functional architecture of bounded autonomy.
 Maintenance notes
 -----------------
 * ORGANIZATION_CATALOG below is the *control-plane runtime authority* for financial
-  approval gating. Structural role data (capabilities, tools, peer calls,
-  segregation of duties) remains in ``organization/role-catalog.yaml``.
-  ``detect_catalog_drift()`` reports divergence between the two instead of letting it
-  rot silently.
+  approval gating: ``owned_engines``, ``allowed_data_classifications``, ``kpis``,
+  ``oversight_only`` and the financial enforcement ceiling are declared here.
+* Structural role data (capabilities, tools, peer calls, segregation of duties) is
+  **sourced from** ``organization/role-catalog.yaml`` at import — it is not mirrored
+  here. ``detect_catalog_drift()`` compares the live file against the imported
+  snapshot so a stale in-process catalog is visible rather than silent.
+* The runtime authorizers (``contracts.adapter``, ``security.policy``,
+  ``control_plane.engine``) all read the YAML catalog's ``roles_by_id`` directly.
+  They never read ``RoleSpec``'s structural fields, which is why sourcing those
+  fields from the YAML cannot change an authorisation decision.
 * The contract models in this module SUBCLASS the canonical ``contracts.task`` models
   rather than redefining them. A governance ``TaskRequest`` therefore stays a valid
   input to ``control_plane.engine.Engine.submit()``: one type, one validation path,
@@ -35,7 +41,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, FrozenSet, List, Optional, Tuple
 
 from contracts.task import (
     CorrelationContext as _BaseCorrelationContext,
@@ -153,8 +159,10 @@ class RoleSpec:
     unlimited (SAMI only, and only via human escalation).
 
     The structural fields (owned_capabilities, allowed_tools, allowed_peer_calls,
-    segregation_of_duties) are sourced from organization/role-catalog.yaml and
-    used by detect_catalog_drift() to surface any divergence.
+    segregation_of_duties) are sourced from organization/role-catalog.yaml at import
+    and are read only by detect_catalog_drift(). Authorisation decisions read the
+    YAML catalog directly, so these fields are drift telemetry rather than
+    enforcement inputs.
     """
 
     role_id: str
@@ -239,7 +247,167 @@ _ALL_CLASSIFICATIONS: Tuple[str, ...] = (
     DataClassification.REGULATED_HIGH_RISK,
 )
 
+#: Runtime role id -> YAML role id. The runtime catalog renamed ``fraud_revenue_gm``
+#: after ``organization/role-catalog.yaml`` was authored; the rename is documented in
+#: ``organization/gm_activation.py``. Structural fields for the renamed seat are read
+#: from the YAML entry it aliases.
+YAML_ROLE_ALIASES: Dict[str, str] = {"fraud_revenue_gm": "fraud_gm"}
+
+
+class RoleCatalogUnavailableError(RuntimeError):
+    """
+    Raised when organization/role-catalog.yaml cannot be read while building the
+    runtime catalog.
+
+    Fail closed. The four structural fields are *derived* from the YAML rather than
+    mirrored here, so a governance layer that cannot read its own source of truth
+    must refuse to start rather than come up with an empty capability map that would
+    silently authorise nothing (or, worse, everything).
+    """
+
+
+def _structural_role_fields() -> Dict[str, Dict[str, Any]]:
+    """
+    Read the structural role fields from organization/role-catalog.yaml.
+
+    The four fields returned per role — ``owned_capabilities``, ``allowed_tools``,
+    ``allowed_peer_calls`` and ``segregation_of_duties`` — are the ones the YAML owns
+    outright. The runtime catalog used to carry hand-copied duplicates of all four and
+    ``detect_catalog_drift()`` existed to notice when the copies rotted; deriving them
+    removes the copy instead of policing it.
+
+    The remaining ``RoleSpec`` fields stay hand-written on purpose:
+
+    * ``owned_engines`` / ``allowed_data_classifications`` — the YAML's
+      ``readable_data_domains`` is a different vocabulary (domains, not
+      ``DataClassification`` labels), so it cannot be projected onto them.
+    * ``kpis`` — the YAML list is the shared org-chart vocabulary; the runtime list is
+      the seat's own enforcement set.
+    * ``display_name`` / ``mission`` — the runtime strings are deliberately terser
+      than the YAML prose.
+    * ``oversight_only`` — runtime-only concept, absent from the YAML schema.
+    * ``financial_approval_limit_usd`` — the runtime value is the *enforcement
+      ceiling* and is deliberately stricter than the YAML org-chart authority; see
+      :data:`FINANCIAL_LIMIT_OVERRIDES`.
+
+    Raises:
+        RoleCatalogUnavailableError: the YAML is unreadable, malformed, or missing a
+            seat the runtime catalog needs.
+    """
+    from organization.role_catalog import load_role_catalog
+
+    try:
+        yaml_catalog = load_role_catalog("organization/role-catalog.yaml")
+    except Exception as exc:
+        raise RoleCatalogUnavailableError(
+            "cannot read organization/role-catalog.yaml, which owns the structural "
+            f"role fields (owned_capabilities, allowed_tools, allowed_peer_calls, "
+            f"segregation_of_duties): {exc}"
+        ) from exc
+
+    yaml_roles: Dict[str, Any] = yaml_catalog.get("roles_by_id", {})
+
+    # Index by *runtime* id. The two catalogs disagree on exactly one seat's name
+    # (YAML fraud_gm, runtime fraud_revenue_gm), so the alias is resolved here and the
+    # rest of the module never has to know.
+    by_runtime_id: Dict[str, Any] = dict(yaml_roles)
+    for runtime_id, yaml_id in YAML_ROLE_ALIASES.items():
+        if yaml_id in yaml_roles:
+            by_runtime_id[runtime_id] = yaml_roles[yaml_id]
+
+    return {
+        role_id: {
+            "owned_capabilities": tuple(role.get("owned_capabilities") or ()),
+            "allowed_tools": tuple(role.get("allowed_tools") or ()),
+            "allowed_peer_calls": tuple(role.get("allowed_peer_calls") or ()),
+            "segregation_of_duties": (
+                tuple((role.get("segregation_of_duties") or {}).get("must_be_reviewed_by") or ()),
+                tuple((role.get("segregation_of_duties") or {}).get("can_review") or ()),
+            ),
+        }
+        for role_id, role in by_runtime_id.items()
+    }
+
+
+#: Structural fields for every seat, resolved once at import.
+_STRUCTURAL_FIELDS: Dict[str, Dict[str, Any]] = _structural_role_fields()
+
+
+def _structural(role_id: str) -> Dict[str, Any]:
+    """
+    Structural fields for one runtime seat, or a fail-closed error.
+
+    Called once per seat while building ``_ROLE_CATALOG``, so a seat that exists in
+    the runtime catalog but not in the YAML fails the import rather than silently
+    getting an empty capability set.
+    """
+    try:
+        return _STRUCTURAL_FIELDS[role_id]
+    except KeyError:
+        raise RoleCatalogUnavailableError(
+            f"role {role_id!r} has no structural entry in organization/role-catalog.yaml "
+            f"(known runtime ids: {sorted(_STRUCTURAL_FIELDS)})"
+        ) from None
+
+
+# ── runtime financial enforcement ceilings ─────────────────────────────────
+#
+# These are a *policy decision*, not drift. organization/role-catalog.yaml is the
+# org chart: what each seat is entitled to authorise. The values below are what the
+# platform actually lets a seat authorise before freezing the task for a human.
+#
+# Every entry narrows authority relative to the org chart; none widens it.
+# ``tests/test_c1_contracts.py::test_catalog_drift_runtime_limits_never_exceed_yaml_authority``
+# proves the narrowing, and ``scripts/check_governance_drift.py`` fails CI if the set
+# of overriding seats changes.
+
+#: Seats whose runtime ceiling is deliberately stricter than the YAML authority.
+#: Declared here rather than left to be discovered by comparing two files.
+FINANCIAL_LIMIT_OVERRIDES: Dict[str, Optional[float]] = {
+    "ops_gm": 500.00,
+    "compliance_quality_gm": 0.00,
+    "fraud_revenue_gm": 0.00,
+    "hr_personnel_gm": 1_000.00,
+    "ld_gm": 200.00,
+    "sales_gm": 2_500.00,
+    "marketing_gm": 500.00,
+    "ict_gm": 5_000.00,
+}
+
+#: Seats whose runtime ceiling is unlimited — reachable only through human
+#: escalation. Declared separately from the override map so that "no override
+#: applies" and "explicitly unlimited" remain different statements.
+UNLIMITED_FINANCIAL_ROLES: FrozenSet[str] = frozenset({"sami"})
+
+#: The seats whose runtime ceiling overrides the YAML. Derived from
+#: :data:`FINANCIAL_LIMIT_OVERRIDES` rather than hand-maintained, so the declaration
+#: and the accepted-drift pin cannot disagree.
+ACCEPTED_FINANCIAL_DRIFT_ROLES: FrozenSet[str] = frozenset(FINANCIAL_LIMIT_OVERRIDES)
+
+
+def _financial_limit(role_id: str) -> Optional[float]:
+    """
+    Runtime enforcement ceiling for one seat, or a fail-closed error.
+
+    Called once per seat while building ``_ROLE_CATALOG``. A seat that declares
+    neither an override nor an unlimited ceiling fails the import, so a newly added
+    seat cannot silently inherit "unlimited" authority by omission.
+    """
+    if role_id in FINANCIAL_LIMIT_OVERRIDES:
+        return FINANCIAL_LIMIT_OVERRIDES[role_id]
+    if role_id in UNLIMITED_FINANCIAL_ROLES:
+        return None
+    raise RoleCatalogUnavailableError(
+        f"role {role_id!r} declares no runtime financial ceiling; every seat must "
+        f"appear in FINANCIAL_LIMIT_OVERRIDES or UNLIMITED_FINANCIAL_ROLES"
+    )
+
+
 #: Canonical Organization Catalog & Role Matrix (8 Functional GMs + SAMI).
+#:
+#: Authority fields (what the runtime owns and the YAML does not) are literal here.
+#: Structural fields are spliced in from the YAML via ``**_structural(role_id)`` so
+#: there is exactly one copy of them in the tree.
 _ROLE_CATALOG: Dict[str, RoleSpec] = {
     "sami": RoleSpec(
         role_id="sami",
@@ -250,46 +418,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         owned_engines=_ALL_ENGINES,
         allowed_data_classifications=_ALL_CLASSIFICATIONS,
-        financial_approval_limit_usd=None,  # unlimited, human-escalated only
+        financial_approval_limit_usd=_financial_limit("sami"),  # unlimited, human-escalated only
         kpis=("system_health", "operational_margin"),
-        owned_capabilities=(
-            "strategic_oversight",
-            "executive_coordination",
-            "cross_gm_escalation",
-            "resource_allocation",
-            "enterprise_summary",
-        ),
-        allowed_tools=(
-            "ollama",
-            "cognitive_log",
-            "orchestrator_routing",
-            "crm_engine_read",
-            "wfm_engine_read",
-            "cx_engine_read",
-        ),
-        allowed_peer_calls=(
-            "hr_personnel_gm",
-            "marketing_gm",
-            "sales_gm",
-            "compliance_quality_gm",
-            "ict_gm",
-            "fraud_gm",
-            "ld_gm",
-            "ops_gm",
-        ),
-        segregation_of_duties=(
-            (),  # must_review
-            (
-                "hr_personnel_gm",
-                "marketing_gm",
-                "sales_gm",
-                "compliance_quality_gm",
-                "ict_gm",
-                "fraud_gm",
-                "ld_gm",
-                "ops_gm",
-            ),  # can_review
-        ),
+        **_structural("sami"),
     ),
     "ops_gm": RoleSpec(
         role_id="ops_gm",
@@ -300,29 +431,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.INTERNAL,
             DataClassification.CLIENT_CONFIDENTIAL,
         ),
-        financial_approval_limit_usd=500.00,
+        financial_approval_limit_usd=_financial_limit("ops_gm"),
         kpis=("sla", "service_level", "occupancy", "adherence", "aht"),
-        owned_capabilities=(
-            "ops_execution",
-            "service_performance",
-            "wfm_forecast",
-            "rta_adherence",
-            "cx_monitoring",
-            "staffing_optimization",
-            "schedule_adherence",
-        ),
-        allowed_tools=("wfm_engine", "rta_engine", "cx_engine", "ollama", "cognitive_log"),
-        allowed_peer_calls=(
-            "hr_personnel_gm",
-            "ld_gm",
-            "sami",
-            "compliance_quality_gm",
-            "fraud_gm",
-        ),
-        segregation_of_duties=(
-            ("compliance_quality_gm",),  # must_review
-            (),  # can_review
-        ),
+        **_structural("ops_gm"),
     ),
     "compliance_quality_gm": RoleSpec(
         role_id="compliance_quality_gm",
@@ -333,48 +444,10 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
         ),
         owned_engines=(),  # oversight only: proposes, never executes
         allowed_data_classifications=_ALL_CLASSIFICATIONS,
-        financial_approval_limit_usd=0.00,
+        financial_approval_limit_usd=_financial_limit("compliance_quality_gm"),
         kpis=("quality_score", "compliance_drift"),
         oversight_only=True,
-        owned_capabilities=(
-            "policy_enforcement",
-            "qa_sampling",
-            "risk_controls",
-            "evidence_pack",
-            "escalation_review",
-            "calibration",
-            "corrective_actions",
-        ),
-        allowed_tools=(
-            "policy_engine",
-            "audit_log",
-            "evidence_store",
-            "ollama",
-            "cognitive_log",
-            "all_engines_read",
-        ),
-        allowed_peer_calls=(
-            "ops_gm",
-            "hr_personnel_gm",
-            "sales_gm",
-            "fraud_gm",
-            "ld_gm",
-            "marketing_gm",
-            "ict_gm",
-            "sami",
-        ),
-        segregation_of_duties=(
-            (),  # must_review
-            (
-                "ops_gm",
-                "hr_personnel_gm",
-                "sales_gm",
-                "fraud_gm",
-                "marketing_gm",
-                "ld_gm",
-                "ict_gm",
-            ),  # can_review
-        ),
+        **_structural("compliance_quality_gm"),
     ),
     "fraud_revenue_gm": RoleSpec(
         role_id="fraud_revenue_gm",
@@ -386,28 +459,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.CLIENT_CONFIDENTIAL,
             DataClassification.FINANCIAL,
         ),
-        financial_approval_limit_usd=0.00,
+        financial_approval_limit_usd=_financial_limit("fraud_revenue_gm"),
         kpis=("leakage", "anomaly_delta"),
-        owned_capabilities=(
-            "anomaly_detection",
-            "leakage_analysis",
-            "fraud_investigation",
-            "revenue_assurance",
-            "abuse_detection",
-        ),
-        allowed_tools=(
-            "crm_engine_read",
-            "b2b_engine_read",
-            "cx_engine_read",
-            "anomaly_engine",
-            "ollama",
-            "cognitive_log",
-        ),
-        allowed_peer_calls=("compliance_quality_gm", "sales_gm", "ops_gm", "sami"),
-        segregation_of_duties=(
-            ("compliance_quality_gm",),  # must_review
-            (),  # can_review
-        ),
+        **_structural("fraud_revenue_gm"),
     ),
     "hr_personnel_gm": RoleSpec(
         role_id="hr_personnel_gm",
@@ -418,22 +472,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.INTERNAL,
             DataClassification.PERSONNEL_SENSITIVE,
         ),
-        financial_approval_limit_usd=1_000.00,
+        financial_approval_limit_usd=_financial_limit("hr_personnel_gm"),
         kpis=("turnover_rate", "time_to_hire"),
-        owned_capabilities=(
-            "talent_acquisition",
-            "hiring_pipeline",
-            "workforce_planning",
-            "attrition_analysis",
-            "retention_strategy",
-            "personnel_policy",
-        ),
-        allowed_tools=("personnel_engine", "wfm_engine_read", "ollama", "cognitive_log"),
-        allowed_peer_calls=("ops_gm", "ld_gm", "sami", "compliance_quality_gm"),
-        segregation_of_duties=(
-            ("compliance_quality_gm",),  # must_review
-            (),  # can_review
-        ),
+        **_structural("hr_personnel_gm"),
     ),
     "ld_gm": RoleSpec(
         role_id="ld_gm",
@@ -444,30 +485,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.INTERNAL,
             DataClassification.PERSONNEL_SENSITIVE,
         ),
-        financial_approval_limit_usd=200.00,
+        financial_approval_limit_usd=_financial_limit("ld_gm"),
         kpis=("competency_score", "time_to_competency"),
-        owned_capabilities=(
-            "competency_analysis",
-            "training_design",
-            "curriculum_development",
-            "assessment",
-            "certification",
-            "knowledge_transfer",
-        ),
-        allowed_tools=(
-            "wili_engine",
-            "personnel_engine_read",
-            "ollama",
-            "cognitive_log",
-            "education_service_read",
-            "studio_service_read",
-            "ldcc_service_read",
-        ),
-        allowed_peer_calls=("hr_personnel_gm", "ops_gm", "sami", "compliance_quality_gm"),
-        segregation_of_duties=(
-            ("compliance_quality_gm", "hr_personnel_gm"),  # must_review
-            (),  # can_review
-        ),
+        **_structural("ld_gm"),
     ),
     "sales_gm": RoleSpec(
         role_id="sales_gm",
@@ -478,24 +498,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.INTERNAL,
             DataClassification.CLIENT_CONFIDENTIAL,
         ),
-        financial_approval_limit_usd=2_500.00,
+        financial_approval_limit_usd=_financial_limit("sales_gm"),
         kpis=("pipeline_value", "win_rate"),
-        owned_capabilities=(
-            "pipeline_management",
-            "deal_qualification",
-            "proposal_generation",
-            "revenue_execution",
-            "crm_operations",
-            "b2b_handoff",
-            "sales_pipeline",
-            "customer_support",
-        ),
-        allowed_tools=("crm_engine", "b2b_engine", "ollama", "cognitive_log"),
-        allowed_peer_calls=("marketing_gm", "ops_gm", "sami", "compliance_quality_gm", "fraud_gm"),
-        segregation_of_duties=(
-            ("compliance_quality_gm",),  # must_review
-            (),  # can_review
-        ),
+        **_structural("sales_gm"),
     ),
     "marketing_gm": RoleSpec(
         role_id="marketing_gm",
@@ -506,22 +511,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.PUBLIC,
             DataClassification.INTERNAL,
         ),
-        financial_approval_limit_usd=500.00,
+        financial_approval_limit_usd=_financial_limit("marketing_gm"),
         kpis=("cac", "lead_volume"),
-        owned_capabilities=(
-            "market_intelligence",
-            "campaign_management",
-            "positioning",
-            "demand_generation",
-            "content_review",
-            "attribution",
-        ),
-        allowed_tools=("crm_engine_read", "approved_content", "ollama", "cognitive_log"),
-        allowed_peer_calls=("sales_gm", "sami", "compliance_quality_gm"),
-        segregation_of_duties=(
-            ("compliance_quality_gm",),  # must_review
-            (),  # can_review
-        ),
+        **_structural("marketing_gm"),
     ),
     "ict_gm": RoleSpec(
         role_id="ict_gm",
@@ -532,29 +524,9 @@ _ROLE_CATALOG: Dict[str, RoleSpec] = {
             DataClassification.INTERNAL,
             DataClassification.REGULATED_HIGH_RISK,
         ),
-        financial_approval_limit_usd=5_000.00,
+        financial_approval_limit_usd=_financial_limit("ict_gm"),
         kpis=("engine_latency", "model_timeout"),
-        owned_capabilities=(
-            "platform_ops",
-            "integration_management",
-            "security",
-            "reliability",
-            "release_operations",
-            "incident_management",
-        ),
-        allowed_tools=(
-            "platform_runtime",
-            "integration_hub",
-            "deployment_pipeline",
-            "observability",
-            "ollama",
-            "cognitive_log",
-        ),
-        allowed_peer_calls=("compliance_quality_gm", "sami", "ops_gm"),
-        segregation_of_duties=(
-            ("compliance_quality_gm",),  # must_review
-            (),  # can_review
-        ),
+        **_structural("ict_gm"),
     ),
 }
 
@@ -642,48 +614,33 @@ def resolve_actor_role(actor_id: str, fallback_role_id: Optional[str] = None) ->
     return ""
 
 
-#: Roles whose runtime ``financial_approval_limit_usd`` is intentionally lower
-#: than the YAML org-chart authority. The runtime limits are the *enforcement*
-#: ceiling and are deliberately more conservative than the authority recorded in
-#: ``organization/role-catalog.yaml`` (which is never edited). The divergence is
-#: therefore accepted and pinned here rather than suppressed: a structural
-#: regression, a new role, or a runtime limit that drifts *above* the YAML
-#: authority still fails CI.
-#:
-#: ``sami`` is absent by design — it is the only unlimited seat, so its runtime
-#: and YAML values agree.
-ACCEPTED_FINANCIAL_DRIFT_ROLES = frozenset(
-    {
-        "ops_gm",
-        "compliance_quality_gm",
-        "fraud_revenue_gm",
-        "hr_personnel_gm",
-        "ld_gm",
-        "sales_gm",
-        "marketing_gm",
-        "ict_gm",
-    }
-)
+#: The accepted-drift set is declared up with the ceilings it describes — see
+#: :data:`FINANCIAL_LIMIT_OVERRIDES` and :data:`ACCEPTED_FINANCIAL_DRIFT_ROLES`.
 
 
 def detect_catalog_drift() -> List[Dict[str, Any]]:
     """
     Report divergence between this runtime catalog and organization/role-catalog.yaml.
 
-    The YAML remains the source of truth for capabilities, tools, peer calls and
-    segregation-of-duties. This function compares all five fields (capabilities,
-    tools, peer calls, segregation-of-duties, and the financial approval limit) so
-    drift between the two is visible in CI instead of being discovered during an
-    audit.
+    Five fields are compared. They now fall into two distinct classes, and the
+    distinction matters when reading a report:
+
+    * ``financial_approval_limit_usd`` — a **genuine, intentional divergence**. The
+      runtime value is the enforcement ceiling and is deliberately stricter than the
+      YAML org-chart authority. Exactly the eight seats in
+      :data:`ACCEPTED_FINANCIAL_DRIFT_ROLES` diverge, and each is declared in
+      :data:`FINANCIAL_LIMIT_OVERRIDES`.
+    * ``owned_capabilities`` / ``allowed_tools`` / ``allowed_peer_calls`` /
+      ``segregation_of_duties`` — **derived** from the YAML at import (see
+      :func:`_structural_role_fields`), so these entries are no longer a
+      mirror-divergence signal. A hit here means the file changed on disk *after*
+      this process imported the catalog, i.e. the in-memory authority is stale. That
+      is a restart-worthy condition, and it still fails CI.
 
     Callers that need to distinguish accepted divergence from regression should
     compare the result against :data:`ACCEPTED_FINANCIAL_DRIFT_ROLES`; see
     ``scripts/check_governance_drift.py``.
     """
-    # The runtime catalog renamed fraud_revenue_gm after the YAML was authored; the
-    # alias is documented in organization/gm_activation.py. Resolve it here so the
-    # role's structural fields are compared against the correct YAML entry.
-    yaml_role_aliases = {"fraud_revenue_gm": "fraud_gm"}
 
     def _field(y: Dict[str, Any], r: Any, key: str, normalize: bool = False) -> None:
         y_val = y.get(key)
@@ -719,7 +676,7 @@ def detect_catalog_drift() -> List[Dict[str, Any]]:
 
     yaml_roles = yaml_catalog.get("roles_by_id", {})
     for role_id, spec in ORGANIZATION_CATALOG.items():
-        y = yaml_roles.get(role_id) or yaml_roles.get(yaml_role_aliases.get(role_id, ""))
+        y = yaml_roles.get(role_id) or yaml_roles.get(YAML_ROLE_ALIASES.get(role_id, ""))
         if y is None:
             drift.append(
                 {
@@ -1632,10 +1589,15 @@ __all__ = [
     "MIN_AUTONOMY_CONFIDENCE",
     "AccessDeniedError",
     "GovernanceStateError",
+    "RoleCatalogUnavailableError",
     "RoleSpec",
     "ORGANIZATION_CATALOG",
     "ENGINE_ALIASES",
     "ACTOR_ALIASES",
+    "YAML_ROLE_ALIASES",
+    "FINANCIAL_LIMIT_OVERRIDES",
+    "UNLIMITED_FINANCIAL_ROLES",
+    "ACCEPTED_FINANCIAL_DRIFT_ROLES",
     "normalize_engine",
     "get_role",
     "resolve_actor_role",

@@ -1,7 +1,8 @@
-# Helix Prime — GENERATED MIRROR — DO NOT HAND-EDIT INDEPENDENTLY
+# Helix Prime — GENERATED MIRROR — DO NOT HAND-EDIT
+# Regenerate with: python scripts/sync_capability_mirrors.py
 # Canonical: organization/capability-registry.yaml (engine_capabilities)
-# This file: contracts/capabilities.yaml — YAML mirror for contracts consumers
-# Mirrors are validated against canonical by tests/test_capability_registry_drift.py
+# This file: contracts/capabilities.yaml — YAML view for consumers that expect this path
+# Verified current by tests/test_capability_registry_drift.py and by --check in CI.
 # Agent capabilities are canonical in organization/role-catalog.yaml (owned_capabilities).
 schema_version: "1.0"
 generated: "2026-08-27"

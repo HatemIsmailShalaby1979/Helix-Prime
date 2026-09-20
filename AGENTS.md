@@ -2,8 +2,9 @@
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
 > **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
-> Phases 1 (A0 — correctness fixes) and 2 (A1 — vocabulary single-sourcing) are
-> COMPLETE; Phase 3 (A2 — structural mirror removal) is next. Everything else is
+> Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing) and
+> 3 (A2 — structural mirror removal) are COMPLETE; Phase 4 (A3 unify SOD + A4
+> dead-code cleanup) is next. Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
 > sections. Read this file top-to-bottom, then pick up from §18, or §5
@@ -1671,24 +1672,115 @@ A1's scope. Observed flaking once during verification (1 of 5 runs).
   unformatted, as noted in §1A).
 - `mypy server/ connectors/ control_plane/` → no issues, 59 files.
 
-### 18.6 Next: Phase 3 (A2) — remove the structural mirror
+### 18.6 Phase 3 (A2) — structural mirror removal — COMPLETE
 
-Load the `RoleSpec` structural fields (`owned_capabilities`, `allowed_tools`,
-`allowed_peer_calls`, `segregation_of_duties`) from `role-catalog.yaml` at import
-instead of maintaining them by hand in `control_plane/governance.py:243-559`
-(~300 lines). Replace the 8 silent financial divergences with an explicit, named
-`FINANCIAL_LIMIT_OVERRIDES` map so the policy decision is declared rather than
-left as drift. Collapse the capability-registry mirror set
-(`organization/capability_registry.py:287-341`).
+**The reconnaissance that made this safe.** Before touching anything, the four
+structural fields were traced to their readers. Result: `owned_capabilities`,
+`allowed_tools`, `allowed_peer_calls` and `segregation_of_duties` have **exactly one
+reader in the whole tree** — `detect_catalog_drift()`. Every runtime authorizer reads
+the *YAML dict* via `roles_by_id`, not `RoleSpec`:
 
-**Hard requirement:** `evaluate_gate` output must stay byte-identical, and
-`detect_catalog_drift()` must still pass — that is the proof A2 did not break
-governance. Then Phase 4 (A3 unify SOD — implemented 5× — and A4 dead-code
-cleanup), Phase 5 (B1 evidence loader + nine gates + signoff), Phase 6 (B2–B4:
-real infra, paid external parties, legal/human authority — owner-driven, not
-engineering).
+| Consumer | Where | Reads |
+| --- | --- | --- |
+| `contracts/adapter.py` | `validate_request_against_catalog` (`:138`) | `catalog["roles_by_id"]` |
+| `security/policy.py` | `authorize` (`:140`) | `_load_catalog()["roles_by_id"]` |
+| `control_plane/engine.py` | `approve` (`:953`) | `self.catalog["roles_by_id"]` |
 
-**Do NOT touch** while doing this: `release/gate.py:250-287` bodies (beyond
-B1.2), `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,
+and `evaluate_gate` reads only `role_id`, `financial_approval_limit_usd`,
+`allowed_data_classifications` (via `can_read`) and `owned_engines` (via
+`owns_engine`). So sourcing the structural fields from the YAML is a pure
+de-duplication **by construction**, not by luck. This is the fact to re-verify first
+if anyone ever re-opens A2.
+
+**A2.1 — sourced, not mirrored.** Added `YAML_ROLE_ALIASES` (hoisted out of
+`detect_catalog_drift`), `RoleCatalogUnavailableError`, `_structural_role_fields()`
+(reads the YAML once at import) and `_structural(role_id)` (splices the four fields
+into each seat literal). The nine hand-copied blocks became nine
+`**_structural("<seat>")` lines. Fail-closed at import: PyYAML is a declared hard
+dependency (`requirements.txt:33`, `pyproject.toml:29`) and the YAML is already
+load-bearing for authorisation, so a governance layer that cannot read its own source
+of truth must refuse to start rather than come up with an empty capability map.
+
+The non-structural fields stay hand-written on purpose, and the reason matters:
+`owned_engines` / `allowed_data_classifications` cannot be projected from the YAML
+because `readable_data_domains` is a different vocabulary (domains vs
+`DataClassification` labels); `kpis`, `display_name`, `mission` and `oversight_only`
+are runtime-only or deliberately terser; and the financial ceiling is a policy
+decision (below).
+
+**A2.2 — the divergences are declared, not discovered.** `FINANCIAL_LIMIT_OVERRIDES`
+names all eight stricter runtime ceilings; `UNLIMITED_FINANCIAL_ROLES` names `sami`
+separately, so "no override applies" and "explicitly unlimited" stay different
+statements; `_financial_limit()` fails closed for a seat that declares neither, so a
+newly added seat cannot inherit unlimited authority by omission. Critically,
+`ACCEPTED_FINANCIAL_DRIFT_ROLES` is now **derived** from the override map
+(`frozenset(FINANCIAL_LIMIT_OVERRIDES)`), so the declaration and the CI pin cannot
+disagree. Side effect worth keeping: the A0.5 test
+`test_catalog_drift_is_exactly_the_accepted_financial_set` now doubles as "an
+override that no longer overrides anything must be deleted from the map".
+
+**A2.3 — the mirrors became build artifacts.** The capability-registry mirrors have
+**no runtime consumers at all**: `capability_registry.py` loads the canonical
+`organization/capability-registry.yaml` directly, and only `validate_mirror_drift()`
+plus its test ever read `contracts/capabilities.yaml` /
+`organization/capabilities.json`. They existed to satisfy expected paths, kept in step
+by a validator whose entire job was to police copies nothing consumed.
+`tests/test_capability_registry_drift.py` pins their existence and the plan requires
+that test to stay green unmodified, so deletion was not available. Instead
+`scripts/sync_capability_mirrors.py` is now the **only** writer, with `--check` wired
+into CI. Output is deterministic (the mirrors inherit the canonical's `generated`
+stamp, so regenerating an unchanged canonical is a no-op). `validate_mirror_drift()`
+was reframed as an artifact-freshness check that also enforces provenance
+(`schema_version` + `canonical_source`), now **fails on a missing mirror** instead of
+skipping it silently, and resolves its paths from the repo root rather than the
+caller's CWD. Its module docstring also named a non-existent `validate_mirrors()` —
+fixed.
+
+**The honest line count.** The plan said "~300 lines gone". The catalog *literal*
+went **318 → 121 lines (−197)**. The file as a whole went 1651 → 1613 (**net −38**),
+because the loader (~90 lines incl. docstrings), the A2.2 policy declaration (~50) and
+the new test file and script are genuinely new code. The right way to read that: ~197
+lines of duplicated YAML are gone and the duplication is now **impossible** rather
+than **policed** — which is worth more than the delta, but is not "300 lines deleted".
+
+**Proof of equivalence.** A scratch probe (outside the repo) imported the working tree
+and `git show HEAD:control_plane/governance.py` side by side and compared them:
+
+- 9 seats × 12 `RoleSpec` fields — all identical, plus `to_dict()` identical.
+- **13,125 `evaluate_gate` cases byte-identical** (every seat × 6 classifications ×
+  9 engines × 9 costs × 3 confidences, plus the unknown-role, unknown-classification
+  and `requires_approval` paths).
+- `detect_catalog_drift()` identical; `resolve_actor_role` identical for every crew
+  alias, every catalog id and an unknown actor.
+
+**New tests.** `tests/test_governance_catalog_source.py` (23 tests) proves the YAML is
+the source, that gating is independent of the structural fields (blanking all four on
+every seat must not move a gate decision), that the override map and the accepted-drift
+pin agree, and that a stale / diverged / missing / unprovenanced mirror is caught.
+Each guard has a can-fail proof.
+
+**Watch-out for the next team.** The structural entries in `detect_catalog_drift()` are
+no longer a mirror-divergence signal — they now mean *the YAML changed on disk after
+this process imported the catalog*. A hit there is a restart-worthy staleness
+condition, not evidence that two copies disagree. This is documented on the function
+itself; do not "fix" it by re-introducing a mirror.
+
+### 18.7 Next: Phase 4 (A3 unify SOD + A4 dead-code cleanup)
+
+A3: segregation-of-duties is implemented five times —
+`control_plane/governance.py:1350-1404`, `control_plane/engine.py:914-979`,
+`contracts/task.py:492-506`, `pilot/approval.py:137-147`, `security/policy.py:133-162`
+— and must collapse onto one implementation without changing any verdict. A4:
+`security/secrets.py:98-105` (unreachable branch), `capability_registry.py:183,197`
+(duplicate `if engine_capabilities is None:`), `RoleSpec.to_dict()` omitting the four
+structural fields it stores, and the two divergent envelope validators
+(`memory/governed_memory.py:269-284` vs `helix_codex_app/db.py:466-482`, where the app
+one is materially weaker than its docstring claims).
+
+Then Phase 5 (B1 evidence loader + nine gates + signoff), Phase 6 (B2–B4: real infra,
+paid external parties, legal/human authority — owner-driven, not engineering).
+
+**Do NOT touch:** `release/gate.py:250-287` bodies (beyond B1.2),
+`docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,
 `connectors/policy.py:57`, `capabilities/sports_academy/contracts.py:77-86`,
 `capabilities/sports_academy/fixtures.py`, `pilot/*`, `00_CONSTITUTION.md`.

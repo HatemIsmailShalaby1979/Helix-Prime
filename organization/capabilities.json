@@ -27,5 +27,5 @@
     "crm_operations": "CRM Engine"
   },
   "canonical_source": "organization/capability-registry.yaml",
-  "note": "GENERATED MIRROR \u2014 do not hand-edit; validated against organization/capability-registry.yaml"
+  "note": "GENERATED MIRROR \u2014 do not hand-edit; regenerate with python scripts/sync_capability_mirrors.py"
 }

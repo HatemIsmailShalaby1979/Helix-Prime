@@ -28,7 +28,7 @@ import tempfile
 
 import pytest
 
-from release import gate, profiles
+from release import gate, harness, observability, profiles
 
 # ── helpers ────────────────────────────────────────────────────────────────
 
@@ -490,6 +490,79 @@ def test_the_scratch_directory_is_removed(name, monkeypatch):
     assert scratch, f"{name} took no scratch space, so this probe proves nothing"
     for path in scratch:
         assert not pathlib.Path(path).exists(), f"{name} leaked {path}"
+
+
+#: The same defect outside the gate table. These are the verification harness and
+#: the observability report — not gates, so `SCRATCH_GATES` did not reach them, but
+#: they leaked identically. `_fresh_store` is exercised through its callers rather
+#: than called directly, because it deliberately hands the directory to the caller
+#: and so cannot clean up itself.
+SCRATCH_HARNESS_CALLS = (
+    ("_check_persistence", "hp_harness_"),
+    ("_check_replay", "hp_harness_"),
+    ("_check_idempotency", "hp_harness_"),
+    ("_check_corrupted_event", "hp_harness_"),
+    ("_check_interrupted_workflow", "hp_harness_"),
+    ("_check_corrupted_db", "hp_corrupt_"),
+    ("_check_audit_integrity", "hp_audit_"),
+)
+
+SCRATCH_OBSERVABILITY_CALLS = (
+    ("measure_startup", "hp_startup_"),
+    ("storage_writable", "hp_storage_"),
+)
+
+
+def _record_mkdtemp(monkeypatch):
+    """Record every `tempfile.mkdtemp` path, whichever module calls it.
+
+    Patched on the shared `tempfile` module, not on each consumer: `harness`
+    imports it at module level while `observability` imports it inside the
+    function, so the module attribute is the only handle both share.
+    """
+    created = []
+    real_mkdtemp = tempfile.mkdtemp
+
+    def _recording_mkdtemp(*args, **kwargs):
+        path = real_mkdtemp(*args, **kwargs)
+        created.append(path)
+        return path
+
+    monkeypatch.setattr(tempfile, "mkdtemp", _recording_mkdtemp)
+    return created
+
+
+def _assert_scratch_returned(created, prefix, label):
+    scratch = [p for p in created if prefix in p]
+    assert scratch, f"{label} took no scratch space, so this probe proves nothing"
+    for path in scratch:
+        assert not pathlib.Path(path).exists(), f"{label} leaked {path}"
+
+
+@pytest.mark.parametrize("name,prefix", SCRATCH_HARNESS_CALLS)
+def test_the_harness_returns_its_scratch_directory(name, prefix, monkeypatch):
+    """Every harness check must give its scratch space back."""
+    created = _record_mkdtemp(monkeypatch)
+    result = getattr(harness, name)()
+    assert isinstance(result, dict), f"{name} returned {type(result).__name__}"
+    _assert_scratch_returned(created, prefix, name)
+
+
+def test_the_soak_returns_its_scratch_directory(monkeypatch):
+    """`run_bounded_soak` binds `_fresh_store`'s path; it must discard it too."""
+    created = _record_mkdtemp(monkeypatch)
+    result = harness.run_bounded_soak(num_workflows=2)
+    assert result.get("bounded") is True, result
+    _assert_scratch_returned(created, "hp_harness_", "run_bounded_soak")
+
+
+@pytest.mark.parametrize("name,prefix", SCRATCH_OBSERVABILITY_CALLS)
+def test_the_observability_report_returns_its_scratch_directory(name, prefix, monkeypatch):
+    """The observability report runs on every gate run, and must not leak either."""
+    created = _record_mkdtemp(monkeypatch)
+    result = getattr(observability, name)()
+    assert isinstance(result, dict), f"{name} returned {type(result).__name__}"
+    _assert_scratch_returned(created, prefix, name)
 
 
 # ── the four frozen gates, pinned by body rather than by line range ────────

@@ -3082,42 +3082,89 @@ reading.
 | module | sites | state |
 |---|---|---|
 | `release/gate.py` | 5 | **fixed** |
-| `release/harness.py` | 4 | still leaking |
-| `release/observability.py` | 2 | still leaking |
+| `release/harness.py` | 4 | **fixed** |
+| `release/observability.py` | 2 | **fixed** |
+| `release/scratch.py` | — | **new: the one helper** |
+
+**All eleven sites are now fixed, and there is exactly one definition.** The
+`_discard_scratch` helper first written inside `gate.py` moved to
+`release/scratch.py` as `scratch.discard`, because `harness.py` and
+`observability.py` needed the same thing — three copies of the same defensive
+`try` would have re-created the very defect this section is about.
+`release/scratch.py` imports only `gc`, `os` and `shutil`, so no cycle is possible.
 
 **Fixed in `gate.py`:** `backup_restore`, `rollback`, `app_session_fail_closed`,
-`app_tenant_isolation`, `app_memory_store_isolation`. Each now carries
-`finally: _discard_scratch(work)`, a single-sourced helper defined next to
-`_write_json`. `shutil` was not previously imported in `gate.py`.
+`app_tenant_isolation`, `app_memory_store_isolation` — each carries
+`finally: scratch.discard(work)`.
+
+**Fixed in `harness.py`:** `_check_persistence`, `_check_corrupted_db`,
+`_check_audit_integrity` now discard their own directory. `_fresh_store()` returns
+its path to the caller, so it **cannot** clean up itself; instead all five callers
+(`_check_replay`, `_check_idempotency`, `_check_corrupted_event`,
+`_check_interrupted_workflow`, `run_bounded_soak`) now discard in their existing
+`finally` alongside `store.close()`, and `_fresh_store` discards if `Store()`
+itself raises. `_check_audit_integrity` gained a nested `finally` so the trail is
+closed *before* the tree is removed, and the removal runs even if the close raises.
+
+**Fixed in `observability.py`:** `measure_startup` and `storage_writable`. The
+second needed the whole body wrapped, because its directory has to outlive the
+first probe block and is used by the second.
+
+**A correction to my own earlier caution.** I wrote that the harness sites were
+"not a blanket `finally` away" because `_open_store()` returns the path to its
+caller. Half right: the path *is* returned, so `_fresh_store` cannot clean up
+itself — but no caller ever uses it. Four discard it as `_`, and `run_bounded_soak`
+binds it to `d` and never reads `d` again. So the lifetime is local after all, and
+the fix was safe. I had inferred a constraint from a signature instead of checking
+the callers.
 
 **Why a helper and not a bare `rmtree`.** The first cut inlined
 `shutil.rmtree(work, ignore_errors=True)`. Two reasons that was wrong to leave
-inline. First, `ignore_errors` is load-bearing rather than cosmetic: Windows may
-still hold a SQLite handle on the failure path, and — measured this session —
-the sandbox shim routes a non-exempt deletion through a **5 s** trash subprocess
-that can genuinely time out and **re-raise** when `ignore_errors` is false. So a
-cleanup failure could have turned a gate red for a reason unrelated to the
-condition the gate tests. A gate that leaks a temp tree is a hygiene defect; a
-gate that goes red because a directory would not delete is a correctness defect,
-and the second is worse. Second, five copies of the same defensive `try` is five
-places to get it wrong. `_discard_scratch` swallows `OSError` as well, so it
-cannot raise on any path.
+inline. First, `ignore_errors` is load-bearing rather than cosmetic: the sandbox
+shim routes a non-exempt deletion through a **5 s** trash subprocess that can
+genuinely time out and **re-raise** when `ignore_errors` is false. So a cleanup
+failure could have turned a gate red for a reason unrelated to the condition the
+gate tests. A gate that leaks a temp tree is a hygiene defect; a gate that goes red
+because a directory would not delete is a correctness defect, and the second is
+worse. Second, copies of the same defensive `try` are places to get it wrong.
+`scratch.discard` swallows `OSError` as well, so it cannot raise on any path.
 
-**Can-fail proof:** the new parametrized test
-`test_the_scratch_directory_is_removed` was run against the *committed* `gate.py`
-with the fix reverted — **5 failed, 31 deselected** — then passed again once the fix
-was restored (`36 passed`). It records every `mkdtemp` the gate makes and asserts
-the tree is gone, filtering to the `hp_gate_` prefix so pytest's own temp churn
-cannot confound it. Note it asserts the scratch list is **non-empty** first: a
-gate that stopped taking scratch space would otherwise pass vacuously, which is
-the same nominal-control failure mode §18.9 exists to catch.
+**`ignore_errors=True` is necessary but not sufficient on Windows — measured.**
+`_check_corrupted_db` writes a deliberately corrupt `wf.db`, so `Store()` raises at
+**construction** (`DatabaseError`) and no `Store` object is ever bound. The new
+test still caught the directory surviving. Root cause: SQLite had already opened
+the file, and the half-built connection keeps the handle until it is finalised, so
+`rmtree(..., ignore_errors=True)` **fails silently and leaves the tree behind** —
+`ignore_errors` hides exactly the failure we care about. Verified in-process:
+without a collection the directory survives, with `gc.collect()` first it is
+removed. `scratch.discard` therefore retries once after a collection pass, and only
+if the first attempt did not take, so the happy path pays nothing. This is the same
+remedy `tests/support/sqlite_harness.py::force_release` applies; production code
+cannot import that module, so the remedy is repeated rather than shared. The test
+helper uses a bounded retry with backoff, which is stronger — but one collection
+measured sufficient at all eleven sites, and a `sleep` does not belong in a gate
+run. **Also worth noting:** a defensive `s.close()` in `_check_corrupted_db` would
+have been dead code, since construction raises before `s` is bound. I nearly added
+it. Measuring the constructor's behaviour is what stopped it.
 
-**Not fixed, deliberately:** the six `harness.py`/`observability.py` sites are not a
-blanket `finally` away. `harness._open_store()` **returns the path to its caller**
-(`return Store(...), pathlib.Path(d)`), so that directory's lifetime is not local and
-closing it on function exit would delete a database still in use. Each site needs its
-own lifetime analysis, and `run_observability_report` runs on every gate run, so a
-mistake there is load-bearing. Recorded rather than guessed at.
+**Can-fail proof, all three modules.** `test_the_scratch_directory_is_removed`
+was run against the *committed* `gate.py` with the fix reverted — **5 failed, 31
+deselected** — then passed again once the fix was restored. The ten tests covering
+`harness.py` and `observability.py` were run against *their* committed versions —
+**10 failed, 36 deselected** — then passed once restored. Each test records every
+`mkdtemp` the call makes and asserts the tree is gone, filtering by prefix
+(`hp_gate_`, `hp_harness_`, `hp_corrupt_`, `hp_audit_`, `hp_startup_`,
+`hp_storage_`) so pytest's own temp churn cannot confound it. Every one asserts the
+scratch list is **non-empty** first: a check that stopped taking scratch space
+would otherwise pass vacuously, which is the same nominal-control failure mode
+§18.9 exists to catch. `_fresh_store` is exercised through its callers rather than
+called directly, because it deliberately hands the directory to the caller.
+
+`test_the_harness_returns_its_scratch_directory` patches the **shared `tempfile`
+module**, not a per-module attribute: `harness` imports `tempfile` at module level
+while `observability` imports it *inside* each function, so the module attribute is
+the only handle both resolve at call time. Patching `observability.tempfile` would
+raise `AttributeError`, since no such attribute exists.
 
 #### An unexplained commit with an inaccurate message
 

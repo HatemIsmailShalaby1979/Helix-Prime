@@ -26,14 +26,13 @@ import json
 import os
 import pathlib
 import re
-import shutil
 import sys
 import tempfile
 from typing import Any, Dict, List, Optional
 
 from release import harness as harness_mod
 from release import manifest as manifest_mod
-from release import observability, production_evidence, profiles, security_gate
+from release import observability, production_evidence, profiles, scratch, security_gate
 
 ROOT = manifest_mod.ROOT
 
@@ -49,22 +48,6 @@ def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, default=str, indent=2)
-
-
-def _discard_scratch(path: str) -> None:
-    """Remove a gate's scratch directory, and never raise doing it.
-
-    Two reasons this is a function rather than an inline `rmtree`. First, a
-    cleanup failure must not change a gate's verdict: gates that leak a temp tree
-    are a hygiene defect, but a gate that turns red because a directory would not
-    delete is a correctness defect, and the second is worse. Second, on Windows
-    the sandbox routes deletions under a non-OS-temp path through a trash
-    subprocess with a timeout, so a large or busy tree can genuinely fail.
-    """
-    try:
-        shutil.rmtree(path, ignore_errors=True)
-    except OSError:
-        pass
 
 
 # ── individual gate checks ─────────────────────────────────────────────────
@@ -292,7 +275,7 @@ def _gate_backup_restore() -> tuple[bool, str]:
     except Exception as e:  # noqa: BLE001
         return False, f"backup_restore: {type(e).__name__}: {e}"
     finally:
-        _discard_scratch(work)
+        scratch.discard(work)
 
 
 def _gate_rollback() -> tuple[bool, str]:
@@ -315,7 +298,7 @@ def _gate_rollback() -> tuple[bool, str]:
         ok = out["git_commit"] == "AAAA" and "_rolled_back_from" in out
         return ok, f"rollback: previous identity restored ok={ok}"
     finally:
-        _discard_scratch(work)
+        scratch.discard(work)
 
 
 def _gate_data_isolation() -> tuple[bool, str]:
@@ -563,7 +546,7 @@ def _gate_app_session_fail_closed() -> tuple[bool, str]:
     except Exception as e:  # noqa: BLE001
         return False, f"app_session_fail_closed: {type(e).__name__}: {e}"
     finally:
-        _discard_scratch(work)
+        scratch.discard(work)
 
 
 def _gate_app_tenant_isolation() -> tuple[bool, str]:
@@ -603,7 +586,7 @@ def _gate_app_tenant_isolation() -> tuple[bool, str]:
     except Exception as e:  # noqa: BLE001
         return False, f"app_tenant_isolation: {type(e).__name__}: {e}"
     finally:
-        _discard_scratch(work)
+        scratch.discard(work)
 
 
 def _gate_app_memory_store_isolation() -> tuple[bool, str]:
@@ -661,7 +644,7 @@ def _gate_app_memory_store_isolation() -> tuple[bool, str]:
     except Exception as e:  # noqa: BLE001
         return False, f"app_memory_store_isolation: {type(e).__name__}: {e}"
     finally:
-        _discard_scratch(work)
+        scratch.discard(work)
 
 
 def _gate_app_migration_drift() -> tuple[bool, str]:

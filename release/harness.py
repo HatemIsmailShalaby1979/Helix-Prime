@@ -27,6 +27,7 @@ import uuid
 from typing import Any, Callable, Dict
 
 from release import manifest as manifest_mod
+from release import scratch
 
 ROOT = manifest_mod.ROOT
 
@@ -207,10 +208,20 @@ def _check_unavailable_ollama() -> Dict[str, Any]:
 
 
 def _fresh_store():
+    """A Store on a private temp dir, returned together with the dir it owns.
+
+    The caller owns the directory's lifetime: it must `store.close()` **and**
+    `scratch.discard(d)` when done. The path is handed back rather than cleaned
+    here because the store is still open when this returns.
+    """
     from control_plane.store import Store
 
     d = tempfile.mkdtemp(prefix="hp_harness_")
-    return Store(db_path=os.path.join(d, "wf.db")), pathlib.Path(d)
+    try:
+        return Store(db_path=os.path.join(d, "wf.db")), pathlib.Path(d)
+    except Exception:  # noqa: BLE001
+        scratch.discard(d)
+        raise
 
 
 def _write_workflow(store, eid: str = "wf-1", key: str = "k-1", aggregate: str = "agg-1"):
@@ -263,20 +274,23 @@ def _check_persistence() -> Dict[str, Any]:
     from control_plane.store import Store
 
     d = tempfile.mkdtemp(prefix="hp_harness_")
-    db = os.path.join(d, "wf.db")
-    store = Store(db_path=db)
-    _write_workflow(store, eid="wf-p", key="k-p", aggregate="agg-p")
-    store.close()  # process restart
-    reopened = Store(db_path=db)
-    wf = reopened.get_workflow("wf-p")
-    evs = reopened.replay("agg-p")
-    reopened.close()
-    ok = wf is not None and len(evs) == 1
-    return {"ok": ok, "detail": f"persistence: wf={wf is not None}, events={len(evs)}"}
+    try:
+        db = os.path.join(d, "wf.db")
+        store = Store(db_path=db)
+        _write_workflow(store, eid="wf-p", key="k-p", aggregate="agg-p")
+        store.close()  # process restart
+        reopened = Store(db_path=db)
+        wf = reopened.get_workflow("wf-p")
+        evs = reopened.replay("agg-p")
+        reopened.close()
+        ok = wf is not None and len(evs) == 1
+        return {"ok": ok, "detail": f"persistence: wf={wf is not None}, events={len(evs)}"}
+    finally:
+        scratch.discard(d)
 
 
 def _check_replay() -> Dict[str, Any]:
-    store, _ = _fresh_store()
+    store, d = _fresh_store()
     try:
         _write_workflow(store, eid="wf-r", key="k-r", aggregate="agg-replay")
         evs = store.replay("agg-replay")
@@ -284,11 +298,12 @@ def _check_replay() -> Dict[str, Any]:
         ok = seqs == [0] and len(evs) == 1
     finally:
         store.close()
+        scratch.discard(str(d))
     return {"ok": ok, "detail": f"replay: {len(evs)} event(s) in order={ok}"}
 
 
 def _check_idempotency() -> Dict[str, Any]:
-    store, _ = _fresh_store()
+    store, d = _fresh_store()
     try:
         _write_workflow(store, eid="wf-i", key="k-i", aggregate="agg-i")
         evs_before = store.replay("agg-i")
@@ -299,11 +314,12 @@ def _check_idempotency() -> Dict[str, Any]:
         ok = wf is not None and len(evs_before) == 1 and len(evs_after) == 1
     finally:
         store.close()
+        scratch.discard(str(d))
     return {"ok": ok, "detail": f"idempotency: workflow idempotent, event count stable={ok}"}
 
 
 def _check_corrupted_event() -> Dict[str, Any]:
-    store, _ = _fresh_store()
+    store, d = _fresh_store()
     try:
         _write_workflow(store, eid="wf-c", key="k-c", aggregate="agg-c")
         # out-of-order append must be rejected deterministically
@@ -329,19 +345,21 @@ def _check_corrupted_event() -> Dict[str, Any]:
         ok = rejected
     finally:
         store.close()
+        scratch.discard(str(d))
     return {"ok": ok, "detail": f"corrupted/out-of-order event rejected={ok}"}
 
 
 def _check_interrupted_workflow() -> Dict[str, Any]:
     # A workflow persisted mid-flight (no terminal event) must be recoverable:
     # it remains queryable and a new event can be appended without collision.
-    store, _ = _fresh_store()
+    store, d = _fresh_store()
     try:
         _write_workflow(store, eid="wf-int", key="k-int", aggregate="agg-int")
         wf = store.get_workflow("wf-int")
         ok = wf is not None
     finally:
         store.close()
+        scratch.discard(str(d))
     return {"ok": ok, "detail": "interrupted_workflow: persisted, recoverable"}
 
 
@@ -351,16 +369,19 @@ def _check_corrupted_db() -> Dict[str, Any]:
     from control_plane.store import Store
 
     d = tempfile.mkdtemp(prefix="hp_corrupt_")
-    db = os.path.join(d, "wf.db")
-    with open(db, "wb") as f:
-        f.write(b"\x00\x01NOT-A-REAL-SQLITE-DB-\xde\xad\xbe\xef")
-    fails_closed = False
     try:
-        s = Store(db_path=db)
-        s.list_workflows(limit=1)
-    except Exception:  # noqa: BLE001
-        fails_closed = True
-    return {"ok": fails_closed, "detail": f"corrupted_db: fails closed={fails_closed}"}
+        db = os.path.join(d, "wf.db")
+        with open(db, "wb") as f:
+            f.write(b"\x00\x01NOT-A-REAL-SQLITE-DB-\xde\xad\xbe\xef")
+        fails_closed = False
+        try:
+            s = Store(db_path=db)
+            s.list_workflows(limit=1)
+        except Exception:  # noqa: BLE001
+            fails_closed = True
+        return {"ok": fails_closed, "detail": f"corrupted_db: fails closed={fails_closed}"}
+    finally:
+        scratch.discard(d)
 
 
 # ── audit / authorization checks ───────────────────────────────────────────
@@ -370,22 +391,29 @@ def _check_audit_integrity() -> Dict[str, Any]:
     from security.audit import AuditRecord, AuditTrail
 
     d = tempfile.mkdtemp(prefix="hp_audit_")
-    db = os.path.join(d, "audit.db")
-    trail = AuditTrail(db_path=db)
-    prev = None
-    for _ in range(3):
-        rec = AuditRecord.new(
-            event_type="harness",
-            actor="suby",
-            actor_type="agent",
-            decision="succeeded",
-            previous_hash=prev,
-        )
-        trail.append(rec)
-        prev = rec.current_hash
-    valid, msg = trail.verify_chain()
-    trail.close()
-    return {"ok": valid, "detail": f"audit integrity: {msg}"}
+    trail = None
+    try:
+        db = os.path.join(d, "audit.db")
+        trail = AuditTrail(db_path=db)
+        prev = None
+        for _ in range(3):
+            rec = AuditRecord.new(
+                event_type="harness",
+                actor="suby",
+                actor_type="agent",
+                decision="succeeded",
+                previous_hash=prev,
+            )
+            trail.append(rec)
+            prev = rec.current_hash
+        valid, msg = trail.verify_chain()
+        return {"ok": valid, "detail": f"audit integrity: {msg}"}
+    finally:
+        try:
+            if trail is not None:
+                trail.close()
+        finally:
+            scratch.discard(d)
 
 
 def _check_tenant_isolation() -> Dict[str, Any]:
@@ -452,6 +480,7 @@ def run_bounded_soak(
         ok = failures == 0 and wf_count == n and no_growth and wf_count <= MAX_SOAK_WORKFLOWS
     finally:
         store.close()
+        scratch.discard(str(d))
     return {
         "ok": ok,
         "detail": (

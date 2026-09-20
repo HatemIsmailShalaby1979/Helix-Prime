@@ -20,6 +20,7 @@ import time
 from typing import Any, Dict, Optional
 
 from release import manifest as manifest_mod
+from release import scratch
 
 ROOT = manifest_mod.ROOT
 
@@ -39,6 +40,7 @@ def _now() -> str:
 def measure_startup() -> Dict[str, Any]:
     """Measure import + instantiation time of the control plane Engine and Store."""
     start = time.monotonic()
+    tmp = None
     try:
         import os
         import tempfile
@@ -65,6 +67,9 @@ def measure_startup() -> Dict[str, Any]:
             "slo_le_ms": SLO_THRESHOLDS["startup_seconds_le"] * 1000.0,
             "detail": detail,
         }
+    finally:
+        if tmp is not None:
+            scratch.discard(tmp)
     duration = time.monotonic() - start
     return {
         "ok": ok,
@@ -105,34 +110,39 @@ def storage_writable() -> Dict[str, Any]:
     import tempfile
 
     results: Dict[str, Any] = {}
+    tmp = None
     try:
-        tmp = tempfile.mkdtemp(prefix="hp_storage_")
-        from control_plane.store import Store
+        try:
+            tmp = tempfile.mkdtemp(prefix="hp_storage_")
+            from control_plane.store import Store
 
-        s = Store(db_path=os.path.join(tmp, "wf.db"))
-        s.close()
-        results["control_plane_db"] = True
-    except Exception as e:  # noqa: BLE001
-        results["control_plane_db"] = False
-        results["control_plane_error"] = f"{type(e).__name__}: {e}"
-    try:
-        from security.audit import AuditRecord, AuditTrail
+            s = Store(db_path=os.path.join(tmp, "wf.db"))
+            s.close()
+            results["control_plane_db"] = True
+        except Exception as e:  # noqa: BLE001
+            results["control_plane_db"] = False
+            results["control_plane_error"] = f"{type(e).__name__}: {e}"
+        try:
+            from security.audit import AuditRecord, AuditTrail
 
-        trail = AuditTrail(db_path=os.path.join(tmp, "audit.db"))
-        rec = AuditRecord.new(
-            event_type="release_gate",
-            actor="release_gate",
-            actor_type="service",
-            decision="succeeded",
-        )
-        trail.append(rec)
-        trail.close()
-        results["audit_db"] = True
-    except Exception as e:  # noqa: BLE001
-        results["audit_db"] = False
-        results["audit_error"] = f"{type(e).__name__}: {e}"
-    results["all_writable"] = bool(results.get("control_plane_db") and results.get("audit_db"))
-    return results
+            trail = AuditTrail(db_path=os.path.join(tmp, "audit.db"))
+            rec = AuditRecord.new(
+                event_type="release_gate",
+                actor="release_gate",
+                actor_type="service",
+                decision="succeeded",
+            )
+            trail.append(rec)
+            trail.close()
+            results["audit_db"] = True
+        except Exception as e:  # noqa: BLE001
+            results["audit_db"] = False
+            results["audit_error"] = f"{type(e).__name__}: {e}"
+        results["all_writable"] = bool(results.get("control_plane_db") and results.get("audit_db"))
+        return results
+    finally:
+        if tmp is not None:
+            scratch.discard(tmp)
 
 
 def run_observability_report(db_path: Optional[str] = None) -> Dict[str, Any]:

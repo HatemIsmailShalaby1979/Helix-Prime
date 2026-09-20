@@ -52,10 +52,29 @@ def test_fail_closed_on_red_gate():
 
 
 def test_profiles_yaml_mirror():
+    """The YAML mirrors the module, and must keep mirroring it.
+
+    The file's header used to call itself the "hand-editable source of truth" and
+    claim `profiles.py` read it in place of the inline defaults. It does not: the
+    gate path reads the module constants (`gates_required_for` ->
+    `PROFILE_REQUIRED_GATES`), and `load_profiles()` is used only for a sanity
+    count in `_gate_configuration_validation`. Measured by editing a profile's gate
+    list in the YAML and watching the gate not move. The header now says so.
+
+    This pins **every** field the two share, not just `gates`. `required_gates` is
+    the one that decides behaviour and it was previously unpinned, so the two could
+    have diverged silently while this test stayed green.
+    """
     data = profiles.load_profiles()
-    assert set(data.get("gates", [])) == set(profiles.GATE_NAMES)
-    assert "production_candidate" in data.get("profiles", [])
-    assert "production" in data.get("profiles", [])
+    assert set(data["gates"]) == set(profiles.GATE_NAMES)
+    assert set(data["profiles"]) == set(profiles.PROFILE_ORDER)
+    assert set(data["app_gates"]) == set(profiles.APP_GATE_NAMES)
+    assert set(data["allowed_final"]) == set(profiles.ALLOWED_FINAL_CLASSIFICATIONS)
+    assert data["default_c8"] == profiles.DEFAULT_C8_CLASSIFICATION
+
+    assert set(data["required_gates"]) == set(profiles.PROFILE_REQUIRED_GATES)
+    for profile, gates in profiles.PROFILE_REQUIRED_GATES.items():
+        assert set(data["required_gates"][profile]) == set(gates), profile
 
 
 # ── manifest ───────────────────────────────────────────────────────────────

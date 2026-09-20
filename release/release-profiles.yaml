@@ -1,6 +1,18 @@
 # Helix Prime Codex C8 — release profiles and gate boundary (YAML mirror).
-# Hand-editable source of truth; module release/profiles.py reads this file
-# when present and falls back to inline defaults otherwise.
+#
+# THIS FILE IS A MIRROR, NOT THE SOURCE OF TRUTH. It previously claimed to be
+# "hand-editable source of truth; module release/profiles.py reads this file when
+# present and falls back to inline defaults otherwise". That was false, and the
+# correction is recorded in AGENTS.md §18.8: the gate path reads the module
+# constants (`gates_required_for` -> PROFILE_REQUIRED_GATES), and
+# `load_profiles()` is called only for a sanity count in
+# `_gate_configuration_validation`. Editing a profile's gate list here changes
+# nothing about which gates that profile requires — measured by editing it and
+# watching the gate not move.
+#
+# So: change release/profiles.py to change behaviour, then mirror the change here.
+# `tests/test_c8_release_gate.py::test_profiles_yaml_mirror` fails if the two
+# disagree, including per-profile gate lists.
 #
 # IMPORTANT: The "production" profile adds production-only gates (signed
 # production evidence, certified data isolation, external observer audit)

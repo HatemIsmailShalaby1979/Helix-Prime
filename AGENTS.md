@@ -2226,6 +2226,36 @@ Two fields that *do* still check out: `version: "0.9.0-c8"` matches
 `pyproject.toml` plus `CEREMONY_SUFFIX`, and `supported_python: ">=3.12,<3.13"`
 matches `requires-python` exactly.
 
+#### `release-profiles.yaml` claimed to be the source of truth; it is a mirror
+
+Audited 2026-09-20, same family as the manifest schema defect. The file's header
+said *"Hand-editable source of truth; module release/profiles.py reads this file
+when present and falls back to inline defaults otherwise"*. **False.** The gate
+path reads the module constants — `gates_required_for()` returns
+`PROFILE_REQUIRED_GATES[profile]` — and `load_profiles()` is called only from
+`_gate_configuration_validation`, for a sanity count (`>= 10` gates, `>= 4`
+profiles). Proven by editing `repository_state` out of `controlled_pilot`'s
+`required_gates` and watching `gates_required_for("controlled_pilot")` still
+return 14.
+
+That is the dangerous shape: a governance document inviting an edit that does
+nothing, so someone could "strengthen" the production profile in the YAML and
+believe it took effect.
+
+Fixed by making the **documentation true rather than bending the code to match
+it**: the header now says mirror, not source, and points at `profiles.py`. The
+existing `test_profiles_yaml_mirror` was only **partial** — it pinned `gates` and
+two profile names but not `required_gates`, the field that actually decides
+behaviour — so the two could have diverged silently while the test stayed green.
+It now pins every shared field including the per-profile gate lists, with a
+can-fail proof (drop a gate from the YAML → the test fails).
+
+**Deliberately not done: single-sourcing.** A2's precedent would make the YAML
+authoritative and derive the constants at import. That is a deliberate refactor of
+the release gate's classification path with a new import-time failure mode (a
+missing or malformed YAML), and it is not required to remove this hazard. Recorded
+as the follow-up, not taken unilaterally.
+
 #### CI was linting nine directories while this ledger claimed thirteen
 
 Audited 2026-09-20 by reading `.github/workflows/ci.yml` against what the record

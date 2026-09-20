@@ -3007,14 +3007,20 @@ ran it end to end:
 
 | run | result |
 |---|---|
-| full suite, guard threshold raised | **1 failed, 1742 passed in 21m50s** |
-| the one failure, re-run alone | **1 passed in 4.30s** |
+| `test_c8_gate_falsifiability.py` alone | **31 passed in 10.75s** |
+| full suite, guard threshold raised | 1 failed, 1742 passed in 21m50s |
+| junitxml cross-check of that run | collected 1743, failed 1 |
+| the one failure, re-run alone | 1 passed in 4.30s |
+| **full suite, threshold raised + short temp root** | **1743 passed, 0 failed, 0 skipped in 17m52s (exit 0)** |
 
-The lone failure was `test_c5_vertical_slice.py::test_audit_records_for_every_step`,
-dying with `OperationalError` from `control_plane/store.py:38` because the FS broker
-denied SQLite's `wf.db-journal` in the long `…\pt-full\` basetemp path. It is a
-sandbox artifact, not a repo failure — and it is the *second* sandbox restriction,
-distinct from the delete guard, now recorded in §18.4.
+The first full run's lone failure was
+`test_c5_vertical_slice.py::test_audit_records_for_every_step`, dying with
+`OperationalError` from `control_plane/store.py:38` because the FS broker denied
+SQLite's `wf.db-journal` in the long `…\pt-full\` basetemp path. Adding the short
+temp root from the §18.4 recipe fixed it, giving a **fully green run with no
+skips** — the first recorded in this sandbox. It is a sandbox artifact, not a repo
+failure, and it is the *second* sandbox restriction, distinct from the delete
+guard, now recorded in §18.4.
 
 **Total collected: 1743 = 1712 baseline + 31 new tests** in
 `test_c8_gate_falsifiability.py`. The two failures §18.4 has carried as "known

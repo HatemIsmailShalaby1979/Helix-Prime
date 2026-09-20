@@ -55,6 +55,60 @@ class Message:
     classification: str
     created_at: str
     node_id: str | None = None
+    #: SQLite's insertion-ordered row id. Not part of the message's identity and
+    #: never sent on the wire; it is read so paging can break a ``created_at``
+    #: tie. ``None`` for a message built outside a read.
+    rowid: int | None = None
+
+
+#: Separator between the timestamp and the rowid inside a paging cursor. ``_`` is
+#: unreserved in RFC 3986, so the cursor survives a query string untouched, and an
+#: ISO-8601 timestamp (``2026-09-20T04:24:43.478123+00:00``) never contains one.
+CURSOR_SEPARATOR = "_"
+
+
+def encode_cursor(message: Message) -> str:
+    """The cursor that pages past ``message``.
+
+    A ``created_at`` alone cannot say "after this exact row". The wall clock is
+    too coarse to separate two messages written back to back — on Windows it
+    ticks every 15.6 ms, so consecutive writes carry the *same* timestamp — and a
+    page boundary that carries only a timestamp therefore excludes **both** tied
+    rows. The next page then comes back empty and a message is silently lost. The
+    cursor carries the rowid as well, which turns the boundary into an exact
+    keyset comparison on ``(created_at, rowid)``.
+
+    A message with no rowid (built outside a read) degrades to its bare
+    timestamp rather than inventing a rowid for it.
+    """
+    if message.rowid is None:
+        return message.created_at
+    return f"{message.created_at}{CURSOR_SEPARATOR}{message.rowid}"
+
+
+def decode_cursor(before: str) -> tuple[str, int | None]:
+    """Split a cursor into ``(created_at, rowid)``.
+
+    A bare timestamp is accepted unchanged and yields ``rowid=None``. That is what
+    every client sent before the cursor carried a rowid, and it keeps the old
+    ``created_at < ?`` predicate — less precise across a tie, but exactly as
+    precise as it always was, so nothing that worked stops working.
+
+    A ``+`` offset arrives here as a space. Form parsers decode ``+`` that way
+    (RFC 1866 §8.2.1) and that happens in the query string, before this code
+    runs, so the cursor is restored rather than compared as received: an
+    ISO-8601 timestamp never contains a space, so a space is always a mangled
+    ``+``. Without this the boundary compares against a corrupted timestamp —
+    ``…04:33:40.100094 00:00`` sorts *below* every stored ``…+00:00`` — and
+    messages are silently dropped. That is how the old bare-timestamp cursor lost
+    one even when the clock had separated the rows.
+    """
+    timestamp, separator, suffix = before.rpartition(CURSOR_SEPARATOR)
+    if separator and suffix.isdigit():
+        rowid: int | None = int(suffix)
+    else:
+        timestamp, rowid = before, None
+    return timestamp.replace(" ", "+"), rowid
 
 
 class MessagingRepository:
@@ -272,19 +326,33 @@ class MessagingRepository:
         before: str | None = None,
         limit: int = 50,
     ) -> list[Message]:
-        """Messages newest-first, optionally starting below a given
-        created_at timestamp. The caller pages by passing the oldest
-        timestamp of the page it already holds."""
+        """Messages newest-first, optionally starting below a given cursor.
+
+        The caller pages by passing the cursor of the oldest message it already
+        holds — ``encode_cursor(message)``. A bare ``created_at`` is still
+        accepted, but it cannot separate two messages that share a timestamp, so
+        a page boundary that falls between them loses one; pass the cursor.
+        """
         sql = """
             SELECT message_id, conversation_id, sender_account_id, body,
-                   classification, created_at, node_id
+                   classification, created_at, node_id, rowid
             FROM messages
             WHERE conversation_id = ?
         """
         params: list[Any] = [conversation_id]
         if before is not None:
-            sql += " AND created_at < ?"
-            params.append(before)
+            # Keyset paging on (created_at, rowid) rather than on created_at
+            # alone: when two messages share a timestamp, `created_at < ?`
+            # excludes BOTH and the next page comes back empty — a message is
+            # lost with no error. A bare timestamp (rowid is None) keeps the old
+            # predicate so an older client degrades instead of breaking.
+            timestamp, cursor_rowid = decode_cursor(before)
+            if cursor_rowid is None:
+                sql += " AND created_at < ?"
+                params.append(timestamp)
+            else:
+                sql += " AND (created_at < ? OR (created_at = ? AND rowid < ?))"
+                params.extend([timestamp, timestamp, cursor_rowid])
         # rowid breaks the tie. The wall clock is not fine-grained enough to
         # order two messages sent back to back — on Windows `time` ticks every
         # 15.6 ms, so consecutive _now() calls return the *same* value and a
@@ -357,4 +425,5 @@ def _message_from_row(row: sqlite3.Row) -> Message:
         classification=row["classification"],
         created_at=row["created_at"],
         node_id=row["node_id"],
+        rowid=row["rowid"],
     )

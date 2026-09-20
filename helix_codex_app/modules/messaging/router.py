@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from helix_codex_app.db import close, connect
 from helix_codex_app.errors import NotFoundError, PermissionDenied
 from helix_codex_app.integration.sse_bridge import encode, publish, subscribe, unsubscribe
-from helix_codex_app.modules.messaging.repository import MessagingRepository
+from helix_codex_app.modules.messaging.repository import MessagingRepository, encode_cursor
 from helix_codex_app.modules.messaging.schemas import (
     ConversationOut,
     CreateDirectRequest,
@@ -195,10 +195,14 @@ def list_messages_route(request: Request, conversation_id: str) -> JSONResponse:
     finally:
         close(conn)
     out = [MessageOut.from_message(m) for m in messages]
+    # The cursor comes from the stored row, not from its timestamp: a timestamp
+    # cannot separate two messages that share one, and a boundary between them
+    # would drop the second on the next page.
     return JSONResponse(
-        MessagePage(messages=out, next_before=out[-1].created_at if out else None).model_dump(
-            mode="json"
-        )
+        MessagePage(
+            messages=out,
+            next_before=encode_cursor(messages[-1]) if messages else None,
+        ).model_dump(mode="json")
     )
 
 

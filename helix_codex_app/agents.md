@@ -232,7 +232,9 @@ App-specific rules:
       membership in the SQL, so a conversation the caller is not in is absent
       rather than filtered; `find_direct_conversation` treats the pair as
       unordered; `list_messages(conversation_id, before, limit)` pages
-      newest-first by `created_at < before`, cursor-safe, bounded 1..200),
+      newest-first by an opaque cursor (`encode_cursor`: `created_at` + `rowid`,
+      so a boundary inside a timestamp tie loses nothing; a bare `created_at` is
+      still accepted), bounded 1..200),
       `helix_codex_app/modules/messaging/service.py`
       (MessagingService: `create_direct(a, b)` same-tenant-only and
       idempotent (second call returns the existing conversation, either

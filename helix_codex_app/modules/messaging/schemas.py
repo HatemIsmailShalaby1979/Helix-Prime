@@ -70,7 +70,14 @@ class ConversationOut(BaseModel):
 
 
 class MessagePage(BaseModel):
-    """A newest-first page of messages plus the cursor for the next one."""
+    """A newest-first page of messages plus the cursor for the next one.
+
+    ``next_before`` is an **opaque** cursor: hand it back as the ``before`` query
+    parameter unchanged. It is not a timestamp to interpret, and its format may
+    grow — it currently carries the row identity as well as the timestamp so that
+    a page boundary falling between two messages that share a timestamp does not
+    lose one. A bare timestamp is still accepted for older clients.
+    """
 
     messages: list[MessageOut]
     next_before: str | None = None

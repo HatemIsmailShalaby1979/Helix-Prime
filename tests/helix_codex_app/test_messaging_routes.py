@@ -284,6 +284,50 @@ def test_list_messages_route_pages_with_a_cursor(ctx, client) -> None:
     ]
 
 
+def test_list_messages_route_walks_a_tie_without_losing_a_message(ctx, client) -> None:
+    """The cursor survives the wire, and a tie at a boundary costs nothing.
+
+    Every message is forced to share one ``created_at``, so each boundary lands
+    inside a tie, and the page is driven through the real endpoint: the cursor
+    comes out of ``next_before`` and goes straight back in as ``before``.
+
+    Two things are pinned here that a repository-level test cannot see. The
+    cursor is sent *unencoded*, which is what a naive client does — a ``+``
+    offset arrives at the server as a space, so a decoder that trusts what it
+    receives compares against a corrupted timestamp and drops messages. And a
+    timestamp-only cursor returns an empty second page, losing two messages.
+    """
+    conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
+    sent = [
+        ctx.service.send_message(ctx.amira, conversation.conversation_id, f"note {index}")
+        for index in range(5)
+    ]
+    ctx.conn.execute(
+        "UPDATE messages SET created_at = ? WHERE conversation_id = ?",
+        # A `+` offset on purpose: it is what a form parser mangles on the way in.
+        ("2026-01-01T00:00:00+00:00", conversation.conversation_id),
+    )
+    ctx.conn.commit()
+    cookies, _ = _login(ctx, ctx.amira)
+    base = f"/app/api/conversations/{conversation.conversation_id}/messages"
+
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(10):
+        suffix = f"&before={cursor}" if cursor else ""
+        page = client.get(f"{base}?limit=2{suffix}", cookies=cookies)
+        assert page.status_code == 200
+        body = page.json()
+        if not body["messages"]:
+            break
+        seen.extend(m["message_id"] for m in body["messages"])
+        cursor = body["next_before"]
+    else:
+        pytest.fail("paging never reached the end of the conversation")
+
+    assert seen == [m.message_id for m in reversed(sent)]
+
+
 def test_mark_read_route_stamps_only_the_caller(ctx, client) -> None:
     conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
     cookies, headers = _login(ctx, ctx.amira)

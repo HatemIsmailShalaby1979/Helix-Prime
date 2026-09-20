@@ -4,7 +4,8 @@
 > **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
 > Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing),
 > 3 (A2 — structural mirror removal) and 4 (A3 unify SOD + A4 dead-code cleanup)
-> are COMPLETE; Phase 5 (B1 evidence loader + the nine gates + signoff) is next.
+> are COMPLETE, and the §18.5 chat-paging debt is closed in §18.7; Phase 5
+> (B1 evidence loader + the nine gates + signoff) is next.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
@@ -1679,6 +1680,12 @@ boundary between them loses one. The correct fix is a keyset cursor on
 `(created_at, rowid)`, which changes the public signature and the router — out of
 A1's scope. Observed flaking once during verification (1 of 5 runs).
 
+> **Closed in §18.7.** Fixed as an opaque cursor that keeps the wire *type*
+> (`str | None`) and only changes the value, so no client breaks. The estimate
+> above — "changes the public signature" — was wrong. A second, pre-existing
+> transport bug (a `+` offset decoded to a space) was found while proving it and
+> is fixed in the same place.
+
 #### Gate (Phase 2) — PASSED
 
 - **Full suite: 1533 collected = 1531 passed + 2 failed.** The 2 are the same
@@ -1999,22 +2006,66 @@ guard tripped again at session finish (`count: 2927, threshold: 50`, target unde
 `\\?\E:\hx\…`), so the short summary never printed and the `-v` per-test lines
 are the only surviving record — exactly as §18.4 warns.
 
-#### Corrected residual debt: chat paging loses a message (higher rate than recorded)
+#### Fixed: chat paging lost a message (the §18.5 debt is closed)
 
 §18.5 recorded this as "observed flaking once during verification (1 of 5 runs)".
-Measured now: the full suite failed **both** paging tests in one run, and
+Phase 4 re-measured it: the full suite failed **both** paging tests in one run, and
 `tests/helix_codex_app/test_messaging.py::test_list_messages_paginates_correctly`
-failed **1 of 6 runs on a pristine `git worktree` at HEAD** — so it is
-pre-existing and unrelated to Phase 4 (`git diff` on
-`helix_codex_app/modules/messaging/` is empty). The failure mode is exactly as
-described: `created_at < ?` excludes **both** messages when two share a
-`created_at`, so `page_two` comes back **empty** and a message is silently lost.
+failed **1 of 6 runs on a pristine `git worktree` at HEAD**. The failure mode was
+`created_at < ?` excluding **both** messages when two share a `created_at`, so
+`page_two` came back **empty** and a message was silently lost.
 
-The fix is still a keyset cursor on `(created_at, rowid)`, which changes the
-public signature and the router. That is an API change with a client-visible
-effect and needs its own decision — it is **not** A3/A4 scope and was not fixed
-here. It is now CI-visible at a much higher rate than previously recorded, so it
-should be scheduled rather than left as a footnote.
+Phase 4 recorded the fix as "changes the public signature and the router … needs
+its own decision". **That estimate was too pessimistic, and the decision has now
+been taken.** The wire type is `str | None` on both sides already — the `before`
+query parameter and `next_before` on `MessagePage` — so the cursor only had to
+change *value*, not type. `before` is now an **opaque cursor**:
+
+- `encode_cursor(message)` emits `"{created_at}_{rowid}"` (`_` is unreserved in
+  RFC 3986 and never appears in an ISO-8601 timestamp).
+- The predicate becomes a real keyset comparison —
+  `created_at < ? OR (created_at = ? AND rowid < ?)`.
+- `decode_cursor` still accepts a **bare timestamp**, which keeps the old
+  `created_at < ?` predicate. A client holding a pre-cursor value degrades to
+  exactly today's precision instead of breaking, so this is additive on the wire.
+- `Message` gained `rowid` (defaulted, never serialised; `MessageOut` is
+  unchanged) so a caller can build the cursor from a stored row. Only
+  `list_messages`' SELECT feeds `_message_from_row`, so one query needed the extra
+  column.
+
+**A second, pre-existing bug surfaced while proving the first one.** A `+` offset
+arrives at the server as a **space**: form parsers decode `+` that way (RFC 1866
+§8.2.1) in the query string, before any handler runs. An end-to-end probe showed
+the composite cursor *still* losing a message (`page 2` returned 1 of 2) because
+`…04:33:40.100094 00:00` sorts **below** every stored `…+00:00`. This affected the
+**old bare-timestamp cursor too** — it is why paging "worked" only while the
+fractional seconds differed, and failed precisely when the clock tied. An
+ISO-8601 timestamp never contains a space, so `decode_cursor` restores a space to
+`+`. That repair fixes the legacy path as well, which is why the bare-timestamp
+form is now genuinely safe to accept rather than merely tolerated.
+
+**Evidence, not "the suite still passes":**
+
+| Proof | Result |
+|---|---|
+| Walk a 5-message conversation where **every** `created_at` ties, page size 2, cursor-driven | every message served exactly once |
+| Same, through the real endpoint, cursor sent **unencoded** (a `+` offset on purpose) | 5 of 5, no loss |
+| Can-fail 1 — `decode_cursor` forced to ignore the rowid | both new tests **fail** |
+| Can-fail 2 — the space→`+` repair removed | the route test **fails**, losing 3 of 5 |
+| The bug itself, still reproducible | bare-timestamp paging across a tie returns an **empty** second page |
+
+Four tests added: the tie walk at repository level, the tie walk through the
+endpoint, the codec round-trip (including the mangled `+`), and a witness test
+that keeps the original loss reproducible so the composite cursor's own test
+cannot pass vacuously. `test_list_messages_paginates_correctly` now pages by
+cursor rather than by timestamp — the source of its flake — while the legacy
+path keeps dedicated coverage.
+
+Files: `helix_codex_app/modules/messaging/{repository,router,service,schemas}.py`,
+`tests/helix_codex_app/test_messaging.py`,
+`tests/helix_codex_app/test_messaging_routes.py`. Gate: the six
+messaging-touching test files pass (54 + 85), `ruff check` + `ruff format --check`
+clean, `mypy` clean on the messaging package.
 
 ### 18.8 Next: Phase 5 (B1 evidence loader + the nine gates + signoff)
 

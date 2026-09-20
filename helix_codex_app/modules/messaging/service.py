@@ -192,7 +192,11 @@ class MessagingService:
         before: str | None = None,
         limit: int = 50,
     ) -> list[Message]:
-        """Messages of one conversation, membership enforced."""
+        """Messages of one conversation, membership enforced.
+
+        ``before`` is the cursor from the previous page (``encode_cursor``); a
+        bare ``created_at`` is still accepted but is ambiguous across a tie.
+        """
         self.repo.get_conversation(conversation_id, account.account_id)
         return self.repo.list_messages(conversation_id, before=before, limit=limit)
 

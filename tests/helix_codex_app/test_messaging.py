@@ -14,7 +14,12 @@ import pytest
 
 from helix_codex_app import db
 from helix_codex_app.errors import NotFoundError, PermissionDenied
-from helix_codex_app.modules.messaging.repository import MessagingRepository
+from helix_codex_app.modules.messaging.repository import (
+    Message,
+    MessagingRepository,
+    decode_cursor,
+    encode_cursor,
+)
 from helix_codex_app.modules.messaging.schemas import MessageOut
 from helix_codex_app.modules.messaging.service import MessagingService
 from helix_codex_app.security.accounts import AccountRepository
@@ -170,13 +175,15 @@ def test_list_messages_paginates_correctly(ctx) -> None:
         sent[3].message_id,
         sent[2].message_id,
     ]
-    oldest_held = page_one[-1].created_at
+    # Page by the cursor, not by the timestamp: five messages sent back to back
+    # can share a created_at, and a timestamp-only boundary would then drop one.
+    oldest_held = encode_cursor(page_one[-1])
     page_two = ctx.service.list_messages(
         ctx.amira, conversation.conversation_id, before=oldest_held, limit=3
     )
     assert [m.message_id for m in page_two] == [sent[1].message_id, sent[0].message_id]
     beyond = ctx.service.list_messages(
-        ctx.amira, conversation.conversation_id, before=page_two[-1].created_at, limit=3
+        ctx.amira, conversation.conversation_id, before=encode_cursor(page_two[-1]), limit=3
     )
     assert beyond == []
 
@@ -210,6 +217,149 @@ def test_list_messages_orders_a_timestamp_tie_newest_first(ctx) -> None:
 
     messages = ctx.service.list_messages(ctx.omar, conversation.conversation_id)
     assert [m.body for m in messages] == ["two", "one"]
+
+
+def test_a_cursor_survives_a_timestamp_tie_at_the_page_boundary(ctx) -> None:
+    """Paging must lose nothing when a boundary falls inside a tie.
+
+    Every message is forced to share one ``created_at``, so *every* boundary is
+    inside a tie. Walking the conversation with the cursor must then see each
+    message exactly once. This is the can-fail proof for the cursor carrying the
+    rowid: with a bare ``created_at`` the second page comes back empty and two
+    messages are silently lost, which is why the tie is forced here rather than
+    left to the platform's clock resolution.
+    """
+    conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
+    sent = [
+        ctx.service.send_message(ctx.amira, conversation.conversation_id, f"note {index}")
+        for index in range(5)
+    ]
+    ctx.conn.execute(
+        "UPDATE messages SET created_at = ? WHERE conversation_id = ?",
+        ("2026-01-01T00:00:00Z", conversation.conversation_id),
+    )
+    ctx.conn.commit()
+
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(10):
+        page = ctx.service.list_messages(
+            ctx.amira, conversation.conversation_id, before=cursor, limit=2
+        )
+        if not page:
+            break
+        seen.extend(message.message_id for message in page)
+        cursor = encode_cursor(page[-1])
+    else:
+        pytest.fail("paging never reached the end of the conversation")
+
+    assert seen == [message.message_id for message in reversed(sent)]
+    assert len(set(seen)) == len(sent), "a message was served twice"
+
+
+def test_a_bare_timestamp_cursor_is_still_accepted(ctx) -> None:
+    """The pre-cursor wire form keeps working, with its old imprecision.
+
+    ``next_before`` used to be a bare ``created_at`` and a client may still hold
+    one, so it is accepted unchanged. It cannot separate a tie — that is the bug
+    the cursor exists to fix — so this pins the *old* behaviour on purpose rather
+    than pretending the ambiguity is gone. The timestamps are made distinct so
+    the assertion is deterministic on every platform.
+    """
+    conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
+    sent = [
+        ctx.service.send_message(ctx.amira, conversation.conversation_id, f"note {index}")
+        for index in range(4)
+    ]
+    for index, message in enumerate(sent):
+        ctx.conn.execute(
+            "UPDATE messages SET created_at = ? WHERE message_id = ?",
+            (f"2026-01-01T00:00:0{index}Z", message.message_id),
+        )
+    ctx.conn.commit()
+
+    page_one = ctx.service.list_messages(ctx.amira, conversation.conversation_id, limit=2)
+    assert [m.message_id for m in page_one] == [sent[3].message_id, sent[2].message_id]
+
+    page_two = ctx.service.list_messages(
+        ctx.amira, conversation.conversation_id, before=page_one[-1].created_at, limit=2
+    )
+    assert [m.message_id for m in page_two] == [sent[1].message_id, sent[0].message_id]
+
+
+def test_cursor_codec_round_trips_and_degrades(ctx) -> None:
+    """The codec is total: both forms in, both forms out.
+
+    ``encode_cursor`` emits the composite form for a stored row and degrades to
+    the bare timestamp for a message built outside a read; ``decode_cursor``
+    accepts both and reports the absence of a rowid rather than guessing one.
+    """
+    conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
+    ctx.service.send_message(ctx.amira, conversation.conversation_id, "one")
+    stored = ctx.service.list_messages(ctx.amira, conversation.conversation_id)[0]
+
+    assert stored.rowid is not None
+    timestamp, rowid = decode_cursor(encode_cursor(stored))
+    assert (timestamp, rowid) == (stored.created_at, stored.rowid)
+
+    detached = Message(
+        message_id="msg-detached",
+        conversation_id=conversation.conversation_id,
+        sender_account_id=ctx.amira.account_id,
+        body="built outside a read",
+        classification="internal",
+        created_at="2026-01-01T00:00:00Z",
+    )
+    assert encode_cursor(detached) == "2026-01-01T00:00:00Z"
+    assert decode_cursor(encode_cursor(detached)) == ("2026-01-01T00:00:00Z", None)
+
+    # A bare timestamp must not be mistaken for a composite cursor, and neither
+    # may a malformed suffix — both fall back to the unambiguous form.
+    assert decode_cursor("2026-01-01T00:00:00Z") == ("2026-01-01T00:00:00Z", None)
+    assert decode_cursor("2026-01-01T00:00:00Z_notarowid") == (
+        "2026-01-01T00:00:00Z_notarowid",
+        None,
+    )
+
+    # A `+` offset arrives as a space, because that is how a form parser decodes
+    # it out of the query string. It must be restored, not compared as received:
+    # `…00:00` sorts below every stored `…+00:00`, so an unrestored cursor skips
+    # past the boundary and drops messages.
+    mangled = encode_cursor(stored).replace("+", " ")
+    assert " " in mangled
+    assert decode_cursor(mangled) == (stored.created_at, stored.rowid)
+
+
+def test_a_bare_timestamp_cursor_loses_a_message_across_a_tie(ctx) -> None:
+    """The can-fail witness: the bug the cursor exists to remove, still visible.
+
+    With a tie at the page boundary, paging by bare timestamp returns an empty
+    second page and two messages are lost — the exact failure measured in
+    AGENTS.md §18.7. This test is what makes the composite cursor's own test
+    meaningful: if the loss ever stops reproducing here, the two paths have
+    silently converged and the cursor is no longer earning its keep.
+    """
+    conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
+    sent = [
+        ctx.service.send_message(ctx.amira, conversation.conversation_id, f"note {index}")
+        for index in range(5)
+    ]
+    ctx.conn.execute(
+        "UPDATE messages SET created_at = ? WHERE conversation_id = ?",
+        ("2026-01-01T00:00:00Z", conversation.conversation_id),
+    )
+    ctx.conn.commit()
+
+    page_one = ctx.service.list_messages(ctx.amira, conversation.conversation_id, limit=3)
+    assert [m.message_id for m in page_one] == [m.message_id for m in reversed(sent)][:3]
+
+    page_two = ctx.service.list_messages(
+        ctx.amira, conversation.conversation_id, before=page_one[-1].created_at, limit=3
+    )
+    # The whole tie sits on the boundary, so a timestamp cursor excludes all of
+    # it — including the two messages that were never served.
+    assert page_two == []
+    assert len(sent) - len(page_one) == 2, "the loss this test witnesses has changed shape"
 
 
 def test_group_conversation_shape(ctx) -> None:

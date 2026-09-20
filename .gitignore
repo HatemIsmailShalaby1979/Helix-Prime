@@ -52,6 +52,8 @@ Thumbs.db
 .env.local
 .env.*.local
 !.env.example
+# Local session cookie jar (curl/wget scratch from a loopback dev run)
+cookies.txt
 
 # Tauri / Rust
 src-tauri/target/

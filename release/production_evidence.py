@@ -217,6 +217,55 @@ def _parse_timestamp(value: Any, field: str) -> Tuple[Optional[datetime.datetime
     return moment, ""
 
 
+def validate_claims(
+    gate: str, claims: Any, now: Optional[datetime.datetime] = None
+) -> Tuple[bool, str]:
+    """Whether a document's claims satisfy what ``gate`` demands.
+
+    Split out of :func:`check_gate_evidence` so that the gate and
+    ``scripts/produce_production_evidence.py`` enforce **one** contract rather
+    than a rule and a restatement of it — the repo's recurring drift. The
+    producer's ``check`` calls this to tell an external party whether a document
+    would pass *before* it is signed; the gate calls it after verifying the
+    signature. Same function, same messages.
+
+    This judges the **form** of the claims, never their substance: that the
+    issuer field is populated says nothing about who the issuer is or whether
+    they were entitled to assert it. Nothing here can approve production.
+    """
+    if gate not in REQUIRED_EVIDENCE:
+        return False, f"{gate}: not a production-only gate"
+    if not isinstance(claims, dict):
+        return False, f"{gate}: evidence is not a JSON object"
+
+    if claims.get("gate") != gate:
+        return False, f"{gate}: evidence is for gate {claims.get('gate')!r}"
+    expected_type = REQUIRED_EVIDENCE[gate]
+    if claims.get("evidence_type") != expected_type:
+        return False, (
+            f"{gate}: evidence type {claims.get('evidence_type')!r} is not {expected_type!r}"
+        )
+    issuer = claims.get("issuer")
+    if not isinstance(issuer, str) or not issuer.strip():
+        return False, f"{gate}: evidence declares no issuer"
+    if claims.get("scope") != REQUIRED_SCOPE:
+        return False, f"{gate}: evidence scope {claims.get('scope')!r} is not {REQUIRED_SCOPE!r}"
+
+    moment = now or datetime.datetime.now(datetime.timezone.utc)
+    issued_at, reason = _parse_timestamp(claims.get("issued_at"), "issued_at")
+    if issued_at is None:
+        return False, f"{gate}: {reason}"
+    if issued_at > moment + MAX_CLOCK_SKEW:
+        return False, f"{gate}: issued_at {claims['issued_at']} is in the future"
+    expires_at, reason = _parse_timestamp(claims.get("expires_at"), "expires_at")
+    if expires_at is None:
+        return False, f"{gate}: {reason}"
+    if expires_at <= moment:
+        return False, f"{gate}: evidence expired at {claims['expires_at']}"
+
+    return True, f"{gate}: {expected_type} verified (issuer {issuer.strip()!r})"
+
+
 def check_gate_evidence(gate: str, now: Optional[datetime.datetime] = None) -> Tuple[bool, str]:
     """Whether signed external evidence for ``gate`` is present and trustworthy.
 
@@ -264,35 +313,8 @@ def check_gate_evidence(gate: str, now: Optional[datetime.datetime] = None) -> T
         claims = json.loads(document.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         return False, f"{gate}: evidence is not readable JSON: {exc}"
-    if not isinstance(claims, dict):
-        return False, f"{gate}: evidence is not a JSON object"
 
-    if claims.get("gate") != gate:
-        return False, f"{gate}: evidence is for gate {claims.get('gate')!r}"
-    expected_type = REQUIRED_EVIDENCE[gate]
-    if claims.get("evidence_type") != expected_type:
-        return False, (
-            f"{gate}: evidence type {claims.get('evidence_type')!r} is not {expected_type!r}"
-        )
-    issuer = claims.get("issuer")
-    if not isinstance(issuer, str) or not issuer.strip():
-        return False, f"{gate}: evidence declares no issuer"
-    if claims.get("scope") != REQUIRED_SCOPE:
-        return False, f"{gate}: evidence scope {claims.get('scope')!r} is not {REQUIRED_SCOPE!r}"
-
-    moment = now or datetime.datetime.now(datetime.timezone.utc)
-    issued_at, reason = _parse_timestamp(claims.get("issued_at"), "issued_at")
-    if issued_at is None:
-        return False, f"{gate}: {reason}"
-    if issued_at > moment + MAX_CLOCK_SKEW:
-        return False, f"{gate}: issued_at {claims['issued_at']} is in the future"
-    expires_at, reason = _parse_timestamp(claims.get("expires_at"), "expires_at")
-    if expires_at is None:
-        return False, f"{gate}: {reason}"
-    if expires_at <= moment:
-        return False, f"{gate}: evidence expired at {claims['expires_at']}"
-
-    return True, f"{gate}: {expected_type} verified (issuer {issuer.strip()!r})"
+    return validate_claims(gate, claims, now=now)
 
 
 def declared_evidence_summary() -> Dict[str, Any]:

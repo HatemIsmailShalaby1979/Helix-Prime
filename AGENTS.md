@@ -2367,6 +2367,64 @@ extremes plus `build_manifest()`'s pre-run default. It asserts **equality**, so 
 enum entry the code cannot produce fails too, and it validates the committed
 manifest. Can-fail proof: restoring the old four-value enum fails the test.
 
+#### The producer half of the evidence path was missing (B1.1, completed)
+
+Recorded 2026-09-20. B1 built the **consumer** — `release/production_evidence.py`
+verifies a detached RSA signature over a document outside the repository — but
+nothing in the tree could *produce* one. An external auditor had to
+reverse-engineer the contract from the verifier source, hand-roll
+`openssl dgst -sha256 -sign`, and hope their JSON satisfied it; a document whose
+only fault was a renamed field would be refused with no way to find out before
+shipping. The gate was correct and unusable. That is the last mile between "the
+door is openable by evidence" and an external party actually opening it.
+
+`scripts/produce_production_evidence.py` closes it: `gates`, `init-key`,
+`template`, `check`, `sign`, `status`.
+
+**One contract, not a rule and a restatement of it.** The claim checks moved out
+of `check_gate_evidence` into `validate_claims(gate, claims, now)`, which the
+gate calls after verifying the signature and the producer calls before signing.
+The producer's `check` therefore cannot pass a document the gate would reject.
+Equivalence proved against HEAD's inline version (imported from a scratch
+directory, driven through the same matrix with a real openssl keypair):
+**26 cases — valid, tampered body, tampered signature, missing document, missing
+signature, non-object JSON, wrong gate, wrong type, blank/absent/non-string
+issuer, wrong scope, absent/malformed/offsetless/future `issued_at`,
+absent/malformed/expired `expires_at`, and the three environment states — zero
+divergence.** All messages are byte-identical, which the B1 tests pin by
+substring.
+
+**It cannot manufacture evidence.** `template` leaves `issuer`, `issued_at` and
+`expires_at` empty and `sign` refuses outright if the document fails the
+contract — before openssl is invoked. `init-key` and `template` both refuse to
+write inside the repository, because the attested system must not hold what
+attests it. Can-fail proofs, both run: removing the sign refusal fails
+`test_sign_refuses_a_document_the_gate_would_reject`; removing the in-repo guard
+fails both refusal tests **and** — visibly — wrote a real 2048-bit private key
+into the repo root, which is the hazard the guard exists for. The strays were
+moved out; the working tree is clean.
+
+**It never reads as an approval.** `check` prints that a passing result is a
+statement about *form*, not truth, that it does not make production ready, and
+that the terminal human `production_approved` sign-off is still required. A test
+pins that wording, because the failure mode worth guarding is an operator seeing
+exit 0 and stopping.
+
+**Proved end to end, through the gate rather than through the tool.** With a
+produced and signed document declared, `check_gate_evidence("security_review")`
+turns green and `run_gate(profile="production")` moves **14/23 → 15/23**, while
+the classification correctly stays `NOT_READY` and exit stays 1 because eight
+gates remain. The tool agreeing with itself would have proved nothing.
+
+The document shape matches the committed B1 fixtures (`gate`, `evidence_type`,
+`scope`, `issuer`, `issued_at`, `expires_at`, `payload`) rather than inventing a
+second convention. `pyproject.toml` gains one per-file ignore for `S603` on the
+new script — openssl is invoked by fixed argv, resolved with `shutil.which`, and
+signing is the one thing that must not be hand-rolled.
+
+Gate: 121 passed across the six evidence-touching test files (10 new); ruff check
+and format clean; mypy clean on both files.
+
 #### The GitHub remote is PUBLIC — anything committed is published
 
 `origin` is `https://github.com/HatemIsmailShalaby1979/Helix-Prime.git` and
@@ -2378,6 +2436,33 @@ belongs in a private remote or outside the repo, not in a commit that will be
 pushed. Pushing needs a decision, not just a command — and note the `pre-push`
 hook exits 2 unless `git-lfs` is on PATH (it is, at
 `/c/Program Files/Git/cmd/git-lfs`, 3.7.1).
+
+**2026-09-20 — it was pushed, and this warning was not read first.** On the
+user's explicit instruction, `main` went to `origin` (`1ab9bea..5859ced`, then
+`5859ced..3055bb2`). The content audit checked the right things for *secrets* —
+no `.env`, no cookie jar, no database, no mp4, no private key, and the one `.pem`
+is a public test key — but it did **not** check the category this section names:
+internal-only material. Comparing `1ab9bea` against the new `origin/main` shows
+what the push published for the first time:
+
+| Path | First published by |
+|---|---|
+| `docs/handoff/00-project-handover.html` | `79aadad` (this session's artifacts commit) |
+| `docs/Helix_Codex_System_Analysis_and_Design.pdf` | `79aadad` |
+| `docs/client_one_pager.md` | `7d1e7a7` (2026-09-10) |
+| `docs/scoach_academy_hub_opportunity_report.md` | `7d1e7a7` |
+
+`docs/COMMERCIAL_STORY.md` was already public from the initial commit. The newly
+published files are candid status, a named design partner and commercial figures.
+Scanned for the worse categories and found **none**: no email addresses, no phone
+numbers, no credentials. So this is a disclosure of internal material, not a
+leak of secrets or personal data — and it is not undone by rewriting history,
+because the commits were public for the minutes in which they were fetched.
+Options, for the owner, in order of cost: make the repository private (a GitHub
+setting; `gh` is not installed here, so it is a UI action), accept the exposure
+as internal-but-not-damaging, or rewrite history and force-push — which reduces
+ongoing exposure but does not un-publish. **Read this section before the next
+push, not after.**
 
 **Next:** Phase 6 (B2–B4) — real infrastructure, paid external parties, and
 legal/human authority. All three are owner-driven: no engineering work unblocks

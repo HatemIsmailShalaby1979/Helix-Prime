@@ -153,6 +153,11 @@ select = ["E4", "E7", "E9", "F", "I", "B", "S"]
 extend-immutable-calls = ["fastapi.Depends"]
 
 [tool.ruff.lint.per-file-ignores]
+# S603 (subprocess without shell): the evidence producer shells out to openssl by
+# design, because signing is the one thing that must not be hand-rolled. Argv is
+# built here, never parsed from input, and the executable is resolved with
+# shutil.which rather than a bare name.
+"scripts/produce_production_evidence.py" = ["S603"]
 # S110 (try-except-pass): best-effort wrappers where swallowing is intentional —
 # connection close / ROLLBACK after a failed DB write / structured-log telemetry.
 # The primary error path still raises or logs; these guards exist so a secondary

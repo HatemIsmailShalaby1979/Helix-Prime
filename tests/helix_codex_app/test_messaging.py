@@ -191,6 +191,27 @@ def test_list_messages_is_newest_first_and_member_scoped(ctx) -> None:
         ctx.service.list_messages(ctx.layla, conversation.conversation_id)
 
 
+def test_list_messages_orders_a_timestamp_tie_newest_first(ctx) -> None:
+    """A wall clock cannot order two messages sent back to back.
+
+    The clock ticks every 15.6 ms on Windows, so consecutive timestamps are
+    equal and a created_at-only sort hands the pair back oldest-first. The tie
+    is forced here so the regression is catchable on every platform, not only
+    on the one whose clock happens to be coarse.
+    """
+    conversation = ctx.service.create_direct(ctx.amira, ctx.omar)
+    ctx.service.send_message(ctx.amira, conversation.conversation_id, "one")
+    ctx.service.send_message(ctx.omar, conversation.conversation_id, "two")
+    ctx.conn.execute(
+        "UPDATE messages SET created_at = ? WHERE conversation_id = ?",
+        ("2026-01-01T00:00:00Z", conversation.conversation_id),
+    )
+    ctx.conn.commit()
+
+    messages = ctx.service.list_messages(ctx.omar, conversation.conversation_id)
+    assert [m.body for m in messages] == ["two", "one"]
+
+
 def test_group_conversation_shape(ctx) -> None:
     group = ctx.service.create_group(ctx.amira, "Floor crew", [ctx.omar, ctx.layla])
     assert group.kind == "group"

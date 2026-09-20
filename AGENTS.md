@@ -2,12 +2,13 @@
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
 > **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
-> Phase 1 (A0 — correctness fixes) is COMPLETE; Phase 2 (A1 — vocabulary
-> single-sourcing) is next. Everything else is COMPLETE history: §1 (Production
-> Hardening, H0–H3), §1A (app UI modernization, UI-1), the sports-academy pack
-> (S0–S7), and §2–§17. Do not restart completed sections. Read this file
-> top-to-bottom, then pick up from §18, or §5 ("Suggested next work") if §18 is
-> closed. Update this file immediately after completing each step.
+> Phases 1 (A0 — correctness fixes) and 2 (A1 — vocabulary single-sourcing) are
+> COMPLETE; Phase 3 (A2 — structural mirror removal) is next. Everything else is
+> COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
+> UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
+> sections. Read this file top-to-bottom, then pick up from §18, or §5
+> ("Suggested next work") if §18 is closed. Update this file immediately after
+> completing each step.
 
 ---
 
@@ -1572,15 +1573,120 @@ Use a path **outside the repo** for `--junitxml` and the log. Pointing
 The venv `.venv-py312` is the one with `pytest` + `pyyaml`; managed Python 3.13
 has neither.
 
-### 18.5 Next: Phase 2 (A1) — vocabulary single-sourcing
+### 18.5 Phase 2 (A1) — vocabulary single-sourcing — COMPLETE
 
-Four incompatible data-mode vocabularies (connector / pilot / engine /
-app-runtime, plus the pack manifest's `{live, simulated}`) and three
-classification vocabularies. A1 collapses each to one source. Then Phase 3 (A2,
-remove the ~300-line structural mirror), Phase 4 (A3 unify SOD — implemented 5×
-— and A4 dead-code cleanup), Phase 5 (B1 evidence loader + nine gates +
-signoff), Phase 6 (B2–B4: real infra, paid external parties, legal/human
-authority — owner-driven, not engineering).
+**New module: `contracts/vocabulary.py`.** Declares each seam's vocabulary once and
+maps between them. It does **not** unify the vocabularies — the strings are pinned
+by tests and client contracts, so rewriting them would break real agreements.
+
+Measured sizes (the plan's "four vocabularies" undercounts, because `live` and
+`simulated_realistic` are shared spellings):
+
+| Vocabulary | Members |
+|---|---|
+| connector | historical_anonymized, historical_consented, simulated_realistic, live_external |
+| pilot | historical_consented, simulated_realistic, live_customer |
+| engine | live, sample |
+| app runtime | app_runtime |
+| pack manifest | live, simulated |
+
+- **`DATA_MODES` = 9 distinct strings** (not 15), because `historical_consented`,
+  `simulated_realistic` and `live` are each spelled the same by two seams.
+- **`ALL_CLASSIFICATIONS` = 8 distinct strings** across three vocabularies.
+  `security.classification.DataClassification` is **re-exported** as
+  `CORE_CLASSIFICATIONS`, not redeclared — one declaration, not two.
+
+**The live-customer guard.** `PILOT_REFUSED_DATA_MODES = {live_external,
+live_customer, live}`; `to_pilot()` fails closed on all three, so **no mapping
+table has `live_customer` as a target**. `live_customer` is in the refusal set
+deliberately: the pilot vocabulary names it only to *distinguish* it, never to
+select it.
+
+**Migrated to imports (one source each):** `connectors/contracts.py`
+(`CONNECTOR_DATA_MODES` + the `data_mode` default), `engines/contracts.py`
+(`DATA_MODE_LIVE`/`DATA_MODE_SAMPLE`), `pack_loader.py` (`_ALLOWED_DATA_MODES`),
+the 8 app service modules (`PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE`), and
+14 capability-pack / bridge `DATA_MODE` constants (sports_academy 9, restaurant 3,
+`helix_codex_app/integration` 2). Every observable string stayed byte-identical —
+verified by importing all 15 modules and comparing.
+
+**Frozen files: pinned by test, not edited.** The plan contradicts itself:
+A1's table names `pilot/scope.py:12-14` as a definition site, while the
+Do-NOT-touch list names the whole pilot package. The Do-NOT-touch list wins for a
+deployed artifact, so `pilot/scope.py` and `capabilities/sports_academy/fixtures.py`
+are **unchanged**, and `tests/test_vocabulary.py` asserts their constants are
+byte-identical to the vocabulary. Divergence still fails CI; the frozen files
+just are not the ones that fail.
+
+**Undercount correction.** The plan says "11 pack `DATA_MODE` copies". Measured:
+the literal `"simulated_realistic"` appears ~40 times outside tests — 15 as
+module-level `DATA_MODE` constants (now 1, frozen) and ~25 **inline** as function
+defaults, dict values and keyword args in `memory/governed_memory.py`,
+`release/gate.py`, `server/`, `pilot/run.py`, `cockpit/`, `demo/`,
+`customer_success/`, `metacognition/` and `helix_codex_app/modules/{memory,ops}/router.py`.
+The inline occurrences are **not** migrated: several sit in Do-NOT-touch files
+(`pilot/run.py`, `release/gate.py`, `memory/`) and they are argument defaults, not
+duplicated declarations. Two source-scanning tests now block a **new** module-level
+copy, so the debt cannot grow.
+
+#### Out-of-band defects found during A1 verification and fixed
+
+1. **`pack_loader` ↔ `section_registry` circular import.** `import
+   helix_codex_app.modules.lowcode.pack_loader` **failed outright** —
+   `ImportError: cannot import name 'SectionDecl' from partially initialized module`
+   — whenever `pack_loader` was imported first; it only worked if
+   `section_registry` happened to load first. Pre-existing at HEAD (confirmed via
+   `git show HEAD:`), latent because the app's import order hid it. Fixed by moving
+   the `section_registry` import inside `register_pack`, the single function that
+   uses it. Both import orders now work.
+2. **Message ordering bug** (`helix_codex_app/modules/messaging/repository.py`).
+   `ORDER BY created_at DESC` had no tiebreaker, and the Windows clock ticks every
+   **15.625 ms** (`time.get_clock_info('time').resolution = 0.015625`), so two
+   consecutive `datetime.now()` calls return the *same* value — two messages sent
+   back to back rendered **oldest-first**. Fixed with `, rowid DESC` plus a
+   platform-independent regression test that forces the tie. Can-fail proof: the
+   test fails without the fix (`['one','two']` vs `['two','one']`) and passes with
+   it. Note CI (ubuntu-latest) has a nanosecond clock and would never have caught
+   this.
+
+#### Residual debt (documented, not fixed)
+
+`list_messages(before=<created_at>)` paging is still tie-ambiguous: when two
+messages share a `created_at`, `created_at < ?` excludes **both**, so a page
+boundary between them loses one. The correct fix is a keyset cursor on
+`(created_at, rowid)`, which changes the public signature and the router — out of
+A1's scope. Observed flaking once during verification (1 of 5 runs).
+
+#### Gate (Phase 2) — PASSED
+
+- **Full suite: 1533 collected = 1531 passed + 2 failed.** The 2 are the same
+  documented sandbox artifacts as §18.3 and pass in isolation
+  (`2 passed in 35.08s`). Effective: **1533 passed, 0 real failures**.
+- **Count reconciles exactly:** 1487 (A0 gate) + 45 (`test_vocabulary.py`) + 1
+  (messaging regression test) = 1533.
+- `tests/test_vocabulary.py` → **45 passed**; `tests/helix_codex_app/test_messaging.py`
+  → **19 passed**, 4 consecutive runs.
+- `ruff check` clean on all CI paths; `ruff format --check` clean on every tracked
+  path (5 pre-existing untracked `marketing/helix-codex-deck/video/*.py` remain
+  unformatted, as noted in §1A).
+- `mypy server/ connectors/ control_plane/` → no issues, 59 files.
+
+### 18.6 Next: Phase 3 (A2) — remove the structural mirror
+
+Load the `RoleSpec` structural fields (`owned_capabilities`, `allowed_tools`,
+`allowed_peer_calls`, `segregation_of_duties`) from `role-catalog.yaml` at import
+instead of maintaining them by hand in `control_plane/governance.py:243-559`
+(~300 lines). Replace the 8 silent financial divergences with an explicit, named
+`FINANCIAL_LIMIT_OVERRIDES` map so the policy decision is declared rather than
+left as drift. Collapse the capability-registry mirror set
+(`organization/capability_registry.py:287-341`).
+
+**Hard requirement:** `evaluate_gate` output must stay byte-identical, and
+`detect_catalog_drift()` must still pass — that is the proof A2 did not break
+governance. Then Phase 4 (A3 unify SOD — implemented 5× — and A4 dead-code
+cleanup), Phase 5 (B1 evidence loader + nine gates + signoff), Phase 6 (B2–B4:
+real infra, paid external parties, legal/human authority — owner-driven, not
+engineering).
 
 **Do NOT touch** while doing this: `release/gate.py:250-287` bodies (beyond
 B1.2), `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,

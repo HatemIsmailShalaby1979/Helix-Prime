@@ -285,7 +285,12 @@ class MessagingRepository:
         if before is not None:
             sql += " AND created_at < ?"
             params.append(before)
-        sql += " ORDER BY created_at DESC LIMIT ?"
+        # rowid breaks the tie. The wall clock is not fine-grained enough to
+        # order two messages sent back to back — on Windows `time` ticks every
+        # 15.6 ms, so consecutive _now() calls return the *same* value and a
+        # created_at-only sort returns the pair oldest-first. rowid is
+        # insertion-ordered, so it is the correct tiebreaker for "newest first".
+        sql += " ORDER BY created_at DESC, rowid DESC LIMIT ?"
         params.append(_bounded_limit(limit))
         rows = self.conn.execute(sql, params).fetchall()
         return [_message_from_row(row) for row in rows]

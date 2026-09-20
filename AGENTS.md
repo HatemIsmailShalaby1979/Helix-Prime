@@ -2425,6 +2425,16 @@ signing is the one thing that must not be hand-rolled.
 Gate: 121 passed across the six evidence-touching test files (10 new); ruff check
 and format clean; mypy clean on both files.
 
+**Full suite, after the producer commit: 1695 collected = 1695 passed + 0 failed +
+0 errors.** Every per-test line is `PASSED` and the run reached 100%. The process
+still exits 1 because the §18.4 bulk-delete guard tripped at session finish
+(`count: 2937`), which is the documented behaviour and not a failure — the summary
+line is what it eats, and `-v` survives it. **Notably, none of the §18.4 sandbox
+artifacts fired this time, and the §18.5 paging flake did not appear** — the two
+classes that had been producing the "pre-existing 2–4 failures" in every earlier
+recorded run. (The run collected before the sign-off recorder below was written, so
+it holds 1695 of the current 1703.)
+
 #### The terminal sign-off had no producer either — and production is now reachable by evidence
 
 Recorded 2026-09-20, immediately after the above. The same gap existed one step

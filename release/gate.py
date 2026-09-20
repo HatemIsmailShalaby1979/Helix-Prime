@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional
 
 from release import harness as harness_mod
 from release import manifest as manifest_mod
-from release import observability, profiles, security_gate
+from release import observability, production_evidence, profiles, security_gate
 
 ROOT = manifest_mod.ROOT
 
@@ -240,51 +240,54 @@ def _gate_release_approval() -> tuple[bool, str]:
 
 
 # ── production-only gates ─────────────────────────────────────────────────
-# These are external blockers that a local automated run CANNOT satisfy. Each
-# returns red with a documented reason so the production profile fails closed
-# and can never be claimed locally. They are recorded (not fabricated) here.
-def _prod_gate_reason(name: str, evidence_type: str) -> tuple[bool, str]:
-    return False, f"{name}: requires {evidence_type} — not present (production NOT approved)"
+# Each gate now reads *signed evidence from outside the repository*, declared by
+# HELIX_PRODUCTION_EVIDENCE_DIR / HELIX_PRODUCTION_EVIDENCE_PUBKEY and verified
+# by release/production_evidence.py. The evidence type each gate demands lives
+# beside that reader, so the red reason and the green check cannot drift apart.
+#
+# The fail-closed default is unchanged and is the first check in the reader: with
+# nothing declared in the environment, every gate below still returns False with
+# a reason naming what is missing. What is new is that a gate can become green
+# *by evidence* instead of never — the door is openable, and only by a signature
+# this repository cannot produce.
+def _prod_gate(gate: str) -> tuple[bool, str]:
+    return production_evidence.check_gate_evidence(gate)
 
 
 def _gate_signed_production_evidence() -> tuple[bool, str]:
-    return _prod_gate_reason("signed_production_evidence", "external signed production evidence")
+    return _prod_gate("signed_production_evidence")
 
 
 def _gate_certified_data_isolation() -> tuple[bool, str]:
-    return _prod_gate_reason("certified_data_isolation", "certified tenant/data isolation")
+    return _prod_gate("certified_data_isolation")
 
 
 def _gate_external_observer_audit() -> tuple[bool, str]:
-    return _prod_gate_reason("external_observer_audit", "independent external observer audit")
+    return _prod_gate("external_observer_audit")
 
 
 def _gate_production_deployment_architecture() -> tuple[bool, str]:
-    return _prod_gate_reason(
-        "production_deployment_architecture", "reviewed deployment architecture"
-    )
+    return _prod_gate("production_deployment_architecture")
 
 
 def _gate_disaster_recovery_evidence() -> tuple[bool, str]:
-    return _prod_gate_reason(
-        "disaster_recovery_evidence", "disaster-recovery evidence from production"
-    )
+    return _prod_gate("disaster_recovery_evidence")
 
 
 def _gate_operational_ownership() -> tuple[bool, str]:
-    return _prod_gate_reason("operational_ownership", "assigned operational ownership")
+    return _prod_gate("operational_ownership")
 
 
 def _gate_incident_oncall_ownership() -> tuple[bool, str]:
-    return _prod_gate_reason("incident_oncall_ownership", "assigned incident/on-call ownership")
+    return _prod_gate("incident_oncall_ownership")
 
 
 def _gate_security_review() -> tuple[bool, str]:
-    return _prod_gate_reason("security_review", "signed security review")
+    return _prod_gate("security_review")
 
 
 def _gate_legal_privacy_review() -> tuple[bool, str]:
-    return _prod_gate_reason("legal_privacy_review", "signed legal/privacy review where applicable")
+    return _prod_gate("legal_privacy_review")
 
 
 # ── app release gates (the Helix Codex App product surface) ────────────────

@@ -138,12 +138,34 @@ def validate_signoff(s: SignOff) -> tuple[bool, str]:
 
 
 def _all_production_gates_satisfied() -> bool:
-    """Production-only gates are external and NOT satisfiable locally.
+    """Whether every production-only gate is green *by evidence*.
 
-    This always returns False: no local automated run or environment can
-    fabricate the external evidence required for a production sign-off.
+    This used to be a bare ``return False``. It now asks the gates, which ask
+    `release/production_evidence.py`, which refuses unless a signed artifact from
+    outside the repository verifies against a public key that is also outside it.
+    With nothing declared in the environment the answer is still ``False`` — the
+    difference is that the answer is now *derived* rather than asserted, so a
+    genuine external sign-off can be honoured while a fabricated one still cannot.
+
+    Deliberately does NOT read `release/release-manifest.json`. That file records
+    the last gate run's classification, and trusting it here would let a refreshed
+    manifest grant a production sign-off with no evidence present — the one way
+    this function could be made to lie without anyone signing anything.
     """
-    return False
+    from release import gate as gate_mod
+    from release import profiles as profiles_mod
+
+    for name in profiles_mod.PRODUCTION_ONLY_GATES:
+        impl = gate_mod.GATE_IMPL.get(name)
+        if impl is None:
+            return False
+        try:
+            ok, _reason = impl()
+        except Exception:  # noqa: BLE001 — a gate that raises has not passed
+            return False
+        if not ok:
+            return False
+    return True
 
 
 def _is_expired(expires_at: str) -> bool:

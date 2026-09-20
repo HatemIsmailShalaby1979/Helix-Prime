@@ -14,12 +14,13 @@ Two rules shape this module:
 """
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from release import production_evidence
 
 Profile = Literal["local", "pilot", "production"]
 
@@ -65,21 +66,24 @@ class Settings(BaseSettings):
         Fail fast when the profile cannot be honoured.
 
         ``production`` requires the external gates the release gate checks
-        (signed evidence, certified isolation, external observer audit). Those
-        are not satisfiable from configuration alone, so a production profile
-        started without them is a misconfiguration, not a degraded mode.
+        (signed evidence, certified isolation, external observer audit, and the
+        rest of the nine production-only gates). Those are not satisfiable from
+        configuration alone, so a production profile started without them is a
+        misconfiguration, not a degraded mode.
+
+        The check asks `release.production_evidence` rather than naming its own
+        variables, because the server and the release gate must agree on what
+        production evidence *is* — they used to disagree. It asks only for an
+        evidence directory and a public key: the server verifies evidence, it
+        never signs it. The three variables this replaced
+        (``HELIX_EVIDENCE_SIGNING_KEY``, ``HELIX_ISOLATION_CERT``,
+        ``HELIX_OBSERVER_AUDIT``) are superseded — they covered three of the nine
+        gates, and one of them asked a production server to hold a private
+        signing key, which would have let the attested system vouch for itself.
         """
         if not self.is_production:
             return
-        missing = [
-            name
-            for name in (
-                "HELIX_EVIDENCE_SIGNING_KEY",
-                "HELIX_ISOLATION_CERT",
-                "HELIX_OBSERVER_AUDIT",
-            )
-            if not os.environ.get(name)
-        ]
+        missing = production_evidence.missing_declaration()
         if missing:
             raise RuntimeError(
                 "HELIX_PROFILE=production requires the external gate inputs "

@@ -215,7 +215,17 @@ def test_sse_stream_receives_state_frames() -> None:
 
 def test_production_profile_refuses_to_start_without_gate_inputs(tmp_path, monkeypatch) -> None:
     """The production gate fails closed. This keeps anyone from 'fixing' that."""
-    for name in ("HELIX_EVIDENCE_SIGNING_KEY", "HELIX_ISOLATION_CERT", "HELIX_OBSERVER_AUDIT"):
+    # The server and the release gate now share one declaration of what
+    # production evidence is (`release.production_evidence`), so these two are the
+    # variables that matter. The three this replaced are cleared as well, to pin
+    # that they are no longer sufficient on their own.
+    for name in (
+        "HELIX_PRODUCTION_EVIDENCE_DIR",
+        "HELIX_PRODUCTION_EVIDENCE_PUBKEY",
+        "HELIX_EVIDENCE_SIGNING_KEY",
+        "HELIX_ISOLATION_CERT",
+        "HELIX_OBSERVER_AUDIT",
+    ):
         monkeypatch.delenv(name, raising=False)
 
     from server.app import create_app
@@ -230,3 +240,18 @@ def test_production_profile_refuses_to_start_without_gate_inputs(tmp_path, monke
     with pytest.raises(RuntimeError, match="production requires"):
         with TestClient(create_app(settings)):
             pass
+
+
+def test_production_profile_accepts_a_declared_evidence_dir_and_public_key(monkeypatch) -> None:
+    """The mirror of the test above: the check is a declaration, not a dead end.
+
+    Only the two declarations are needed to get past *this* check — the evidence
+    itself is verified by the release gate, which is the layer that reads it.
+    Asserting the positive here is what stops the startup check from silently
+    becoming impossible to satisfy.
+    """
+    from server.config import Settings
+
+    monkeypatch.setenv("HELIX_PRODUCTION_EVIDENCE_DIR", "/srv/helix/evidence")
+    monkeypatch.setenv("HELIX_PRODUCTION_EVIDENCE_PUBKEY", "/srv/helix/auditor.pub")
+    Settings(profile="production").require_headless_safe()  # must not raise

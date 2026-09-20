@@ -3,9 +3,10 @@
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
 > **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
 > Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing),
-> 3 (A2 — structural mirror removal) and 4 (A3 unify SOD + A4 dead-code cleanup)
-> are COMPLETE, and the §18.5 chat-paging debt is closed in §18.7; Phase 5
-> (B1 evidence loader + the nine gates + signoff) is next.
+> 3 (A2 — structural mirror removal), 4 (A3 unify SOD + A4 dead-code cleanup) and
+> 5 (B1 — production evidence loader) are COMPLETE, and the §18.5 chat-paging debt
+> is closed in §18.7. What remains is Phase 6 (B2–B4), which is owner-driven:
+> infrastructure spend, paid external parties, and legal/human authority.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
@@ -1420,18 +1421,33 @@ claims.*
 
 ### 18.1 Why this exists (read this before "opening the production gate")
 
-Two independent walls make production unreachable by engineering work:
+> **Updated 2026-09-20 (Phase 5, B1).** The two walls below were *code* walls: the
+> gates returned `False` because they had no way to read anything. B1 removed
+> them, so read each "now" note with the original text. Production is no longer
+> unreachable by construction — it is unreachable without signed external
+> evidence. The label does not move; only the door becomes openable.
 
-1. **`release/gate.py:250-287`** — the nine production-only gates are wrappers
+Two independent walls made production unreachable by engineering work:
+
+1. **`release/gate.py:250-287`** — the nine production-only gates were wrappers
    over `_prod_gate_reason()` → `return False`. They read **no file, no env var,
-   no artifact**. They are fail-closed *by construction*, not by missing
+   no artifact**. They were fail-closed *by construction*, not by missing
    evidence.
-2. **`release/signoff.py:140-146`** — `_all_production_gates_satisfied()` takes
-   no arguments and always returns `False`.
+   **Now:** each calls `release/production_evidence.check_gate_evidence()`, which
+   verifies a detached RSA signature over an artifact that lives outside the
+   repository. With nothing declared it still refuses at the very first check, so
+   the local default is unchanged — but the refusal now *names what is missing*
+   rather than asserting a verdict, and it can be satisfied by a signature this
+   repository cannot produce.
+2. **`release/signoff.py:140-146`** — `_all_production_gates_satisfied()` took
+   no arguments and always returned `False`.
+   **Now:** it asks the nine gates, so it is `True` only when all nine are green
+   *on evidence*. It deliberately does **not** read the release manifest: that
+   would let a refreshed manifest grant a production sign-off with nothing signed.
 
 The production *door* itself already works: `release/profiles.py:175-188`
 returns `"PRODUCTION"` when all 23 gates are green and `release_approved` is
-set (proven by `tests/test_pilot_readiness.py:47-53`). So the blocker is
+set (proven by `tests/test_pilot_readiness.py:47-53`). The blocker remains
 **evidence + external authority**, not code. The nine gates are:
 
 `signed_production_evidence`, `certified_data_isolation`,
@@ -1439,11 +1455,16 @@ set (proven by `tests/test_pilot_readiness.py:47-53`). So the blocker is
 `disaster_recovery_evidence`, `operational_ownership`,
 `incident_oncall_ownership`, `security_review`, `legal_privacy_review`.
 
-The existing precedent for what the minimum production track must build is
-**`server/config.py:63-88`** (`require_headless_safe`): it already declares
+The precedent B1 followed — and where it deliberately departed from it —
+is **`server/config.py:63-88`** (`require_headless_safe`): it declared
 `HELIX_EVIDENCE_SIGNING_KEY`, `HELIX_ISOLATION_CERT`, `HELIX_OBSERVER_AUDIT`
-and refuses to start without them. B1 completes that design; it does not invent
-a new one.
+and refused to start without them. Those three covered only **three** of the nine
+gates, and one of them asked a production server to hold a **private signing
+key** — which would have let the attested system vouch for itself. They are
+superseded: the server now asks `release.production_evidence.missing_declaration()`
+for the same two variables the gate reads, so the two layers cannot disagree
+about what production evidence is, and a production server holds only a public
+key.
 
 ### 18.2 Phase 1 (A0) — correctness fixes — COMPLETE
 
@@ -2067,11 +2088,84 @@ Files: `helix_codex_app/modules/messaging/{repository,router,service,schemas}.py
 messaging-touching test files pass (54 + 85), `ruff check` + `ruff format --check`
 clean, `mypy` clean on the messaging package.
 
-### 18.8 Next: Phase 5 (B1 evidence loader + the nine gates + signoff)
+### 18.8 Phase 5 (B1) — the production evidence loader — COMPLETE
 
-Phase 5 (B1 evidence loader + nine gates + signoff), then Phase 6 (B2–B4: real
-infra, paid external parties, legal/human authority — owner-driven, not
-engineering).
+**Recorded:** 2026-09-20. B1 was the only pure-code layer of the minimum
+production track; B2–B4 remain and are owner-driven (infra spend, paid external
+parties, legal/human authority), not engineering.
+
+**B1.1 — `release/production_evidence.py` (new).** The reader both walls assumed
+existed. Evidence lives **outside the repository**, declared by
+`HELIX_PRODUCTION_EVIDENCE_DIR` + `HELIX_PRODUCTION_EVIDENCE_PUBKEY` in the same
+style as `HELIX_AUDIT_DB_PATH` (`release/gate.py:170`) — the platform must not be
+able to vouch for itself. Per gate, `<gate>.evidence.json` plus a detached
+`.sig`. Everything security-relevant is read from *inside* the signed document
+(gate, evidence type, scope, issuer, validity window), so a tampered directory can
+only produce a document that fails to verify.
+
+**Stdlib only, and that was a decision.** `cryptography` is neither installed nor
+pinned, and taking a dependency into the governed core to verify one signature
+would widen the supply chain for no gain. The verifier is RSA PKCS#1 v1.5 /
+SHA-256 over a strict DER reader for a PEM SubjectPublicKeyInfo. Hand-rolled
+crypto is normally a smell, so it was **not taken on faith**: an openssl-produced
+signature verifies, a tampered payload does not, a flipped bit does not, a
+different key does not, a 4096-bit key works (so the size handling is not
+2048-specific), and malformed key material is refused without raising. The
+committed fixture signature was produced by `openssl dgst -sha256 -sign`, so the
+suite is an independent implementation agreeing rather than a module agreeing
+with itself.
+
+**B1.2 — the nine gates now read evidence.** Each calls
+`check_gate_evidence()`; the required evidence type for each gate lives beside
+the reader, so the red reason and the green check cannot drift. Signatures stay
+`() -> tuple[bool, str]`, so `GATE_IMPL` and every caller are untouched.
+`_prod_gate_reason()` is gone (dead once the gates read real input). The
+fail-closed default is the reader's *first* check: with nothing declared, all nine
+still refuse — `test_prod_gate_impls_are_registered_and_red` stays green
+**unmodified**, and `test_gate_never_production` still yields `NOT_READY`, exit 1.
+
+**B1.3 — `signoff._all_production_gates_satisfied()` derives instead of
+asserting.** It asks the nine gates and returns `True` only when all nine are
+green on evidence. It deliberately does **not** read the release manifest: doing
+so would let a refreshed manifest grant a production sign-off with nothing
+signed — the one way this function could be made to lie. See the release-artifact
+trap below for the other half of that hazard.
+
+**B1.4 — the server and the gate now agree, by construction.** They used to name
+different variables. `require_headless_safe()` asks
+`production_evidence.missing_declaration()`, the single place that decides what a
+production deployment must declare. The three variables it replaced covered only
+three of the nine gates, and `HELIX_EVIDENCE_SIGNING_KEY` asked a production
+server to hold a **private signing key** — which would have let the attested
+system vouch for itself. A production server now needs a public key only. The
+positive case is pinned too (`test_production_profile_accepts_a_declared_evidence_dir_and_public_key`),
+so the startup check cannot silently become impossible to satisfy.
+
+**B1.5 — the sign-off test became a red/green pair.** It asserted "never
+satisfiable locally"; it now asserts the thing that matters. Red: with nothing
+declared, every gate refuses and a well-formed `production_approved` record is
+rejected. Green: the same record is **accepted** once nine signed artifacts from
+`tests/fixtures/production_evidence/` are present — so the red test cannot pass
+because the path is dead. The fixtures are synthetic, their window is
+2020–2099 so they cannot quietly expire, and **no private key is committed**:
+only the public key and the signatures openssl produced with a throwaway key
+generated outside the repo (`E:/hx/make_evidence_fixtures.py` regenerates them).
+
+**Gate.** `tests/test_production_evidence.py` 27 passed (new);
+`tests/test_pilot_readiness.py` 27 passed; `tests/test_c8_release_gate.py` 22
+passed unmodified; `tests/test_server_spine.py` 12 passed; and
+`test_production_data_boundary` + `test_pilot` + `test_command_center_integration`
++ `test_capabilities_restaurant` + `test_capabilities_sports_academy` 102 passed.
+`ruff check` clean, `ruff format --check` clean, `mypy server/` clean (35 files).
+`mypy release/` reports 6 errors — all in `helix_codex_app/` files this work never
+touched, **proven pre-existing by running the same command in a `git worktree` at
+HEAD** (same 6 files, 10 vs 11 sources checked). `release/` is not in the mypy
+gate scope; the new module itself is clean.
+
+**What this does not do.** The production label does not move: it is still
+`CONTROLLED_PILOT_READY` with `release_approved: false`. B1 made the door
+openable by evidence, and only by a signature this repository cannot produce.
+The nine gates are still red in CI because no evidence is declared there.
 
 #### Release artifacts: do NOT "refresh" them to tidy the repo
 
@@ -2115,6 +2209,11 @@ belongs in a private remote or outside the repo, not in a commit that will be
 pushed. Pushing needs a decision, not just a command — and note the `pre-push`
 hook exits 2 unless `git-lfs` is on PATH (it is, at
 `/c/Program Files/Git/cmd/git-lfs`, 3.7.1).
+
+**Next:** Phase 6 (B2–B4) — real infrastructure, paid external parties, and
+legal/human authority. All three are owner-driven: no engineering work unblocks
+them, and B1 exists precisely so that the evidence they produce has somewhere to
+land.
 
 **Do NOT touch:** `release/gate.py:250-287` bodies (beyond B1.2),
 `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,

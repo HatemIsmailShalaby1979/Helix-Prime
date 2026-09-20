@@ -12,6 +12,7 @@ never write to the repo's evidence/ directory.
 from __future__ import annotations
 
 import pathlib
+import shutil
 import tempfile
 
 from release import gate, pilot_metrics, profiles, security_gate, signoff
@@ -137,13 +138,58 @@ def test_evidence_ref_required_for_pilot_approval():
     assert ok is False
 
 
-def test_production_approved_never_satisfiable_locally():
+def test_production_approved_is_refused_without_external_signed_evidence(monkeypatch):
+    """Not "unsatisfiable locally" — unsatisfiable without a signature we cannot make.
+
+    `production_approved` now consults the real gates rather than a hardcoded
+    `False`, so what this pins is the guarantee that actually matters: with nothing
+    declared in the environment, every production-only gate refuses and a
+    perfectly-formed sign-off record is still rejected. The companion test below
+    proves the same record is *accepted* once genuine signed evidence is present,
+    so this one cannot pass merely because the path is dead.
+    """
+    monkeypatch.delenv("HELIX_PRODUCTION_EVIDENCE_DIR", raising=False)
+    monkeypatch.delenv("HELIX_PRODUCTION_EVIDENCE_PUBKEY", raising=False)
     s = _pilot_signoff(
         state="production_approved",
         signature_ref="sig-1",
     )
-    ok, _ = signoff.validate_signoff(s)
-    assert ok is False  # _all_production_gates_satisfied() is always False
+    ok, reason = signoff.validate_signoff(s)
+    assert ok is False
+    assert "every production-only gate green" in reason
+
+
+def test_production_approved_is_reachable_with_signed_external_evidence(monkeypatch, tmp_path):
+    """The door opens by evidence — and only by evidence.
+
+    Nine artifacts, each signed by a key whose private half is not in this
+    repository, are the *only* difference between the two tests. That is the whole
+    point of B1: the production label stops being unreachable and starts being
+    conditional on something this codebase cannot manufacture.
+
+    The fixtures are synthetic and the key is a throwaway, so this proves the
+    mechanism, not an approval. A real run needs a real auditor's key.
+    """
+    fixtures = pathlib.Path(__file__).parent / "fixtures" / "production_evidence"
+    evidence = tmp_path / "evidence"
+    evidence.mkdir()
+    for artifact in fixtures.glob("*.evidence.json"):
+        shutil.copy(artifact, evidence / artifact.name)
+        shutil.copy(
+            artifact.with_suffix(artifact.suffix + ".sig"),
+            evidence / (artifact.name + ".sig"),
+        )
+    monkeypatch.setenv("HELIX_PRODUCTION_EVIDENCE_DIR", str(evidence))
+    monkeypatch.setenv("HELIX_PRODUCTION_EVIDENCE_PUBKEY", str(fixtures / "test_pub.pem"))
+
+    # Every production-only gate is now green, on evidence.
+    for gate_name in profiles.PRODUCTION_ONLY_GATES:
+        ok, reason = gate.GATE_IMPL[gate_name]()
+        assert ok is True, f"{gate_name} should be satisfied by signed evidence: {reason}"
+
+    s = _pilot_signoff(state="production_approved", signature_ref="sig-1")
+    ok, reason = signoff.validate_signoff(s)
+    assert ok is True, reason
 
 
 def test_unknown_state_is_rejected():

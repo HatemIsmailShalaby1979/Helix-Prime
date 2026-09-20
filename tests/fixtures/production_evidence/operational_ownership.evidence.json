@@ -1,0 +1,12 @@
+{
+  "gate": "operational_ownership",
+  "evidence_type": "assigned operational ownership",
+  "issuer": "Example Assurance LLP <reviews@example-assurance.test>",
+  "scope": "production",
+  "issued_at": "2020-01-01T00:00:00+00:00",
+  "expires_at": "2099-01-01T00:00:00+00:00",
+  "payload": {
+    "report_ref": "EA-2026-5019",
+    "note": "TEST FIXTURE - a synthetic artifact signed with a throwaway key. Not a real audit, review, or approval."
+  }
+}

@@ -5,7 +5,12 @@ Runs every gate in the requested profile, aggregates pass/fail, and emits a
 deterministic classification. Final classifications allowed by C8:
     CONTROLLED_PILOT_READY  (profile=controlled_pilot, all gates green)
     PRODUCTION_CANDIDATE    (profile=production_candidate, all gates green)
-An unqualified PRODUCTION label is NEVER emitted by this gate.
+    PRODUCTION              (profile=production, all 23 gates green on signed
+                             external evidence plus a release_approved sign-off)
+
+PRODUCTION became permitted on 2026-09-20, and it is reachable only by evidence:
+each of the nine production-only gates demands a signature produced by a key held
+outside this repository, so no local run can manufacture the label.
 
 The gate writes a machine-readable evidence pack + release manifest under
 `evidence/releases/<timestamp>/` (gitignored, not committed).
@@ -150,31 +155,83 @@ def _gate_dependency_locking() -> tuple[bool, str]:
 
 
 def _gate_configuration_validation() -> tuple[bool, str]:
+    """The declared profile file must agree with the code that runs it.
+
+    Two of the three checks used to be length floors — `len(gates) >= 10` and
+    `len(profiles) >= 4` — against a file that declares 14 and 6, so four gates
+    and two profiles could be deleted from the source of truth and this gate
+    stayed green. That is the §18.2 A0.1 pattern: a control reporting a property
+    it does not measure. The floors are replaced by closure against the code,
+    which is the one comparison a single-sourced file cannot satisfy by restating
+    its own numbers: every declared gate must have an implementation in this
+    module, and every implemented gate must be named by some declared list.
+    """
     prof = profiles.load_profiles()
-    ok_gates = len(prof.get("gates", profiles.GATE_NAMES)) >= 10
-    ok_profiles = len(prof.get("profiles", profiles.PROFILE_ORDER)) >= 4
-    import json as _json
+    declared_gates = set(prof.get("gates", profiles.GATE_NAMES))
+    declared_app = set(prof.get("app_gates", profiles.APP_GATE_NAMES))
+    prod_required = list(prof.get("required_gates", {}).get("production", []))
+    declared_prod_only = {g for g in prod_required if g not in declared_gates}
+    declared_all = declared_gates | declared_app | declared_prod_only
+
+    unimplemented = sorted(declared_gates - set(GATE_IMPL))
+    orphaned = sorted(set(GATE_IMPL) - declared_all)
+    ok_gates = bool(declared_gates) and not unimplemented and not orphaned
+
+    unevidenced = sorted(declared_prod_only - set(production_evidence.REQUIRED_EVIDENCE))
+    ok_profiles = bool(prof.get("profiles", profiles.PROFILE_ORDER)) and not unevidenced
 
     schema_p = ROOT / "release" / "manifest.schema.json"
     try:
-        _json.loads(schema_p.read_text(encoding="utf-8")) if schema_p.exists() else None
-        ok_schema = schema_p.exists()
-    except Exception:
+        ok_schema = schema_p.exists() and isinstance(
+            json.loads(schema_p.read_text(encoding="utf-8")), dict
+        )
+    except Exception:  # noqa: BLE001
         ok_schema = False
+
     ok = ok_gates and ok_profiles and ok_schema
-    return ok, f"configuration: gates={ok_gates} profiles={ok_profiles} schema={ok_schema}"
+    detail = f"configuration: gates={ok_gates} profiles={ok_profiles} schema={ok_schema}"
+    if unimplemented:
+        detail += f", no implementation: {', '.join(unimplemented)}"
+    if orphaned:
+        detail += f", named by no declared list: {', '.join(orphaned)}"
+    if unevidenced:
+        detail += f", no evidence requirement: {', '.join(unevidenced)}"
+    return ok, detail
 
 
 def _gate_startup_readiness() -> tuple[bool, str]:
+    """`all_ok` also folds in the storage check, so the message must name it.
+
+    `run_observability_report` computes `all_ok` from startup AND readiness AND
+    storage, but the detail string only reported the first two. A red gate caused
+    entirely by an unwritable store therefore read as `startup_ok=True
+    ready=True`, with no visible cause. The check is unchanged; the report now
+    names every input that can turn it red.
+    """
     rep = observability.run_observability_report()
+    startup = rep["checks"]["startup"]
+    readiness = rep["checks"]["readiness"]
+    storage = rep["checks"]["storage"]
     ok = rep["all_ok"]
-    startup_ok = bool(rep["checks"]["startup"].get("slo_met"))
-    ready = bool(rep["checks"]["readiness"].get("ready"))
-    return ok, f"startup_readiness: all_ok={ok} startup_ok={startup_ok} ready={ready}"
+    return ok, (
+        f"startup_readiness: all_ok={ok} startup_ok={bool(startup.get('slo_met'))} "
+        f"ready={bool(readiness.get('ready'))} "
+        f"storage_writable={bool(storage.get('all_writable'))}"
+    )
 
 
 def _gate_backup_restore() -> tuple[bool, str]:
-    # Synthetic-state backup/restore (never mutates live DBs).
+    """Synthetic-state backup/restore (never mutates live DBs).
+
+    `restore_state` documents that it "enforces schema compatibility (fail
+    closed)" and raises when `schema_ok` is false — but this gate used to pass
+    `schema_ok=True` as a literal, so the branch could never fire and the
+    compatibility claim was an assertion rather than a check. The backup already
+    records `schema_versions`, so the value is now computed from that record.
+    Within this gate both sides are read from the same state moments apart, so
+    the comparison is only falsifiable by a backup carrying different versions —
+    which is exactly what the can-fail test constructs.
+    """
     from release import backup
 
     work = tempfile.mkdtemp(prefix="hp_gate_br_")
@@ -202,7 +259,11 @@ def _gate_backup_restore() -> tuple[bool, str]:
         backup_dir = os.path.join(work, "backup")
         backup.backup_state(backup_dir, repo_root=work)
         restore_dir = os.path.join(work, "restored")
-        backup.restore_state(backup_dir, restore_dir, repo_root=work, schema_ok=True)
+        recorded = json.loads(
+            pathlib.Path(backup_dir, "backup-manifest.json").read_text(encoding="utf-8")
+        )
+        schema_ok = recorded.get("schema_versions") == manifest_mod.data_schema_versions()
+        backup.restore_state(backup_dir, restore_dir, repo_root=work, schema_ok=schema_ok)
         # verify restored audit chain
         from security.audit import AuditTrail as AT2
 
@@ -210,23 +271,29 @@ def _gate_backup_restore() -> tuple[bool, str]:
         valid, msg = t2.verify_chain()
         t2.close()
         ok = valid
-        return ok, f"backup_restore: restored audit chain valid={valid} ({msg})"
+        return ok, (
+            f"backup_restore: restored audit chain valid={valid} " f"schema_ok={schema_ok} ({msg})"
+        )
     except Exception as e:  # noqa: BLE001
         return False, f"backup_restore: {type(e).__name__}: {e}"
 
 
 def _gate_rollback() -> tuple[bool, str]:
+    """Synthetic manifest rollback: previous identity restored, provenance kept.
+
+    The manifest read used to leak an open handle (`json.load(open(...))`), which
+    is what the C0 Windows SQLite-handle work exists to stop; it is closed here.
+    """
     from release import backup
 
     prev = {"git_commit": "AAAA", "classification": "PRODUCTION_CANDIDATE", "version": "0.9.0-c8"}
     cur = {"git_commit": "BBBB", "classification": "PRODUCTION_CANDIDATE", "version": "0.9.0-c8"}
-    import os
-    import tempfile
 
     work = tempfile.mkdtemp(prefix="hp_gate_rb_")
     path = os.path.join(work, "release-manifest.json")
     backup.rollback_manifest(prev, cur, target_path=path)
-    out = json.load(open(path, encoding="utf-8"))
+    with open(path, encoding="utf-8") as f:
+        out = json.load(f)
     ok = out["git_commit"] == "AAAA" and "_rolled_back_from" in out
     return ok, f"rollback: previous identity restored ok={ok}"
 
@@ -289,16 +356,34 @@ def _gate_performance_limits() -> tuple[bool, str]:
     return ok, f"performance_limits: soak_ok={soak['ok']} startup_slo={startup.get('slo_met')}"
 
 
+def _operator_doc_has_body(rel: str) -> bool:
+    """True when `rel` exists under ROOT and carries non-blank text.
+
+    Absence and unreadability are both "not ready": an operator document that
+    cannot be read cannot be followed.
+    """
+    try:
+        return bool((ROOT / rel).read_text(encoding="utf-8").strip())
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
 def _gate_operator_readiness() -> tuple[bool, str]:
+    """Each operator document must be present AND carry content.
+
+    Presence alone is not readiness: a zero-byte runbook satisfied this gate
+    before, the same defect `dependency_locking` had when it went green on a
+    merely non-empty file. The bar is a non-blank body.
+    """
     docs = [
         "docs/release/operator-runbook.md",
         "docs/release/incident-response.md",
         "docs/release/backup-restore-guide.md",
         "docs/release/controlled-pilot-pack.md",
     ]
-    present = [d for d in docs if (ROOT / d).exists()]
-    ok = len(present) == len(docs)
-    return ok, f"operator_readiness: {len(present)}/{len(docs)} docs present"
+    filled = [rel for rel in docs if _operator_doc_has_body(rel)]
+    ok = len(filled) == len(docs)
+    return ok, f"operator_readiness: {len(filled)}/{len(docs)} docs present and non-empty"
 
 
 def _gate_release_approval() -> tuple[bool, str]:

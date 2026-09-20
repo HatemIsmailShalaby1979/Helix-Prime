@@ -4,9 +4,12 @@
 > **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
 > Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing),
 > 3 (A2 — structural mirror removal), 4 (A3 unify SOD + A4 dead-code cleanup) and
-> 5 (B1 — production evidence loader) are COMPLETE, and the §18.5 chat-paging debt
-> is closed in §18.7. What remains is Phase 6 (B2–B4), which is owner-driven:
+> 5 (B1 — production evidence loader) are COMPLETE, the §18.5 chat-paging debt is
+> closed in §18.7, and §18.9 (can-fail proof for the seven remaining core gates)
+> is COMPLETE. What remains is Phase 6 (B2–B4), which is owner-driven:
 > infrastructure spend, paid external parties, and legal/human authority.
+> **No code change can unblock Phase 6** — the nine production-only gates need
+> signatures from keys held outside this repository.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
@@ -2819,3 +2822,135 @@ human acts, not code.
 `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,
 `connectors/policy.py:57`, `capabilities/sports_academy/contracts.py:77-86`,
 `capabilities/sports_academy/fixtures.py`, `pilot/*`, `00_CONSTITUTION.md`.
+
+### 18.9 The seven unaudited core gates: can-fail proof — COMPLETE
+
+**Recorded:** 2026-09-20. Phase 6 (B2–B4) is owner-driven, so the remaining work an
+agent can do is proving the *other* gates can refuse a bad state. Seven core gates
+had no falsifiability test. One of them turned out to be a **third** instance of
+the §18.2 A0.1 pattern, and a second had a fail-closed branch that was dead code.
+
+**New file:** `tests/test_c8_gate_falsifiability.py` — 35 tests: one per way each
+gate can be made red, plus a green control per gate.
+
+| gate | could it fail? | what changed |
+|---|---|---|
+| `configuration_validation` | **no** — two of its three checks were dead | length floors replaced by closure against the code |
+| `startup_readiness` | yes, but the red cause was hidden | storage now named in the detail |
+| `backup_restore` | **no** — the fail-closed branch was unreachable | `schema_ok` computed, not asserted |
+| `rollback` | yes | leaked file handle closed |
+| `data_isolation` | yes | unchanged |
+| `operator_readiness` | weakly — existence only | non-blank body required |
+| `release_approval` | yes | unchanged |
+
+#### `configuration_validation` could not see a gate being deleted
+
+Two of its three checks were `len(gates) >= 10` and `len(profiles) >= 4` against a
+file declaring **14** and **6**. Four gates and two profiles could be deleted from
+the source of truth and it stayed green — and because `3055bb2` made that file the
+single source of truth, deleting a gate removes it from the set `run_gate`
+iterates, so the release can be classified green having satisfied one fewer gate.
+
+Replaced with **closure against the code**, which is the one comparison a
+single-sourced file cannot satisfy by restating its own numbers: every declared
+gate must have an implementation in `GATE_IMPL`, and every implemented gate must be
+named by some declared list (`gates ∪ app_gates ∪ production_only`). Both
+directions measured empty at HEAD before the change (29 = 14 + 6 + 9), so the fix
+is green on the committed repo. Can-fail proof: dropping `backup_restore` leaves
+**13** gates — still above the old floor of 10, i.e. the old check would have been
+green — and the new check returns red naming `backup_restore`.
+
+#### `backup_restore` asserted the schema compatibility it claimed to enforce
+
+`restore_state`'s docstring promises *"Enforces schema compatibility (fail
+closed)"* and raises `BackupError` when `not schema_ok`. The gate passed
+`schema_ok=True` as a **literal**, so the branch could never fire and the claim was
+an assertion, not a check. `backup_state` already records `schema_versions` into
+`backup-manifest.json`, so the gate now computes the comparison. Measured: with a
+backup whose recorded versions are rewritten to a foreign schema the gate is red
+(`restore rejected: backup schema incompatible with current release`); with
+`schema_ok=True` the same pair restores silently, which is what it used to do.
+Honest limit, recorded in the docstring: inside this gate both sides are read from
+the same state moments apart, so the comparison is falsifiable only by a backup
+carrying different versions — which is what the test constructs.
+
+#### `operator_readiness` accepted a zero-byte runbook
+
+Existence was the whole check, so an empty file was "ready". Now requires a
+non-blank body. All four committed documents are 2–4 KB, so the gate stays green.
+Can-fail proof: the old existence predicate is asserted green on the same empty
+docs that the new check refuses (`0/4`).
+
+#### `startup_readiness` reported a red gate with no visible cause
+
+`run_observability_report` computes `all_ok` from startup **and** readiness **and**
+storage, but the detail string named only the first two, so a storage-only failure
+rendered as `all_ok=False startup_ok=True ready=True`. The check is unchanged; the
+report now names storage. `rollback` also leaked its manifest handle
+(`json.load(open(path))`) — closed, and pinned by an AST-based source assertion.
+
+#### The four frozen gates are pinned by body, not by line range
+
+**A correction to my own earlier report.** I recorded that the freeze
+`release/gate.py:250-287` had drifted. It had not. The *window* moved because
+`d86181c` inserted code above it; the **bodies did not**. Measured: all four
+frozen gate bodies are byte-identical between `origin/main` (`3055bb2`) and HEAD.
+
+| frozen gate | sha256 of body |
+|---|---|
+| `_gate_audit_integrity` | `8a1101cdb3276516a516033b0c942a1e05388dd72bf65289761c1d14379013c7` |
+| `_gate_security_checks` | `d54baee1fe9d28009d9b13a742f9818b1ac9748fa825cd259c14f6f9700704d2` |
+| `_gate_failure_recovery` | `89de29713bfb0a30fc158dec7583d5cc8eb8f5da1100cb6ee8e410ba58018b09` |
+| `_gate_performance_limits` | `8e40a191eeb9a4af6bd9d907c6b0a9f96fa6141bf9db1a9961334c5db4e256e3` |
+
+`test_frozen_gate_body_is_unchanged` pins those digests, so the freeze is enforced
+rather than annotated, and it survives the renumbering a line-range pin would
+mistake for a violation. Re-pinning is the documented process if a change is ever
+intended. Do not re-chase the "drift": the window is expected to move.
+
+#### Stale declarations corrected (my own `d0b4801` left four)
+
+`release/gate.py` module docstring ("An unqualified PRODUCTION label is NEVER
+emitted by this gate"), `scripts/release_gate.py` (same claim, plus the profile
+list omitted `production`), and `release/__init__.py` ("never an unqualified
+PRODUCTION claim") all contradicted the code and are corrected.
+`scripts/release_gate.py` now also warns that running it is **not** read-only: it
+regenerates `release/release-manifest.json` and records `release_approved` from the
+pilot-consent flag, flipping it false → true.
+
+**Judged accurate, deliberately left alone** so nobody re-litigates them:
+`profiles.py:188` and `:229` ("an *unqualified* PRODUCTION label is still
+unreachable" — "unqualified" is the load-bearing word), and
+`manifest.schema.json:5` ("Never a **bare** production claim").
+
+#### The sandbox delete budget is 50 per turn, and a full-suite run needs thousands
+
+Measured from the guard's own stderr, not inferred:
+
+```
+[safe-delete][SAFE_DELETE_BULK_CONFIRM_REQUIRED] {"count":115,"threshold":50,"scope":"turn",...}
+sitecustomize.py:826: SystemExit
+```
+
+`scope: "turn"` means the budget does not refill mid-turn. Once spent, the
+`SystemExit` fires inside fixture teardown and pytest reports
+`assert not self._finalizers`, which cascades into "failed on setup" for every
+remaining test — including tests that request no fixtures, because
+`tests/conftest.py`'s **autouse** `release_sqlite_handles(request, tmp_path)` gives
+every test in `tests/` a `tmp_path`. That is the whole explanation for the
+`656 passed, 1056 errors` full-suite result recorded this session; it is not a
+regression, and the same file passes 65/65 run alone. **The suite count is 1712,
+not 1711.**
+
+Because a clean full-suite run is not achievable once the budget is spent, the
+can-fail assertions were verified by a standalone replay
+(`E:/Helix-Prime-backups/probe/verify_falsifiability.py`, outside the repo) that
+calls the gate callables directly: **35/35 assertions hold, 7/7 gates green, 4/4
+frozen bodies unchanged.** The pytest file is the durable artefact; run it in a
+fresh turn.
+
+#### Gate
+
+`ruff check` + `ruff format --check` clean on all four changed files; the seven
+gates green on the committed repo; `release-manifest.json` and `go-no-go.json`
+hash-verified untouched throughout (`write_evidence=False` on every probe).

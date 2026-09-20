@@ -38,7 +38,9 @@ from pathlib import Path
 from build_captions import FILM, build as build_captions, extract_scenes
 from build_voice import AUDIO, clip_name, ffprobe_seconds, flatten_beats
 
-SCENE_RE = re.compile(r'id:"([^"]+)",\s*act:(\d+),\s*start:([\d.]+),\s*dur:([\d.]+),\s*title:"([^"]+)"')
+SCENE_RE = re.compile(
+    r'id:"([^"]+)",\s*act:(\d+),\s*start:([\d.]+),\s*dur:([\d.]+),\s*title:"([^"]+)"'
+)
 BEAT_RE = re.compile(r"^(\s*\{t:)([\d.]+)(, line:.*)$")
 
 
@@ -83,8 +85,12 @@ def new_times(lengths: list[float], duration: float) -> list[float]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--apply", action="store_true", help="rewrite the film and regenerate the captions")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--apply", action="store_true", help="rewrite the film and regenerate the captions"
+    )
     args = ap.parse_args()
 
     source = FILM.read_text(encoding="utf-8")
@@ -128,8 +134,10 @@ def main() -> int:
 
         total = sum(group)
         flag = "OK" if wa <= 0.25 else "OVER"
-        print(f"{scene['title'][:44]:44s} {scene['dur']:4.0f}s {total:5.1f}s "
-              f"{total / scene['dur']:5.2f}x  {wb:6.2f}s -> {wa:5.2f}s  {flag}")
+        print(
+            f"{scene['title'][:44]:44s} {scene['dur']:4.0f}s {total:5.1f}s "
+            f"{total / scene['dur']:5.2f}x  {wb:6.2f}s -> {wa:5.2f}s  {flag}"
+        )
 
         for (line_index, _), value in zip(scene["beats"], new, strict=True):
             match = BEAT_RE.match(lines[line_index])

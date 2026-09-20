@@ -31,7 +31,7 @@ FILM = HERE / "Helix_Codex_5Min_Animated.html"
 OUT = HERE / "Helix_Codex_5Min_Animated.vtt"
 
 MAX_CHARS = 84  # roughly two 42-character caption lines
-MIN_CUE = 1.2   # seconds; a shorter cue is a flash, not a caption
+MIN_CUE = 1.2  # seconds; a shorter cue is a flash, not a caption
 
 
 def extract_scenes() -> list[dict]:
@@ -174,7 +174,9 @@ def build() -> int:
         for i, beat in enumerate(beats):
             window_start = scene["start"] + beat["t"]
             window_end = (
-                scene["start"] + beats[i + 1]["t"] if i + 1 < len(beats) else scene["start"] + scene["dur"]
+                scene["start"] + beats[i + 1]["t"]
+                if i + 1 < len(beats)
+                else scene["start"] + scene["dur"]
             )
             span = max(0.8, window_end - window_start)
             chunks = merge_short_chunks(to_chunks(beat["line"]), span)
@@ -194,9 +196,13 @@ def build() -> int:
                 lines.append("")
 
     OUT.write_text("\n".join(lines), encoding="utf-8")
-    print(f"scenes: {len(scenes)} | cues: {cue_count} | runtime {int(total // 60)}:{int(total % 60):02d}")
-    print(f"cue duration: shortest {min(durations):.2f}s, median {sorted(durations)[len(durations) // 2]:.2f}s "
-          f"(floor is {MIN_CUE:.1f}s)")
+    print(
+        f"scenes: {len(scenes)} | cues: {cue_count} | runtime {int(total // 60)}:{int(total % 60):02d}"
+    )
+    print(
+        f"cue duration: shortest {min(durations):.2f}s, median {sorted(durations)[len(durations) // 2]:.2f}s "
+        f"(floor is {MIN_CUE:.1f}s)"
+    )
     print(f"wrote {OUT} ({OUT.stat().st_size} bytes)")
     return 0
 

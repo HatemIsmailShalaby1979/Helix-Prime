@@ -138,13 +138,16 @@ def report(flat: list[dict]) -> list[tuple[dict, float]]:
     if over:
         print(f"  overrunning their beat window: {len(over)}")
         for beat, sec in over[:10]:
-            print(f"    beat {beat['n']:03d}  {sec:.2f}s > {beat['window']:.2f}s  {beat['line'][:60]}")
+            print(
+                f"    beat {beat['n']:03d}  {sec:.2f}s > {beat['window']:.2f}s  {beat['line'][:60]}"
+            )
     elif not missing:
         print("  every clip fits inside its beat window")
     return over
 
 
 # --------------------------------------------------------------------------- edge
+
 
 def edge_exe() -> str:
     exe = os.environ.get("EDGE_TTS") or shutil.which("edge-tts") or shutil.which("edge-tts.exe")
@@ -170,6 +173,7 @@ def edge_render(exe: str, voice: str, rate: int, text: str, out: Path) -> tuple[
 
 
 # ------------------------------------------------------------------------ eleven
+
 
 def eleven_key() -> str:
     key = os.environ.get("ELEVENLABS_API_KEY") or os.environ.get("XI_API_KEY")
@@ -201,14 +205,18 @@ def eleven_voice(key: str, want_name: str | None, want_id: str | None) -> tuple[
     if not want_name:
         v = voices[0]
         return v["voice_id"], v.get("name", "?")
-    sys.exit("no voice matching %r. Available: %s"
-             % (name, ", ".join(sorted(v.get("name", "?") for v in voices))))
+    sys.exit(
+        "no voice matching %r. Available: %s"
+        % (name, ", ".join(sorted(v.get("name", "?") for v in voices)))
+    )
 
 
 def eleven_render(key: str, voice_id: str, model: str, text: str, out: Path) -> tuple[bool, str]:
     req = urllib.request.Request(
         f"{API}/text-to-speech/{voice_id}?output_format={ELEVEN_FORMAT}",
-        data=json.dumps({"text": text, "model_id": model, "voice_settings": ELEVEN_SETTINGS}).encode(),
+        data=json.dumps(
+            {"text": text, "model_id": model, "voice_settings": ELEVEN_SETTINGS}
+        ).encode(),
         headers={"xi-api-key": key, "Content-Type": "application/json", "Accept": "audio/mpeg"},
         method="POST",
     )
@@ -227,7 +235,10 @@ def eleven_render(key: str, voice_id: str, model: str, text: str, out: Path) -> 
 
 # ------------------------------------------------------------------------- build
 
-def auto_fit(flat: list[dict], scenes: list[dict], render, base_rate: int, args: argparse.Namespace) -> int:
+
+def auto_fit(
+    flat: list[dict], scenes: list[dict], render, base_rate: int, args: argparse.Namespace
+) -> int:
     """Render the pack so that every scene's narration fits inside its duration.
 
     A scene's beats can only all fit if the scene's total narration is no longer
@@ -287,13 +298,17 @@ def build(args: argparse.Namespace) -> int:
     flat = flatten_beats(scenes)
     AUDIO.mkdir(parents=True, exist_ok=True)
 
-    print(f"film: {len(scenes)} scenes, {len(flat)} narration beats, "
-          f"{sum(b['window'] for b in flat):.0f}s of timeline")
+    print(
+        f"film: {len(scenes)} scenes, {len(flat)} narration beats, "
+        f"{sum(b['window'] for b in flat):.0f}s of timeline"
+    )
 
     if args.dry_run:
         for beat in flat:
-            print(f"  {beat['n']:03d}  {beat['start']:6.1f}s  win {beat['window']:4.1f}s  "
-                  f"{len(beat['line'].split()):3d}w  {beat['line']}")
+            print(
+                f"  {beat['n']:03d}  {beat['start']:6.1f}s  win {beat['window']:4.1f}s  "
+                f"{len(beat['line'].split()):3d}w  {beat['line']}"
+            )
         return 0
 
     if args.check:
@@ -331,7 +346,9 @@ def build(args: argparse.Namespace) -> int:
         ok, detail = render(beat["line"], path, base_rate)
         if ok:
             written += 1
-            print(f"  {beat['n']:03d} ok   {path.stat().st_size // 1024:4d} KB  {beat['line'][:56]}")
+            print(
+                f"  {beat['n']:03d} ok   {path.stat().st_size // 1024:4d} KB  {beat['line'][:56]}"
+            )
         else:
             failed += 1
             print(f"  {beat['n']:03d} FAIL {detail}")
@@ -351,7 +368,9 @@ def build(args: argparse.Namespace) -> int:
             if ok:
                 new = ffprobe_seconds(path) or 0.0
                 verdict = "fits" if new <= beat["window"] + 0.25 else "still long"
-                print(f"  {beat['n']:03d} rate {target:+d}%  {seconds:.2f}s -> {new:.2f}s  {verdict}")
+                print(
+                    f"  {beat['n']:03d} rate {target:+d}%  {seconds:.2f}s -> {new:.2f}s  {verdict}"
+                )
             else:
                 print(f"  {beat['n']:03d} refit failed: {detail}")
         report(flat)
@@ -360,22 +379,45 @@ def build(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--engine", choices=["edge", "eleven"], default="edge",
-                    help="TTS backend (default: edge)")
-    ap.add_argument("--voice", help=f"voice name (edge default: {EDGE_VOICE}, eleven default: {ELEVEN_VOICE})")
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    ap.add_argument(
+        "--engine", choices=["edge", "eleven"], default="edge", help="TTS backend (default: edge)"
+    )
+    ap.add_argument(
+        "--voice", help=f"voice name (edge default: {EDGE_VOICE}, eleven default: {ELEVEN_VOICE})"
+    )
     ap.add_argument("--voice-id", help="explicit ElevenLabs voice id (skips the name lookup)")
     ap.add_argument("--model", help=f"ElevenLabs model (default: {ELEVEN_MODEL})")
-    ap.add_argument("--rate", type=int, default=EDGE_RATE, help=f"edge-tts rate percent (default: {EDGE_RATE:+d}%%)")
+    ap.add_argument(
+        "--rate",
+        type=int,
+        default=EDGE_RATE,
+        help=f"edge-tts rate percent (default: {EDGE_RATE:+d}%%)",
+    )
     ap.add_argument("--only", type=int, metavar="N", help="render a single beat")
     ap.add_argument("--force", action="store_true", help="re-render clips that already exist")
-    ap.add_argument("--fit", action="store_true", help="re-render overrunning clips at a faster rate")
-    ap.add_argument("--auto", action="store_true",
-                    help="render so every scene fits its duration (per-scene rate), then report")
-    ap.add_argument("--cap", type=int, default=MAX_RATE,
-                    help=f"ceiling for --auto per-scene rates, in percent (default: {MAX_RATE})")
-    ap.add_argument("--max-rate", type=int, default=MAX_RATE,
-                    help=f"ceiling for --fit, in percent (default: {MAX_RATE})")
+    ap.add_argument(
+        "--fit", action="store_true", help="re-render overrunning clips at a faster rate"
+    )
+    ap.add_argument(
+        "--auto",
+        action="store_true",
+        help="render so every scene fits its duration (per-scene rate), then report",
+    )
+    ap.add_argument(
+        "--cap",
+        type=int,
+        default=MAX_RATE,
+        help=f"ceiling for --auto per-scene rates, in percent (default: {MAX_RATE})",
+    )
+    ap.add_argument(
+        "--max-rate",
+        type=int,
+        default=MAX_RATE,
+        help=f"ceiling for --fit, in percent (default: {MAX_RATE})",
+    )
     ap.add_argument("--dry-run", action="store_true", help="list the beats without rendering")
     ap.add_argument("--check", action="store_true", help="measure the pack without rendering")
     return build(ap.parse_args())

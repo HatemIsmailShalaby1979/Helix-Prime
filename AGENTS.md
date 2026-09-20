@@ -2226,6 +2226,40 @@ Two fields that *do* still check out: `version: "0.9.0-c8"` matches
 `pyproject.toml` plus `CEREMONY_SUFFIX`, and `supported_python: ">=3.12,<3.13"`
 matches `requires-python` exactly.
 
+#### CI was linting nine directories while this ledger claimed thirteen
+
+Audited 2026-09-20 by reading `.github/workflows/ci.yml` against what the record
+says. The ruff step covered `server/ connectors/ control_plane/ engines/
+capabilities/ security/ pilot/ scripts/ GOVERNANCE/` and skipped **eight** that
+hold shipped Python — including the entire app (`helix_codex_app/`) and every test
+(`tests/`) — while §18.7 claimed "`ruff check` clean on every CI path" for
+thirteen. The mypy step covered three directories where the §18.7 gate ran five.
+
+Both are now true: ruff lints all seventeen paths and mypy type-checks
+`server/ connectors/ control_plane/ contracts/ security/`. Verified with the
+versions CI installs (ruff 0.1.15, mypy 2.3.1 — identical to local, so local
+results are CI-representative): ruff exit 0, mypy "no issues found in **72 source
+files**", matching §18.7's count exactly.
+
+`organization/`, `cockpit/`, `memory/` and `metacognition/` are deliberately **not**
+in the mypy list: mypy cannot resolve them as packages without an `__init__.py` or
+`--explicit-package-bases`, so adding them fails on configuration rather than on
+types. `marketing/` is format-checked (repo-wide) but not lint-gated — it is demo
+tooling, not shipped code, and its 20 remaining lint findings are mostly
+`subprocess`-use flags on scripts that legitimately shell out.
+
+**And this audit caught a break I had just caused myself.** Committing the deck
+scripts unformatted (`79aadad`) made `ruff format --check .` — a repo-wide CI step
+— fail with exit 1, so a fresh clone would have been red. Fixed by formatting those
+five files; the diff was purely cosmetic (comment alignment, line wrapping) and all
+five still compile. Root cause: `.pre-commit-config.yaml` exists but
+`pre-commit install` was never run, so its `ruff-format` hook never fires locally
+and only CI enforces formatting.
+
+**Lesson:** `ruff format --check .` is repo-wide and covers directories the lint
+step does not, so run the CI steps locally before committing — especially when
+adding files to a directory that was never linted.
+
 #### The release manifest failed its own schema (fixed)
 
 Found while in the area, as the plan predicted. `release/release-manifest.json` is

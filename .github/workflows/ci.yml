@@ -29,17 +29,30 @@ jobs:
           pip install -r release/requirements.lock.txt
           pip install -r requirements-dev.txt
 
+      # Every directory that holds shipped Python is linted. This used to cover
+      # nine paths and skip seven — including the whole app (helix_codex_app/)
+      # and every test — while the build ledger claimed "ruff check clean on
+      # every CI path" for thirteen. The claim is now true instead of aspirational.
       - name: Run ruff (linting)
         run: |
-          ruff check server/ connectors/ control_plane/ engines/ capabilities/ security/ pilot/ scripts/ GOVERNANCE/
+          ruff check \
+            server/ connectors/ control_plane/ engines/ capabilities/ \
+            security/ pilot/ scripts/ GOVERNANCE/ \
+            contracts/ helix_codex_app/ release/ tests/ \
+            memory/ metacognition/ organization/ cockpit/
 
       - name: Run ruff format check
         run: |
           ruff format --check .
 
+      # contracts/ and security/ are the enforcement core's neighbours and were
+      # being type-checked only by hand. organization/, cockpit/, memory/ and
+      # metacognition/ are deliberately NOT here: mypy cannot resolve them as
+      # packages without an __init__.py or --explicit-package-bases, so adding
+      # them would fail on configuration rather than on types.
       - name: Run mypy (type checking)
         run: |
-          mypy server/ connectors/ control_plane/
+          mypy server/ connectors/ control_plane/ contracts/ security/
 
       - name: Run test suite
         run: |

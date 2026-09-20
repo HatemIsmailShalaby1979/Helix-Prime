@@ -76,7 +76,12 @@ def make_chime(path: Path) -> None:
         freq = CHIME_HZ_FROM * (CHIME_HZ_TO / CHIME_HZ_FROM) ** sweep
         attack = min(1.0, t / 0.03)
         value = CHIME_SINE_GAIN * attack * math.exp(-t * 9) * math.sin(2 * math.pi * freq * t)
-        value += CHIME_TRI_GAIN * min(1.0, t / 0.02) * math.exp(-t * 14) * math.sin(2 * math.pi * 110 * t)
+        value += (
+            CHIME_TRI_GAIN
+            * min(1.0, t / 0.02)
+            * math.exp(-t * 14)
+            * math.sin(2 * math.pi * 110 * t)
+        )
         samples[i] = max(-32768, min(32767, int(value * 32767)))
     with wave.open(str(path), "wb") as w:
         w.setnchannels(1)
@@ -127,9 +132,16 @@ def build_bed(beats: list[dict], starts: list[float], total: float, out: Path) -
     )
 
     cmd += [
-        "-filter_complex", ";".join(graph),
-        "-map", "[out]",
-        "-ar", str(RATE), "-ac", "2", "-t", f"{total:.3f}",
+        "-filter_complex",
+        ";".join(graph),
+        "-map",
+        "[out]",
+        "-ar",
+        str(RATE),
+        "-ac",
+        "2",
+        "-t",
+        f"{total:.3f}",
         str(out),
     ]
     print(f"  mixing {len(beats)} narration clips + {len(starts)} chimes")
@@ -191,40 +203,82 @@ def concat_list(frames_dir: Path, info: dict) -> Path:
     lines.append(f"file '{last_ok.as_posix()}'")
 
     if filled:
-        print(f"  warning: {len(filled)} captured frame(s) missing on disk, held the previous "
-              f"frame to keep the film's timing: {filled[:10]}")
+        print(
+            f"  warning: {len(filled)} captured frame(s) missing on disk, held the previous "
+            f"frame to keep the film's timing: {filled[:10]}"
+        )
 
     path = BUILD / "frames.txt"
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
 
-def assemble(frames_dir: Path, info: dict, bed: Path, out: Path, max_seconds: int,
-             captions: bool = True) -> None:
+def assemble(
+    frames_dir: Path, info: dict, bed: Path, out: Path, max_seconds: int, captions: bool = True
+) -> None:
     listing = concat_list(frames_dir, info)
     has_subs = captions and CAPTIONS.exists()
     cmd = [
-        tool("ffmpeg"), "-hide_banner", "-loglevel", "error", "-y",
-        "-f", "concat", "-safe", "0", "-i", str(listing),
-        "-i", str(bed),
+        tool("ffmpeg"),
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(listing),
+        "-i",
+        str(bed),
     ]
     if has_subs:
         cmd += ["-i", str(CAPTIONS)]
     cmd += [
-        "-map", "0:v:0", "-map", "1:a:0",
-        "-vf", f"scale=1920:1080:flags=lanczos,fps={FPS},format=yuv420p",
-        "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-        "-pix_fmt", "yuv420p", "-profile:v", "high", "-level", "4.2",
-        "-c:a", "aac", "-b:a", "192k", "-ar", str(RATE),
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-vf",
+        f"scale=1920:1080:flags=lanczos,fps={FPS},format=yuv420p",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+        "-profile:v",
+        "high",
+        "-level",
+        "4.2",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        str(RATE),
     ]
     if has_subs:
         # Soft subtitles, so the film is self-contained for someone who will never
         # see the .vtt next to it. Players leave them off unless asked.
-        cmd += ["-map", "2:s:0", "-c:s", "mov_text",
-                "-metadata:s:s:0", "language=eng", "-metadata:s:s:0", "title=English"]
+        cmd += [
+            "-map",
+            "2:s:0",
+            "-c:s",
+            "mov_text",
+            "-metadata:s:s:0",
+            "language=eng",
+            "-metadata:s:s:0",
+            "title=English",
+        ]
     cmd += [
-        "-movflags", "+faststart",
-        "-t", f"{max_seconds if max_seconds else info.get('elapsed', 300):.3f}",
+        "-movflags",
+        "+faststart",
+        "-t",
+        f"{max_seconds if max_seconds else info.get('elapsed', 300):.3f}",
         str(out),
     ]
     print(f"  encoding H.264 + AAC{', embedding captions' if has_subs else ''}")
@@ -239,9 +293,18 @@ def verify(out: Path, expected: float, want_subs: bool = True) -> dict:
     still reports a full-length file.
     """
     res = subprocess.run(
-        [tool("ffprobe"), "-v", "error", "-print_format", "json",
-         "-show_format", "-show_streams", str(out)],
-        capture_output=True, text=True,
+        [
+            tool("ffprobe"),
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
     )
     if res.returncode != 0:
         sys.exit(f"ffprobe could not read the output: {res.stderr[-500:]}")
@@ -254,32 +317,44 @@ def verify(out: Path, expected: float, want_subs: bool = True) -> dict:
 
     got = float(probe["format"]["duration"])
     vdur = float(video.get("duration") or 0)
-    print(f"  {video['width']}x{video['height']} {video['codec_name']} @ {video['r_frame_rate']} "
-          f"+ {audio['codec_name']} {audio['sample_rate']} Hz {audio['channels']}ch")
+    print(
+        f"  {video['width']}x{video['height']} {video['codec_name']} @ {video['r_frame_rate']} "
+        f"+ {audio['codec_name']} {audio['sample_rate']} Hz {audio['channels']}ch"
+    )
     print(f"  container {got:.2f}s · picture {vdur:.2f}s · expected {expected:.2f}s")
 
     subs = [s for s in probe["streams"] if s["codec_type"] == "subtitle"]
     if subs:
-        print(f"  captions {subs[0]['codec_name']} ({subs[0].get('tags', {}).get('language', 'und')})")
+        print(
+            f"  captions {subs[0]['codec_name']} ({subs[0].get('tags', {}).get('language', 'und')})"
+        )
     elif want_subs:
         sys.exit("the captions were not embedded in the output")
 
     if vdur < expected - 0.5:
-        sys.exit(f"the picture ends at {vdur:.2f}s but the film is {expected:.2f}s "
-                 f"- {expected - vdur:.1f}s of the film has no video")
+        sys.exit(
+            f"the picture ends at {vdur:.2f}s but the film is {expected:.2f}s "
+            f"- {expected - vdur:.1f}s of the film has no video"
+        )
     if got < expected - 0.5:
         sys.exit(f"the file is {got:.2f}s but the film is {expected:.2f}s")
     return probe
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--out", type=Path, default=OUT)
     ap.add_argument("--frames", type=Path, default=BUILD / "frames")
     ap.add_argument("--max-seconds", type=int, default=0, help="capture only the first N seconds")
     ap.add_argument("--quality", type=int, default=78, help="JPEG quality for the captured frames")
-    ap.add_argument("--skip-capture", action="store_true", help="reuse an existing frames directory")
-    ap.add_argument("--no-captions", action="store_true", help="do not embed the .vtt as a subtitle track")
+    ap.add_argument(
+        "--skip-capture", action="store_true", help="reuse an existing frames directory"
+    )
+    ap.add_argument(
+        "--no-captions", action="store_true", help="do not embed the .vtt as a subtitle track"
+    )
     args = ap.parse_args()
 
     for name in ("ffmpeg", "ffprobe", "node"):
@@ -299,7 +374,9 @@ def main() -> int:
         info = json.loads((args.frames / "frames.json").read_text(encoding="utf-8"))
         print(f"1/3 frames: reusing {info['count']} captured frames")
     else:
-        print(f"1/3 frames: capturing {'the full film' if not args.max_seconds else str(args.max_seconds) + 's'}")
+        print(
+            f"1/3 frames: capturing {'the full film' if not args.max_seconds else str(args.max_seconds) + 's'}"
+        )
         info = capture(args.frames, args.max_seconds, args.quality)
 
     # A full-film export that stopped early is a truncated film, not a short one.

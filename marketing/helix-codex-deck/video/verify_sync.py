@@ -47,8 +47,20 @@ def decode_envelope(path: Path) -> list[float]:
     """Per-frame RMS level in dBFS, from the file's own audio stream."""
     rate = 16000
     res = subprocess.run(
-        [tool("ffmpeg"), "-v", "error", "-i", str(path),
-         "-ac", "1", "-ar", str(rate), "-f", "s16le", "-"],
+        [
+            tool("ffmpeg"),
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-ac",
+            "1",
+            "-ar",
+            str(rate),
+            "-f",
+            "s16le",
+            "-",
+        ],
         capture_output=True,
     )
     if res.returncode != 0:
@@ -59,7 +71,7 @@ def decode_envelope(path: Path) -> list[float]:
     step = rate * FRAME_MS // 1000
     levels = []
     for i in range(0, len(pcm) - step + 1, step):
-        window = pcm[i:i + step]
+        window = pcm[i : i + step]
         mean_sq = sum(v * v for v in window) / step
         rms = math.sqrt(mean_sq)
         levels.append(20 * math.log10(max(rms, 1e-9) / 32768.0))
@@ -100,7 +112,9 @@ def parse_vtt(path: Path) -> list[tuple[float, float, str]]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--video", type=Path, default=VIDEO)
     ap.add_argument("--vtt", type=Path, default=VTT)
     args = ap.parse_args()
@@ -114,9 +128,11 @@ def main() -> int:
     cues = parse_vtt(args.vtt)
 
     loud = [level > threshold for level in levels]
-    print(f"audio: {len(levels) * FRAME_MS / 1000:.1f}s in {FRAME_MS}ms frames, "
-          f"speech threshold {threshold:.1f} dBFS, "
-          f"{sum(loud) * FRAME_MS / 1000:.1f}s above it")
+    print(
+        f"audio: {len(levels) * FRAME_MS / 1000:.1f}s in {FRAME_MS}ms frames, "
+        f"speech threshold {threshold:.1f} dBFS, "
+        f"{sum(loud) * FRAME_MS / 1000:.1f}s above it"
+    )
     print(f"captions: {len(cues)} cues, {cues[0][0]:.2f}s to {cues[-1][1]:.2f}s")
 
     def onset_within(start: float, end: float) -> float | None:
@@ -139,7 +155,10 @@ def main() -> int:
 
     covered = [False] * len(levels)
     for start, end, _ in cues:
-        for i in range(max(0, int(start / (FRAME_MS / 1000))), min(len(levels), int(end / (FRAME_MS / 1000)) + 1)):
+        for i in range(
+            max(0, int(start / (FRAME_MS / 1000))),
+            min(len(levels), int(end / (FRAME_MS / 1000)) + 1),
+        ):
             covered[i] = True
 
     orphans, run_start = [], None
@@ -152,8 +171,10 @@ def main() -> int:
             run_start = None
 
     if offsets:
-        print(f"narration onset vs caption start: median {statistics.median(offsets):+.2f}s, "
-              f"worst {max(offsets, key=abs):+.2f}s")
+        print(
+            f"narration onset vs caption start: median {statistics.median(offsets):+.2f}s, "
+            f"worst {max(offsets, key=abs):+.2f}s"
+        )
 
     if missing:
         print(f"\nFAIL: {len(missing)} caption(s) have no speech under them:")
@@ -161,7 +182,9 @@ def main() -> int:
             print(f"  {start:7.2f}s  {text[:70]}")
     if orphans:
         total = sum(length for _, length in orphans) / 1000
-        print(f"\nFAIL: {len(orphans)} stretch(es) of speech outside every caption, {total:.1f}s total:")
+        print(
+            f"\nFAIL: {len(orphans)} stretch(es) of speech outside every caption, {total:.1f}s total:"
+        )
         for start, length in orphans[:10]:
             print(f"  {start:7.2f}s for {length / 1000:.1f}s")
     if missing or orphans:

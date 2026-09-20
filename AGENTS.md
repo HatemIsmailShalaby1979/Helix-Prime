@@ -1593,8 +1593,13 @@ must not be "fixed" in code.** Two consequences worth knowing:
 - **`-q` hides which tests failed when the guard eats the summary.** The guard
   trips *at session finish*, before the short-summary block prints, so a `-q` run
   shows `F`s you cannot name. Use `-v --tb=line` and grep the log for `FAILED`:
-  per-test results print inline and survive the guard. `--junitxml` does **not**
-  survive it.
+  per-test results print inline and survive the guard.
+  **Corrected 2026-09-20:** this note previously said `--junitxml` does **not**
+  survive. That is too absolute. Measured: in a run where the summary was lost to
+  the guard, `--junitxml` **was** written complete and parsed to the same tally the
+  `-v` lines showed (`tests=1650 failures=2 errors=4`). Teardown ordering decides
+  which record wins, so treat the `-v` lines and the XML as two independent records
+  and cross-check them rather than trusting either alone.
 - **`cockpit/` imports flat, and getting it wrong passes alone but fails in the
   full suite.** `cockpit/` has no `__init__.py` and ships a `cockpit.py`, so
   `from cockpit.command_center_integration import ...` resolves only until
@@ -2151,11 +2156,18 @@ because the path is dead. The fixtures are synthetic, their window is
 only the public key and the signatures openssl produced with a throwaway key
 generated outside the repo (`E:/hx/make_evidence_fixtures.py` regenerates them).
 
-**Gate.** `tests/test_production_evidence.py` 27 passed (new);
+**Gate.** **Full suite: 1679 collected = 1679 passed + 0 failed + 0 errors**, 17m
+33s — the first fully green full-suite run recorded in this ledger, with none of
+the §18.4 sandbox artifacts firing and the §18.5 paging flake now gone. (The run
+collected before the schema-drift test below was added, so it holds 1679 of the
+current 1680; that test was verified separately.) Targeted:
+`tests/test_production_evidence.py` 27 passed (new);
 `tests/test_pilot_readiness.py` 27 passed; `tests/test_c8_release_gate.py` 22
 passed unmodified; `tests/test_server_spine.py` 12 passed; and
 `test_production_data_boundary` + `test_pilot` + `test_command_center_integration`
 + `test_capabilities_restaurant` + `test_capabilities_sports_academy` 102 passed.
+Count reconciles exactly: 1650 (pre-B1, measured in a `git worktree`) + 27 + 1 + 1
++ 1 = **1680**.
 `ruff check` clean, `ruff format --check` clean, `mypy server/` clean (35 files).
 `mypy release/` reports 6 errors — all in `helix_codex_app/` files this work never
 touched, **proven pre-existing by running the same command in a `git worktree` at

@@ -2997,9 +2997,35 @@ found. The fix is a `try/finally` with `shutil.rmtree(work, ignore_errors=True)`
 path), and `shutil` is not yet imported in `release/gate.py`. Re-run the full suite
 after it.
 
+#### An unexplained commit with an inaccurate message
+
+`b9d8fb6` — *"chore(ops): sync release manifest to 1c176d3, update test ledger,
+secure workspace"* — is **not** one of the commits recorded in this section. It
+appeared between `7bddc90` and `5e3709f`, authored under the repo's configured
+identity (`Helix Developer <developer@helix.local>`), which is also the identity
+these commits use, so authorship does not distinguish it.
+
+Its message claims three things. **Measured against the diff, two are false:**
+
+| claim | reality |
+|---|---|
+| "sync release manifest to 1c176d3" | **did not happen** — `release/release-manifest.json` still pins `git_commit: b6b954e…`, identical locally and at `3055bb2` |
+| "update test ledger" | **did not happen** — the commit touches no test file |
+| "secure workspace" | true in spirit: the only change is `+cookies.txt` to `.gitignore` |
+
+`1c176d3` is a real revision — an ancestor of HEAD, 30 commits back, already on
+`origin/main`. So the message names a genuine commit while describing a change it
+did not make. The `.gitignore` edit itself is sound and worth keeping: `cookies.txt`
+does not exist on disk and has **never** been tracked, in this repo or in the pushed
+history, so the entry is preventive rather than a remediation.
+
+Left in place rather than rewritten: rewriting a commit that may be another party's
+is not this ledger's call. Recorded here so no future reader trusts the message. The
+`git log` line is misleading; the diff is the truth.
+
 #### Gate
 
-**The full suite finally ran clean, and the "owed in a fresh turn" item is closed.**
+**The full suite is fully green, and the "owed in a fresh turn" item is closed.**
 The blocker was never the code — it was that §18.4's advice to wait for a fresh turn
 does not work, because the delete budget is per-session, not per-turn (see the §18.4
 addendum). Raising `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for one scoped invocation

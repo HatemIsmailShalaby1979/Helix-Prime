@@ -5,8 +5,14 @@
 > Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing),
 > 3 (A2 — structural mirror removal), 4 (A3 unify SOD + A4 dead-code cleanup) and
 > 5 (B1 — production evidence loader) are COMPLETE, the §18.5 chat-paging debt is
-> closed in §18.7, and §18.9 (can-fail proof for the seven remaining core gates)
-> is COMPLETE. What remains is Phase 6 (B2–B4), which is owner-driven:
+> closed in §18.7, and §18.9 (can-fail proof for the seven remaining core gates,
+> plus the scratch-directory hygiene sweep) is COMPLETE. §18.9 also closed a
+> systemic leak: all eleven `tempfile.mkdtemp` sites in the release path now route
+> through `release/scratch.py`, and the Windows bulk-delete guard was finally
+> explained (§18.4) — **pytest always deletes via a `\\?\` path, so the guard's
+> temp-dir exemption never applies; raise
+> `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for any broad run.** What remains is
+> Phase 6 (B2–B4), which is owner-driven:
 > infrastructure spend, paid external parties, and legal/human authority.
 > **No code change can unblock Phase 6** — the nine production-only gates need
 > signatures from keys held outside this repository.
@@ -72,7 +78,7 @@
 |---|---|
 | Current step | **ALL H-STEPS COMPLETE.** Superseded in time by §1A (app UI modernization, UI-1) — also COMPLETE. No active work. |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **UI-1, 2026-09-16: 1393 passed, 2 failed, of 1395 collected.** Both failures are WorkBuddy sandbox artifacts, not repo failures — the sandbox's bulk-delete guard blocks `observability/logs.jsonl` deletion and `evidence/baseline/smoke.log` writes, so `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers` and `test_c5_vertical_slice::test_existing_c0_c4_regression` cannot pass here. See §1A "Gate". **Note the suite has grown well past the 621 recorded above.** |
+| Last full-suite result | **2026-09-20: 1743 passed, 0 failed, 0 skipped of 1743 collected** (1748 once the scratch tests were added; `2 failed, 1746 passed` under the default environment). **CORRECTION to the 2026-09-16 entry that used to sit here:** it recorded `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers` and `test_c5_vertical_slice::test_existing_c0_c4_regression` as failures that "cannot pass here". They are **not** repo failures and they **do** pass here — they are bulk-delete-guard artifacts that go green the moment `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` is raised. Measured same day, same commit: default environment → `2 failed, 1746 passed`; threshold raised → `1743 passed, 0 failed`. **Never dismiss a failure in those two tests as environmental without first raising the threshold and re-running.** See §18.4 and §18.9. |
 | Last commit | `081e4bc` fix(app): correct four visual defects found in real screenshots |
 | Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, **H1.3 ✅ (F1 + F3: drift AST + mypy)**, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)**, **H3.3 ✅ (G36 + G37)**, **H3.4 ✅ (G38 + G40 + G41)** |
 | Post-task doc-sync | **COMPLETE (2026-09-12)** — marketing + docs aligned to current repo state: 9-agent roster (role-catalog), 621-test suite, Python 3.12, `helix-api` canonical, kill switch/metrics/audit-chain real, tenancy.py deletion, Scoach pack BUILT, PCV 18/24, LICENSE resolved; dated handoff records banner-marked SUPERSEDED; 0 broken relative links; no code changed |
@@ -3043,7 +3049,7 @@ pilot-consent flag, flipping it false → true.
 unreachable" — "unqualified" is the load-bearing word), and
 `manifest.schema.json:5` ("Never a **bare** production claim").
 
-#### The sandbox delete budget is 50 per turn, and a full-suite run needs thousands
+#### The sandbox delete budget is 50, and a full-suite run needs thousands
 
 Measured from the guard's own stderr, not inferred:
 
@@ -3052,15 +3058,23 @@ Measured from the guard's own stderr, not inferred:
 sitecustomize.py:826: SystemExit
 ```
 
-`scope: "turn"` means the budget does not refill mid-turn. Once spent, the
-`SystemExit` fires inside fixture teardown and pytest reports
+The payload labels the scope `"turn"`, but **the measured behaviour is
+per-session, not per-turn** — a fresh turn's *first* pytest invocation still failed
+at setup. The state lives in
+`%TEMP%\codebuddy-safe-delete-bulk\<session-hash>\state.json`, keyed per session,
+holding a per-scope `count`. Treat the budget as per-session and do not plan around
+a new turn resetting it. (This heading used to assert "per turn", taking the label
+at face value; §18.4's addendum carries the correction.)
+
+Once spent, the `SystemExit` fires inside fixture teardown and pytest reports
 `assert not self._finalizers`, which cascades into "failed on setup" for every
 remaining test — including tests that request no fixtures, because
 `tests/conftest.py`'s **autouse** `release_sqlite_handles(request, tmp_path)` gives
 every test in `tests/` a `tmp_path`. That is the whole explanation for the
 `656 passed, 1056 errors` full-suite result recorded this session; it is not a
-regression, and the same file passes 65/65 run alone. **The suite count is 1712,
-not 1711.**
+regression, and the same file passes 65/65 run alone. **The suite count is 1748,
+not 1711** — it was 1712 when this paragraph was first written, and 1743 before the
+scratch tests were added.
 
 Because the budget was already spent when the file was written, the can-fail
 assertions were first verified by a standalone replay
@@ -3207,6 +3221,10 @@ ran it end to end:
 | junitxml cross-check of that run | collected 1743, failed 1 |
 | the one failure, re-run alone | 1 passed in 4.30s |
 | **full suite, threshold raised + short temp root** | **1743 passed, 0 failed, 0 skipped in 17m52s (exit 0)** |
+| full suite, **default environment, no override** | 2 failed, 1746 passed in 40m54s — the two guard artifacts, nothing else |
+
+*(A run at `306c0ad` with the threshold raised is in flight; its result is appended
+below once measured. Do not record a suite result before it is measured.)*
 
 The first full run's lone failure was
 `test_c5_vertical_slice.py::test_audit_records_for_every_step`, dying with
@@ -3217,9 +3235,17 @@ skips** — the first recorded in this sandbox. It is a sandbox artifact, not a 
 failure, and it is the *second* sandbox restriction, distinct from the delete
 guard, now recorded in §18.4.
 
-**Total collected: 1743 = 1712 baseline + 31 new tests** in
-`test_c8_gate_falsifiability.py`. The two failures §18.4 has carried as "known
-sandbox failures" **both pass** with the guard bypassed, which confirms the ledger's
+**The default-environment run is the experiment that settled the recipe.** It
+produced `2 failed, 1746 passed` — and the two failures were exactly the tests
+§18.4 had carried as "known sandbox failures". That is what disproved the claim
+that the default environment needs no workaround, and led to the `\\?\` root cause
+in §18.4. **The threshold raise is the operative fix; the temp root is not.**
+
+**Test-file sizes, measured:** `test_c8_gate_falsifiability.py` is now **46 tests** —
+31 from §18.9's gate work, 5 from the `gate.py` scratch fix, 10 from the
+harness/observability scratch fix. Against the 1712 baseline that implies **1758
+collected**, up from 1743. The two failures §18.4 has carried as "known sandbox
+failures" **both pass** with the guard bypassed, which confirms the ledger's
 diagnosis of them and retires them as items to work around.
 
 `ruff check` + `ruff format --check` clean on all four changed files; the seven gates

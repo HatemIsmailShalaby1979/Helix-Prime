@@ -41,21 +41,20 @@ def test_app_pilot_profile_red_gate_denied() -> None:
     assert result == "NOT_READY"
 
 
-def test_app_pilot_matches_yaml_mirror() -> None:
-    data = release_profiles.load_profiles()
-    assert "app_pilot" in data.get("profiles", [])
-    yaml_gates = set(data.get("gates", []))
-    py_gates = set(release_profiles.GATE_NAMES)
-    assert yaml_gates == py_gates
-    yaml_app = set(data.get("app_gates", []))
-    py_app = set(release_profiles.APP_GATE_NAMES)
-    assert yaml_app == py_app
-    yaml_req = set(data.get("required_gates", {}).get("app_pilot", []))
-    py_req = set(release_profiles.PROFILE_REQUIRED_GATES["app_pilot"])
-    assert yaml_req == py_req
-    assert set(release_profiles.APP_GATE_NAMES) <= set(
-        release_profiles.PROFILE_REQUIRED_GATES["app_pilot"]
-    )
+def test_app_pilot_profile_requires_every_app_gate() -> None:
+    """app_pilot must carry every app gate, plus the core gates it rides on.
+
+    The YAML comparisons this replaced went vacuous once the file became the
+    source of truth — both sides were the same derivation. What still needs
+    pinning is the app-specific invariant: every declared app gate is required by
+    app_pilot, and every gate app_pilot requires is declared somewhere.
+    """
+    app_gates = set(release_profiles.APP_GATE_NAMES)
+    app_pilot = set(release_profiles.PROFILE_REQUIRED_GATES["app_pilot"])
+    assert app_gates <= app_pilot
+    assert app_pilot <= (set(release_profiles.GATE_NAMES) | app_gates)
+    # It rides on the core's configuration/startup guarantees.
+    assert {"configuration_validation", "startup_readiness"} <= app_pilot
 
 
 def test_all_app_gates_registered_in_gate_impl() -> None:

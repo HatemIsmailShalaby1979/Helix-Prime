@@ -1,8 +1,21 @@
 """
 Helix Prime Codex C8 — release profiles and boundary gates.
 
-Defines the five release profiles and the explicit gates a profile must satisfy.
-Canonical source of truth for release classification (this module + YAML mirror).
+**`release-profiles.yaml` is the source of truth.** Every constant below is
+derived from it at import, so editing the file changes behaviour. It used to be
+the other way round: the module held the values, `load_profiles()` read the YAML
+only for a sanity count in `_gate_configuration_validation`, and editing a
+profile's gate list in the file changed nothing — measured by editing it and
+watching the gate not move (AGENTS.md §18.8). That hazard is gone: there is no
+second copy to disagree with.
+
+**Fail-closed at import.** A missing, unreadable or malformed file raises
+`ReleaseProfilesUnavailableError` rather than falling back to inline defaults. A
+release gate that cannot read its own profile definitions must refuse to run,
+not proceed on an unverified copy of them — the same rule A2 applied to the role
+catalog. This adds no packaging risk: `release/` is in neither the wheel nor the
+sdist package lists, so this module is only ever imported from the source tree,
+where the YAML sits beside it.
 
 Profiles (never conflated with production readiness):
 - alpha                : non-production, development/exploration
@@ -15,129 +28,159 @@ Profiles (never conflated with production readiness):
 from __future__ import annotations
 
 import pathlib
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, FrozenSet, List, Optional
 
 import yaml
 
-PROFILE_ORDER = [
-    "alpha",
-    "internal_pilot",
-    "controlled_pilot",
-    "production_candidate",
-    "production",
-    "app_pilot",
-]
+_RELEASE_YAML = pathlib.Path(__file__).resolve().parent / "release-profiles.yaml"
+
+#: Every key the canonical file must carry.
+_REQUIRED_KEYS = (
+    "profiles",
+    "gates",
+    "app_gates",
+    "required_gates",
+    "allowed_final",
+    "default_c8",
+)
+
+
+class ReleaseProfilesUnavailableError(RuntimeError):
+    """`release-profiles.yaml` is missing, unreadable or malformed.
+
+    Raised at import: the release gate's profile definitions are load-bearing for
+    authorisation, so a layer that cannot read them must refuse to start rather
+    than guess.
+    """
+
+
+def _reject(path: pathlib.Path, why: str) -> "ReleaseProfilesUnavailableError":
+    return ReleaseProfilesUnavailableError(f"{path}: {why}")
+
+
+def load_profiles(rel_path: Optional[str] = None) -> Dict[str, Any]:
+    """Read and validate the canonical release profile file.
+
+    Returns the file's own mapping — not a normalised copy — so a caller sees
+    exactly what is on disk. Raises rather than returning defaults, because
+    returning a second, unverified copy of the values is the failure mode this
+    module exists to prevent. `rel_path` is for tests and tooling that want to
+    read an edited copy; the constants above always come from the canonical file.
+    """
+    path = pathlib.Path(rel_path) if rel_path else _RELEASE_YAML
+    if not path.exists():
+        raise _reject(path, "missing")
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise _reject(path, f"unreadable: {exc}") from exc
+    if not isinstance(data, dict):
+        raise _reject(path, "not a mapping")
+    absent = [key for key in _REQUIRED_KEYS if key not in data]
+    if absent:
+        raise _reject(path, f"missing keys: {', '.join(absent)}")
+    return data
+
+
+def derive_profiles(data: Dict[str, Any], rel_path: Optional[str] = None) -> Dict[str, Any]:
+    """Turn validated file contents into the constants this module exposes.
+
+    Pure: it reads nothing, so a test can hand it an edited copy of the file and
+    watch the derived values move. That is the property that makes the YAML the
+    source of truth, and it is pinned in `tests/test_c8_release_gate.py`.
+
+    Everything is checked before anything is returned, so a partially valid file
+    cannot half-populate the module.
+    """
+    path = pathlib.Path(rel_path) if rel_path else _RELEASE_YAML
+    order = list(data["profiles"])
+    gate_names = list(data["gates"])
+    app_gate_names = list(data["app_gates"])
+    required = {profile: list(gates) for profile, gates in data["required_gates"].items()}
+
+    if len(set(order)) != len(order):
+        raise _reject(path, "duplicate profile name")
+    if len(set(gate_names)) != len(gate_names):
+        raise _reject(path, "duplicate gate name")
+    if set(required) != set(order):
+        raise _reject(path, "required_gates does not cover exactly the declared profiles")
+
+    # production-only gates are the ones production requires that are not part of
+    # the shared C8 set. Derived rather than declared twice, so the two lists
+    # cannot drift; a gate added to `production` automatically becomes
+    # production-only, which fails test_production_evidence until evidence for it
+    # is defined. That is the intended coupling.
+    production = required.get("production")
+    if production is None:
+        raise _reject(path, "no production profile")
+    production_only = [gate for gate in production if gate not in set(gate_names)]
+
+    # production must require every C8 gate. Without this a one-line edit to the
+    # file would silently weaken the strongest profile in it.
+    if not set(gate_names) <= set(production):
+        missing = sorted(set(gate_names) - set(production))
+        raise _reject(path, f"production omits C8 gates: {', '.join(missing)}")
+
+    declared = set(gate_names) | set(app_gate_names) | set(production_only)
+    for profile, gates in required.items():
+        if not gates:
+            raise _reject(path, f"{profile} requires no gates")
+        unknown = [gate for gate in gates if gate not in declared]
+        if unknown:
+            raise _reject(path, f"{profile} names undeclared gates: {', '.join(unknown)}")
+
+    allowed_final: FrozenSet[str] = frozenset(data["allowed_final"])
+    default_c8 = str(data["default_c8"])
+    if default_c8 not in allowed_final:
+        raise _reject(path, f"default_c8 {default_c8!r} is not in allowed_final")
+
+    return {
+        "order": order,
+        "gate_names": gate_names,
+        "app_gate_names": app_gate_names,
+        "production_only_gates": production_only,
+        "required_gates": required,
+        "allowed_final": allowed_final,
+        "default_c8": default_c8,
+    }
+
+
+_CANONICAL = derive_profiles(load_profiles())
+
+PROFILE_ORDER: List[str] = _CANONICAL["order"]
 
 # Final classification allowed by THIS sprint (never "production").
-ALLOWED_FINAL_CLASSIFICATIONS = {"CONTROLLED_PILOT_READY", "PRODUCTION_CANDIDATE"}
+ALLOWED_FINAL_CLASSIFICATIONS: FrozenSet[str] = _CANONICAL["allowed_final"]
 
 # The default classification emitted when the C8 release gate is green.
-DEFAULT_C8_CLASSIFICATION = "PRODUCTION_CANDIDATE"
+DEFAULT_C8_CLASSIFICATION: str = _CANONICAL["default_c8"]
 
 # Explicit gates required before a profile may be claimed.
 # Each gate maps to a check function name in release.gate.
-GATE_NAMES = [
-    "repository_state",  # clean-ish repo, reproducible commands present
-    "reproducible_install",  # one setup path documented + dependency lock
-    "configuration_validation",  # config parses + validates before startup
-    "dependency_locking",  # dependency versions pinned/locked
-    "startup_readiness",  # health/readiness command passes
-    "backup_restore",  # backup + restore proven from synthetic data
-    "rollback",  # rollback to previous manifest proven
-    "data_isolation",  # tenant/client isolation verified
-    "audit_integrity",  # audit chain verifies after backup/restore
-    "security_checks",  # no-secrets scan + policy checks
-    "failure_recovery",  # failure injection + recovery
-    "performance_limits",  # bounded load/soak within explicit limits
-    "operator_readiness",  # runbook + incident guide present
-    "release_approval",  # explicit human go/no-go recorded
-]
+GATE_NAMES: List[str] = _CANONICAL["gate_names"]
 
 # App product gates — owned by the Helix Codex App build, distinct from the
 # C8 core gate set. The app_pilot profile combines a subset of the core gates
 # with these; they deliberately never enter GATE_NAMES, whose length is a
 # pinned C8 invariant.
-APP_GATE_NAMES = [
-    "app_auth_boundary",  # every /app route but healthz/static runs the guard
-    "app_session_fail_closed",  # revoked and expired sessions fail closed
-    "app_tenant_isolation",  # one tenant never reads another tenant's rows
-    "app_memory_store_isolation",  # one account's memory never leaks to another
-    "app_migration_drift",  # db.py and the alembic head agree
-    "app_pwa_assets",  # installable shell: manifest, icons, sw, offline page
-]
+APP_GATE_NAMES: List[str] = _CANONICAL["app_gate_names"]
 
-_RELEASE_YAML = pathlib.Path(__file__).resolve().parent / "release-profiles.yaml"
+
+def _all_c8_gates() -> List[str]:
+    return list(GATE_NAMES)
+
+
+# Production-only gates: external evidence / ownership commitments that C8 (and
+# any local automated run) cannot satisfy. These keep the production profile
+# permanently NOT_READY until genuine external approvals and evidence exist.
+PRODUCTION_ONLY_GATES: List[str] = _CANONICAL["production_only_gates"]
 
 
 # Gates required per profile. alpha/internal_pilot are permissive;
 # controlled_pilot and production_candidate require the full C8 gate set.
 # production requires ALL gates PLUS production-only criteria that C8 does
 # not satisfy (so an unqualified PRODUCTION label can never be emitted here).
-def _all_c8_gates() -> List[str]:
-    return list(GATE_NAMES)
-
-
-# Production-only gate: external evidence / ownership commitments that C8 (and
-# any local automated run) cannot satisfy. These keep the production profile
-# permanently NOT_READY until genuine external approvals and evidence exist.
-PRODUCTION_ONLY_GATES = [
-    "signed_production_evidence",  # external signed production evidence
-    "certified_data_isolation",  # certified tenant/data isolation
-    "external_observer_audit",  # independent external observer audit
-    "production_deployment_architecture",  # reviewed prod deployment architecture
-    "disaster_recovery_evidence",  # DR / restore evidence from a real environment
-    "operational_ownership",  # assigned operational owner
-    "incident_oncall_ownership",  # assigned incident/on-call owner
-    "security_review",  # security review signed off
-    "legal_privacy_review",  # legal/privacy review where applicable
-]
-
-
-PROFILE_REQUIRED_GATES: Dict[str, List[str]] = {
-    "alpha": ["repository_state"],
-    "internal_pilot": [
-        "repository_state",
-        "reproducible_install",
-        "configuration_validation",
-        "startup_readiness",
-    ],
-    "controlled_pilot": _all_c8_gates(),
-    "production_candidate": _all_c8_gates(),
-    "production": _all_c8_gates() + PRODUCTION_ONLY_GATES,
-    # The app product surface — the Helix Codex App's own release gates.
-    # A green app_pilot run means the app is safe to pilot on its side of the
-    # seam, riding on the core's configuration/startup/data/audit guarantees.
-    "app_pilot": [
-        "repository_state",
-        "configuration_validation",
-        "startup_readiness",
-        "data_isolation",
-        "audit_integrity",
-        "app_auth_boundary",
-        "app_session_fail_closed",
-        "app_tenant_isolation",
-        "app_memory_store_isolation",
-        "app_migration_drift",
-        "app_pwa_assets",
-    ],
-}
-
-
-def load_profiles(rel_path: Optional[str] = None) -> Dict[str, Any]:
-    """Load release-profiles.yaml if present; else fall back to module defaults."""
-    path = pathlib.Path(rel_path) if rel_path else _RELEASE_YAML
-    if not path.exists():
-        return {
-            "profiles": PROFILE_ORDER,
-            "gates": GATE_NAMES,
-            "app_gates": APP_GATE_NAMES,
-            "required_gates": PROFILE_REQUIRED_GATES,
-            "allowed_final": sorted(ALLOWED_FINAL_CLASSIFICATIONS),
-            "default_c8": DEFAULT_C8_CLASSIFICATION,
-        }
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    return data
+PROFILE_REQUIRED_GATES: Dict[str, List[str]] = _CANONICAL["required_gates"]
 
 
 def is_known_profile(profile: str) -> bool:

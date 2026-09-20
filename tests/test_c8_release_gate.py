@@ -7,11 +7,15 @@ live shared control-plane/audit DBs.
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import pathlib
+import shutil
 import tempfile
 
 import pytest
+import yaml
 
 from release import backup, harness, manifest, observability, profiles, security_gate
 
@@ -51,30 +55,172 @@ def test_fail_closed_on_red_gate():
     assert result == "NOT_READY"
 
 
-def test_profiles_yaml_mirror():
-    """The YAML mirrors the module, and must keep mirroring it.
+def _import_profiles_copy(tmp_path: pathlib.Path):
+    """Import a private copy of release/profiles.py from tmp_path.
 
-    The file's header used to call itself the "hand-editable source of truth" and
-    claim `profiles.py` read it in place of the inline defaults. It does not: the
-    gate path reads the module constants (`gates_required_for` ->
-    `PROFILE_REQUIRED_GATES`), and `load_profiles()` is used only for a sanity
-    count in `_gate_configuration_validation`. Measured by editing a profile's gate
-    list in the YAML and watching the gate not move. The header now says so.
+    Exercises the real import path — module body, sibling YAML, derivation — in a
+    throwaway directory, so a test can edit the file the module reads without
+    touching the live module or the repository.
+    """
+    source = pathlib.Path(profiles.__file__)
+    shutil.copy(source, tmp_path / "profiles.py")
+    spec = importlib.util.spec_from_file_location("_profiles_probe", tmp_path / "profiles.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
-    This pins **every** field the two share, not just `gates`. `required_gates` is
-    the one that decides behaviour and it was previously unpinned, so the two could
-    have diverged silently while this test stayed green.
+
+def _expect_unavailable(tmp_path: pathlib.Path) -> str:
+    """Import a broken copy and return the refusal message.
+
+    Matched on the exception's name, not its class object: the copy is a distinct
+    module, so it raises a distinct `ReleaseProfilesUnavailableError` class. Both
+    derive from RuntimeError, and asserting on the name plus the message is
+    stronger than asserting on identity would be.
+    """
+    with pytest.raises(RuntimeError) as excinfo:
+        _import_profiles_copy(tmp_path)
+    assert type(excinfo.value).__name__ == "ReleaseProfilesUnavailableError"
+    return str(excinfo.value)
+
+
+def test_editing_the_yaml_changes_the_derived_constants(tmp_path):
+    """The property that makes the file the source of truth — end to end.
+
+    A copy of the module is imported beside an *edited* copy of the YAML, so the
+    real import path runs: module body, sibling file, derivation. Removing
+    `data_isolation` from `controlled_pilot` must remove it from what that module
+    requires.
+
+    Can-fail: on the previous, mirrored code this test fails. The module carried
+    its own copy of the gate lists and `load_profiles()` was read only for a sanity
+    count, so the edit changed nothing — which is exactly how the hazard was
+    measured in AGENTS.md §18.8.
     """
     data = profiles.load_profiles()
-    assert set(data["gates"]) == set(profiles.GATE_NAMES)
-    assert set(data["profiles"]) == set(profiles.PROFILE_ORDER)
-    assert set(data["app_gates"]) == set(profiles.APP_GATE_NAMES)
-    assert set(data["allowed_final"]) == set(profiles.ALLOWED_FINAL_CLASSIFICATIONS)
-    assert data["default_c8"] == profiles.DEFAULT_C8_CLASSIFICATION
+    data["required_gates"]["controlled_pilot"] = [
+        gate for gate in data["required_gates"]["controlled_pilot"] if gate != "data_isolation"
+    ]
+    (tmp_path / "release-profiles.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
 
-    assert set(data["required_gates"]) == set(profiles.PROFILE_REQUIRED_GATES)
-    for profile, gates in profiles.PROFILE_REQUIRED_GATES.items():
-        assert set(data["required_gates"][profile]) == set(gates), profile
+    edited = _import_profiles_copy(tmp_path)
+
+    assert "data_isolation" not in edited.gates_required_for("controlled_pilot")
+    # The live module did not move: a copy was edited, not a global.
+    assert "data_isolation" in profiles.gates_required_for("controlled_pilot")
+
+
+def test_a_missing_yaml_fails_closed_at_import(tmp_path):
+    """No file, no import — rather than a silent fallback to an inline copy."""
+    assert "missing" in _expect_unavailable(tmp_path)
+
+
+def test_a_malformed_yaml_fails_closed_at_import(tmp_path):
+    """A file that parses but is not a complete profile set is refused too."""
+    (tmp_path / "release-profiles.yaml").write_text("profiles:\n  - alpha\n", encoding="utf-8")
+    assert "missing keys" in _expect_unavailable(tmp_path)
+
+
+def test_a_weakened_production_profile_is_refused(tmp_path):
+    """production must require every C8 gate.
+
+    Without this check a one-line edit to the file would quietly weaken the
+    strongest profile in it — the failure the fail-closed reader exists to catch.
+    """
+    data = profiles.load_profiles()
+    data["required_gates"]["production"] = [
+        gate for gate in data["required_gates"]["production"] if gate != "release_approval"
+    ]
+    (tmp_path / "release-profiles.yaml").write_text(yaml.safe_dump(data), encoding="utf-8")
+    message = _expect_unavailable(tmp_path)
+    assert "production omits C8 gates" in message
+    assert "release_approval" in message
+
+
+def test_module_constants_are_the_canonical_files_values():
+    """There is no second copy: the constants *are* the derivation of the file.
+
+    The mirror test this replaced compared two copies and was only ever as good
+    as the discipline of keeping them in step. This asserts the structural
+    property instead, so re-introducing a hardcoded copy fails here.
+    """
+    derived = profiles.derive_profiles(profiles.load_profiles())
+    assert profiles.PROFILE_ORDER == derived["order"]
+    assert profiles.GATE_NAMES == derived["gate_names"]
+    assert profiles.APP_GATE_NAMES == derived["app_gate_names"]
+    assert profiles.PRODUCTION_ONLY_GATES == derived["production_only_gates"]
+    assert profiles.PROFILE_REQUIRED_GATES == derived["required_gates"]
+    assert set(profiles.ALLOWED_FINAL_CLASSIFICATIONS) == set(derived["allowed_final"])
+    assert profiles.DEFAULT_C8_CLASSIFICATION == derived["default_c8"]
+
+
+def test_derived_values_match_the_hardcoded_ones_they_replaced():
+    """Equivalence with the code this replaced, transcribed rather than trusted.
+
+    These are the module's previous inline constants. The refactor's only claim is
+    that deriving them from the file changed nothing, so the assertion is exact
+    equality — lists in order, not "roughly the same set".
+    """
+    c8 = [
+        "repository_state",
+        "reproducible_install",
+        "configuration_validation",
+        "dependency_locking",
+        "startup_readiness",
+        "backup_restore",
+        "rollback",
+        "data_isolation",
+        "audit_integrity",
+        "security_checks",
+        "failure_recovery",
+        "performance_limits",
+        "operator_readiness",
+        "release_approval",
+    ]
+    production_only = [
+        "signed_production_evidence",
+        "certified_data_isolation",
+        "external_observer_audit",
+        "production_deployment_architecture",
+        "disaster_recovery_evidence",
+        "operational_ownership",
+        "incident_oncall_ownership",
+        "security_review",
+        "legal_privacy_review",
+    ]
+    assert profiles.GATE_NAMES == c8
+    assert profiles.PRODUCTION_ONLY_GATES == production_only
+    assert profiles.PROFILE_REQUIRED_GATES == {
+        "alpha": ["repository_state"],
+        "internal_pilot": [
+            "repository_state",
+            "reproducible_install",
+            "configuration_validation",
+            "startup_readiness",
+        ],
+        "controlled_pilot": c8,
+        "production_candidate": c8,
+        "production": c8 + production_only,
+        "app_pilot": [
+            "repository_state",
+            "configuration_validation",
+            "startup_readiness",
+            "data_isolation",
+            "audit_integrity",
+            "app_auth_boundary",
+            "app_session_fail_closed",
+            "app_tenant_isolation",
+            "app_memory_store_isolation",
+            "app_migration_drift",
+            "app_pwa_assets",
+        ],
+    }
+    assert set(profiles.ALLOWED_FINAL_CLASSIFICATIONS) == {
+        "CONTROLLED_PILOT_READY",
+        "PRODUCTION_CANDIDATE",
+    }
+    assert profiles.DEFAULT_C8_CLASSIFICATION == "PRODUCTION_CANDIDATE"
 
 
 # ── manifest ───────────────────────────────────────────────────────────────

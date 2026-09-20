@@ -1,18 +1,24 @@
-# Helix Prime Codex C8 — release profiles and gate boundary (YAML mirror).
+# Helix Prime Codex C8 — release profiles and gate boundary.
 #
-# THIS FILE IS A MIRROR, NOT THE SOURCE OF TRUTH. It previously claimed to be
-# "hand-editable source of truth; module release/profiles.py reads this file when
-# present and falls back to inline defaults otherwise". That was false, and the
-# correction is recorded in AGENTS.md §18.8: the gate path reads the module
-# constants (`gates_required_for` -> PROFILE_REQUIRED_GATES), and
-# `load_profiles()` is called only for a sanity count in
-# `_gate_configuration_validation`. Editing a profile's gate list here changes
-# nothing about which gates that profile requires — measured by editing it and
-# watching the gate not move.
+# THIS FILE IS THE SOURCE OF TRUTH. Editing it changes behaviour: every constant
+# in release/profiles.py is derived from it at import, so there is no second copy
+# to disagree with. Edit here, then run
+# `tests/test_c8_release_gate.py`, which pins the derived values.
 #
-# So: change release/profiles.py to change behaviour, then mirror the change here.
-# `tests/test_c8_release_gate.py::test_profiles_yaml_mirror` fails if the two
-# disagree, including per-profile gate lists.
+# (History, recorded in AGENTS.md §18.8: this file once called itself the source
+# of truth while being only a mirror — `load_profiles()` read it for a sanity
+# count and the gate path used the module's own copy, so editing a profile's gate
+# list here changed nothing. That was measured by editing it and watching the
+# gate not move. The header was corrected to say "mirror"; it is now true the
+# other way round, because the module derives from this file.)
+#
+# A missing, unreadable or malformed file raises ReleaseProfilesUnavailableError
+# at import — the release gate refuses to run rather than guess.
+#
+# `production_only_gates` is deliberately NOT a key here: it is derived as
+# `required_gates.production` minus `gates`, so the two cannot drift. Adding a
+# gate to `production` therefore makes it production-only automatically, which
+# fails tests/test_production_evidence.py until evidence for it is defined.
 #
 # IMPORTANT: The "production" profile adds production-only gates (signed
 # production evidence, certified data isolation, external observer audit)

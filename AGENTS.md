@@ -2250,11 +2250,67 @@ behaviour — so the two could have diverged silently while the test stayed gree
 It now pins every shared field including the per-profile gate lists, with a
 can-fail proof (drop a gate from the YAML → the test fails).
 
-**Deliberately not done: single-sourcing.** A2's precedent would make the YAML
-authoritative and derive the constants at import. That is a deliberate refactor of
-the release gate's classification path with a new import-time failure mode (a
-missing or malformed YAML), and it is not required to remove this hazard. Recorded
-as the follow-up, not taken unilaterally.
+**Single-sourcing: done, on the user's instruction (was "the follow-up, not taken
+unilaterally").** `release-profiles.yaml` is now the source of truth and every
+constant in `release/profiles.py` is derived from it at import. There is no second
+copy left to disagree with.
+
+- `load_profiles()` returns the file's own mapping and **raises
+  `ReleaseProfilesUnavailableError`** when the file is missing, unreadable, not a
+  mapping, or lacks a required key — instead of falling back to inline defaults,
+  which was the whole hazard. `derive_profiles()` is the single, pure
+  YAML→constants step, so a test can drive it with an edited copy.
+- Validation is fail-closed and refuses a file that would *weaken* a profile:
+  duplicate profile or gate names; `required_gates` not covering exactly the
+  declared profiles; **`production` omitting any C8 gate**; a profile naming an
+  undeclared gate; an empty gate list; `default_c8` outside `allowed_final`.
+- `production_only_gates` is deliberately **not** a key in the file: it is derived
+  as `required_gates.production` minus `gates`. Declaring it separately would
+  recreate the very drift this change removes. A gate added to `production`
+  therefore becomes production-only automatically, which fails
+  `test_production_evidence.py` until evidence for it is defined — the intended
+  coupling.
+- **No packaging risk, checked before starting:** `release/` appears in neither
+  `[tool.hatch.build.targets.wheel].packages` nor the sdist `include` list — the
+  comment there says auto-discovery "would swallow demo/, release/, scripts/ and
+  tests/ into the wheel" — so this module is only ever imported from the source
+  tree, next to the YAML. The new import-time failure mode cannot reach an
+  installed distribution.
+
+**Equivalence proved, not assumed.** HEAD's `release/profiles.py` was written to a
+scratch directory with no sibling YAML, so it fell back to exactly the inline
+constants this change removed; both modules were then driven through the same
+matrix — every profile (plus an unknown one) × ten green-gate sets × both approval
+states, plus `gates_required_for` and `is_known_profile` for each:
+
+| Comparison | Cases | Divergence |
+|---|---|---|
+| `classify_from_gate_results` | 310 | **0** |
+| `gates_required_for` / `is_known_profile` | 19 | **0** |
+| The seven constants | 7 | **0** |
+
+**Can-fail proof for the property itself.** `test_editing_the_yaml_changes_the_derived_constants`
+imports a copy of the module beside an edited copy of the file and shows
+`data_isolation` leave `controlled_pilot`'s required gates. Run against HEAD's code
+it **fails** — the module's own copy wins and the edit moves nothing, which is
+precisely the hazard measured in the first half of this section. Three more tests
+pin the refusals (missing file, incomplete file, weakened `production`).
+
+**Two mirror tests became tautologies and were replaced.** `test_profiles_yaml_mirror`
+compared two copies; with one derivation both sides are the same object. It is
+replaced by the source-of-truth, refusal, and equivalence tests above, plus a
+structural assertion that the constants *are* the file's derivation — so
+re-introducing a hardcoded copy fails. `test_app_pilot_matches_yaml_mirror` is
+replaced by the app-specific invariant that still needs pinning (every declared app
+gate is required by `app_pilot`, and every gate it requires is declared).
+
+**Gate.** `tests/test_c8_release_gate.py` 28 passed (was 26: 1 mirror test out, 6
+in); the four release-gate test files together 99 passed; ruff check + format clean
+and mypy clean on the changed files. End to end with `write_evidence=False` (the
+manifest was **not** rewritten — see the section above): `app_pilot` and
+`controlled_pilot` → `CONTROLLED_PILOT_READY` exit 0, `production_candidate` →
+`PRODUCTION_CANDIDATE` exit 0, `production` → `NOT_READY` exit 1. The fail-closed
+default is unchanged.
 
 #### CI was linting nine directories while this ledger claimed thirteen
 

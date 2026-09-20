@@ -2571,7 +2571,7 @@ human or external party showed up today, could they actually complete it?*
 | Class 5.3/5.4: network sibling transport, external IdP/observability | In `DISABLED_CAPABILITIES` as deliberate C8 non-goals. Enabling them is a product-scope decision, and the plan assigns their *validation* to B2 (operational spend) | Owner (scope + spend) |
 | Class 5.7, 5.2, 5.1: production soak, DR evidence, signed deployment architecture | Need a real environment; no code path is missing | B2 spend |
 
-Two smaller findings from the same audit, both recorded rather than changed:
+Three findings from the same audit:
 
 - **`docs/release/production-blockers.md:35` is stale.** It says the nine gates are
   "red by construction", which stopped being true when B1 gave them a reader — they
@@ -2584,10 +2584,82 @@ Two smaller findings from the same audit, both recorded rather than changed:
 - The superseded env vars (`HELIX_EVIDENCE_SIGNING_KEY`, `HELIX_ISOLATION_CERT`,
   `HELIX_OBSERVER_AUDIT`) survive only as documentation of their own removal, plus
   a test asserting the server no longer asks for them. Consistent, not stale.
-- The nine gates are **not vacuous**: `test_pilot_readiness.py` already pins all
-  nine red with nothing declared *and* all nine green on signed fixtures, so the
-  A0.1 class of defect ("a control the ledger claims is active has never fired")
-  is covered here and needed no new test.
+- **The nine production-only gates are not vacuous** — `test_pilot_readiness.py`
+  already pins all nine red with nothing declared *and* all nine green on signed
+  fixtures, so no new test was needed there. **But that is nine of the twenty.** The
+  same question asked of the fourteen C8 gates found a real one.
+
+#### `repository_state` was vacuous, and reported a condition it never checked
+
+Found 2026-09-20 by asking of every gate the question the two producer gaps taught:
+*can this actually fail?* This one could not.
+
+```python
+def _gate_repository_state() -> tuple[bool, str]:
+    manifest_mod.build_manifest()  # ensure git + runtime detectable
+    return True, "repository_state: git + runtime detectable"
+```
+
+It called `build_manifest()` for its side effect and then returned `True`
+unconditionally. Nothing could fail: `build_manifest()` **degrades** to
+`git_commit: "unknown"` rather than raising (`_git_head()` catches everything and
+returns `None`), so the gate asserted a condition it never checked. Measured before
+the fix, with git made undetectable:
+
+```
+normal      : (True, 'repository_state: git + runtime detectable')
+git unknown : (True, 'repository_state: git + runtime detectable')   ← still green
+manifest    : git_commit = 'unknown'
+```
+
+So it was green while reporting "git detectable" in the one case where git was
+demonstrably *not* detectable. This is the §18.2 A0.1 class — a control the ledger
+described as active that could never fire — and it sits inside the fourteen gates
+that `CONTROLLED_PILOT_READY` and `PRODUCTION_CANDIDATE` are computed from.
+
+**Fixed by making the gate check the value that matters**, not a proxy: it reads
+`build_manifest()["git_commit"]` and refuses when it is absent or `"unknown"`,
+because a release cannot attest a commit it cannot name. The reason string keeps the
+original substring and adds the short commit, so the existing sign-off record's
+`"git + runtime detectable"` cell stays accurate:
+
+```
+normal      : (True, 'repository_state: git + runtime detectable (3bb3bd6d945c)')
+git unknown : (False, 'repository_state: git commit not detectable — a release
+                      cannot attest a commit it cannot name')
+```
+
+**Its declared purpose was also false, and is now corrected rather than
+implemented.** The comment said "clean-ish repo, reproducible commands present".
+Neither was ever checked, and the second *cannot* be: `run_gate` writes
+`release/release-manifest.json`, so the tree is dirty immediately after any gate run
+by construction. Following the §18.8 precedent for `release-profiles.yaml` — make
+the documentation true rather than bend the code to match it — the purpose is now
+stated as attestability, and a test pins that the reason string does not re-acquire
+a cleanliness claim.
+
+**No classification moved.** All four profiles still classify exactly as before
+(`app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` exit 0,
+`production_candidate` → `PRODUCTION_CANDIDATE` exit 0, `production` → `NOT_READY`
+exit 1), because the change only bites when git is genuinely undetectable. Can-fail
+proof: `test_repository_state_gate_refuses_when_the_commit_is_not_attestable` makes
+git undetectable and asserts the refusal; three tests added, `test_c8_release_gate.py`
+31 passed.
+
+#### A regression I introduced: making a list derived silently dropped its comments
+
+The fourteen per-gate purpose comments used to live in `release/profiles.py` beside
+the literal list. `3055bb2` made that list derived from `release-profiles.yaml`, and
+**the comments did not come along** — they existed nowhere else, so the only
+statement of what each gate claims to check was destroyed by a refactor whose whole
+subject was single-sourcing. It is what made the audit above harder than it needed
+to be.
+
+Restored in `release/release-profiles.yaml`, with the data, so deriving cannot drop
+them again — and with `repository_state`'s purpose corrected to match its behaviour
+rather than its name. **The generalisable lesson: when a literal becomes derived,
+its comments are part of what is being moved, and nothing fails when they are
+lost.**
 
 **Do NOT touch:** `release/gate.py:250-287` bodies (beyond B1.2),
 `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,

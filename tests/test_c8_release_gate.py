@@ -487,3 +487,55 @@ def test_gate_never_production():
     assert summary["classification"] == "NOT_READY"
     assert summary["permitted_c8_outcome"] is False
     assert summary["exit_code"] == 1
+
+
+# ── individual gates ───────────────────────────────────────────────────────
+
+
+def test_repository_state_gate_refuses_when_the_commit_is_not_attestable(monkeypatch):
+    """This gate used to be vacuous, and reported a condition it never checked.
+
+    It called `build_manifest()` for its side effect and then returned `True`
+    unconditionally, so it was green even with git undetectable — while reporting
+    "git + runtime detectable". Nothing could fail, because `build_manifest()`
+    degrades to `git_commit: "unknown"` rather than raising. Measured before the
+    fix: `(True, 'repository_state: git + runtime detectable')` alongside a
+    manifest saying `git_commit: unknown`.
+
+    A release that cannot name its commit cannot be attested, so it now refuses.
+    This is the section 18.2 A0.1 class: a control the ledger described as active
+    that could never fire.
+    """
+    from release import gate
+
+    monkeypatch.setattr(manifest, "_git_head", lambda: None)
+    monkeypatch.setattr(manifest, "_git_branch", lambda: None)
+
+    ok, reason = gate.GATE_IMPL["repository_state"]()
+    assert ok is False
+    assert "not detectable" in reason
+    # The gate is reading the value that actually matters, not a proxy for it.
+    assert manifest.build_manifest()["git_commit"] == "unknown"
+
+
+def test_repository_state_gate_is_green_in_a_real_checkout():
+    from release import gate
+
+    ok, reason = gate.GATE_IMPL["repository_state"]()
+    assert ok is True
+    assert "git + runtime detectable" in reason
+
+
+def test_repository_state_gate_does_not_claim_repo_cleanliness():
+    """Its declared purpose used to be "clean-ish repo, reproducible commands present".
+
+    Neither was ever checked, and the second cannot be: running the gate writes
+    `release/release-manifest.json`, so the tree is dirty immediately afterwards by
+    construction. The purpose is now stated as attestability, and this pins that the
+    reason string does not re-acquire a cleanliness claim.
+    """
+    from release import gate
+
+    _ok, reason = gate.GATE_IMPL["repository_state"]()
+    assert "clean" not in reason.lower()
+    assert "attest" in gate.GATE_IMPL["repository_state"].__doc__.lower()

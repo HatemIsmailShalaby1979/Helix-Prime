@@ -48,8 +48,29 @@ def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
 
 
 def _gate_repository_state() -> tuple[bool, str]:
-    manifest_mod.build_manifest()  # ensure git + runtime detectable
-    return True, "repository_state: git + runtime detectable"
+    """A release must be able to name the commit it attests.
+
+    This used to call `build_manifest()` for its side effect and then return `True`
+    unconditionally, so it was green even with git undetectable — while reporting
+    "git + runtime detectable". Nothing could fail: `build_manifest()` degrades to
+    `git_commit: "unknown"` rather than raising, so the gate asserted a condition it
+    never checked. Measured before the fix by making git undetectable:
+    `(True, 'repository_state: git + runtime detectable')` alongside a manifest that
+    said `git_commit: unknown`.
+
+    It now checks the value the manifest actually records. The declared purpose
+    ("clean-ish repo") was never true and is not implemented here: running the gate
+    writes `release/release-manifest.json`, so the tree is dirty immediately
+    afterwards by construction. This gate is about *attestability*, not cleanliness.
+    """
+    built = manifest_mod.build_manifest()
+    commit = str(built.get("git_commit", "") or "")
+    if not commit or commit == "unknown":
+        return False, (
+            "repository_state: git commit not detectable — a release cannot attest "
+            "a commit it cannot name"
+        )
+    return True, f"repository_state: git + runtime detectable ({commit[:12]})"
 
 
 def _gate_reproducible_install() -> tuple[bool, str]:

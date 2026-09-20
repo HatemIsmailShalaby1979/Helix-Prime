@@ -34,21 +34,26 @@ profiles:
   - production
   - app_pilot
 
+# What each gate claims to check. These comments are the ONLY statement of each
+# gate's purpose — they used to live in release/profiles.py beside the literal
+# list, and were silently lost when that list became derived from this file
+# (AGENTS.md §18.8). They belong here, with the data, so deriving cannot drop them
+# again. A gate whose purpose and behaviour disagree is the §18.2 A0.1 defect class.
 gates:
-  - repository_state
-  - reproducible_install
-  - configuration_validation
-  - dependency_locking
-  - startup_readiness
-  - backup_restore
-  - rollback
-  - data_isolation
-  - audit_integrity
-  - security_checks
-  - failure_recovery
-  - performance_limits
-  - operator_readiness
-  - release_approval
+  - repository_state            # the commit is attestable — NOT repo cleanliness
+  - reproducible_install        # one setup path documented + dependency lock
+  - configuration_validation    # config parses + validates before startup
+  - dependency_locking          # dependency versions pinned/locked
+  - startup_readiness           # health/readiness command passes
+  - backup_restore              # backup + restore proven from synthetic data
+  - rollback                    # rollback to previous manifest proven
+  - data_isolation              # tenant/client isolation verified
+  - audit_integrity             # audit chain verifies after backup/restore
+  - security_checks             # no-secrets scan + policy checks
+  - failure_recovery            # failure injection + recovery
+  - performance_limits          # bounded load/soak within explicit limits
+  - operator_readiness          # runbook + incident guide present
+  - release_approval            # explicit human go/no-go recorded
 
 app_gates:
   - app_auth_boundary

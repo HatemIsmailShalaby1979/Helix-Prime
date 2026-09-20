@@ -2,7 +2,7 @@
 
 Status: these nine production-only gates are NOT satisfiable in a local/controlled
 release. They are the hard blockers that prevent any bare `PRODUCTION` label in
-C8. Machine mirror: `release/profiles.py` → `PRODUCTION_ONLY_GATES`.
+C8. Source of truth: `release/release-profiles.yaml`; `release/profiles.py` derives it.
 
 The C8 gate (`release/gate.py`) returns `PRODUCTION` only if ALL NINE of these are
 green AND a genuine human `production_approved` sign-off exists. Locally these
@@ -32,7 +32,7 @@ or `PRODUCTION_CANDIDATE` — never `PRODUCTION`.
 
 ## Consequence
 
-Because blockers 1–9 are red by construction and no local `production_approved`
+Because blockers 1–9 are red absent signed evidence and no local `production_approved`
 sign-off is obtainable, the C8 pipeline is fail-closed against production release.
 This is deliberate: no controlled-pilot artefact may be mislabelled as production.
 

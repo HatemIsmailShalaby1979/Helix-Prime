@@ -2573,14 +2573,19 @@ human or external party showed up today, could they actually complete it?*
 
 Three findings from the same audit:
 
-- **`docs/release/production-blockers.md:35` is stale.** It says the nine gates are
-  "red by construction", which stopped being true when B1 gave them a reader — they
-  are red *absent signed evidence*, and an auditor's signature can satisfy them. The
-  conclusion it draws is unchanged. **Not edited, deliberately:** the plan pins
-  `production-blockers.md:39-42` *by line number*, and correcting line 35 needs
-  more lines than it replaces, which would move the frozen range and risk a future
-  agent freezing the wrong text. The rule there — "defeating a block is a defect" —
-  is worth more than the tidier sentence.
+- **`docs/release/production-blockers.md:35` was stale and is now corrected** —
+  line-count-neutrally. It said the nine gates are "red by construction", which
+  stopped being true when B1 gave them a reader: they are red *absent signed
+  evidence*, and an auditor's signature can satisfy them. Line 5 was stale too — it
+  named `release/profiles.py` as the machine mirror, which `3055bb2` inverted
+  (`release-profiles.yaml` is the source of truth; the module derives from it).
+  **The earlier decision not to edit was wrong on its own terms.** It assumed the
+  correction "needs more lines than it replaces"; it does not. Both sentences were
+  rewritten at the same line count, so the frozen range kept its exact text at
+  39-42 — proved by hashing `sed -n '39,42p'` before and after (unchanged) and by
+  the diff being 2 insertions / 2 deletions. **When a freeze is expressed by line
+  number the constraint is the line count, not the sentence** — and "I can't fix
+  this without moving the range" is itself a claim to measure rather than accept.
 - The superseded env vars (`HELIX_EVIDENCE_SIGNING_KEY`, `HELIX_ISOLATION_CERT`,
   `HELIX_OBSERVER_AUDIT`) survive only as documentation of their own removal, plus
   a test asserting the server no longer asks for them. Consistent, not stale.
@@ -2666,6 +2671,78 @@ them again — and with `repository_state`'s purpose corrected to match its beha
 rather than its name. **The generalisable lesson: when a literal becomes derived,
 its comments are part of what is being moved, and nothing fails when they are
 lost.**
+
+#### Two more nominal controls: `reproducible_install` and `dependency_locking`
+
+The same audit as `repository_state` — one question per gate, *can this actually
+fail?* — asked of the two dependency gates. Neither could, and the weaker of the
+two flatly contradicted its own declared purpose.
+
+```python
+# before
+lines = [ln for ln in lock.splitlines() if ln.strip() and not ln.startswith("#")]
+ok = len(lines) > 0                       # reproducible_install
+
+ok = p.exists() and p.stat().st_size > 0  # dependency_locking
+```
+
+`not ln.startswith("#")` does not strip leading whitespace, and pip-compile
+**indents** its `# via ...` provenance comments — so `reproducible_install`
+reported **337** "declared deps" for a lock file holding **120** real pins, and a
+lock file whose only line was an indented comment passed. `dependency_locking`
+checked only that the file was non-empty, while its declared purpose is
+"dependency versions pinned/locked": measured before the fix, the bare lines
+`requests` / `flask` passed, and so did a single comment. It was strictly *weaker*
+than `reproducible_install`, so it could never be the gate that failed.
+
+**Fixed with one parser rather than two restatements of one rule** — the
+repository's recurring defect is a rule and a copy of it drifting apart.
+`_lock_lines()` is the single declared-lines reader (the comment test runs after
+`strip()`), `_PIN_RE` accepts only `pkg==ver` with an optional environment marker,
+and `dependency_locking` now requires *every* declared line to be a pin.
+
+`reproducible_install`'s first clause ("one setup path documented") was also never
+checked — but unlike `repository_state`'s "clean-ish repo", **this one is
+checkable**, so it was implemented rather than deleted from the purpose:
+`docs/release/setup-guide.md` must exist and name the lock file. Correcting a
+purpose is only right when the check *cannot* exist. The per-gate purpose comment
+in `release-profiles.yaml` was corrected to match the behaviour.
+
+**Can-fail, run by reverting `release/gate.py` to HEAD** while keeping the new
+tests: 4 of the 5 new tests fail, and they fail *informatively* —
+`'120 declared deps' not in 'reproducible_install: 337 declared deps'` and
+`'requests\n' should not satisfy the locking gate`. The old numbers are the proof.
+
+**No classification moved.** All four profiles × (classification,
+`all_gates_green`, `permitted_c8_outcome`, `exit_code`) are identical between HEAD
+and the fix, and **zero** gate `ok` flags moved across the 23 gates. Only the two
+detail strings changed, in the direction of truth:
+
+| gate | HEAD | fixed |
+|---|---|---|
+| `reproducible_install` | `337 declared deps` | `setup doc=True (docs/release/setup-guide.md), 120 declared deps` |
+| `dependency_locking` | `lock present=True` | `120 pinned` |
+
+`release/manifest.py::_read_versions` is deliberately **not** changed, so the
+manifest's `dependency_lock_count` (333) still counts every non-empty line while
+the gate now reports 120 real pins. **That divergence is recorded, not new** —
+`f8becae` decided the manifest field is a claim about a future manifest and
+changing it is the same class as the commit pin. Two numbers measuring *different*
+things is fine; two numbers claiming the same thing is the defect removed here. Do
+not "harmonise" them.
+
+Independence is asserted in **both** directions, which is what stops one gate being
+redundant: a declared-but-unpinned set satisfies `reproducible_install` and not
+`dependency_locking`; a pinned set with no documented setup path does the reverse.
+
+**A CI break in my own in-flight work, caught by running the CI steps locally.**
+`ruff format --check .` failed on both touched files — an extra blank line, an
+implicit string concatenation ruff rejoins, and two over-long `monkeypatch.setattr`
+calls — so the work would have been red on a fresh clone. This is the §18.8 rule
+("run the CI steps locally before committing") paying for itself a second time, and
+it is why this was not committed on the strength of the tests alone. `ruff check`
++ `ruff format --check .` (405 files), `mypy` (72 files, the CI scope) and all five
+governance checks are green; 171 tests pass across the nine gate-touching files.
 
 **Do NOT touch:** `release/gate.py:250-287` bodies (beyond B1.2),
 `docs/release/production-blockers.md:39-42`, `connectors/base.py:254-259`,

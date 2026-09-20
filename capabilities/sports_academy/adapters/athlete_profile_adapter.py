@@ -15,8 +15,9 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Sequence
 
 from connectors.contracts import ConnectorContext
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 #: Attendance rate below which an athlete is flagged at-risk without any
 #: engine call (pure arithmetic fast path; the CX engine refines the score).

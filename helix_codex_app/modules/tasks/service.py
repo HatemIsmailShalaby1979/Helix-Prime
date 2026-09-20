@@ -18,6 +18,7 @@ import sqlite3
 import uuid
 from datetime import datetime, timezone
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app.db import record_node
 from helix_codex_app.errors import PermissionDenied
 from helix_codex_app.modules.notifications.service import MAX_PREVIEW, NotificationService
@@ -31,7 +32,7 @@ from helix_codex_app.modules.tasks.repository import (
 from helix_codex_app.security.accounts import Account
 
 PROVENANCE_SOURCE = "helix_codex_app.tasks"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 
 
 class TaskService:

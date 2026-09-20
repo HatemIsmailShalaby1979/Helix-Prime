@@ -19,6 +19,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from connectors.contracts import ConnectorContext  # noqa: E402
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 from metacognition.improvement import MetacognitionEngine  # noqa: E402
 from pilot.approval import (  # noqa: E402
@@ -45,7 +46,7 @@ from .register import get_restaurant_metadata  # noqa: E402
 from .roles import required_approver_role  # noqa: E402
 from .workflows import run_all_workflows  # noqa: E402
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 DEFAULT_AS_OF = "2026-08-29T12:00:00Z"
 
 

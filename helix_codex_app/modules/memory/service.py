@@ -24,6 +24,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app import db
 from helix_codex_app.db import record_node
 from helix_codex_app.errors import InvalidStateError, NotFoundError, PermissionDenied
@@ -40,7 +41,7 @@ from helix_codex_app.modules.memory.repository import MemoryRepository, Promotio
 from helix_codex_app.security.accounts import Account, AccountRepository
 
 PROVENANCE_SOURCE = "helix_codex_app.memory"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 CASE_POLICY_KEY = "value"
 MAX_EVIDENCE_CASES = 200
 ROLLBACK_STATES = ("approved", "rolled_back")

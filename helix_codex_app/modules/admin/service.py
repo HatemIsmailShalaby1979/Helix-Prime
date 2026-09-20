@@ -16,6 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app.db import record_node
 from helix_codex_app.errors import NotFoundError, PermissionDenied
 from helix_codex_app.security.accounts import (
@@ -33,7 +34,7 @@ from helix_codex_app.security.permissions import has_permission
 
 ADMIN_PERMISSION = "admin.users"
 PROVENANCE_SOURCE = "helix_codex_app.admin"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 MIN_PASSWORD_LENGTH = 8
 
 _ALLOWED_STATUSES = frozenset({"active", "disabled", "locked", "terminated"})

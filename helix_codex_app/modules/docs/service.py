@@ -22,6 +22,7 @@ import sqlite3
 import uuid
 from typing import Any
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app.db import record_node
 from helix_codex_app.errors import NotFoundError, PermissionDenied
 from helix_codex_app.modules.docs.repository import (
@@ -40,7 +41,7 @@ from helix_codex_app.modules.docs.repository import (
 from helix_codex_app.security.accounts import Account
 
 PROVENANCE_SOURCE = "helix_codex_app.docs"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 ARCHIVED = "archived"
 
 

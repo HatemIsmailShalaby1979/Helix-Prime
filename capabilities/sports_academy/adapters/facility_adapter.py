@@ -10,10 +10,11 @@ from __future__ import annotations
 from typing import Any, Dict, List, Sequence
 
 from connectors.contracts import ConnectorContext
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 
 from ..ontology import FacilitySlot
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 
 def _minutes(hhmm: str) -> int:

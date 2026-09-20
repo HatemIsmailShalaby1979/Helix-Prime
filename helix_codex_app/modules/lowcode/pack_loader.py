@@ -32,10 +32,10 @@ from typing import Any, Protocol, runtime_checkable
 
 import yaml
 
+from contracts.vocabulary import PACK_DATA_MODES
 from helix_codex_app import db
 from helix_codex_app.errors import AppError
 from helix_codex_app.integration import packs as pack_seam
-from helix_codex_app.modules.lowcode import section_registry
 from helix_codex_app.security.accounts import Account
 from helix_codex_app.security.permissions import PERMISSIONS
 
@@ -43,7 +43,7 @@ CORE_VERSION = "0.9.0"
 
 _ESTABLISHED = "ESTABLISHED"
 _ALLOWED_PRODUCTION_READINESS = frozenset({"ESTABLISHED", "NOT_ESTABLISHED"})
-_ALLOWED_DATA_MODES = frozenset({"live", "simulated"})
+_ALLOWED_DATA_MODES = PACK_DATA_MODES
 
 
 class PackValidationError(AppError):
@@ -573,6 +573,11 @@ def register_pack(
     A pack that fails any invariant is never registered and raises the typed
     validation error.
     """
+    # Imported here rather than at module scope: section_registry imports
+    # SectionDecl from this module, so a module-level import would close a cycle
+    # and make `import pack_loader` fail whenever pack_loader was imported first.
+    from helix_codex_app.modules.lowcode import section_registry
+
     _raise_if_invalid(pack)
     now = datetime.now(timezone.utc).isoformat()
     conn.execute(

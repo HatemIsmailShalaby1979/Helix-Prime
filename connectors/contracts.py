@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Mapping, Protocol, Sequence
 
+from contracts.vocabulary import CONNECTOR_DATA_MODES, CONNECTOR_SIMULATED_REALISTIC
+
 SCHEMA_VERSION = "1.0"
 
 
@@ -77,19 +79,14 @@ class ConnectorContext:
     client_id: str
     actor: str = "codex"
     correlation_id: str = ""
-    data_mode: str = "simulated_realistic"
+    data_mode: str = CONNECTOR_SIMULATED_REALISTIC
     data_classification: str = "client_confidential"
 
     def __post_init__(self) -> None:
         for name in ("tenant_id", "organization_id", "client_id", "actor"):
             if not getattr(self, name).strip():
                 raise ValueError(f"ConnectorContext.{name}: must be non-empty")
-        if self.data_mode not in {
-            "historical_anonymized",
-            "historical_consented",
-            "simulated_realistic",
-            "live_external",
-        }:
+        if self.data_mode not in CONNECTOR_DATA_MODES:
             raise ValueError(f"ConnectorContext.data_mode: unsupported {self.data_mode!r}")
 
 

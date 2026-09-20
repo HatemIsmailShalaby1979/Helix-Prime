@@ -6,6 +6,8 @@ Built for the first design partner (private sports academy, one location).
 """
 from __future__ import annotations
 
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
+
 from .adapters.athlete_profile_adapter import (  # noqa: F401
     athlete_profile,
     churn_risk_scores,
@@ -68,7 +70,7 @@ from .workflows import (  # noqa: F401
     renewal_flow,
 )
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 __all__ = [
     "Athlete",

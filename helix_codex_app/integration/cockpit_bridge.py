@@ -16,12 +16,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 from helix_codex_app.errors import EngineUnavailableError, NotFoundError
 from helix_codex_app.integration import policy_bridge
 from helix_codex_app.security.accounts import Account
 
 DEFAULT_PACK = "sports_academy"
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 # The cockpit rides on the operations GM's authority, because it is the operations
 # surface for the people accountable for it. This is the third gate: the router
 # dependency, the service check, and this policy call.

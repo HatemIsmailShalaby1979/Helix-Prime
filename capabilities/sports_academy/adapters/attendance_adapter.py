@@ -15,10 +15,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional, Sequence
 
 from connectors.contracts import ConnectorContext
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 
 from ..ontology import CheckIn, Session
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 
 def _hours(start: str, end: str) -> float:

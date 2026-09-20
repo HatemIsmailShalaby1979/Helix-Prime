@@ -11,10 +11,11 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Sequence
 
 from connectors.contracts import ConnectorContext
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 
 from ..ontology import Athlete, FeePayment
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 
 def monthly_recurring_revenue(athletes: Sequence[Athlete], programs: Sequence[Any]) -> float:

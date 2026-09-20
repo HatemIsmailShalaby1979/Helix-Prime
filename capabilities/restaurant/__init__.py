@@ -5,6 +5,8 @@ activates live connectors or external writes, and never auto-improves.
 """
 from __future__ import annotations
 
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
+
 from .classifications import DATA_CLASSIFICATIONS  # noqa: F401
 from .contracts import RestaurantConnector, build_restaurant_connectors  # noqa: F401
 from .fixtures import build_synthetic_restaurant  # noqa: F401
@@ -33,7 +35,7 @@ from .workflows import (  # noqa: F401
     run_all_workflows,
 )
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 __all__ = [
     "Employee",

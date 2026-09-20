@@ -15,6 +15,7 @@ import re
 import sqlite3
 import uuid
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app.db import record_node
 from helix_codex_app.integration.sse_bridge import publish
 from helix_codex_app.modules.notifications.repository import Notification, NotificationRepository
@@ -22,7 +23,7 @@ from helix_codex_app.security.accounts import Account, AccountRepository
 
 MENTION_RE = re.compile(r"@([A-Za-z0-9_]+)")
 PROVENANCE_SOURCE = "helix_codex_app.notifications"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 MAX_PREVIEW = 120
 DIRECT_KIND = "direct"
 

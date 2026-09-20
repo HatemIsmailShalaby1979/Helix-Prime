@@ -20,6 +20,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Mapping, Sequence
 
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 from helix_codex_app import db
 from helix_codex_app.config import get_app_settings
 from helix_codex_app.security.accounts import Account
@@ -30,7 +31,7 @@ STORE_FILENAME = "governed_memory.jsonl"
 ACCOUNT_STORE_KIND = "account"
 ORG_STORE_KIND = "org"
 DEFAULT_CLASSIFICATION = "client_confidential"
-DEFAULT_DATA_MODE = "simulated_realistic"
+DEFAULT_DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 _SAFE_COMPONENT = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
 

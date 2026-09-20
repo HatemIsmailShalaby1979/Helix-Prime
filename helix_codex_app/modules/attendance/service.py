@@ -20,6 +20,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime, timedelta, timezone
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app.db import record_node
 from helix_codex_app.modules.attendance.repository import (
     PUNCH_IN,
@@ -31,7 +32,7 @@ from helix_codex_app.modules.attendance.repository import (
 from helix_codex_app.security.accounts import Account, AccountRepository
 
 PROVENANCE_SOURCE = "helix_codex_app.attendance"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 OWNER_ROLE = "owner"
 MANAGER_ROLE = "manager"
 

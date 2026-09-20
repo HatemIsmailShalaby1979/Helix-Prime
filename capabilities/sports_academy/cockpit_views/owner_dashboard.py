@@ -9,12 +9,13 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from connectors.contracts import ConnectorContext
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 
 from .. import kpis as academy_kpis
 from ..adapters.athlete_profile_adapter import churn_risk_signals
 from ..adapters.attendance_adapter import compute_attendance
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 
 def compute_owner_dashboard(

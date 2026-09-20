@@ -18,12 +18,14 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
+from contracts.vocabulary import ENGINE_LIVE, ENGINE_SAMPLE
+
 SCHEMA_VERSION = "1.0"
 CONTRACT_VERSION = "1.0"
 
 #: The only two data modes that exist. "sample" must never be reported as "live".
-DATA_MODE_LIVE = "live"
-DATA_MODE_SAMPLE = "sample"
+DATA_MODE_LIVE = ENGINE_LIVE
+DATA_MODE_SAMPLE = ENGINE_SAMPLE
 
 #: Payload keys that mark a request as carrying synthetic/baseline data.
 SAMPLE_PAYLOAD_FLAGS: Tuple[str, ...] = (

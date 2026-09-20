@@ -6,6 +6,7 @@ no live customer data and no network access.
 from __future__ import annotations
 
 from connectors.contracts import SourceRef
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC
 
 from .ontology import (
     Complaint,
@@ -16,7 +17,7 @@ from .ontology import (
     Supplier,
 )
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 
 
 def _src(provider: str, record_id: str, as_of: str) -> SourceRef:

@@ -21,6 +21,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from connectors.contracts import ConnectorContext  # noqa: E402
+from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC  # noqa: E402
 from memory.governed_memory import GovernedMemory  # noqa: E402
 from metacognition.improvement import MetacognitionEngine  # noqa: E402
 from pilot.approval import (  # noqa: E402
@@ -64,7 +65,7 @@ from .workflows import (  # noqa: E402
     renewal_flow,
 )
 
-DATA_MODE = "simulated_realistic"
+DATA_MODE = CONNECTOR_SIMULATED_REALISTIC
 DEFAULT_AS_OF = "2026-09-07T20:00:00Z"
 
 

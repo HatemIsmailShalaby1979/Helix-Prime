@@ -13,6 +13,7 @@ from __future__ import annotations
 import sqlite3
 import uuid
 
+from contracts.vocabulary import APP_RUNTIME_DATA_MODE
 from helix_codex_app.db import record_node
 from helix_codex_app.errors import PermissionDenied
 from helix_codex_app.modules.messaging.repository import (
@@ -24,7 +25,7 @@ from helix_codex_app.modules.notifications.service import NotificationService
 from helix_codex_app.security.accounts import Account
 
 PROVENANCE_SOURCE = "helix_codex_app.messaging"
-PROVENANCE_DATA_MODE = "app_runtime"
+PROVENANCE_DATA_MODE = APP_RUNTIME_DATA_MODE
 DIRECT_KIND = "direct"
 GROUP_KIND = "group"
 MAX_GROUP_MEMBERS = 64

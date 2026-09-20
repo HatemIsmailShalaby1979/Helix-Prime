@@ -2198,6 +2198,22 @@ must not be paired with a manifest refresh, or the two together would turn a
 red production profile green on paper. Leave both artifacts until a real
 ceremony runs.
 
+**Two more fields in that snapshot are stale, and are not defects either.**
+Audited 2026-09-20 against the repo, because the ledger says claims should be
+re-checked rather than trusted:
+
+- `dependency_lock_count: 333` no longer matches the lock file, which now has
+  **339** non-empty lines. It is also a **misleading metric**: `_read_versions`
+  returns every non-empty line, so the number counts 219 comment lines as well as
+  the **120** actual `pkg==ver` pins. It measures lock-file verbosity, not
+  dependencies. Changing it would change what a future manifest claims, so it is
+  recorded here instead — a reader should not take "333" to mean 333 packages.
+- `git_commit` and `build_timestamp` are from the 2026-09-15 run, as above.
+
+Two fields that *do* still check out: `version: "0.9.0-c8"` matches
+`pyproject.toml` plus `CEREMONY_SUFFIX`, and `supported_python: ">=3.12,<3.13"`
+matches `requires-python` exactly.
+
 #### The release manifest failed its own schema (fixed)
 
 Found while in the area, as the plan predicted. `release/release-manifest.json` is

@@ -265,6 +265,7 @@ markers = [
     "smoke: marks tests as smoke tests requiring live Ollama service",
     "unit: fast, no external dependencies",
     "integration: requires engines or Ollama",
+    "ui_integration: quarantined cockpit tier that spawns live servers and a Streamlit runner; deselected unless the run names this marker",
 ]
 testpaths = ["tests"]
 addopts = "-r a --strict-markers --durations=20"

@@ -22,7 +22,7 @@
 > signatures from keys held outside this repository.
 >
 > **Two owner decisions are also still open and are not engineering work:** the
-> repository is **public** (`"private": false`), and 7 commits are unpushed
+> repository is **public** (`"private": false`), and 16 commits are unpushed
 > (`origin/main = b9d8fb6`). See §18.10 and the remote section below.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
@@ -30,6 +30,13 @@
 > sections. Read this file top-to-bottom, then pick up from §18, or §5
 > ("Suggested next work") if §18 is closed. Update this file immediately after
 > completing each step.
+>
+> **Out-of-band tooling (§19):** four standalone modules at the repository root —
+> `telemetry_simulator.py`, `ingest_engine.py`, `supervisor.py`, `cockpit_ui.py` —
+> form the Helix Ops Cockpit. They are **not** part of the governed core: nothing
+> under `tests/` references them, they are absent from `release/release-manifest.json`,
+> and they appear in no gate profile. They therefore move neither the 1,758-test
+> baseline nor the gate surface.
 
 ---
 
@@ -3342,3 +3349,123 @@ four, as the tool always reports — screenshots are evidence, not a polish clai
 **Commits:** `3defc55` (the refresh, 21 files) and `7631b0f` (handover commit
 labelling). No code changed; `ruff` was not run because no Python file was
 touched.
+
+---
+
+## 19. Helix Ops Cockpit modules (COCKPIT-1) — COMPLETE
+
+**Recorded:** 2026-09-21 · **Scope:** four standalone modules at the repository root,
+outside the governed core. No release gate, capability pack, or engine was modified.
+
+### 19.1 Boundary — read this before assuming they are wired in
+
+These modules are out-of-band operator tooling. They are independent of the governed
+core, and of each other:
+
+| Property | Measurement |
+|---|---|
+| Referenced anywhere under `tests/` | **no** |
+| Present in `release/release-manifest.json` | **no** (0 matches) |
+| Cross-imported between the four | **no** — each redefines the shared contracts rather than importing another module's package |
+| Effect on the 1,758-test baseline | **none** — nothing here is collected by pytest |
+| `ruff check` | clean on all four |
+
+**Consequence for rule 6 of §0:** there is no baseline movement to report, because
+these modules are not part of the suite. The verification for this section is the
+dedicated harnesses in §19.4, not `pytest`.
+
+### 19.2 The modules
+
+| File | Lines | Role |
+|---|---|---|
+| `telemetry_simulator.py` | 366 | Deterministic operations twin. A reproducible Erlang C + fluid-queue telemetry stream for a simulated 500-agent contact center, with a programmatic volume-spike control. |
+| `ingest_engine.py` | 949 | Ingestion point and intervention engine. FastAPI; OLS backlog velocity over a rolling window; SLA projection against a data-derived gradient; an action ladder priced in penalty dollars; a `PENDING → APPROVED \| REJECTED → EXECUTED` gate with a single-pending invariant; and a WebSocket state stream. |
+| `supervisor.py` | 559 | Execution and transport layer. Launches the twin as an async subprocess, decodes its stdout line by line, POSTs each tick to the engine, and holds a payload through an exponential retry budget before dropping it. |
+| `cockpit_ui.py` | 473 | Streamlit manager console. Floor status, the action centre for pending interventions, approve/reject execution, and the audit trail. |
+
+### 19.3 The contracts between them
+
+```
+telemetry_simulator.py --stdout (JSON Lines)--> supervisor.py --HTTP POST--> ingest_engine.py
+                                                                                    |
+                                                    cockpit_ui.py <--HTTP GET/POST---+--> ws stream
+```
+
+| Link | Contract |
+|---|---|
+| twin → supervisor | One JSON object per line on stdout; operator notices on stderr. |
+| supervisor → engine | `POST /api/v1/telemetry` with `IngestPayload{metrics, state}`. |
+| console → engine | `GET /api/v1/cockpit/state` and `POST /api/v1/cockpit/approve`. The console polls; it does not yet subscribe to `ws /ws/v1/cockpit/stream`, which is live and tested but unused by the UI. |
+
+**`--emit-state` exists because the envelope cannot be completed downstream.**
+`IngestPayload.state` is required, and `SimulationState.current_interval_volume` is
+not derivable from `QueueMetrics`. A transport layer forwarding each decoded stdout
+line verbatim would therefore have taken **422 on every tick**, and the only way to
+avoid that would have been to invent control-plane state it does not own. The flag is
+opt-in; the twin's default stdout contract is unchanged and byte-identical.
+
+### 19.4 Verification
+
+Three purpose-built harnesses, each run against live servers and real subprocesses.
+**They were scratch files and have been removed** — see finding 6 in §19.5; the
+counts below are recorded measurements, reproduced twice for the supervisor and the
+console.
+
+| Harness | Checks | What it proved |
+|---|---|---|
+| ingest stream | 34 | Snapshot on connect; ping/pong; `telemetry_tick`, `intervention_triggered` and `intervention_updated` frames; strictly increasing `seq`; dead and stalled peers pruned; 50 dispatches to a stalled peer returning in 0.00 ms; ingest latency < 1 ms with a stalled subscriber attached; the writer cancelled by the application lifespan. |
+| supervisor bridge | 32 | 8 ticks through a live engine with 8 `200 OK` and `dropped=0`; the twin's stderr passed through; a payload held across a `0.10s → 0.20s` backoff and then dropped with `exit=1`; a 404 aborting the run rather than dropping every tick; `terminate` reaping a live child; cancellation terminating the twin; `KeyboardInterrupt` → 130. |
+| cockpit console | 46 | Five floor tiles plus four per intervention under Streamlit's `AppTest`; the 80% target delta on the service-level tile; trigger condition, reasoning trace and USD exposure rendered; approve → `APPROVED` → `EXECUTED` and reject → `REJECTED` against a live engine; the audit frame carrying both rows; unreachable-engine and stale-snapshot degraded paths. |
+
+### 19.5 Findings worth keeping
+
+1. **An ambient proxy silently detours loopback control-plane calls.**
+   `HTTP_PROXY`/`HTTPS_PROXY` are set in this sandbox and httpx honours them by
+   default. Measured: a POST to a *closed* localhost port returned the proxy's
+   `502 upstream connect failed` after ~2.0 s instead of raising `ConnectError`.
+   `supervisor.py` and `cockpit_ui.py` both pass `trust_env=False`. **Any future
+   loopback client in this repository must do the same.**
+2. **A Streamlit decision taken inside `if st.button(...)` can be lost.** Those
+   branches are one-shot: the button reports `True` on the single rerun that delivers
+   the click, and a 2-second timer rerun landing first can reach the script before
+   that branch does — silently dropping a manager's authority decision.
+   `cockpit_ui.py` therefore gives every button an `on_click` callback that only
+   appends to a session-state queue; the queue is drained at the top of the next
+   render, which is where the POST happens.
+3. **Decisions are never retried.** Unlike telemetry, an approval is an authority
+   action. A failed POST is reported to the manager, who decides again; the engine
+   answers 409 for a second decision on the same id and 404 for an unknown one, so a
+   blind retry would only manufacture confusing errors.
+4. **Windows console control events do not map to exit code 130.**
+   `CTRL_BREAK_EVENT` terminates a piped, console-less process with
+   `STATUS_CONTROL_C_EXIT` (`0xC000013A`) before Python's `except KeyboardInterrupt`
+   can run, and it reaches every process in the group — so it cannot isolate a
+   parent's cleanup logic either. The 130 path is correct for POSIX and interactive
+   Ctrl-C; test it by raising `KeyboardInterrupt` at the boundary instead of
+   signalling a child.
+5. **Raising the root logger switches on third-party request logging.**
+   `supervisor.py`'s first cut set the root level, which made httpx log every
+   request: 8 ticks produced 16 `200 OK` lines. The level now applies to the
+   `supervisor` logger only.
+6. **The harnesses were removed, so this section's numbers are not re-runnable.**
+   That is a deliberate trade against repository hygiene, not an oversight. Durable
+   evidence would mean promoting the three harnesses into a permanent,
+   non-collected location — an owner decision, because putting them under `tests/`
+   would add them to the 1,758-test baseline and they spawn servers.
+
+### 19.6 Commits
+
+| Commit | What |
+|---|---|
+| `a7c53e7` | the deterministic operations twin |
+| `87ef4c8` | the ingest engine: velocity, HITL gate, live stream |
+| `c760548` | `--emit-state` on the twin |
+| `5b4d0f5` | the supervisor bridge |
+| `13f3b65` | the Streamlit manager console |
+| (this entry) | §19 and the banner pointer |
+
+**Remote state at the time of writing:** `origin/main = b9d8fb6`, re-verified with
+`git ls-remote`; **16 commits unpushed**, measured with
+`git rev-list --count origin/main..HEAD` after the fetch — not against a remembered
+hash, per §18.8. The repository remains public. Both remain owner decisions, not
+engineering work.

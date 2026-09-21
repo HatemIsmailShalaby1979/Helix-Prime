@@ -133,7 +133,7 @@
       "col": 2,
       "type": "backend",
       "label": "Test Suite",
-      "sublabel": "1,483 tests"
+      "sublabel": "1,758 tests"
     },
     {
       "id": "evidence",
@@ -149,7 +149,7 @@
       "col": 4,
       "type": "security",
       "label": "Gate Verdict",
-      "sublabel": "14 release gates",
+      "sublabel": "29 gate checks",
       "tag": "human gate"
     },
     {
@@ -258,7 +258,7 @@
       "title": "What this means for marketing",
       "items": [
         "Every public number must trace to a test run",
-        "The demo video still carries retracted claims"
+        "The shipped demo MP4 still carries retracted claims; its captions no longer do"
       ]
     }
   ]

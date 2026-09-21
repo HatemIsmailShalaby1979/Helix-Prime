@@ -202,9 +202,9 @@
     <a href="#first30">Your first 30 days</a>
   </nav>
   <div class="meta">
-    HEAD <code>1c176d3</code><br>
-    Validated 2026-09-18<br>
-    Suite 1483 passed<br>
+    HEAD <code>003709b</code><br>
+    Re-verified 2026-09-20<br>
+    Suite 1,758 passed<br>
     Profile <code>0.9.0-c8</code>
   </div>
 </aside>
@@ -221,12 +221,12 @@
     carry the structure; this document is the spine that connects them.
   </p>
   <div class="hero-meta">
-    <span class="chip">HEAD <code style="background:none;padding:0">1c176d3</code></span>
-    <span class="chip ok">1483 tests passing</span>
+    <span class="chip">HEAD <code style="background:none;padding:0">003709b</code></span>
+    <span class="chip ok">1,758 tests passing</span>
     <span class="chip ok">9 / 9 code checks green</span>
     <span class="chip warn">CONTROLLED_PILOT_READY</span>
     <span class="chip stop">release_approved: false</span>
-    <span class="chip stop">166 commits never pushed</span>
+    <span class="chip stop">7 commits never pushed</span>
   </div>
 </header>
 
@@ -241,25 +241,30 @@
     refuses to let anything happen without a record of who authorised it.
   </p>
   <p>
-    The engineering is in good shape. 1,483 tests pass, the linters and security scanners are clean,
-    and the release gate does exactly what it was designed to do. The commercial side is not started.
-    There is no revenue, no pricing, and no sales pipeline. There is one named design partner who has
-    never run a pilot. If you are joining to build, you are joining a well-built engine with no
-    market attached to it yet. That is the honest summary, and the rest of this document supports it.
+    The engineering is in good shape. 1,758 tests pass in a single uninterrupted run, the
+    linters and security scanners are clean, and the release gate does exactly what it was designed
+    to do. The commercial side is not started. There is no revenue, no pricing, and no sales
+    pipeline. There is one named design partner who has never run a pilot. If you are joining to
+    build, you are joining a well-built engine with no market attached to it yet. That is the honest
+    summary, and the rest of this document supports it.
   </p>
 
   <div class="note stop">
     <span class="lbl">Three things to know before anything else</span>
     <p>
-      <strong>1. Nothing has been pushed.</strong> <code>main</code> is 166 commits ahead of
-      <code>origin/main</code> and 0 behind. The public repository does not contain the current work.
-      If the machine is lost, the work is lost. Push is a human decision that has been deliberately
-      withheld, and it is the single highest-value thing to resolve.
+      <strong>1. Seven commits are unpushed, and the repository is still public.</strong> The remote
+      <code>origin/main</code> sits at <code>b9d8fb6</code>; HEAD is 7 commits ahead of it and 0
+      behind, so most of the work <em>is</em> published. Two things still need an owner decision:
+      push the remaining 7 commits, and make the repository private. It is currently public
+      (<code>"private": false</code>), which is the larger exposure of the two.
     </p>
     <p>
-      <strong>2. The shipped demo video still contains fabricated narration.</strong> The script was
-      rewritten to remove invented claims, but the rendered <code>.mp4</code> and <code>.vtt</code>
-      were never rebuilt. It must not be distributed.
+      <strong>2. The demo video on disk is stale, and its captions no longer match it.</strong> The
+      script was rewritten to remove invented claims and the <code>.vtt</code> caption track was
+      regenerated from it, but <code>assets/Helix_Prime_5Min_Demo.mp4</code> is an untracked build
+      output dated 2026-08-27 that was never rebuilt. Its narration runs longer than the corrected
+      script in three of five chapters. Rebuild it or withdraw it — and do not ship the two files as
+      a matched pair, because they are not one.
     </p>
     <p>
       <strong>3. "Production ready" is false and the system says so itself.</strong> Twenty-one
@@ -275,9 +280,9 @@
   <p class="lede">Every number below was read from the repository, not from documentation about it.</p>
 
   <div class="stats">
-    <div class="stat good"><div class="v">1483</div><div class="k">Tests passed, 0 failed, 0 skipped (2026-09-18)</div></div>
-    <div class="stat good"><div class="v">202</div><div class="k">Total commits on <code>main</code></div></div>
-    <div class="stat bad"><div class="v">166</div><div class="k">Commits ahead of <code>origin/main</code>. Never pushed.</div></div>
+    <div class="stat good"><div class="v">1,758</div><div class="k">Tests passed, 0 failed, 0 skipped — one process (2026-09-20)</div></div>
+    <div class="stat good"><div class="v">237</div><div class="k">Total commits on <code>main</code></div></div>
+    <div class="stat bad"><div class="v">7</div><div class="k">Commits ahead of <code>origin/main</code>. Never pushed.</div></div>
     <div class="stat good"><div class="v">9/9</div><div class="k">Ruff, mypy, bandit, pip-audit, drift checks clean</div></div>
     <div class="stat mid"><div class="v">0.9.0</div><div class="k">Version, release profile <code>0.9.0-c8</code></div></div>
     <div class="stat mid"><div class="v">21</div><div class="k">External verification items open (Classes 2–5)</div></div>
@@ -305,14 +310,20 @@
   </div>
 
   <div class="note warn">
-    <span class="lbl">Documentation is stale in two places</span>
+    <span class="lbl">One documentation drift, still open</span>
     <p>
-      <code>AGENTS.md</code> §1.1 still records 1,395 collected tests and last commit
-      <code>081e4bc</code>. The real figures are 1,483 and <code>1c176d3</code>. The build ledger's
-      <em>history</em> is accurate; only that one summary table drifted. Also,
       <code>release/release-manifest.json</code> pins commit <code>b6b954e</code> and a build
-      timestamp of 2026-09-15, so it describes a build three commits behind HEAD. Regenerate it
-      before any release action.
+      timestamp of 2026-09-15, so it describes a build that is no longer HEAD. Regenerate it before
+      any release action, or you will be certifying a build that does not exist.
+    </p>
+    <p>
+      <em>Closed since the first edition of this handover:</em> <code>AGENTS.md</code> §1.1 used to
+      record 1,395 collected tests and commit <code>081e4bc</code>; both have been corrected, and the
+      ledger now carries the measured suite result. The two figures this document previously quoted
+      — 1,483 tests and 166 unpushed commits — have also moved, to 1,758 and 7 respectively. The
+      166 figure was itself wrong by the time it was written: the remote had already advanced to
+      <code>b9d8fb6</code>, which is why this edition measures the delta directly against
+      <code>origin/main</code> instead of against a remembered commit hash.
     </p>
   </div>
 </section>
@@ -384,7 +395,7 @@
     <div class="card">
       <h4>Safe to say</h4>
       <ul>
-        <li>It is a working, tested platform: 1,483 automated tests, clean security scans.</li>
+        <li>It is a working, tested platform: 1,758 automated tests in one green run, clean security scans.</li>
         <li>It is designed to be governed and auditable, and it refuses unsafe actions by default.</li>
         <li>It has been validated as suitable for a supervised controlled pilot.</li>
         <li>It is built by an operator with 28 years in the domain, with a public repository.</li>
@@ -524,12 +535,19 @@
   <div class="note warn">
     <span class="lbl">Known limitation, stated plainly</span>
     <p>
-      This is the one diagram of the four whose desktop containment check does not pass. At a 1440×900
-      window its content needs 1,304px of height; at 2048×1320 it needs 1,461px. The workflow layout
-      engine enforces a minimum canvas of 896×668 for this density, and the required label text size
-      cannot be preserved inside a shorter frame. The diagram is fully readable and internally
-      correct, but on a smaller laptop it will scroll rather than fit. Fixing it means splitting the
-      four lanes across two diagrams. The other three diagrams fit at every tested viewport.
+      This is the one diagram of the four whose desktop containment check does not pass. Measured on
+      2026-09-20, its content needs 1,320px of height at a 1440×900 window, 1,450px at 1600×1000 and
+      1920×1080, and 1,477px at 2048×1320 — so it overflows vertically at every checked viewport. The
+      workflow layout engine enforces a minimum canvas for this density, and the required label text
+      size cannot be preserved inside a shorter frame. The diagram is fully readable and internally
+      correct, but it will scroll rather than fit. Fixing it means splitting the four lanes across two
+      diagrams. The other three diagrams pass containment at all four viewports.
+    </p>
+    <p>
+      <em>This is pre-existing, not a regression from this refresh.</em> The earlier edition of this
+      document recorded the same failure with slightly smaller figures (1,304px and 1,461px); the
+      numbers moved because the gate-verdict node's sublabel was corrected from "14 release gates" to
+      "29 gate checks" in the same pass.
     </p>
   </div>
 
@@ -559,7 +577,12 @@
 
   <h3>The gate profiles</h3>
   <p>
-    <code>release/gate.py</code> runs fourteen gates against a named profile. Re-run on 2026-09-18:
+    <code>release/gate.py</code> runs a named profile over its own gate list, derived from
+    <code>release/release-profiles.yaml</code>. There are six profiles, and the count differs by
+    profile: <code>alpha</code> 1, <code>internal_pilot</code> 4, <code>controlled_pilot</code> 14,
+    <code>production_candidate</code> 14, <code>app_pilot</code> 11, and <code>production</code> 23
+    (the 14 core gates plus nine production-only gates). Across all profiles there are 29 distinct
+    gate implementations. Re-verified 2026-09-20:
   </p>
   <div class="tblwrap">
     <table>
@@ -666,7 +689,7 @@
     <table>
       <thead><tr><th style="width:8%">Class</th><th style="width:22%">Owned by</th><th style="width:12%">Count</th><th>Items</th></tr></thead>
       <tbody>
-        <tr><td><strong>1</strong></td><td>Coding agent</td><td><span class="tag pass">10 pass</span></td><td>Regression suite, all three pilot gates, no fabricated approval, data boundary, evidence isolation, audit chain, tenant isolation, secret scan, backup and restore</td></tr>
+        <tr><td><strong>1</strong></td><td>Coding agent</td><td><span class="tag pass">11 pass</span></td><td>Regression suite, all three pilot gates, no fabricated approval, data boundary, evidence isolation, audit chain, tenant isolation, secret scan, backup and restore</td></tr>
         <tr><td><strong>2</strong></td><td>Project owner / operator</td><td><span class="tag open">6 open</span></td><td>Pilot operator, independent reviewer (SOD), data controller, go/no-go consent, success metrics over a real window, exit review</td></tr>
         <tr><td><strong>3</strong></td><td>Independent external reviewer</td><td><span class="tag open">3 open</span></td><td>Observer audit of the release pipeline, review of the pilot evidence pack, verification that outputs are synthetic or consented only</td></tr>
         <tr><td><strong>4</strong></td><td>Legal / privacy / security</td><td><span class="tag open">4 open</span></td><td>Security review, legal and privacy review, certified tenant isolation, records compliance review</td></tr>
@@ -715,7 +738,7 @@
     </div>
     <div class="path">
       <div class="h"><b>Release machinery</b><em>release/</em></div>
-      <p><code>gate.py</code> (14 gates, four profiles), <code>manifest.py</code>, <code>profiles.py</code>, <code>security_gate.py</code>, <code>signoff.py</code>, <code>pilot_metrics.py</code>, <code>backup.py</code>, and the lock file with 333 pinned dependencies.</p>
+      <p><code>gate.py</code> (29 gate checks across six profiles), <code>manifest.py</code>, <code>profiles.py</code>, <code>security_gate.py</code>, <code>signoff.py</code>, <code>pilot_metrics.py</code>, <code>backup.py</code>, <code>scratch.py</code>, and the lock file with 120 pinned dependencies.</p>
     </div>
     <div class="path">
       <div class="h"><b>Evidence and proof</b><em>evidence/ · observability/</em></div>
@@ -731,7 +754,7 @@
     </div>
     <div class="path">
       <div class="h"><b>Build ledger</b><em>AGENTS.md</em></div>
-      <p>91KB. The running record of every completed step, with the git protocol and the non-negotiable rules. Read it top to bottom before your first commit.</p>
+      <p>~203KB. The running record of every completed step, with the git protocol and the non-negotiable rules. Read it top to bottom before your first commit.</p>
     </div>
   </div>
 </section>
@@ -779,19 +802,19 @@
       <thead><tr><th style="width:30%">Risk</th><th style="width:12%">Severity</th><th>What we found and what to do</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>166 commits exist only on this machine</strong></td>
+          <td><strong>The repository is public, and 7 commits are unpushed</strong></td>
           <td><span class="tag stop">Critical</span></td>
-          <td><code>main</code> is 166 ahead of <code>origin/main</code>. Nothing since the early history has been pushed. Disk failure destroys the entire current state of the project. Push, or mirror to a second location, before anything else.</td>
+          <td><code>origin/main</code> is at <code>b9d8fb6</code>; HEAD is 7 ahead and 0 behind, so the bulk of the work is published. But the repository is still <strong>public</strong> — the GitHub API reports <code>"private": false</code> — which is the larger exposure, since the commit history, the ledger, and the marketing surface are all world-readable. Making it private and pushing the last 7 commits are both owner decisions.</td>
         </tr>
         <tr>
-          <td><strong>Demo video carries retracted narration</strong></td>
+          <td><strong>Demo video is stale and no longer matches its captions</strong></td>
           <td><span class="tag stop">Critical</span></td>
-          <td><code>marketing/assets/Helix_Prime_5Min_Demo.mp4</code> and its <code>.vtt</code> still contain the fabricated claims. <code>marketing/DEMO_SCRIPT.md</code> says so in a truth note. Rebuild from the script or remove it from the distribution path.</td>
+          <td><code>marketing/assets/Helix_Prime_5Min_Demo.mp4</code> is an untracked build output dated 2026-08-27 that still carries the fabricated narration. Its <code>.vtt</code> was regenerated from the corrected script, so the two files describe different things — measured, the MP4's narration runs 11–16&nbsp;s longer in three of five chapters. Rebuild from <code>marketing/DEMO_SCRIPT.md</code> or remove it from the distribution path.</td>
         </tr>
         <tr>
           <td><strong>Release manifest describes an older build</strong></td>
           <td><span class="tag open">High</span></td>
-          <td><code>release/release-manifest.json</code> pins commit <code>b6b954e</code> with a 2026-09-15 timestamp; HEAD is <code>1c176d3</code>. Regenerate before any release action, or you will be certifying a build that no longer exists.</td>
+          <td><code>release/release-manifest.json</code> pins commit <code>b6b954e</code> with a 2026-09-15 timestamp; HEAD is <code>003709b</code>. Regenerate before any release action, or you will be certifying a build that no longer exists.</td>
         </tr>
         <tr>
           <td><strong>Pilot consent record has a placeholder timestamp</strong></td>
@@ -804,24 +827,9 @@
           <td>The Docker daemon was unavailable during validation, so the first real <code>docker build</code> may surface problems that 32 static packaging tests cannot see. Do this early, on a machine with a working daemon.</td>
         </tr>
         <tr>
-          <td><strong>Full suite never ran in one process</strong></td>
-          <td><span class="tag open">Medium</span></td>
-          <td>The sandbox capped commands at ten minutes, so validation ran in seven chunks with per-test isolation. Shared-process flakiness cannot be ruled out from those runs alone. Run the whole suite once, uninterrupted, on real hardware.</td>
-        </tr>
-        <tr>
-          <td><strong><code>cookies.txt</code> in the repo root</strong></td>
-          <td><span class="tag open">Medium</span></td>
-          <td>An untracked Netscape cookie file containing a <code>helix_session</code> cookie for <code>127.0.0.1</code>. It is a loopback session cookie, so the exposure is limited, but the file is not in <code>.gitignore</code> and a careless <code>git add -A</code> would sweep it in. Add the ignore rule and delete the file.</td>
-        </tr>
-        <tr>
-          <td><strong>Working tree is dirty</strong></td>
+          <td><strong>Three untracked files in the tree</strong></td>
           <td><span class="tag mute">Low</span></td>
-          <td><code>marketing/README.md</code> is modified and unstaged. It is user-authored content, deliberately never staged. Decide whether it should be committed or reverted.</td>
-        </tr>
-        <tr>
-          <td><strong>Two documentation drifts</strong></td>
-          <td><span class="tag mute">Low</span></td>
-          <td><code>AGENTS.md</code> §1.1 still says 1,395 tests and commit <code>081e4bc</code>. The ledger's history is fine; the summary table is not. Update it.</td>
+          <td><code>docs/PROJECT_ARCHITECTURE.md</code>, <code>docs/PROJECT_ARCHITECTURE.pdf</code>, and <code>scripts/generate_pdf.py</code> are untracked. Nothing else in the tree differs from HEAD in content — <code>git diff HEAD --quiet</code> exits 0. The ~39 files that <code>git status</code> shows as modified are <code>core.autocrlf</code> stat artifacts, not edits.</td>
         </tr>
         <tr>
           <td><strong>Two names for one product</strong></td>
@@ -856,9 +864,9 @@
 
   <h3>Week 1 · Stop the bleeding, learn the shape</h3>
   <ol>
-    <li>Push the branch, or mirror the repository to a second location. Everything else is secondary until this is done.</li>
+    <li>Push the 7 unpushed commits, and make the repository private. The work is mostly published already; the privacy of the repository is the open item.</li>
     <li>Read <code>00_CONSTITUTION.md</code>, then <code>docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md</code>, then <code>AGENTS.md</code> top to bottom.</li>
-    <li>Run the full suite in one process on real hardware: <code>python -m pytest tests/ -q -m "not smoke"</code>. Confirm the 1,483 figure independently.</li>
+    <li>Run the full suite in one process: <code>python -m pytest tests/ -q -m "not smoke"</code>. Confirm the 1,758 figure independently.</li>
     <li>Build the container. Record whatever breaks.</li>
     <li>Open the four diagrams in this folder and read the sections above. They are the map.</li>
   </ol>
@@ -866,9 +874,9 @@
   <h3>Week 2 · Fix the credibility items</h3>
   <ol>
     <li>Rebuild or withdraw the demo video. This is a public-facing liability sitting in the repo.</li>
-    <li>Delete <code>cookies.txt</code> and add it to <code>.gitignore</code>.</li>
+    <li><em>Done since the first edition:</em> <code>cookies.txt</code> is gone and the ignore rule is in place.</li>
     <li>Regenerate the release manifest at HEAD so it describes the real build.</li>
-    <li>Update the stale figures in <code>AGENTS.md</code> §1.1.</li>
+    <li><em>Done since the first edition:</em> the stale figures in <code>AGENTS.md</code> §1.1 have been corrected.</li>
     <li>Fill in or remove the placeholder contact fields in <code>docs/client_one_pager.md</code>.</li>
   </ol>
 
@@ -881,7 +889,7 @@
 
   <h3>Week 4 · Set the working contract</h3>
   <ol>
-    <li>Agree the test baseline and the lint gate you will hold yourself to. The current baseline is 1,483 passing.</li>
+    <li>Agree the test baseline and the lint gate you will hold yourself to. The current baseline is 1,758 passing.</li>
     <li>Agree who can authorise what. The role catalog already encodes this; make sure the humans match the machine.</li>
     <li>Fix the release-gate diagram, or accept it as a two-diagram split.</li>
     <li>Write down what you changed and why, in <code>AGENTS.md</code>. The next team will need it.</li>
@@ -890,9 +898,10 @@
   <div class="note">
     <span class="lbl">The one sentence version</span>
     <p>
-      A well-governed, well-tested platform with a genuinely unusual honesty discipline, sitting on a
-      single machine that has never been pushed, with no customers and a marketing surface that
-      still needs cleanup. The engineering is the least of your problems. Start with the push.
+      A well-governed, well-tested platform with a genuinely unusual honesty discipline, published to
+      a repository that is still public and 7 commits behind the local work, with no customers and a
+      marketing surface that still needs cleanup. The engineering is the least of your problems.
+      Start with the repository's visibility.
     </p>
   </div>
 </section>
@@ -900,10 +909,10 @@
 <footer>
   <p>
     <strong>Helix Codex OS — Project Handover.</strong> Prepared from a direct read of
-    <code>E:\Helix-Prime</code> at HEAD <code>1c176d3</code> on 2026-09-19. Every figure in this
-    document was read from the repository, the release manifest, the gate output, or the validation
-    report, and can be reproduced from the commands and file paths named alongside it. Where
-    something could not be verified, it is marked as unverified rather than assumed.
+    <code>E:\Helix-Prime</code> at HEAD <code>003709b</code>, and re-verified on 2026-09-20. Every
+    figure in this document was read from the repository, the release manifest, the gate output, or
+    the validation report, and can be reproduced from the commands and file paths named alongside
+    it. Where something could not be verified, it is marked as unverified rather than assumed.
   </p>
   <p>
     Companion diagrams in this folder: <code>01-platform-landscape.html</code>,

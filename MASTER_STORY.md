@@ -12,6 +12,46 @@ This is the single source of truth for the Helix Codex workspace's actual, curre
 
 ---
 
+## Current status — re-verified 2026-09-20
+
+This block supersedes the dated §1 entries below wherever they disagree. The
+sections after it are a **historical log** and are kept as written; several of
+their counts have since moved, and those movements are recorded here rather than
+by rewriting the log.
+
+| Field | Value (measured 2026-09-20) |
+|---|---|
+| HEAD | `003709b` |
+| Full suite | **1,758 passed, 0 failed, 0 skipped — one process, end to end** |
+| Release profile | `0.9.0-c8` (core version single-sourced from `pyproject.toml`) |
+| Gate implementations | **29** in `release/gate.py` — 14 core + 6 app + 9 production-only, across 5 profiles |
+| Gate verdicts | `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1) |
+| Evidence files | **2,181** JSON files (gitignored by design) |
+| Evidence release dirs | **714** (`evidence/releases/`), plus 18 pilot dirs — the 2026-08-28 "29 directories" figure in §1 is long superseded |
+| Commits ahead of `origin/main` | **7** (`origin/main` = `b9d8fb6`, measured against the live remote with `git ls-remote`); the repository is **public** (`"private": false` per the GitHub API) |
+| Total commits on `main` | **237** |
+| `release_approved` | **false** (`release/release-manifest.json`); `go-no-go.json` records pilot-scoped consent with `approved_at: "PENDING-GATE-RUN"` |
+| `production_readiness` | **`NOT_ESTABLISHED`** on every governed record |
+| Container image | **never built** — sandbox Docker daemon unavailable; recorded, not claimed |
+
+**Corrections to the log below.** Two §1 entries describe the current repository
+incorrectly and are superseded:
+
+- §1 "Repo hygiene" states `LICENSE`: **missing**. `LICENSE.md` (MIT) is present.
+  The gap was real when recorded and has since been closed.
+- §1 "Evidence timestamps" states 29 release directories in one 2.5-hour window.
+  The directory now holds 714 release dirs spanning 2026-08-28 to 2026-09-15. The
+  *point* of that entry still holds: the count is a measure of repeated harness
+  runs, not of elapsed production operation.
+
+**What has not changed.** The §1 status label still governs: this is an internally
+governed pre-pilot system, self-tested, with no external party and no real client.
+Every pack runs `DATA_MODE = "simulated_realistic"`. There is no revenue, no
+pricing, no certification, and no independent audit. The nine production-only
+gates are red because the external evidence they check does not exist.
+
+---
+
 ## 1. Helix Prime (Codex Core)
 
 **Location:** `E:\Helix-Prime`

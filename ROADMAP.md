@@ -7,24 +7,30 @@
 
 ## Where the project actually stands
 
-Helix Prime is a **solo-built, public alpha** operations system. It is not yet a product, has no customers, and makes no deployment claims.
+Helix Prime is a **solo-built, governed operations platform**. It is `CONTROLLED_PILOT_READY`, not a product: it has no customers, no revenue, and makes no deployment claims.
 
 **What is real today (verified):**
 
 - 6 business engines: WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, CRM
 - 9 AI agents: SAMI, SUBY, PHILI, WILI, ANDY (Compliance & Quality), NONO (Fraud), MAYA (Marketing), LIZA (Sales), TOMY (ICT), connected to a local Ollama model
 - An orchestrator with content-based request routing
-- A Streamlit Operations Cockpit (dashboard)
-- A public repository at `github.com/HatemShelby/Helix-Prime`
-- CI pipeline live with pre-commit linting
+- **`helix-api`** — the governed FastAPI spine (`127.0.0.1:8000`), the one deployable artifact: identity, RBAC, approvals, kill switch, metrics, audit chain. The Streamlit cockpit is now a **read-only secondary diagnostic surface**.
+- **Helix Codex App** — the first daily-use product layer (`helix_codex_app/`): identity, chat, documents, tasks, calendar, attendance, governed memory, and a low-code capability loader
+- **2 vertical capability packs**: `capabilities/restaurant/` (the reference pattern) and `capabilities/sports_academy/` (first real vertical, built for Scoach Academy Hub)
+- **C8 release gate** — `release/gate.py`, 29 gate implementations (14 core + 6 app + 9 production-only) across 5 named profiles
+- A public repository at `github.com/HatemIsmailShalaby1979/Helix-Prime`
+- CI pipeline live with pre-commit linting, bandit, and pip-audit
 
 **What is explicitly NOT real yet — do not claim otherwise:**
 
 - No client deployments and no production enterprise usage
-- No verified inter-agent calling proven through the live UI (the mechanism is proven in isolation; full UI proof is pending)
-- The control-plane `audit_events` ledger is append-only and hash-chained; it is now implemented and exportable through `scripts/export_evidence_pack.py`. It is a local evidence mechanism, not a claim of production certification.
+- No pilot has ever run on real data; every pack runs `DATA_MODE = "simulated_realistic"`
 - No revenue, no pricing model, no budget of a team that does not exist
+- No certifications: no SOC 2, no ISO, no independent audit
+- The 9 production-only gates remain red by design — they require external humans, external auditors, and legal review that do not exist
 - No patent filings, no blockchain integration, no quantum-computing work
+
+The control-plane `audit_events` ledger is append-only and hash-chained; it is implemented and exportable through `scripts/export_evidence_pack.py`. It is a local evidence mechanism, not a claim of production certification.
 
 ---
 
@@ -41,15 +47,16 @@ This is a **one-person** effort. Everything below is sized for that reality.
 
 ## Now (current focus)
 
-1. **Agent inter-communication through the live UI** — the orchestrator and agent mechanisms exist and are proven in isolation; the remaining work is demonstrating a full agent-to-agent flow through the actual cockpit UI.
-2. **Automated test coverage** — build and grow the test suite so the alpha's claims are continuously verified by CI.
-3. **CI polish** — keep the pre-commit linting pipeline green and extend it where it adds real protection.
+1. **Make the repository private, and push the last 7 commits.** `origin/main` is at `b9d8fb6` and `main` is 7 ahead of it, so most of the work is already published — but the repository is **public** (`"private": false`), which exposes the commit history, the build ledger, and the marketing surface. Both are owner decisions.
+2. **Run the pilot.** Turn Scoach Academy Hub from a named design partner into a dated pilot with a named operator and a consent record. This is the one gate that unlocks every commercial conversation.
+3. **Close the external production gap (Classes 2–5)** — 21 external verification items that require humans or external parties, tracked in `docs/release/handoff/production-blockers-checklist.md`. These cannot be closed by engineering.
 
 ## Next (once the above is stable)
 
-1. **Lint and style debt** — Helix Prime carries its own backlog of lint findings (predominantly line-length and style). Cleaning it is real but low-priority, non-functional work.
-2. **Documentation consistency** — sweep remaining docs and screens for claims that exceed `MASTER_STORY.md`, and correct them the way this roadmap was corrected.
-3. **Demo assets** — rebuild or remove marketing audio/video assets whose scripts contain claims that are not verified (see `CHANGE_LOG.md`).
+1. **Demo assets** — the shipped `marketing/assets/Helix_Prime_5Min_Demo.mp4` and its `.vtt` still carry retracted fabricated narration. Rebuild from `marketing/DEMO_SCRIPT.md` or withdraw it from the distribution path. See `CHANGELOG.md`.
+2. **Build the container** — the Docker daemon was unavailable during validation, so the first real `docker build` may surface problems that the 32 static packaging tests cannot see.
+3. **Documentation consistency** — sweep remaining docs and screens for claims that exceed `MASTER_STORY.md`, and correct them the way this roadmap was corrected.
+4. **Decide the public product name** — the repository says Helix Prime, the commercial layer says Helix Codex OS, and the manifest says Helix-Prime-Codex.
 
 ## Not on the roadmap
 
@@ -61,7 +68,7 @@ This is a **one-person** effort. Everything below is sized for that reality.
 
 ## Contact
 
-Helix Prime is built and maintained by Hatem Shalaby. Public contact is via the GitHub profile: `github.com/HatemShelby/HatemShelby`.
+Helix Prime is built and maintained by Hatem Shalaby. Public contact is via the GitHub profile: `github.com/HatemIsmailShalaby1979`.
 
 *Any email addresses ending in `helixprime.io` found in older versions of this repository are fabricated and void.*
 

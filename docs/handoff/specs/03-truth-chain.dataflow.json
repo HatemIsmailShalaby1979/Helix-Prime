@@ -133,7 +133,7 @@
       "id": "gates",
       "type": "security",
       "label": "Release Gates",
-      "sublabel": "14 C8 gates",
+      "sublabel": "29 gate checks",
       "tag": "human gate",
       "stage": 4,
       "row": 1

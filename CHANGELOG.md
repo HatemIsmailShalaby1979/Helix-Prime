@@ -41,7 +41,37 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    - Release: `app_pilot` gate profile with six app gates; first sign-off `CONTROLLED_PILOT_READY`
      (full suite 1395 passed, 0 failed; ruff clean under the pinned 0.1.15)
 
+### Fixed
+
+- **Scratch-directory leaks in the release path** (2026-09-20) — eleven
+  `tempfile.mkdtemp` call sites across `release/gate.py`, `release/harness.py`,
+  and `release/observability.py` created probe directories that were never
+  removed, leaving hundreds of `hp_*` trees behind in the system temp root.
+  Cleanup is now single-sourced in `release/scratch.py::discard`, which
+  imports only `gc`, `os`, and `shutil` so no import cycle is possible. It
+  removes best-effort and never raises: cleanup failure must never change a
+  gate verdict. On Windows it retries after a `gc.collect()` because an
+  orphaned SQLite handle makes `rmtree(..., ignore_errors=True)` fail
+  silently. Falsifiability tests were added to
+  `tests/test_c8_gate_falsifiability.py` (46 tests in that file now), and the
+  fix was proved can-fail: reverting the source while keeping the tests
+  produces 10 failures.
+
 ### Validated
+
+- **Full-suite validation 2026-09-20** (code HEAD `003709b`): the suite ran
+  **in one process, end to end, uninterrupted** — `1,758` passed, 0 failed,
+  0 skipped. This closes the "full suite never ran in one process" caveat the
+  2026-09-18 record carried, and retires the two failures previously described
+  as sandbox artifacts: they were never repo failures. The blocker was a
+  bulk-delete guard on Windows, which pytest trips on every run because it
+  always prefixes temp paths with `\\?\` — see `AGENTS.md` §18.4. Raising
+  `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for the run is the fix.
+  `ruff check` + `ruff format --check` clean; `mypy` clean; `bandit` no
+  issues; `pip-audit` clean; dependency and migration drift checks green;
+  `release-manifest.json` and `go-no-go.json` verified byte-identical
+  throughout. Verdict unchanged: **controlled pilot and gate-defined
+  production candidate only; not production.**
 
 - **Final validation 2026-09-18** (code HEAD `c00dec5`): full suite **1483 passed,
   0 failed, 0 skipped** (parent 686 + app 797, run in chunks with JUnit XML,

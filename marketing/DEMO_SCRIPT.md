@@ -5,11 +5,25 @@ Narrator: Professional storyteller voice (warm, confident, human)
 Author featured: Hatem Shalaby
 Core message: Real operations problems solved by real engineering, not AI hype.
 
-> **Truth note:** This script was previously rewritten to remove fabricated claims
-> (an invented "proof ledger," "57 auditable entries," "three client profiles over
-> 19 days," and invented savings figures). The rendered `Helix_Prime_5Min_Demo.mp4`
-> and its `.vtt` captions still contain the OLD fabricated narration. Rebuild the
-> video from THIS script before using or distributing it; see `README.md`.
+> **Truth note (re-verified 2026-09-20):** This script was rewritten to remove
+> fabricated claims (an invented "proof ledger," "57 auditable entries," "three
+> client profiles over 19 days," and invented savings figures).
+>
+> **The rendered video and its captions are now in different states — do not treat
+> them as a matched pair:**
+>
+> - `assets/Helix_Prime_5Min_Demo.mp4` is **stale**. It is untracked, dated
+>   2026-08-27, and predates the 2026-09-13 script correction. Measured against this
+>   script, its narration runs longer in three of five chapters (speech ends at
+>   34.1 s / 101.1 s / 155.3 s / 211.3 s / 278.8 s, versus 23 s / 104 s / 156 s /
+>   199 s / 263 s here). It carries the OLD narration. **Rebuild it from this script
+>   before using or distributing it, or remove it from the distribution path.**
+> - `assets/Helix_Prime_5Min_Demo.vtt` is **current**. It was regenerated with this
+>   script in commit `c5a88ef` and matches it word for word. It is safe to read, but
+>   it does not describe the stale `.mp4` sitting beside it.
+>
+> A clean checkout contains the correct captions and no video at all; the marketing
+> `Dockerfile` rebuilds the `.mp4` from this script at image-build time.
 
 ---
 

@@ -219,7 +219,7 @@
       "id": "engines",
       "type": "backend",
       "label": "Six Engines",
-      "sublabel": "WFM RTA CX B2B",
+      "sublabel": "WFM RTA CX B2B CRM HR",
       "pos": [
         1140,
         430
@@ -362,7 +362,7 @@
       "dot": "emerald",
       "title": "Where it stands",
       "items": [
-        "1,483 tests collected; the final validation was 1483 passed / 0 failed",
+        "1,758 tests passed, 0 failed, 0 skipped, in one uninterrupted run (2026-09-20)",
         "controlled_pilot and production_candidate gates return exit 0; production returns exit 1"
       ]
     },
@@ -378,8 +378,9 @@
       "dot": "rose",
       "title": "Open gaps",
       "items": [
-        "9 production gates need named humans, external audits, and legal review",
-        "main is 166 commits ahead of origin/main; live connectors are unimplemented"
+        "9 production-only gates need named humans, external audits, and legal review",
+        "the repository is still public, and main is 7 commits ahead of origin/main",
+        "live connectors are unimplemented"
       ]
     }
   ]

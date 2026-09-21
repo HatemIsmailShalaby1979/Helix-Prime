@@ -78,7 +78,7 @@
 |---|---|
 | Current step | **ALL H-STEPS COMPLETE.** Superseded in time by §1A (app UI modernization, UI-1) — also COMPLETE. No active work. |
 | Baseline test count | **571 passed, 0 failed** (verified at commit `c3c4abf`) |
-| Last full-suite result | **2026-09-20: 1743 passed, 0 failed, 0 skipped of 1743 collected** (1748 once the scratch tests were added; `2 failed, 1746 passed` under the default environment). **CORRECTION to the 2026-09-16 entry that used to sit here:** it recorded `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers` and `test_c5_vertical_slice::test_existing_c0_c4_regression` as failures that "cannot pass here". They are **not** repo failures and they **do** pass here — they are bulk-delete-guard artifacts that go green the moment `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` is raised. Measured same day, same commit: default environment → `2 failed, 1746 passed`; threshold raised → `1743 passed, 0 failed`. **Never dismiss a failure in those two tests as environmental without first raising the threshold and re-running.** See §18.4 and §18.9. |
+| Last full-suite result | **2026-09-20: 1758 passed, 0 failed, 0 skipped — one process, end to end, in 50m20s** (`003709b`, `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=100000`; JUnit XML agrees: tests=1758 failures=0 errors=0 skipped=0). **This is the first fully green single-process run recorded in this sandbox, and it retires the two "known sandbox failures" for good** — they were never repo failures. The blocker was the bulk-delete guard, which pytest trips on every run because it always prefixes temp paths with `\\?\` on Windows; raising the threshold is the operative fix. Earlier same-day measurements: `1743 passed, 0 failed, 0 skipped` (threshold raised, before the 15 scratch tests were added) and `2 failed, 1746 passed` (default environment). **Never dismiss a failure in `test_c3_c2_integration_preflight::test_structured_logs_contain_identifiers` or `test_c5_vertical_slice::test_existing_c0_c4_regression` as environmental without first raising the threshold and re-running.** See §18.4 and §18.9. |
 | Last commit | `081e4bc` fix(app): correct four visual defects found in real screenshots |
 | Completed H-steps | H0.1 ✅, H0.2 ✅, H0.3 ✅, H0.4 ✅, H0.5 ✅, H0.6 ✅, H1.1 ✅, H1.2 ✅, **H1.3 ✅ (F1 + F3: drift AST + mypy)**, H1.4 ✅, H1.5 ✅, H1.6 ✅, H2.1 ✅, H2.2 ✅, H2.3 ✅, H2.4 ✅, H2.5 ✅, H3.1 ✅ (G31 + G39), **H3.2 ✅ (G32–G35)**, **H3.3 ✅ (G36 + G37)**, **H3.4 ✅ (G38 + G40 + G41)** |
 | Post-task doc-sync | **COMPLETE (2026-09-12)** — marketing + docs aligned to current repo state: 9-agent roster (role-catalog), 621-test suite, Python 3.12, `helix-api` canonical, kill switch/metrics/audit-chain real, tenancy.py deletion, Scoach pack BUILT, PCV 18/24, LICENSE resolved; dated handoff records banner-marked SUPERSEDED; 0 broken relative links; no code changed |
@@ -3072,9 +3072,10 @@ remaining test — including tests that request no fixtures, because
 `tests/conftest.py`'s **autouse** `release_sqlite_handles(request, tmp_path)` gives
 every test in `tests/` a `tmp_path`. That is the whole explanation for the
 `656 passed, 1056 errors` full-suite result recorded this session; it is not a
-regression, and the same file passes 65/65 run alone. **The suite count is 1748,
-not 1711** — it was 1712 when this paragraph was first written, and 1743 before the
-scratch tests were added.
+regression, and the same file passes 65/65 run alone. **The suite count is 1758**
+— it was 1712 when this paragraph was first written, 1743 before the scratch tests
+were added, and 1758 once all 15 of them landed and the whole suite ran green in one
+process (see the §18.9 run table).
 
 Because the budget was already spent when the file was written, the can-fail
 assertions were first verified by a standalone replay
@@ -3222,9 +3223,16 @@ ran it end to end:
 | the one failure, re-run alone | 1 passed in 4.30s |
 | **full suite, threshold raised + short temp root** | **1743 passed, 0 failed, 0 skipped in 17m52s (exit 0)** |
 | full suite, **default environment, no override** | 2 failed, 1746 passed in 40m54s — the two guard artifacts, nothing else |
+| **full suite at `003709b`, threshold raised, one process** | **1758 passed, 0 failed, 0 skipped in 50m20s (exit 0)** — JUnit XML: tests=1758 failures=0 errors=0 skipped=0 |
 
-*(A run at `306c0ad` with the threshold raised is in flight; its result is appended
-below once measured. Do not record a suite result before it is measured.)*
+**The 1758 run closes this item.** It is the first single-process, uninterrupted,
+fully green full-suite run recorded in this sandbox, and it lands exactly on the
+number §18.9 predicted (1743 + the 15 scratch tests). Both previously-carried
+"known sandbox failures" pass, which confirms the diagnosis in §18.4 and retires
+them as things to work around. The earlier 1743 run also carried a short temp
+root; this one did **not** — it used the default temp root and still passed, which
+is the final confirmation that **the threshold raise is the fix and the temp root
+is not.**
 
 The first full run's lone failure was
 `test_c5_vertical_slice.py::test_audit_records_for_every_step`, dying with

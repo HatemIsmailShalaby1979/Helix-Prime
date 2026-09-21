@@ -258,7 +258,7 @@
       "dot": "emerald",
       "title": "What is genuinely done",
       "items": [
-        "1483 tests passed, 0 failed, 0 skipped",
+        "1,758 tests passed, 0 failed, 0 skipped — one process",
         "Pilot and candidate gates return exit 0"
       ]
     },

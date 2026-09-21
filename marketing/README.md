@@ -9,7 +9,7 @@ This folder markets **Helix Prime** as a digital operations team that solves rea
 | `index.html` | Marketing website (open in browser) |
 | `assets/style.css` | Site styling (dark, red-accent brand theme) |
 | `assets/screenshots/` | Real screenshots from test & deployment runs |
-| `assets/Helix_Prime_5Min_Demo.mp4` | 5-minute demo video (built from `DEMO_SCRIPT.md`) |
+| `assets/Helix_Prime_5Min_Demo.mp4` | 5-minute demo video — **STALE build output, not committed.** See the truth note in `DEMO_SCRIPT.md` before distributing |
 | `assets/Helix_Prime_5Min_Demo.vtt` | WebVTT captions for the demo |
 | `assets/screenshots/demo-poster.svg` | Poster frame for the `<video>` element |
 | `assets/build_demo.py` | Builder: parses `DEMO_SCRIPT.md`, renders slides, TTS, muxes mp4 |

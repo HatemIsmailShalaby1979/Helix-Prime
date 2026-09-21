@@ -27,12 +27,13 @@ We don't need:
 
 ### Prerequisites
 
-- **Python 3.12+** — for the orchestrator and engines
-- **Go runtime** — for the orchestration daemon
-- **Ollama** — for local AI model inference (optional; system runs without it in deterministic mode)
-- **Streamlit** — for the cockpit dashboard
+- **Python 3.12** — canonical, for the orchestrator, engines, and API spine
+- **Ollama** — for local AI model inference (optional; the system runs without it in deterministic offline mode)
+- **Streamlit** — for the cockpit dashboard (a secondary read-only surface)
 
-Node.js and Power Apps CLI are **not required** for Helix Prime. They appear in older templates but don't belong here.
+There is no Go component: the orchestrator is pure Python in `orchestration/`.
+Node.js and Docker are **not required** for development; Docker is only needed to
+build the deployment profile in `infra/docker/`.
 
 ### Local development
 
@@ -47,7 +48,7 @@ python -m venv .venv
 # source .venv/bin/activate   # Linux/macOS
 
 # Install dependencies
-pip install -r cockpit/requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 
 # Install pre-commit hooks
 pip install pre-commit

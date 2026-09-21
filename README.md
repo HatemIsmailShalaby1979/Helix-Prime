@@ -8,7 +8,7 @@
 
 > **Authority chain:** `00_CONSTITUTION.md` (authority) → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (architecture + commercial record) → implementation. On conflict, the earlier link in the chain wins — the constitution outranks the blueprint, and both outrank status summaries, roadmaps, and release docs.
 
-Helix Prime is a local-first platform that runs six business engines (WFM, RTA, CX, B2B, Personnel, CRM) with nine AI agents routing requests by content. It includes a Streamlit cockpit, governed memory, and evidence-based approval workflows — all running on your machine with no cloud dependency.
+Helix Prime is a local-first platform that runs six business engines (WFM, RTA, CX, B2B, Personnel, CRM) with nine AI agents routing requests by content. The canonical artifact is **`helix-api`**, a governed FastAPI spine where identity, RBAC, approvals, the kill switch, metrics, and the audit chain are enforced; the Streamlit cockpit is a secondary read-only diagnostic surface. Everything runs on your machine with no cloud dependency.
 
 This is the first product for **Helix Codex**: an accountable AI operating organization that helps businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.
 
@@ -16,15 +16,23 @@ This is the first product for **Helix Codex**: an accountable AI operating organ
 
 - **Controlled-pilot ready:** `CONTROLLED_PILOT_READY`
 - **Production:** NOT_READY — no external evidence or human approvals exist
-- **Verification:** C0 dependency drift check passes; C4 adapter, C5 seam, C6 activation and C7 event-contract smoke paths pass. The full historical suite remains subject to legacy teardown migration.
+- **Verification:** the full suite passes in one process — `1,758` passed, 0 failed, 0 skipped. `ruff check` and `ruff format --check` are clean, `mypy` is clean, `bandit` reports no issues, `pip-audit` is clean, and both dependency and migration drift checks are green.
 - Governance checker: **PASS**
-- Synthetic call-centre and restaurant demonstrations: verified
+- Release gate: `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1, nine external-only gates red by design)
+- Synthetic call-centre, restaurant, and sports-academy demonstrations: verified
 - Live connectors and external writes: intentionally disabled
+- Container image: **never built** — the sandbox Docker daemon was down during validation. 32 static packaging tests cover the surface instead.
+
+> The container-build gap and the open external items are tracked in
+> `docs/release/handoff/production-blockers-checklist.md`. Nothing in this README
+> should be read as a production or deployment claim.
 
 ## What's inside
 
 - Six engines: WFM (Erlang C), RTA, CX Churn Sentinel, B2B Onboarding, Personnel, CRM
 - Nine agents (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY) with content-based routing
+- **Two vertical capability packs**: `capabilities/restaurant/` (the reference pattern) and `capabilities/sports_academy/` (first real vertical, built for Scoach Academy Hub)
+- **Helix Codex App** (`helix_codex_app/`) — the daily-use product layer: identity, chat, documents, tasks, calendar, attendance, governed memory, and a low-code capability loader
 - Tenant identity and deny-by-default authorization
 - Workflow state machine with approvals, retries, and dead-letter handling
 - Read-only boundaries for Zendesk, Salesforce, and Clay

@@ -294,7 +294,7 @@ sse-starlette==3.4.11
     # via pyproject.toml (web extra)
 stevedore==5.9.1
     # via bandit
-streamlit==1.63.0
+streamlit==1.64.0
     # via -r requirements.txt
 tenacity==9.1.4
     # via plotly

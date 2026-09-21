@@ -47,7 +47,7 @@ This is a **one-person** effort. Everything below is sized for that reality.
 
 ## Now (current focus)
 
-1. **Push the last commits.** The exposure half of this item is **closed**: the owner made the repository **private** on 2026-09-21, so the commit history, the build ledger, and the marketing surface are no longer world-readable. What remains is the push itself — `origin/main` is at `b9d8fb6` and `main` is **19** commits ahead of it (`git rev-list --count origin/main..HEAD`), so most of the work is still unpublished. A push is an owner action.
+1. **Push the last commits.** The exposure half of this item is **closed**: the owner made the repository **private** on 2026-09-21, so the commit history, the build ledger, and the marketing surface are no longer world-readable. What remains is the push itself — `origin/main` sits at `b9d8fb6` and `main` is ahead of it by the whole unpushed backlog. Measure that backlog with `git rev-list --count origin/main..HEAD` rather than trusting a figure written here, since it moves with every commit. A push is an owner action.
 2. **Run the pilot.** Turn Scoach Academy Hub from a named design partner into a dated pilot with a named operator and a consent record. This is the one gate that unlocks every commercial conversation.
 3. **Close the external production gap (Classes 2–5)** — 21 external verification items that require humans or external parties, tracked in `docs/release/handoff/production-blockers-checklist.md`. These cannot be closed by engineering.
 

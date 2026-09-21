@@ -21,10 +21,13 @@
 > **No code change can unblock Phase 6** — the nine production-only gates need
 > signatures from keys held outside this repository.
 >
-> **One owner decision is also still open and is not engineering work:** 19
-> commits are unpushed (`origin/main = b9d8fb6`). The other — repository
-> visibility — was **closed on 2026-09-21: the repository is now private.**
-> See §18.10 and the remote section below.
+> **One owner decision is also still open and is not engineering work:** the
+> unpushed backlog (`origin/main = b9d8fb6`). The other — repository visibility —
+> was **closed on 2026-09-21: the repository is now private.** See §18.10 and the
+> remote section below. **Re-measure the backlog with
+> `git rev-list --count origin/main..HEAD` rather than trusting a number written
+> here** — it moves with every commit, and §18.8 records two figures that were
+> wrong for exactly that reason.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed

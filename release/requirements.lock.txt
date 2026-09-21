@@ -325,7 +325,7 @@ tzdata==2026.3
     # via pandas
 urllib3==2.7.0
     # via requests
-uvicorn==0.52.4
+uvicorn==0.53.0
     # via streamlit
 virtualenv==21.7.8
     # via pre-commit

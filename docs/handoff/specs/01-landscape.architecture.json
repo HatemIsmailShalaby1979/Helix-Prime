@@ -379,7 +379,7 @@
       "title": "Open gaps",
       "items": [
         "9 production-only gates need named humans, external audits, and legal review",
-        "the repository is still public, and main is 7 commits ahead of origin/main",
+        "main is 19 commits ahead of origin/main — unpublished work with no off-machine backup",
         "live connectors are unimplemented"
       ]
     }

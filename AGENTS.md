@@ -21,9 +21,10 @@
 > **No code change can unblock Phase 6** — the nine production-only gates need
 > signatures from keys held outside this repository.
 >
-> **Two owner decisions are also still open and are not engineering work:** the
-> repository is **public** (`"private": false`), and 19 commits are unpushed
-> (`origin/main = b9d8fb6`). See §18.10 and the remote section below.
+> **One owner decision is also still open and is not engineering work:** 19
+> commits are unpushed (`origin/main = b9d8fb6`). The other — repository
+> visibility — was **closed on 2026-09-21: the repository is now private.**
+> See §18.10 and the remote section below.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
@@ -2660,7 +2661,7 @@ is intermittent — it did not fire in the previous run — which is exactly how
 describes it. Process exit is 1 only because the bulk-delete guard tripped at session
 finish (`count: 3036`).
 
-#### The GitHub remote is PUBLIC — anything committed is published
+#### The GitHub remote was PUBLIC — anything committed is published (now private; see the 2026-09-21 note below)
 
 `origin` is `https://github.com/HatemIsmailShalaby1979/Helix-Prime.git` and
 GitHub reports `"private": false`. The last pushed commit is `1ab9bea`
@@ -2707,6 +2708,16 @@ Measured against the live remote (`git ls-remote origin refs/heads/main` →
 of it. So the bulk of the work is published and only a small delta is local.
 **The privacy item remains open** — the repository is public, which is the larger
 exposure of the two, and it is a GitHub UI action because `gh` is not installed.
+
+**2026-09-21 — closed. The owner made the repository private.** Verified from this
+sandbox: an unauthenticated `GET https://api.github.com/repos/HatemIsmailShalaby1979/Helix-Prime`
+returns **404**, while a known-public control (`torvalds/linux`) returns 200 on the
+same connection, and `https://github.com/HatemIsmailShalaby1979/Helix-Prime` also
+returns 404. Note the limit of that evidence: an unauthenticated probe cannot
+distinguish *private* from *deleted*, so the owner's statement is the authoritative
+source and the 404 is corroboration, not proof. The 174 commits that were published
+while it was public are **not** un-published — private hides content from new
+anonymous readers; it does not retract what was already fetched.
 
 **Do not measure the unpushed delta against a remembered hash.** The earlier
 "166 commits ahead" and "19 commits ahead" figures in this ledger were both
@@ -3315,6 +3326,10 @@ re-delivered diagrams, and their 24 visual-check artifacts).
 | Evidence | "29 release dirs" | **714 release dirs, 2,181 files** | directory counts |
 | Class 1 blocker rows | 10 | **11** | row count in `production-blockers-checklist.md` |
 
+> **Superseded 2026-09-21.** The visibility row above records what was true when
+> §18.10 was measured. The repository is now **private** — owner action; see §18.4
+> for the corroborating evidence and its limits.
+
 **Gate re-verification, all six profiles, `write_evidence=False`:**
 `alpha` 1 gate → exit 1 (classification not permitted); `internal_pilot` 4 →
 exit 1; `controlled_pilot` 14 → `CONTROLLED_PILOT_READY` exit 0;
@@ -3515,5 +3530,6 @@ decision-loss class this tier exists to catch — failed the console module (`ex
 **Remote state at the time of writing:** `origin/main = b9d8fb6`, re-verified with
 `git ls-remote`; **19 commits unpushed**, measured with
 `git rev-list --count origin/main..HEAD` after the fetch — not against a remembered
-hash, per §18.8. The repository remains public. Both remain owner decisions, not
-engineering work.
+hash, per §18.8. **Updated 2026-09-21:** the repository is now **private** (owner
+action; see §18.4), so the push is no longer a disclosure decision. The push itself
+remains an owner action — the commit authorization in §0 does not extend to pushing.

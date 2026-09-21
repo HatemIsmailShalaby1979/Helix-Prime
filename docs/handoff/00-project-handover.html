@@ -221,12 +221,13 @@
     carry the structure; this document is the spine that connects them.
   </p>
   <div class="hero-meta">
-    <span class="chip">Code HEAD <code style="background:none;padding:0">003709b</code></span>
+    <span class="chip">Code HEAD <code style="background:none;padding:0">0334fae</code></span>
     <span class="chip ok">1,758 tests passing</span>
     <span class="chip ok">9 / 9 code checks green</span>
     <span class="chip warn">CONTROLLED_PILOT_READY</span>
     <span class="chip stop">release_approved: false</span>
-    <span class="chip stop">7 commits never pushed</span>
+    <span class="chip warn">19 commits never pushed</span>
+    <span class="chip ok">repository private</span>
   </div>
 </header>
 
@@ -252,11 +253,12 @@
   <div class="note stop">
     <span class="lbl">Three things to know before anything else</span>
     <p>
-      <strong>1. Seven commits are unpushed, and the repository is still public.</strong> The remote
-      <code>origin/main</code> sits at <code>b9d8fb6</code>; HEAD is 7 commits ahead of it and 0
-      behind, so most of the work <em>is</em> published. Two things still need an owner decision:
-      push the remaining 7 commits, and make the repository private. It is currently public
-      (<code>"private": false</code>), which is the larger exposure of the two.
+      <strong>1. Nineteen commits are unpushed; the repository is now private.</strong> The remote
+      <code>origin/main</code> sits at <code>b9d8fb6</code>; HEAD is 19 commits ahead of it and 0
+      behind, so most of the work is <em>not</em> published. The exposure half of this item is
+      closed — the owner made the repository private on 2026-09-21, so the commit history, the
+      build ledger, and the marketing surface are no longer world-readable. What remains is one
+      owner decision: push the remaining 19 commits.
     </p>
     <p>
       <strong>2. The demo video on disk is stale, and its captions no longer match it.</strong> The
@@ -398,7 +400,7 @@
         <li>It is a working, tested platform: 1,758 automated tests in one green run, clean security scans.</li>
         <li>It is designed to be governed and auditable, and it refuses unsafe actions by default.</li>
         <li>It has been validated as suitable for a supervised controlled pilot.</li>
-        <li>It is built by an operator with 28 years in the domain, with a public repository.</li>
+        <li>It is built by an operator with 28 years in the domain.</li>
       </ul>
     </div>
     <div class="card">
@@ -802,9 +804,9 @@
       <thead><tr><th style="width:30%">Risk</th><th style="width:12%">Severity</th><th>What we found and what to do</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>The repository is public, and 7 commits are unpushed</strong></td>
-          <td><span class="tag stop">Critical</span></td>
-          <td><code>origin/main</code> is at <code>b9d8fb6</code>; HEAD is 7 ahead and 0 behind, so the bulk of the work is published. But the repository is still <strong>public</strong> — the GitHub API reports <code>"private": false</code> — which is the larger exposure, since the commit history, the ledger, and the marketing surface are all world-readable. Making it private and pushing the last 7 commits are both owner decisions.</td>
+          <td><strong>19 commits are unpushed; the repository is now private</strong></td>
+          <td><span class="tag pass">Closed</span></td>
+          <td><code>origin/main</code> is at <code>b9d8fb6</code>; HEAD is 19 ahead and 0 behind, so most of the work is unpublished. The exposure half of this row is <strong>closed</strong>: the owner made the repository private on 2026-09-21, so the commit history, the ledger, and the marketing surface are no longer world-readable. What remains is the push itself — an owner decision. The only residual risk is that the unpublished work has no off-machine backup.</td>
         </tr>
         <tr>
           <td><strong>Demo video is stale and no longer matches its captions</strong></td>
@@ -898,10 +900,10 @@
   <div class="note">
     <span class="lbl">The one sentence version</span>
     <p>
-      A well-governed, well-tested platform with a genuinely unusual honesty discipline, published to
-      a repository that is still public and 7 commits behind the local work, with no customers and a
+      A well-governed, well-tested platform with a genuinely unusual honesty discipline, sitting in a
+      repository that is now private and 19 commits behind the local work, with no customers and a
       marketing surface that still needs cleanup. The engineering is the least of your problems.
-      Start with the repository's visibility.
+      Start by pushing the work, then with the pilot.
     </p>
   </div>
 </section>

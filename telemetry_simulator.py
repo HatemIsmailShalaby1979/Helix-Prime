@@ -42,6 +42,15 @@ Determinism
     A seeded ``random.Random`` owns every draw and the simulated clock advances
     from a fixed epoch, so identical (seed, tick_count) inputs reproduce a
     byte-identical stream.
+
+Transport contract
+    stdout carries one JSON object per line and nothing else; operator notices
+    (the spike-arming banner) go to stderr. By default a line is a bare
+    :class:`QueueMetrics`. ``--emit-state`` switches stdout to
+    :class:`TelemetryEnvelope` -- ``{"metrics": ..., "state": ...}`` -- which is
+    exactly the body ``ingest_engine`` accepts at ``POST /api/v1/telemetry``, so
+    a supervisor can forward each line verbatim rather than re-deriving
+    control-plane state it does not own.
 """
 
 from __future__ import annotations
@@ -108,6 +117,19 @@ class SimulationState(BaseModel):
 
     is_spike_active: bool
     current_interval_volume: int = Field(ge=0)
+
+
+class TelemetryEnvelope(BaseModel):
+    """One tick as a single line: the metrics plus the state behind them.
+
+    Structurally identical to ``ingest_engine.IngestPayload`` but defined
+    independently, so neither module depends on the other's package.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    metrics: QueueMetrics
+    state: SimulationState
 
 
 def _erlang_c(offered_load: float, servers: int) -> float:
@@ -298,7 +320,9 @@ class TelemetryGenerator:
         )
 
 
-async def _run(tick_count: int, spike_after: int, seed: int, tick_seconds: float) -> None:
+async def _run(
+    tick_count: int, spike_after: int, seed: int, tick_seconds: float, emit_state: bool
+) -> None:
     generator = TelemetryGenerator(seed=seed, tick_seconds=tick_seconds)
     async for metrics in generator.generate_tick():
         if generator.tick_index == spike_after:
@@ -307,7 +331,10 @@ async def _run(tick_count: int, spike_after: int, seed: int, tick_seconds: float
                 f"[twin] volume spike armed at {metrics.timestamp.isoformat()}",
                 file=sys.stderr,
             )
-        print(metrics.model_dump_json())
+        if emit_state:
+            print(TelemetryEnvelope(metrics=metrics, state=generator.state).model_dump_json())
+        else:
+            print(metrics.model_dump_json())
         if generator.tick_index >= tick_count:
             break
 
@@ -320,12 +347,19 @@ def main() -> None:
     parser.add_argument(
         "--tick-seconds", type=float, default=TICK_SECONDS, help="wall-clock cadence"
     )
+    parser.add_argument(
+        "--emit-state",
+        action="store_true",
+        help="emit {metrics, state} envelopes instead of bare metrics",
+    )
     args = parser.parse_args()
     if args.ticks < 1:
         parser.error("--ticks must be >= 1")
     if not 0 <= args.spike_after <= args.ticks:
         parser.error("--spike-after must fall within [0, --ticks]")
-    asyncio.run(_run(args.ticks, args.spike_after, args.seed, args.tick_seconds))
+    asyncio.run(
+        _run(args.ticks, args.spike_after, args.seed, args.tick_seconds, args.emit_state)
+    )
 
 
 if __name__ == "__main__":

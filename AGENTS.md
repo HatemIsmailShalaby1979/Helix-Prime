@@ -22,7 +22,7 @@
 > signatures from keys held outside this repository.
 >
 > **Two owner decisions are also still open and are not engineering work:** the
-> repository is **public** (`"private": false`), and 16 commits are unpushed
+> repository is **public** (`"private": false`), and 19 commits are unpushed
 > (`origin/main = b9d8fb6`). See §18.10 and the remote section below.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
@@ -34,9 +34,11 @@
 > **Out-of-band tooling (§19):** four standalone modules at the repository root —
 > `telemetry_simulator.py`, `ingest_engine.py`, `supervisor.py`, `cockpit_ui.py` —
 > form the Helix Ops Cockpit. They are **not** part of the governed core: nothing
-> under `tests/` references them, they are absent from `release/release-manifest.json`,
+> under `tests/` imports them, they are absent from `release/release-manifest.json`,
 > and they appear in no gate profile. They therefore move neither the 1,758-test
-> baseline nor the gate surface.
+> baseline nor the gate surface. Their own coverage lives in a quarantined
+> integration tier — `tests/integration/ui/cockpit/`, 19 tests, deselected by
+> default; run it with `pytest tests/integration/ui/cockpit/ -m ui_integration`.
 
 ---
 
@@ -3364,15 +3366,15 @@ core, and of each other:
 
 | Property | Measurement |
 |---|---|
-| Referenced anywhere under `tests/` | **no** |
+| Imported by any test in the default baseline | **no** — the tier in §19.4 imports them and is deselected by default |
 | Present in `release/release-manifest.json` | **no** (0 matches) |
 | Cross-imported between the four | **no** — each redefines the shared contracts rather than importing another module's package |
-| Effect on the 1,758-test baseline | **none** — nothing here is collected by pytest |
+| Effect on the 1,758-test baseline | **none** — the tier's 19 tests are deselected at collection time |
 | `ruff check` | clean on all four |
 
-**Consequence for rule 6 of §0:** there is no baseline movement to report, because
-these modules are not part of the suite. The verification for this section is the
-dedicated harnesses in §19.4, not `pytest`.
+**Consequence for rule 6 of §0:** there is no baseline movement to report. The
+baseline still collects exactly 1,758 tests; the cockpit tier is separate and named
+explicitly when it is wanted.
 
 ### 19.2 The modules
 
@@ -3404,18 +3406,47 @@ line verbatim would therefore have taken **422 on every tick**, and the only way
 avoid that would have been to invent control-plane state it does not own. The flag is
 opt-in; the twin's default stdout contract is unchanged and byte-identical.
 
-### 19.4 Verification
+### 19.4 Verification — the quarantined integration tier
 
-Three purpose-built harnesses, each run against live servers and real subprocesses.
-**They were scratch files and have been removed** — see finding 6 in §19.5; the
-counts below are recorded measurements, reproduced twice for the supervisor and the
-console.
+The three harnesses are reinstated as **19 pytest tests** under
+`tests/integration/ui/cockpit/` (1,167 lines including the shared `conftest.py`),
+holding every granular check they performed. They spawn live servers and drive a real
+Streamlit script runner, so they are held out of the baseline by a collection hook —
+not by a marker in `addopts`, for the reason in finding 6. Run them on demand:
 
-| Harness | Checks | What it proved |
-|---|---|---|
-| ingest stream | 34 | Snapshot on connect; ping/pong; `telemetry_tick`, `intervention_triggered` and `intervention_updated` frames; strictly increasing `seq`; dead and stalled peers pruned; 50 dispatches to a stalled peer returning in 0.00 ms; ingest latency < 1 ms with a stalled subscriber attached; the writer cancelled by the application lifespan. |
-| supervisor bridge | 32 | 8 ticks through a live engine with 8 `200 OK` and `dropped=0`; the twin's stderr passed through; a payload held across a `0.10s → 0.20s` backoff and then dropped with `exit=1`; a 404 aborting the run rather than dropping every tick; `terminate` reaping a live child; cancellation terminating the twin; `KeyboardInterrupt` → 130. |
-| cockpit console | 46 | Five floor tiles plus four per intervention under Streamlit's `AppTest`; the 80% target delta on the service-level tile; trigger condition, reasoning trace and USD exposure rendered; approve → `APPROVED` → `EXECUTED` and reject → `REJECTED` against a live engine; the audit frame carrying both rows; unreachable-engine and stale-snapshot degraded paths. |
+```
+python -m pytest tests/integration/ui/cockpit/ -m ui_integration
+```
+
+The shared `conftest.py` binds each engine to an ephemeral loopback port, so two
+concurrent runs cannot collide; the tier is still single-runner by design, because
+concurrent runs compete for CPU and memory on a 16 GB machine. Every request goes
+through a proxy-free opener for the reason in finding 1 — `urllib.request` honours
+`HTTP_PROXY` exactly as `httpx` does, and the symptom is a health probe that never
+succeeds while the engine is demonstrably listening.
+
+| Module | Tests | Checks | What it proved |
+|---|---|---|---|
+| `test_cockpit_engine_integration.py` | 7 | 34 | Snapshot on connect; ping/pong; `telemetry_tick`, `intervention_triggered` and `intervention_updated` frames; strictly increasing `seq`; dead and stalled peers pruned; 50 dispatches to a stalled peer returning in 0.00 ms; ingest latency < 1 ms with a stalled subscriber attached; the writer cancelled by the application lifespan. |
+| `test_cockpit_supervisor_integration.py` | 7 | 32 | 8 ticks through a live engine with 8 `200 OK` and `dropped=0`; the twin's stderr passed through; a payload held across a `0.10s → 0.20s` backoff and then dropped with `exit=1`; a 404 aborting the run rather than dropping every tick; `terminate` reaping a live child; cancellation terminating the twin; `KeyboardInterrupt` → 130. |
+| `test_cockpit_ui_integration.py` | 5 | 48 | Five floor tiles plus four per intervention under Streamlit's `AppTest`; the 80% target delta on the service-level tile; trigger condition, reasoning trace and USD exposure rendered; approve → `APPROVED` → `EXECUTED` and reject → `REJECTED` against a live engine; the audit frame carrying both rows; unreachable-engine and stale-snapshot degraded paths. |
+
+**Measured isolation.** The tier must not be collectable by accident, and the
+baseline must not move:
+
+| Command | Result |
+|---|---|
+| `pytest tests/` | 1758/1777 collected, **19 deselected** |
+| `pytest tests/ -m unit` | 0 collected, 1777 deselected |
+| `pytest tests/ -m "not smoke"` (the documented baseline) | **1758/1777 collected, 19 deselected** |
+| `pytest tests/ -m ui_integration` | **19/1777 collected**, 1758 deselected |
+| `pytest tests/integration/ui/cockpit/ -m ui_integration` | **19 passed in 39.21s** |
+
+**Can-fail proof.** A tier that cannot fail is not evidence. Making
+`cockpit_ui._enqueue_decision` return before it records the intent — the
+decision-loss class this tier exists to catch — failed the console module (`exit=1`,
+`2 passed, 1 error`); restoring the file passed it again (`5 passed in 11.57s`), with
+`sha256 d9a92deaeb626c8f…` verified identical before and after.
 
 ### 19.5 Findings worth keeping
 
@@ -3447,11 +3478,27 @@ console.
    `supervisor.py`'s first cut set the root level, which made httpx log every
    request: 8 ticks produced 16 `200 OK` lines. The level now applies to the
    `supervisor` logger only.
-6. **The harnesses were removed, so this section's numbers are not re-runnable.**
-   That is a deliberate trade against repository hygiene, not an oversight. Durable
-   evidence would mean promoting the three harnesses into a permanent,
-   non-collected location — an owner decision, because putting them under `tests/`
-   would add them to the 1,758-test baseline and they spawn servers.
+6. **`addopts` cannot quarantine a tier; a collection hook can.** The obvious form,
+   `addopts = -m "not ui_integration"`, is silently discarded the moment a run passes
+   its own `-m`: pytest's command-line value replaces the one from `addopts`, and this
+   repository's documented baseline command is `-m "not smoke"`. Demonstrated in an
+   isolated sandbox — with `addopts = -m "not x"`, a bare `pytest` collected 1/2 tests
+   while `pytest -m "not smoke"` collected **2/2**, the marked test included. Every
+   baseline run would have spawned a live engine per test. The tier is deselected in
+   `pytest_collection_modifyitems` instead, which holds for every invocation that does
+   not name the marker, including CI and a remembered command line.
+7. **Provenance inside the tier is not uniform, and one count moved.**
+   `test_cockpit_ui_integration.py` and `test_cockpit_supervisor_integration.py` are
+   faithful ports — their original sources were still available, so the sequence,
+   assertions and check labels are the ones that ran. The engine module is a
+   reconstruction: its `test_stream_lifecycle` is a faithful port of the original
+   session test (the same 17 checks), while the six peer- and writer-level tests were
+   rebuilt from the design. **The console module runs 48 checks against the 46 recorded
+   in the first draft of this section** — the reinstated tier is the authority on that
+   number. One console check was deliberately loosened rather than ported verbatim: the
+   autorefresh probe asserted the optional package was *absent*, which would have failed
+   the moment somebody installed it, and now asserts the probe returns a boolean and
+   reports which branch the refresh cascade took.
 
 ### 19.6 Commits
 
@@ -3462,10 +3509,11 @@ console.
 | `c760548` | `--emit-state` on the twin |
 | `5b4d0f5` | the supervisor bridge |
 | `13f3b65` | the Streamlit manager console |
-| (this entry) | §19 and the banner pointer |
+| `e0f44b3` | §19 and the banner pointer |
+| `274bbc2` | the quarantined integration tier: 19 tests, the collection hook, the marker registration |
 
 **Remote state at the time of writing:** `origin/main = b9d8fb6`, re-verified with
-`git ls-remote`; **16 commits unpushed**, measured with
+`git ls-remote`; **19 commits unpushed**, measured with
 `git rev-list --count origin/main..HEAD` after the fetch — not against a remembered
 hash, per §18.8. The repository remains public. Both remain owner decisions, not
 engineering work.

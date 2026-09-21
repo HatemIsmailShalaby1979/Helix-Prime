@@ -202,7 +202,7 @@
     <a href="#first30">Your first 30 days</a>
   </nav>
   <div class="meta">
-    HEAD <code>003709b</code><br>
+    Code HEAD <code>003709b</code><br>
     Re-verified 2026-09-20<br>
     Suite 1,758 passed<br>
     Profile <code>0.9.0-c8</code>
@@ -221,7 +221,7 @@
     carry the structure; this document is the spine that connects them.
   </p>
   <div class="hero-meta">
-    <span class="chip">HEAD <code style="background:none;padding:0">003709b</code></span>
+    <span class="chip">Code HEAD <code style="background:none;padding:0">003709b</code></span>
     <span class="chip ok">1,758 tests passing</span>
     <span class="chip ok">9 / 9 code checks green</span>
     <span class="chip warn">CONTROLLED_PILOT_READY</span>
@@ -814,7 +814,7 @@
         <tr>
           <td><strong>Release manifest describes an older build</strong></td>
           <td><span class="tag open">High</span></td>
-          <td><code>release/release-manifest.json</code> pins commit <code>b6b954e</code> with a 2026-09-15 timestamp; HEAD is <code>003709b</code>. Regenerate before any release action, or you will be certifying a build that no longer exists.</td>
+          <td><code>release/release-manifest.json</code> pins commit <code>b6b954e</code> with a 2026-09-15 timestamp; the measured code HEAD is <code>003709b</code>. Regenerate before any release action, or you will be certifying a build that no longer exists.</td>
         </tr>
         <tr>
           <td><strong>Pilot consent record has a placeholder timestamp</strong></td>
@@ -909,10 +909,14 @@
 <footer>
   <p>
     <strong>Helix Codex OS — Project Handover.</strong> Prepared from a direct read of
-    <code>E:\Helix-Prime</code> at HEAD <code>003709b</code>, and re-verified on 2026-09-20. Every
-    figure in this document was read from the repository, the release manifest, the gate output, or
-    the validation report, and can be reproduced from the commands and file paths named alongside
-    it. Where something could not be verified, it is marked as unverified rather than assumed.
+    <code>E:\Helix-Prime</code>, with every figure re-measured at <strong>code HEAD
+    <code>003709b</code></strong> on 2026-09-20. The documentation refresh that carries this edition
+    is the commit directly on top of that one, so <code>git rev-parse HEAD</code> will not equal
+    <code>003709b</code> — the commit named here is the code state the numbers describe, not the
+    commit that contains this file. Every figure in this document was read from the repository, the
+    release manifest, the gate output, or a validation run, and can be reproduced from the commands
+    and file paths named alongside it. Where something could not be verified, it is marked as
+    unverified rather than assumed.
   </p>
   <p>
     Companion diagrams in this folder: <code>01-platform-landscape.html</code>,

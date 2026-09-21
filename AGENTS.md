@@ -11,11 +11,19 @@
 > through `release/scratch.py`, and the Windows bulk-delete guard was finally
 > explained (§18.4) — **pytest always deletes via a `\\?\` path, so the guard's
 > temp-dir exemption never applies; raise
-> `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for any broad run.** What remains is
+> `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for any broad run.** §18.10 then closed the
+> long-standing "full suite never ran in one process" item — **1,758 passed, 0
+> failed, 0 skipped in 50m20s** — and re-measured every status surface in the
+> repository (root docs, marketing, and the whole `docs/handoff/` set) against it.
+> What remains is
 > Phase 6 (B2–B4), which is owner-driven:
 > infrastructure spend, paid external parties, and legal/human authority.
 > **No code change can unblock Phase 6** — the nine production-only gates need
 > signatures from keys held outside this repository.
+>
+> **Two owner decisions are also still open and are not engineering work:** the
+> repository is **public** (`"private": false`), and 7 commits are unpushed
+> (`origin/main = b9d8fb6`). See §18.10 and the remote section below.
 > Everything else is
 > COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
 > UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
@@ -2682,6 +2690,21 @@ as internal-but-not-damaging, or rewrite history and force-push — which reduce
 ongoing exposure but does not un-publish. **Read this section before the next
 push, not after.**
 
+**2026-09-20 — the remote advanced again, and the repository is still public.**
+Measured against the live remote (`git ls-remote origin refs/heads/main` →
+`b9d8fb6b4ecdc76f6e6f117c65cb73318574d3dd`, and the GitHub API reports
+`"private": false`): `origin/main` is now `b9d8fb6`, twelve commits past the
+`3055bb2` this section previously named, and local `main` is **7** commits ahead
+of it. So the bulk of the work is published and only a small delta is local.
+**The privacy item remains open** — the repository is public, which is the larger
+exposure of the two, and it is a GitHub UI action because `gh` is not installed.
+
+**Do not measure the unpushed delta against a remembered hash.** The earlier
+"166 commits ahead" and "19 commits ahead" figures in this ledger were both
+computed against `3055bb2` rather than against `origin/main`, and both were wrong
+by the time they were written. Use `git rev-list --count origin/main..HEAD` after
+a fetch, or `git ls-remote` to confirm what the remote actually holds.
+
 **Next:** Phase 6 (B2–B4) — real infrastructure, paid external parties, and
 legal/human authority.
 
@@ -3259,3 +3282,63 @@ diagnosis of them and retires them as items to work around.
 `ruff check` + `ruff format --check` clean on all four changed files; the seven gates
 green on the committed repo; `release-manifest.json` and `go-no-go.json`
 hash-verified untouched throughout (`write_evidence=False` on every probe).
+
+---
+
+### §18.10 Documentation refresh to the measured 2026-09-20 state
+
+**What was done.** Every status surface in the repository was re-measured and
+refreshed in one pass: the eight root documents, the four marketing documents, and
+the whole `docs/handoff/` set (the handover, four diagram specs, the four
+re-delivered diagrams, and their 24 visual-check artifacts).
+
+**The figures that moved, and how each was established:**
+
+| Claim | Was | Now | How it was measured |
+|---|---|---|---|
+| Full suite | 1,483 (7 chunks) | **1,758 passed, 0 failed, 0 skipped, one process, 50m20s** | `pytest -q -m "not smoke"` with the delete threshold raised; JUnit XML cross-checked (tests=1758 failures=0 errors=0 skipped=0) |
+| Unpushed commits | 166 | **7** | `git rev-list --count origin/main..HEAD`; `git ls-remote` confirms `origin/main = b9d8fb6` |
+| Repository visibility | — | **public** (`"private": false`) | GitHub API |
+| Gate surface | "14 release gates" | **29 implementations, six profiles** | `release/release-profiles.yaml` (alpha 1, internal_pilot 4, controlled_pilot 14, production_candidate 14, app_pilot 11, production 23) |
+| Gate verdicts | 2026-09-18 | **re-verified 2026-09-20** | `run_gate(..., write_evidence=False)` for all six profiles |
+| Demo video | "`.mp4` and `.vtt` both stale" | **`.vtt` current, `.mp4` stale** | Audio-envelope measurement against the script: the mp4's narration ends at 34.1/101.1/155.3/211.3/278.8 s vs the script's 23/104/156/199/263 s |
+| Lock file | 333 pinned | **120 pinned** | `grep -c "==" release/requirements.lock.txt` |
+| Evidence | "29 release dirs" | **714 release dirs, 2,181 files** | directory counts |
+| Class 1 blocker rows | 10 | **11** | row count in `production-blockers-checklist.md` |
+
+**Gate re-verification, all six profiles, `write_evidence=False`:**
+`alpha` 1 gate → exit 1 (classification not permitted); `internal_pilot` 4 →
+exit 1; `controlled_pilot` 14 → `CONTROLLED_PILOT_READY` exit 0;
+`production_candidate` 14 → `PRODUCTION_CANDIDATE` exit 0; `app_pilot` 11 →
+`CONTROLLED_PILOT_READY` exit 0; `production` 23 → `NOT_READY` exit 1 with
+exactly the nine external-only gates red. `release-manifest.json` and
+`go-no-go.json` verified byte-identical before and after
+(`2d60a4d2a76e1398…` / `707293a225a554f1…`).
+
+**Handoff diagrams.** All four specs re-validated and re-delivered through
+archify: 9/9 artifact checks, composition `pass`, 0 errors, 0 warnings each.
+Diagrams 01, 03 and 04 then passed containment at 1440×900, 1600×1000, 1920×1080
+and 2048×1320. **Diagram 02 (workflow) fails vertical containment at every
+viewport** — it needs 1,320 / 1,450 / 1,450 / 1,477 px against 900 / 1,000 /
+1,080 / 1,320 px available. That is pre-existing and already documented in the
+handover; the figures were updated to the measured values, and fixing it means
+splitting the four lanes across two diagrams. `visualReview` is `pending` on all
+four, as the tool always reports — screenshots are evidence, not a polish claim.
+
+**Two tooling findings worth keeping:**
+
+1. **Parallel edits to the same file clobber each other.** Sending two edits to
+   one file in a single message can report success for both while only the last
+   write survives. Three edits were silently lost this way (the handover stats
+   block, the spec-01 open-gaps card, and a marketing line) and were caught only
+   by grepping the file afterwards. **One edit per file per message, then verify.**
+2. **The gate CLI has no `--check-only` flag.** `release/gate.py::main` ignores
+   unknown arguments and calls `run_gate(profile=...)` with the default
+   `write_evidence=True`, which rewrites `release/release-manifest.json`. To probe
+   a gate without mutating governance artifacts, call `run_gate(profile=...,
+   write_evidence=False)` from Python. The `--check-only` form that appears in the
+   six-step task list would have silently rewritten the manifest.
+
+**Commits:** `3defc55` (the refresh, 21 files) and `7631b0f` (handover commit
+labelling). No code changed; `ruff` was not run because no Python file was
+touched.

@@ -158,6 +158,11 @@ extend-immutable-calls = ["fastapi.Depends"]
 # built here, never parsed from input, and the executable is resolved with
 # shutil.which rather than a bare name.
 "scripts/produce_production_evidence.py" = ["S603"]
+# S104 (hardcoded bind to all interfaces): the Ops Cockpit ingest engine is a
+# service whose deployment contract is 0.0.0.0:8000. The bind is a CLI default
+# (--host overrides it) and the module docstring flags the loopback override for
+# untrusted networks. The governed core's own bind default stays 127.0.0.1.
+"ingest_engine.py" = ["S104"]
 # S110 (try-except-pass): best-effort wrappers where swallowing is intentional —
 # connection close / ROLLBACK after a failed DB write / structured-log telemetry.
 # The primary error path still raises or logs; these guards exist so a secondary

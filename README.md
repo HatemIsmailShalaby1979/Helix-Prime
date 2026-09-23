@@ -12,20 +12,28 @@ Helix Prime is a local-first platform that runs six business engines (WFM, RTA, 
 
 This is the first product for **Helix Codex**: an accountable AI operating organization that helps businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.
 
+## Why this exists (human note)
+
+I did not build Helix Prime to impress an interviewer with the word "revolutionize." I built it because I switched careers, started learning alone, and decided that when crisis hits — when operations break, when data is missing, when decisions need to be made fast — the answer should not be a black box. It should be a governed system that tells you exactly what it knows, exactly what it doesn't, and exactly what it needs before it acts.
+
+Helix Codex is the organization I designed for that. Helix Prime is its core engine. It runs locally. It has no cloud dependency. It has nine agents, six engines, a fail-closed kill switch, an audit chain, and a constitution that outranks any summary. It has not been externally audited. It has not made revenue. It is maintained by one engineer, solo, self-taught, with no team, no venture funding, and no hidden claims.
+
+If you want to see the verified state — not the marketing version — read `MASTER_STORY.md` first. It was written by running real commands, not by trusting an agent's summary.
+
 ## Where it stands
 
-- **Controlled-pilot ready:** `CONTROLLED_PILOT_READY`
-- **Production:** NOT_READY — no external evidence or human approvals exist
-- **Verification:** the full suite passes in one process — `1,758` passed, 0 failed, 0 skipped. `ruff check` and `ruff format --check` are clean, `mypy` is clean, `bandit` reports no issues, `pip-audit` is clean, and both dependency and migration drift checks are green.
+- **Repo status:** Private (changed 2026-09-21). `main` has 237 commits; 7 commits ahead of `origin/main` (`b9d8fb6`). Verify with `git ls-remote`.
+- **Controlled-pilot ready:** `CONTROLLED_PILOT_READY` — but this is an *internal self-approval* (`approver: "operator-pilot-consent"`), not a third-party sign-off. There is no external pilot.
+- **Production:** NOT_READY — no external evidence, no certified isolation, no assigned on-call owner, no signed security review, no legal privacy review, no external observer audit.
+- **Verification:** full suite passes in one process — `1,758` passed, 0 failed, 0 skipped. `ruff check` / `ruff format --check` clean, `mypy` clean, `bandit` no issues, `pip-audit` clean, dependency and migration drift green.
 - Governance checker: **PASS**
-- Release gate: `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1, nine external-only gates red by design)
-- Synthetic call-centre, restaurant, and sports-academy demonstrations: verified
-- Live connectors and external writes: intentionally disabled
-- Container image: **never built** — the sandbox Docker daemon was down during validation. 32 static packaging tests cover the surface instead.
+- Release gate: `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1, 9 external-only gates red by design: signed_production_evidence, certified_data_isolation, external_observer_audit, production_deployment_architecture, disaster_recovery_evidence, operational_ownership, incident_oncall_ownership, security_review, legal_privacy_review).
+- Synthetic demonstrations (call-centre, restaurant, sports academy): verified against synthetic/consented-historical data only.
+- Live connectors and external writes: intentionally disabled.
+- Container image: **never built** — sandbox Docker daemon unavailable during validation. 32 static packaging tests cover the surface. The gap is tracked in `docs/release/handoff/production-blockers-checklist.md`.
+- **Evidence:** 714 release directories (`evidence/releases/`) spanning 2026-08-28 to 2026-09-15 — one burst of harness runs in a single session (03:18–05:47 UTC), not a multi-day production track record.
 
-> The container-build gap and the open external items are tracked in
-> `docs/release/handoff/production-blockers-checklist.md`. Nothing in this README
-> should be read as a production or deployment claim.
+> Nothing in this README is a production claim. The system is internally governed, self-tested, pre-pilot, with no real client and no external approval. See `MASTER_STORY.md` for the full verified account.
 
 ## What's inside
 

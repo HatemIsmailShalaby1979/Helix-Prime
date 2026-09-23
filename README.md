@@ -1,6 +1,6 @@
-![CI](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/workflows/python-app.yml/badge.svg)
-![License](https://img.shields.io/github/license/HatemIsmailShalaby1979/Helix-Prime)
-![Release](https://img.shields.io/github/v/release/HatemIsmailShalaby1979/Helix-Prime)
+> **Status: Private / Pre-pilot / 1,758 passed / 0 failed / Container never built / No external audit / No release tag.**
+>
+> Internal self-approval only (`approver: "operator-pilot-consent"`). No third-party sign-off exists.
 
 # Helix Prime
 

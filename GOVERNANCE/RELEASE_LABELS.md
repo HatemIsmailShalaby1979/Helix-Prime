@@ -16,6 +16,20 @@
 - `verified` = evidenced run in `evidence/runs/<id>/` with input/output/version/timestamp.
 - `pilot` / `production-ready` require release evidence pack per `evidence/releases/<label>/` with input version, model, data classification, approvals.
 
+## Proportional controlled-pilot lane
+
+`controlled_pilot` is a bounded launch lane, not a weaker production label. Its
+scope is fixed by `release/release-profiles.yaml`: the governed `helix-api` is
+canonical, one tenant is permitted, data is synthetic or explicitly consented,
+integrations are read-only, consequential actions require human approval, and
+an independent peer review is required. Evidence may be lighter in ceremony,
+but no required gate is removed and no production-only gate may be substituted.
+
+The cockpit, desktop shell, and `helix-app` profile are diagnostic or separate
+deployment surfaces until they have their own complete evidence. A pilot may
+reduce blast radius and documentation ceremony; it may not widen authority,
+data scope, or autonomy.
+
 ## Versioning
 
 `Cargo.toml`/`CHANGELOG.md` remain semver for code; labels above are governance gates orthogonal to semver.

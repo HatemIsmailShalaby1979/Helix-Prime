@@ -86,3 +86,22 @@ jobs:
       - name: Build package
         run: |
           python -m build
+
+      - name: Validate API container definition
+        run: |
+          docker compose -f infra/docker/docker-compose.yml config --quiet
+          docker compose -f infra/docker/docker-compose.yml build helix-api
+
+      - name: Smoke test API container readiness
+        run: |
+          set -euo pipefail
+          trap 'docker compose -f infra/docker/docker-compose.yml down -v' EXIT
+          docker compose -f infra/docker/docker-compose.yml up -d --no-build helix-api
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:8000/readyz >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose -f infra/docker/docker-compose.yml logs helix-api
+          exit 1

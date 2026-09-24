@@ -55,8 +55,22 @@ def _write_json(path: pathlib.Path, data: Dict[str, Any]) -> None:
 
 def step_validate_profile() -> Dict[str, Any]:
     required = profiles.gates_required_for("controlled_pilot")
-    ok = profiles.is_known_profile("controlled_pilot") and set(profiles.GATE_NAMES) == set(required)
-    return {"ok": ok, "detail": f"controlled_pilot requires {len(required)} gates"}
+    policy = profiles.policy_for("controlled_pilot")
+    ok = (
+        profiles.is_known_profile("controlled_pilot")
+        and set(profiles.GATE_NAMES) == set(required)
+        and policy.get("canonical_surface") == "helix-api"
+        and policy.get("data_scope") == "SYNTHETIC_OR_CONSENTED_ONLY"
+        and policy.get("tenant_limit") == 1
+        and policy.get("read_only_integrations") is True
+        and policy.get("human_approval_required") is True
+        and policy.get("production_gate_substitution_allowed") is False
+    )
+    return {
+        "ok": ok,
+        "detail": f"controlled_pilot requires {len(required)} gates",
+        "policy": policy,
+    }
 
 
 def step_c5_vertical_slice(state: str) -> Dict[str, Any]:
@@ -131,9 +145,14 @@ def step_c5_denial(state: str) -> Dict[str, Any]:
     )
     ev = ctrl.run(req)
     engine.close()
-    comp = ev.steps[3]
-    ok = comp.name == "compliance_review" and comp.approval_decision == "denied"
-    return {"ok": ok, "detail": f"denial: compliance denied={ok}"}
+    comp = next((step for step in ev.steps if step.name == "compliance_review"), None)
+    ok = comp is not None and comp.approval_decision == "denied"
+    detail = (
+        f"denial: compliance denied={ok}"
+        if comp is not None
+        else "denial: compliance review was not reached before an upstream failure"
+    )
+    return {"ok": ok, "detail": detail}
 
 
 def step_c7_sibling(state: str) -> Dict[str, Any]:
@@ -349,6 +368,7 @@ def run_pilot_dry_run(
             "created_at": _now(),
             "kind": "pilot_dry_run",
             "profile": "controlled_pilot",
+            "profile_policy": profiles.policy_for("controlled_pilot"),
             "classification": "CONTROLLED_PILOT_READY" if ok else "NOT_READY",
             "is_sample": True,
             "all_checks_green": ok,

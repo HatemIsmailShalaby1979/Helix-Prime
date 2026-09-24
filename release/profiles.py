@@ -42,6 +42,7 @@ _REQUIRED_KEYS = (
     "required_gates",
     "allowed_final",
     "default_c8",
+    "profile_policy",
 )
 
 
@@ -134,6 +135,47 @@ def derive_profiles(data: Dict[str, Any], rel_path: Optional[str] = None) -> Dic
     if default_c8 not in allowed_final:
         raise _reject(path, f"default_c8 {default_c8!r} is not in allowed_final")
 
+    profile_policy = data["profile_policy"]
+    if not isinstance(profile_policy, dict):
+        raise _reject(path, "profile_policy must be a mapping")
+    for profile in order:
+        policy = profile_policy.get(profile)
+        if not isinstance(policy, dict):
+            raise _reject(path, f"profile_policy missing {profile!r}")
+        required_policy = {
+            "canonical_surface",
+            "data_scope",
+            "tenant_limit",
+            "read_only_integrations",
+            "human_approval_required",
+            "independent_peer_review_required",
+            "production_gate_substitution_allowed",
+            "evidence_expiry_days",
+        }
+        missing_policy = sorted(required_policy - set(policy))
+        if missing_policy:
+            raise _reject(
+                path,
+                f"profile_policy[{profile!r}] missing keys: {', '.join(missing_policy)}",
+            )
+        if not isinstance(policy["canonical_surface"], str) or not policy["canonical_surface"]:
+            raise _reject(path, f"profile_policy[{profile!r}].canonical_surface must be non-empty")
+        if not isinstance(policy["data_scope"], str) or not policy["data_scope"]:
+            raise _reject(path, f"profile_policy[{profile!r}].data_scope must be non-empty")
+        if (
+            not isinstance(policy["evidence_expiry_days"], int)
+            or policy["evidence_expiry_days"] <= 0
+        ):
+            raise _reject(
+                path, f"profile_policy[{profile!r}].evidence_expiry_days must be positive"
+            )
+        if policy["tenant_limit"] is not None and (
+            not isinstance(policy["tenant_limit"], int) or policy["tenant_limit"] <= 0
+        ):
+            raise _reject(
+                path, f"profile_policy[{profile!r}].tenant_limit must be positive or null"
+            )
+
     return {
         "order": order,
         "gate_names": gate_names,
@@ -142,6 +184,7 @@ def derive_profiles(data: Dict[str, Any], rel_path: Optional[str] = None) -> Dic
         "required_gates": required,
         "allowed_final": allowed_final,
         "default_c8": default_c8,
+        "profile_policy": {profile: dict(policy) for profile, policy in profile_policy.items()},
     }
 
 
@@ -189,6 +232,10 @@ PRODUCTION_ONLY_GATES: List[str] = _CANONICAL["production_only_gates"]
 # hold, not the policy set.
 PROFILE_REQUIRED_GATES: Dict[str, List[str]] = _CANONICAL["required_gates"]
 
+# Scope limits are intentionally separate from gate results: a green pilot gate
+# never widens the pilot's tenant, data, integration, or approval boundary.
+PROFILE_POLICY: Dict[str, Dict[str, Any]] = _CANONICAL["profile_policy"]
+
 
 def is_known_profile(profile: str) -> bool:
     return profile in PROFILE_ORDER
@@ -199,6 +246,17 @@ def gates_required_for(profile: str) -> List[str]:
     if not is_known_profile(profile):
         return list(_all_c8_gates())
     return list(PROFILE_REQUIRED_GATES[profile])
+
+
+def policy_for(profile: str) -> Dict[str, Any]:
+    """Return the immutable scope policy for a known profile.
+
+    Unknown profiles fail closed with no policy rather than inheriting a
+    production-like default.
+    """
+    if profile not in PROFILE_POLICY:
+        return {}
+    return dict(PROFILE_POLICY[profile])
 
 
 def classify_from_gate_results(

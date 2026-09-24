@@ -150,3 +150,61 @@ allowed_final:
   - PRODUCTION
 
 default_c8: PRODUCTION_CANDIDATE
+
+# Scope and evidence policy for each release profile. These fields shape blast
+# radius and ceremony; they never remove a required gate.
+profile_policy:
+  alpha:
+    canonical_surface: helix-api
+    data_scope: SYNTHETIC_ONLY
+    tenant_limit: 1
+    read_only_integrations: true
+    human_approval_required: true
+    independent_peer_review_required: false
+    production_gate_substitution_allowed: false
+    evidence_expiry_days: 30
+  internal_pilot:
+    canonical_surface: helix-api
+    data_scope: SYNTHETIC_OR_CONSENTED_ONLY
+    tenant_limit: 1
+    read_only_integrations: true
+    human_approval_required: true
+    independent_peer_review_required: false
+    production_gate_substitution_allowed: false
+    evidence_expiry_days: 30
+  controlled_pilot:
+    canonical_surface: helix-api
+    data_scope: SYNTHETIC_OR_CONSENTED_ONLY
+    tenant_limit: 1
+    read_only_integrations: true
+    human_approval_required: true
+    independent_peer_review_required: true
+    production_gate_substitution_allowed: false
+    evidence_expiry_days: 30
+  production_candidate:
+    canonical_surface: helix-api
+    data_scope: SYNTHETIC_OR_CONSENTED_ONLY
+    tenant_limit: 1
+    read_only_integrations: true
+    human_approval_required: true
+    independent_peer_review_required: true
+    production_gate_substitution_allowed: false
+    evidence_expiry_days: 14
+  production:
+    canonical_surface: helix-api
+    data_scope: LIVE_PRODUCTION_DATA
+    tenant_limit: null
+    read_only_integrations: false
+    human_approval_required: false
+    independent_peer_review_required: true
+    production_gate_substitution_allowed: false
+    evidence_expiry_days: 7
+  app_pilot:
+    canonical_surface: helix-app
+    data_scope: SYNTHETIC_OR_CONSENTED_ONLY
+    tenant_limit: 1
+    read_only_integrations: true
+    human_approval_required: true
+    independent_peer_review_required: true
+    production_gate_substitution_allowed: false
+    evidence_expiry_days: 30

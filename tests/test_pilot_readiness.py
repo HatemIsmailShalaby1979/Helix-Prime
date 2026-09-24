@@ -31,6 +31,20 @@ def test_all_c8_gates_present():
     assert len(profiles.GATE_NAMES) == 14
 
 
+def test_controlled_pilot_policy_is_narrow_and_explicit():
+    policy = profiles.policy_for("controlled_pilot")
+    assert policy["canonical_surface"] == "helix-api"
+    assert policy["data_scope"] == "SYNTHETIC_OR_CONSENTED_ONLY"
+    assert policy["tenant_limit"] == 1
+    assert policy["read_only_integrations"] is True
+    assert policy["human_approval_required"] is True
+    assert policy["production_gate_substitution_allowed"] is False
+
+
+def test_unknown_profile_has_no_scope_policy():
+    assert profiles.policy_for("unknown") == {}
+
+
 def test_production_requires_the_nine_production_only_gates():
     prod = profiles.gates_required_for("production")
     for g in profiles.PRODUCTION_ONLY_GATES:

@@ -4,7 +4,7 @@
 # multi-stage build keeps compiler/build artifacts out of the final footprint.
 # SQLite stays local by design; mount /data as the durable tenant-isolated volume.
 
-FROM python:3.12-slim AS builder
+FROM python:3.12.10-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -16,10 +16,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY requirements.txt requirements-dev.txt pyproject.toml ./
+COPY requirements.txt requirements-dev.txt pyproject.toml release/requirements.lock.txt ./
 RUN python -m venv /opt/venv \
-    && /opt/venv/bin/pip install --upgrade pip \
-    && /opt/venv/bin/pip install -r requirements.txt \
+    && /opt/venv/bin/pip install -r requirements.lock.txt \
     && /opt/venv/bin/pip install hatchling
 
 # Phase 1 W4 service spine: fastapi, uvicorn, jinja2, sse-starlette, pydantic-settings, httpx.
@@ -28,7 +27,7 @@ COPY . .
 RUN /opt/venv/bin/pip install '.[web]' \
     && /opt/venv/bin/python -m compileall -q -f . || true
 
-FROM python:3.12-slim AS runtime
+FROM python:3.12.10-slim AS runtime
 
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \

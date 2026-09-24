@@ -12,7 +12,7 @@ This is the single source of truth for the Helix Codex workspace's actual, curre
 
 ---
 
-## Current status — re-verified 2026-09-20
+## Current status — release-candidate track opened 2026-09-24
 
 This block supersedes the dated §1 entries below wherever they disagree. The
 sections after it are a **historical log** and are kept as written; several of
@@ -21,8 +21,8 @@ by rewriting the log.
 
 | Field | Value (measured 2026-09-20) |
 |---|---|
-| HEAD | `003709b` |
-| Full suite | **1,758 passed, 0 failed, 0 skipped — one process, end to end** |
+| HEAD | **Regenerate this row from the candidate commit before release** |
+| Full suite | **Run the canonical release command against the candidate commit; do not reuse historical counts** |
 | Release profile | `0.9.0-c8` (core version single-sourced from `pyproject.toml`) |
 | Gate implementations | **29** in `release/gate.py` — 14 core + 6 app + 9 production-only, across 5 profiles |
 | Gate verdicts | `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1) |
@@ -32,7 +32,7 @@ by rewriting the log.
 | Total commits on `main` | **237** |
 | `release_approved` | **false** (`release/release-manifest.json`); `go-no-go.json` records pilot-scoped consent with `approved_at: "PENDING-GATE-RUN"` |
 | `production_readiness` | **`NOT_ESTABLISHED`** on every governed record |
-| Container image | **never built** — sandbox Docker daemon unavailable; recorded, not claimed |
+| Container image | **CI must build and readiness-smoke-test the API image; local availability is not assumed** |
 
 **Corrections to the log below.** Two §1 entries describe the current repository
 incorrectly and are superseded:

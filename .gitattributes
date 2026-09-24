@@ -1,1 +1,14 @@
+# Line-ending policy.
+#
+# The repository stores text with LF, which is what every blob already contains.
+# Without an explicit rule, Git for Windows applies `core.autocrlf=true` from the
+# system config and expects CRLF in the working tree. That expectation produced a
+# permanent "modified" status on 35 files whose bytes were in fact identical to
+# the index, which made `git status` useless for spotting real changes.
+#
+# `eol=lf` states the intent once, so the working tree, the index and the blobs
+# all agree. Text files are detected automatically; binary files are left alone.
+* text=auto eol=lf
+
+# Git LFS. Must come after the general rule so that it wins for these paths.
 marketing/assets/fonts/*.ttf filter=lfs diff=lfs merge=lfs -text

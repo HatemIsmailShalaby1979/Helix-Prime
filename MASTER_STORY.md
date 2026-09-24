@@ -28,7 +28,7 @@ by rewriting the log.
 | Gate verdicts | `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1) |
 | Evidence files | **2,181** JSON files (gitignored by design) |
 | Evidence release dirs | **714** (`evidence/releases/`), plus 18 pilot dirs — the 2026-08-28 "29 directories" figure in §1 is long superseded |
-| Commits ahead of `origin/main` | **7** (`origin/main` = `b9d8fb6`, measured against the live remote with `git ls-remote`); the repository is **private** — changed by the owner on 2026-09-21, and `"private": false` at the time of this measurement |
+| Commits ahead of `origin/main` | **0** (`origin/main` = `50fd69f`, measured 2026-09-25 with `git ls-remote` and `git rev-list --count`). The repository is **public** — an unauthenticated request to the GitHub API returns HTTP 200 and `"private": false`, superseding the 2026-09-21 private record. Earlier rows in this block quoted `b9d8fb6` and 7 commits; both were correct when written and have moved |
 | Total commits on `main` | **237** |
 | `release_approved` | **false** (`release/release-manifest.json`); `go-no-go.json` records pilot-scoped consent with `approved_at: "PENDING-GATE-RUN"` |
 | `production_readiness` | **`NOT_ESTABLISHED`** on every governed record |

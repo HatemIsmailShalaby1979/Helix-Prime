@@ -23,8 +23,10 @@
 >
 > **One owner decision is also still open and is not engineering work:** the
 > unpushed backlog (`origin/main = b9d8fb6`). The other — repository visibility —
-> was **closed on 2026-09-21: the repository is now private.** See §18.10 and the
-> remote section below. **Re-measure the backlog with
+> was **recorded as closed on 2026-09-21 with the repository set to private. That
+> no longer holds.** Measured 2026-09-25, an unauthenticated request to
+> `https://api.github.com/repos/HatemIsmailShalaby1979/Helix-Prime` returns HTTP
+> 200 and `"private": false`. **The repository is public.** See §20.5. **Re-measure the backlog with
 > `git rev-list --count origin/main..HEAD` rather than trusting a number written
 > here** — it moves with every commit, and §18.8 records two figures that were
 > wrong for exactly that reason.

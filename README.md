@@ -1,4 +1,4 @@
-> **Status: Private / Pre-pilot / 1,758 passed / 0 failed / Container never built / No external audit / No release tag.**
+> **Status: Private / Pre-pilot / 1,758 tests passed / 0 failed (snapshot 2026-09-24) / Production NOT_READY / Container never built / No external audit / No release tag.**
 >
 > Internal self-approval only (`approver: "operator-pilot-consent"`). No third-party sign-off exists.
 
@@ -6,39 +6,40 @@
 
 > **The operations core of Helix Codex.**
 
-> **Authority chain:** `00_CONSTITUTION.md` (authority) → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (architecture + commercial record) → implementation. On conflict, the earlier link in the chain wins — the constitution outranks the blueprint, and both outrank status summaries, roadmaps, and release docs.
+> **Authority chain:** `00_CONSTITUTION.md` (authority) → `docs/HELIX_CODEX_OS_MASTER_BLUEPRINT.md` (architecture + commercial record) → implementation. On conflict, the earlier link in the chain wins. The constitution outranks the blueprint, and both outrank status summaries, roadmaps, and release docs.
 
-Helix Prime is a local-first platform that runs six business engines (WFM, RTA, CX, B2B, Personnel, CRM) with nine AI agents routing requests by content. The canonical artifact is **`helix-api`**, a governed FastAPI spine where identity, RBAC, approvals, the kill switch, metrics, and the audit chain are enforced; the Streamlit cockpit is a secondary read-only diagnostic surface. Everything runs on your machine with no cloud dependency.
+Helix Prime is a local-first platform that runs six business engines (WFM, RTA, CX, B2B, Personnel, CRM) with nine AI agents routing requests by content. The canonical artifact is **`helix-api`**, a governed FastAPI spine where identity, RBAC, approvals, the kill switch, metrics, and the audit chain are enforced. The Streamlit cockpit is a secondary read-only diagnostic surface. Everything runs on your machine with no cloud dependency.
 
-This is the first product for **Helix Codex**: an accountable AI operating organization that helps businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.
-
-## Why this exists (human note)
-
-I did not build Helix Prime to impress an interviewer with the word "revolutionize." I built it because I switched careers, started learning alone, and decided that when crisis hits — when operations break, when data is missing, when decisions need to be made fast — the answer should not be a black box. It should be a governed system that tells you exactly what it knows, exactly what it doesn't, and exactly what it needs before it acts.
-
-Helix Codex is the organization I designed for that. Helix Prime is its core engine. It runs locally. It has no cloud dependency. It has nine agents, six engines, a fail-closed kill switch, an audit chain, and a constitution that outranks any summary. It has not been externally audited. It has not made revenue. It is maintained by one engineer, solo, self-taught, with no team, no venture funding, and no hidden claims.
-
-If you want to see the verified state — not the marketing version — read `MASTER_STORY.md` first. It was written by running real commands, not by trusting an agent's summary.
+Helix Prime is the operations core of **Helix Codex**, an accountable AI operating organization that helps businesses understand operations, coordinate decisions, and improve through evidence without silently taking control.
 
 ## Where it stands
 
-**Release-candidate track (2026-09-24):** stabilization is centered on the
-governed `helix-api` controlled-pilot surface. The boundary is one tenant,
-synthetic or explicitly consented data, read-only integrations, human approval,
-and independent peer review. This is not a production claim.
+**Release-candidate track (2026-09-24):** stabilization is centered on the governed `helix-api` controlled-pilot surface. The boundary is one tenant, synthetic or explicitly consented data, read-only integrations, human approval, and independent peer review. This is not a production claim.
+
+| Check | Result | Snapshot |
+|---|---|---|
+| Full test suite | 1,758 passed / 0 failed / 0 skipped, one process | 2026-09-24 |
+| Lint / format / mypy / bandit / pip-audit | Clean | 2026-09-24 |
+| Dependency / migration drift | Green | 2026-09-24 |
+| Governance checker | PASS | 2026-09-24 |
+| Release gate `app_pilot` | `CONTROLLED_PILOT_READY` (exit 0) | 2026-09-24 |
+| Release gate `controlled_pilot` | `CONTROLLED_PILOT_READY` (exit 0) | 2026-09-24 |
+| Release gate `production_candidate` | `PRODUCTION_CANDIDATE` (exit 0) | 2026-09-24 |
+| Release gate `production` | `NOT_READY` (exit 1) | 2026-09-24 |
+| Evidence directories | 714 release dirs under `evidence/releases/` | 2026-08-28 → 2026-09-15 |
 
 - **Repo status:** Private repository on `main`; verify the exact candidate SHA and remote position with `git rev-parse HEAD` and `git ls-remote`.
-- **Controlled-pilot ready:** `CONTROLLED_PILOT_READY` — but this is an *internal self-approval* (`approver: "operator-pilot-consent"`), not a third-party sign-off. There is no external pilot.
-- **Production:** NOT_READY — no external evidence, no certified isolation, no assigned on-call owner, no signed security review, no legal privacy review, no external observer audit.
+- **Controlled-pilot ready:** `CONTROLLED_PILOT_READY` is an internal self-approval (`approver: "operator-pilot-consent"`), not a third-party sign-off. There is no external pilot.
+- **Production:** `NOT_READY`. The nine red gates are production-only and red by design: `signed_production_evidence`, `certified_data_isolation`, `external_observer_audit`, `production_deployment_architecture`, `disaster_recovery_evidence`, `operational_ownership`, `incident_oncall_ownership`, `security_review`, `legal_privacy_review`.
 - **Verification:** candidate status is valid only for commands run against the exact candidate commit. Use `.github/copilot-instructions.md` for the canonical command inventory.
-- Governance checker: **PASS**
-- Release gate: `app_pilot` and `controlled_pilot` → `CONTROLLED_PILOT_READY` (exit 0); `production_candidate` → `PRODUCTION_CANDIDATE` (exit 0); `production` → `NOT_READY` (exit 1, 9 external-only gates red by design: signed_production_evidence, certified_data_isolation, external_observer_audit, production_deployment_architecture, disaster_recovery_evidence, operational_ownership, incident_oncall_ownership, security_review, legal_privacy_review).
-- Synthetic demonstrations (call-centre, restaurant, sports academy): verified against synthetic/consented-historical data only.
-- Live connectors and external writes: intentionally disabled.
-- **Container image:** CI must build and readiness-smoke-test the API image before candidate promotion; local Docker availability is not assumed.
-- **Evidence:** 714 release directories (`evidence/releases/`) spanning 2026-08-28 to 2026-09-15 — one burst of harness runs in a single session (03:18–05:47 UTC), not a multi-day production track record.
+- **Evidence character:** the 714 release directories span 2026-08-28 to 2026-09-15 and come from one burst of harness runs in a single session (03:18–05:47 UTC). That is not a multi-day production track record.
+- **Synthetic demonstrations** (call-centre, restaurant, sports academy): verified against synthetic or consented-historical data only.
+- **Live connectors and external writes:** intentionally disabled.
+- **Container image:** CI must build and readiness-smoke-test the API image before candidate promotion. Local Docker availability is not assumed, and the image has not been built.
 
-> Nothing in this README is a production claim. The system is internally governed, self-tested, pre-pilot, with no real client and no external approval. See `MASTER_STORY.md` for the full verified account.
+Test counts move as the suite grows. `MASTER_STORY.md` is the authority on the verified state and records 445 tests as of 2026-08-29. The 1,758 figure above is the 2026-09-24 snapshot. The release candidate must be re-measured before any release.
+
+> Nothing in this README is a production claim. The system is internally governed, self-tested, and pre-pilot, with no real client and no external approval. See `MASTER_STORY.md` for the full verified account.
 
 ## What's inside
 
@@ -74,25 +75,18 @@ The current demo uses synthetic and consented-historical data only. This is not 
 
 ### Canonical: the API spine (`helix-api`)
 
-The **one** deployable artifact is the governed FastAPI service spine. It is
-where identity, RBAC, approvals, kill switch, metrics and the audit chain are
-enforced — everything the platform claims to be happens behind this surface.
-It runs with bare `uvicorn` semantics and no UI dependency:
+The **one** deployable artifact is the governed FastAPI service spine. Identity, RBAC, approvals, the kill switch, metrics, and the audit chain are enforced behind this surface. It runs with bare `uvicorn` semantics and no UI dependency:
 
 ```bash
 pip install 'helix-codex-os[web]'        # or `pip install -r requirements.txt`
 helix-api                                # binds 127.0.0.1:8000 by default
 ```
 
-Settings come from `HELIX_*` environment variables (see `server/config.py`);
-`HELIX_HOST=127.0.0.1` / `HELIX_PORT=8000` are the defaults, and the API
-refuses to boot in `HELIX_PROFILE=production` without the external gate
-inputs. `helix-api` is the same entry point the Docker profile runs.
+Settings come from `HELIX_*` environment variables (see `server/config.py`). `HELIX_HOST=127.0.0.1` and `HELIX_PORT=8000` are the defaults, and the API refuses to boot in `HELIX_PROFILE=production` without the external gate inputs. `helix-api` is the same entry point the Docker profile runs.
 
 ### Secondary: the cockpit dashboard (`helix-cockpit`)
 
-The Streamlit dashboard is a **read-only, secondary diagnostic surface**, not
-the deployable artifact. It is equivalent to `python launch.py`:
+The Streamlit dashboard is a **read-only, secondary diagnostic surface**, not the deployable artifact. It is equivalent to `python launch.py`:
 
 ```bash
 helix-cockpit                            # binds 127.0.0.1:8501
@@ -100,13 +94,9 @@ helix-cockpit                            # binds 127.0.0.1:8501
 
 ### Legacy / do not build on these
 
-- `python launch.py` / `launch.bat` — the Streamlit launcher; superseded by
-  `helix-cockpit`.
-- `python desktop.py` — pywebview desktop shell; the packaged wheel does not
-  ship a desktop UI and no console script exposes it.
-- `infra/docker/docker-compose.yml` — containerized profile running the same
-  `helix-api` plus the cockpit and an Ollama sidecar; it is a deployment
-  profile, not a separate application surface.
+- `python launch.py` / `launch.bat` — the Streamlit launcher; superseded by `helix-cockpit`.
+- `python desktop.py` — pywebview desktop shell; the packaged wheel does not ship a desktop UI and no console script exposes it.
+- `infra/docker/docker-compose.yml` — containerized profile running the same `helix-api` plus the cockpit and an Ollama sidecar; it is a deployment profile, not a separate application surface.
 
 ### Windows (source checkout)
 
@@ -129,26 +119,63 @@ helix-api   # or: python -m server.cli
 
 Ollama is optional. Without it, the system runs in deterministic offline mode and reports the limitation clearly.
 
-## Why this exists
+## Honest boundary
 
-I spent 28 years in operations hitting the same walls: manual forecasting, fragmented tools, reactive firefighting. I built Helix Prime to solve those problems — and to prove that operational intelligence can be governed, not autonomous. Decisions have owners. Recommendations expose evidence. Actions have authority boundaries. Memory carries provenance. Improvement requires evaluation, review, approval, and rollback.
+Helix Prime is a private, pre-pilot system. It has no external pilot, no production deployment, and no paying client.
+
+- No external audit and no certification.
+- No certified data isolation.
+- No signed security review.
+- No legal privacy review.
+- No assigned on-call owner; the operator is one person.
+- The container image has never been built.
+- Live connectors and external writes are intentionally disabled.
+- No revenue has been realised.
 
 ## Next milestone
 
 A real design-partner pilot. Read-only first, minimum data, explicit consent, measured baseline. No production claim until the production gates pass.
 
-## Related
+## The founder's story
 
-- [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education)
-- [Study Studio](https://github.com/HatemIsmailShalaby1979/Study-Studio)
-- [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center)
-- [Hatem Shalaby portfolio](https://github.com/HatemIsmailShalaby1979)
+I spent twenty-eight years in contact-centre operations and workforce management. Forecasting, scheduling, adherence, service levels, churn. The same problems appeared in every company I worked in, and none of the tools solved them properly.
+
+In April 2026 I left that career and started building full time — alone, and teaching myself to write software as I went. The first four tools were published six weeks later, in May and June 2026. Each one took a single operational problem and solved it properly. They were not impressive. They were correct.
+
+Those four tools converged into one idea: **Helix Codex**, an accountable AI operating organization. Not an autonomous agent. An organization with a constitution, named roles with bounded authority, evidence trails, and a human at every consequential boundary. Helix Prime is its operations core.
+
+Helix Prime is the operations core of Helix Codex — the platform the rest of the
+work is built on. It is maintained by one person, with no team and no funding. It
+has not been externally audited and it has not made revenue. Where it is
+unfinished, this document says so.
+
+## Related work
+
+- [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education) — event-sourced learning engine
+- [Study Studio](https://github.com/HatemIsmailShalaby1979/Study-Studio) — local-first AI tutor
+- [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center) — desktop learning and career workstation
+- [Blue Waves](https://github.com/HatemIsmailShalaby1979/Blue-Waves-) — content studio
+- [LIVE Support Assistant](https://github.com/HatemIsmailShalaby1979/LIVE-Support-Assistant) — explainable support prototype
+- [Full portfolio](https://github.com/HatemIsmailShalaby1979) — the front door
+
+### The 2026 building attempts
+
+- [WFM Forecasting Calculator](https://github.com/HatemIsmailShalaby1979/wfm-forecasting-calculator)
+- [RTA Command Center](https://github.com/HatemIsmailShalaby1979/RTA_command_center)
+- [CX Sentiment Sentinel](https://github.com/HatemIsmailShalaby1979/cx-sentiment-sentinel)
+- [Dynamic Ops Automation Engine](https://github.com/HatemIsmailShalaby1979/Dynamic-Ops-Automation-Engine)
 
 ## Author
 
-**Hatem Ismail Shalaby** — Operations Architect and AI Systems Engineer
+**Hatem Ismail Shalaby** — Operations Architect · AI Systems Engineer · Founder
 
-## License
+- GitHub: [HatemIsmailShalaby1979](https://github.com/HatemIsmailShalaby1979)
+- LinkedIn: [hatem-shalaby-202902127](https://www.linkedin.com/in/hatem-shalaby-202902127/)
+- Email: hatemshalaby2025@gmail.com
+
+Based in Al Obour City, Al-Qalyubia Governorate, Egypt.
+
+## Licence
 
 MIT
 

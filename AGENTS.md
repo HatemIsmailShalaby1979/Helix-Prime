@@ -3536,3 +3536,141 @@ decision-loss class this tier exists to catch — failed the console module (`ex
 hash, per §18.8. **Updated 2026-09-21:** the repository is now **private** (owner
 action; see §18.4), so the push is no longer a disclosure decision. The push itself
 remains an owner action — the commit authorization in §0 does not extend to pushing.
+
+---
+
+## 20. Portfolio documentation unification and secret audit (PORTFOLIO-DOCS-1) — COMPLETE
+
+**Date:** 2026-09-25. **Scope:** eleven repositories — the seven in this workspace
+plus four GitHub-only predecessors (`wfm-forecasting-calculator`,
+`RTA_command_center`, `cx-sentiment-sentinel`, `Dynamic-Ops-Automation-Engine`).
+**Status:** audit complete and remediated; documentation rewritten and verified;
+four repositories pushed; seven left uncommitted by design (§20.6).
+
+### 20.1 Why this section exists
+
+The portfolio had drifted. Eleven repositories told eleven versions of the same
+story, two GitHub handles and three email addresses appeared across them, and a
+credential had been committed to a public repository. This section records what
+was found, what was changed, and — per §18.8 — what was measured rather than
+assumed.
+
+### 20.2 Security findings
+
+| Severity | Repository | Finding | State |
+|---|---|---|---|
+| P0 | `cx-sentiment-sentinel` (public) | Live database credential in a tracked `.env`, commit `a78d5d8`, present in `HEAD` and history | Owner rotated 2026-09-25; file removed; history purge outstanding |
+| P1 | `cx-sentiment-sentinel` | Literal `POSTGRES_PASSWORD` in `docker-compose.yml` | Fixed — now read from the environment, fails closed |
+| P1 | `cx-sentiment-sentinel` | `.gitignore` was the `python -m venv` file, sole rule `*` | Fixed — deliberate rule set |
+| P1 | `blue-waves` | `.env.bak-20260904`, `.env.bak-20260904b` held ~15 live provider keys and a YouTube OAuth client secret; untracked but **not** ignored | Fixed — ignore rules extended |
+| P1 | `Dynamic-Ops-Automation-Engine` | `.gitignore` ignored `*.md`, `README`, `LICENSE`, `Dockerfile`, `.github`; rules were being bypassed by force-adds | Fixed — blocking entries removed |
+| P2 | several | Absolute local paths, tracked virtualenv debris, compiled artefacts, public Docker Hub namespace | Recorded, owner action |
+
+**Clean, verified:** no real secret exists in the tracked file set of any of the
+seven workspace repositories. Every scanner match resolved to a variable name, a
+typed field (`SecretStr`), an environment lookup, or a test fixture. The four
+repositories listed above were the only ones with findings.
+
+**Root cause, stated once:** a `.gitignore` inherited from `python -m venv`
+rather than authored, combined with GitHub's web upload, which does not consult
+ignore rules at all. The rule was never in a position to prevent the commit.
+
+**Positive controls observed in this repository:** `release/security_gate.py`
+redacts secret-shaped strings and fails closed; a test asserts the redaction.
+
+### 20.3 Documentation changes
+
+A single authoritative specification was written first
+(`E:\_helix_docs_2026-09-25\CANONICAL_STORY_AND_VOICE.md`) defining the story, the
+placement of each repository within it, canonical vocabulary, a banned-word list,
+voice rules, and reusable text blocks. All eleven repositories were then rewritten
+from it. The shared narrative: 28 years in contact-centre operations → career
+switch April 2026 → full-time solo self-taught build → four **building attempts**
+published May–June 2026 → convergence into **Helix Codex**, with Helix Prime as
+its operations core.
+
+**In this repository, exactly two files changed:** `README.md` and `index.html`.
+The subagent brief restricted edits to those files, and this was verified
+afterwards — `grep -rl "The founder's story"` returns `./README.md` and nothing
+else. The other 38 dirty paths in the working tree are line-ending churn and
+pre-existing uncommitted work, and were deliberately left untouched.
+
+Two facts that previously disagreed are now recorded rather than reconciled
+silently, in both `README.md` and `index.html`:
+
+- **Test count.** `MASTER_STORY.md` records 445 tests at 2026-08-29;
+  `README.md` states 1,758 passed / 0 failed at 2026-09-24. These are different
+  snapshots of a moving suite. `MASTER_STORY.md` remains the authority, and both
+  documents now say so explicitly. **The release candidate must be re-measured
+  before any release.**
+- **Evidence character.** The 714 release directories span 2026-08-28 to
+  2026-09-15 and come from one burst of harness runs in a single session, not a
+  multi-day production track record. Both documents now state this.
+
+### 20.4 Verification
+
+`E:\_repo_audit\verify_docs.py` checks banned vocabulary, superseded identity,
+mojibake, required sections, snapshot dates, self-referential links and HTML
+structure across all eleven repositories.
+
+**Final run: 0 failures.** All eleven passed on banned vocabulary, superseded
+identity and mojibake; all eleven READMEs carry the founder's story, honest
+boundary, author block, canonical email and canonical GitHub URL.
+
+Remote state after the four pushes, confirmed with `git ls-remote` and the GitHub
+contents API — not against a remembered hash:
+
+| Repository | Pushed commit |
+|---|---|
+| `wfm-forecasting-calculator` | `394e461` |
+| `RTA_command_center` | `6a29b59` |
+| `Dynamic-Ops-Automation-Engine` | `0a99aad` |
+| `cx-sentiment-sentinel` | `2b422b2` (security), `e805b4b` (docs) |
+
+`.env` was confirmed absent from the `cx-sentiment-sentinel` remote `HEAD`.
+
+### 20.5 Correction to §19.6
+
+§19.6 records `origin/main = b9d8fb6` with **19 commits unpushed**. That is stale.
+Measured 2026-09-25 with `git rev-parse --short origin/main` and
+`git rev-list --count origin/main..HEAD`: `origin/main = b934613`, `HEAD = b934613`,
+**0 commits ahead, 0 behind**. The earlier figure was correct when written and is
+superseded, not wrong. Recorded here rather than rewritten, per the §18.8 rule
+that a figure wrong for a moving reason should be corrected in place with its
+measurement method.
+
+### 20.6 What was not done
+
+Stated because the absence is part of the record.
+
+1. **No commit in this repository.** The working tree carries 40 dirty paths, of
+   which only two belong to this work. Committing here would either sweep up
+   unrelated changes or require a path-scoped commit whose review has not happened.
+2. **No push.** Per §0 and §19.6, the commit authorization does not extend to
+   pushing. Pushing is an owner action.
+3. **No history purge on `cx-sentiment-sentinel`.** Destructive; the runbook is in
+   `SECURITY_AUDIT_2026-09-25.md` §6 and the owner executes it.
+4. **No dependency, container, licence-compliance or runtime testing.** The audit
+   covered secrets and credential exposure only.
+5. **`MASTER_STORY.md` was not rewritten.** It is an existing authoritative record
+   and was treated as an input.
+6. **`ThommyShelby79` was not committed.** Its checkout is in detached `HEAD` at
+   `d36a28c` (= `origin/main`) while local `main` sits at `5e7c94d`, and the two
+   have diverged — 4 commits on one side, 6 on the other, over the same files.
+   Resolving that is an owner decision. Committing in detached `HEAD` would have
+   orphaned the work.
+
+### 20.7 Outstanding owner actions
+
+| # | Action | Priority |
+|---|---|---|
+| 1 | Confirm the rotated password pattern is not reused on any other service | High |
+| 2 | Purge `.env` from `cx-sentiment-sentinel` history and force-push | Medium |
+| 3 | Enable GitHub secret scanning and push protection on all eleven repositories | Medium |
+| 4 | Confirm the canonical email and LinkedIn URL | Medium |
+| 5 | Resolve the `ThommyShelby79` detached-`HEAD` and divergent-`main` state | Medium |
+| 6 | Remove `.env.production` / `.env.staging` from `Dynamic-Ops-Automation-Engine` | Low |
+| 7 | Delete the two `blue-waves` `.env.bak-*` files once confirmed redundant | Low |
+
+Full detail: `E:\_helix_docs_2026-09-25\CHANGE_RECORD_2026-09-25.md` and
+`SECURITY_AUDIT_2026-09-25.md`.

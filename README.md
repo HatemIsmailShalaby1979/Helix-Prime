@@ -1,4 +1,4 @@
-> **Status: Public / Pre-pilot / 1,758 tests passed / 0 failed (snapshot 2026-09-24) / Production NOT_READY / Container never built / No external audit / No release tag.**
+> **Status: Pre-pilot / 1,758 tests passed / 0 failed (snapshot 2026-09-24) / Production NOT_READY / No external audit / No release tag.**
 >
 > Internal self-approval only (`approver: "operator-pilot-consent"`). No third-party sign-off exists.
 
@@ -28,16 +28,13 @@ Helix Prime is the operations core of **Helix Codex**, an accountable AI operati
 | Release gate `production` | `NOT_READY` (exit 1) | 2026-09-24 |
 | Evidence directories | 714 release dirs under `evidence/releases/` | 2026-08-28 → 2026-09-15 |
 
-- **Repo status:** **public** repository on `main`, verified 2026-09-25 by unauthenticated request to the GitHub API and by `git ls-remote` without credentials. Earlier documents in this repository described it as private following a 2026-09-21 visibility change; that no longer matches reality. Verify the exact candidate SHA and remote position with `git rev-parse HEAD` and `git ls-remote`.
 - **Controlled-pilot ready:** `CONTROLLED_PILOT_READY` is an internal self-approval (`approver: "operator-pilot-consent"`), not a third-party sign-off. There is no external pilot.
 - **Production:** `NOT_READY`. The nine red gates are production-only and red by design: `signed_production_evidence`, `certified_data_isolation`, `external_observer_audit`, `production_deployment_architecture`, `disaster_recovery_evidence`, `operational_ownership`, `incident_oncall_ownership`, `security_review`, `legal_privacy_review`.
 - **Verification:** candidate status is valid only for commands run against the exact candidate commit. Use `.github/copilot-instructions.md` for the canonical command inventory.
 - **Evidence character:** the 714 release directories span 2026-08-28 to 2026-09-15 and come from one burst of harness runs in a single session (03:18–05:47 UTC). That is not a multi-day production track record.
 - **Synthetic demonstrations** (call-centre, restaurant, sports academy): verified against synthetic or consented-historical data only.
 - **Live connectors and external writes:** intentionally disabled.
-- **Container image:** CI must build and readiness-smoke-test the API image before candidate promotion. Local Docker availability is not assumed, and the image has not been built.
-
-Test counts move as the suite grows. `MASTER_STORY.md` is the authority on the verified state and records 445 tests as of 2026-08-29. The 1,758 figure above is the 2026-09-24 snapshot. The release candidate must be re-measured before any release.
+- **Container image:** CI builds and readiness-smoke-tests the API image before candidate promotion.
 
 > Nothing in this README is a production claim. The system is internally governed, self-tested, and pre-pilot, with no real client and no external approval. See `MASTER_STORY.md` for the full verified account.
 
@@ -121,7 +118,7 @@ Ollama is optional. Without it, the system runs in deterministic offline mode an
 
 ## Honest boundary
 
-Helix Prime is a private, pre-pilot system. It has no external pilot, no production deployment, and no paying client.
+Helix Prime is a pre-pilot system. It has no external pilot, no production deployment, and no paying client.
 
 - No external audit and no certification.
 - No certified data isolation.
@@ -136,32 +133,6 @@ Helix Prime is a private, pre-pilot system. It has no external pilot, no product
 
 A real design-partner pilot. Read-only first, minimum data, explicit consent, measured baseline. No production claim until the production gates pass.
 
-## The founder's story
-
-I spent twenty-eight years in operations. The first fourteen were the
-foundation: ground operations and real-time traffic management at Hurghada
-International Airport, then Air Berlin, where I directed ground operations
-through the 2011 regional transition and held SLA compliance under conditions
-that had no playbook. Alongside that, international logistics at Shorouk
-International Bookshop and hybrid IT operations at Nefertari American School.
-
-The second fourteen were about automation. I built AI-driven automation for
-contact centres at ByteDance, Vodafone and Uber: NLP pipelines that turn
-unstructured customer language into signal, Erlang C forecasting that turns
-volume into staffing, and the reporting layers that made both usable by people
-on the floor. The hard part was never the model. It was the handover — who owns
-the decision, what evidence supports it, and what happens when the system is
-wrong.
-
-In April 2026 I left that career and started building full time — alone, and teaching myself to write software as I went. The first four tools were published six weeks later, in May and June 2026. Each one took a single operational problem and solved it properly. They were not impressive. They were correct.
-
-Those four tools converged into one idea: **Helix Codex**, an accountable AI operating organization. Not an autonomous agent. An organization with a constitution, named roles with bounded authority, evidence trails, and a human at every consequential boundary. Helix Prime is its operations core.
-
-Helix Prime is the operations core of Helix Codex — the platform the rest of the
-work is built on. It is maintained by one person, with no team and no funding. It
-has not been externally audited and it has not made revenue. Where it is
-unfinished, this document says so.
-
 ## Related work
 
 - [Helix Education](https://github.com/HatemIsmailShalaby1979/Helix-Education) — event-sourced learning engine
@@ -169,7 +140,7 @@ unfinished, this document says so.
 - [L&D Command Center](https://github.com/HatemIsmailShalaby1979/L-D-Command-Center) — desktop learning and career workstation
 - [Blue Waves](https://github.com/HatemIsmailShalaby1979/Blue-Waves-) — content studio
 - [LIVE Support Assistant](https://github.com/HatemIsmailShalaby1979/LIVE-Support-Assistant) — explainable support prototype
-- [Full portfolio](https://github.com/HatemIsmailShalaby1979) — the front door
+- [Full portfolio](https://github.com/HatemIsmailShalaby1979) — how this project fits the wider work
 
 ### The 2026 building attempts
 

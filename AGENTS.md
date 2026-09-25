@@ -24,9 +24,10 @@
 > **One owner decision is also still open and is not engineering work:** the
 > unpushed backlog (`origin/main = b9d8fb6`). The other — repository visibility —
 > was **recorded as closed on 2026-09-21 with the repository set to private. That
-> no longer holds.** Measured 2026-09-25, an unauthenticated request to
+> record was superseded.** Measured 2026-09-25, an unauthenticated request to
 > `https://api.github.com/repos/HatemIsmailShalaby1979/Helix-Prime` returns HTTP
-> 200 and `"private": false`. **The repository is public.** See §20.5. **Re-measure the backlog with
+> 200 and `"private": false`. **The repository is public, and the owner confirmed
+> on 2026-09-25 that public is the intended state.** See §20.5. **Re-measure the backlog with
 > `git rev-list --count origin/main..HEAD` rather than trusting a number written
 > here** — it moves with every commit, and §18.8 records two figures that were
 > wrong for exactly that reason.
@@ -2666,7 +2667,7 @@ is intermittent — it did not fire in the previous run — which is exactly how
 describes it. Process exit is 1 only because the bulk-delete guard tripped at session
 finish (`count: 3036`).
 
-#### The GitHub remote was PUBLIC — anything committed is published (now private; see the 2026-09-21 note below)
+#### The GitHub remote was PUBLIC — anything committed is published (a 2026-09-21 note recorded it as private; that was superseded, and public is confirmed intended)
 
 `origin` is `https://github.com/HatemIsmailShalaby1979/Helix-Prime.git` and
 GitHub reports `"private": false`. The last pushed commit is `1ab9bea`

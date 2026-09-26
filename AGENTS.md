@@ -3791,3 +3791,139 @@ unregistered-origin probe returned the Worker-designed HTTP 503.
 A2 is re-verified as the auth front-door/proxy layer. A3 remains separate: it must
 implement the Supabase identity bridge and pass the fresh-account/no-prior-session
 external sign-in test before Phase A can be called complete.
+
+### 20.18 Phase A A3 — Supabase `state` carriage — PARTIAL
+
+**Recorded:** 2026-09-26. Status: **code defect fixed and verified; the hosted
+end-to-end leg is HALTED** on two owner-held artifacts and one newly surfaced
+defect that this step deliberately did not fix.
+
+**Step:** A3 — state-handling gap.
+**Changed files:** `helix_codex_app/modules/identity/router.py`,
+`tests/helix_codex_app/test_supabase_auth.py`, `AGENTS.md`.
+**Scope boundary:** the CSRF check is untouched. `state != query.get("state")`
+remains strict equality. No Supabase application data table was created or moved.
+
+#### A3.1 Defect — the committed bridge was never green
+
+`e81f52e` ("feat(app): bridge Supabase identity to demo session") does not pass
+its own test. `router.py:70` called `urlencode(...)` with no `urlencode` import,
+so every request to `/app/auth/supabase/login` raised
+`NameError: name 'urlencode' is not defined` and answered HTTP 500.
+
+Measured before the fix, with `.venv-py312`:
+`pytest tests/helix_codex_app/test_supabase_auth.py` → **1 failed**.
+
+The same line was also the state-carriage gap: `state` was not reaching
+`redirect_to` in a form the callback could match.
+
+#### A3.2 Fix
+
+`redirect_uri = f"{settings.supabase_redirect_uri}?state={quote(state)}"`, with
+`import base64` and `from urllib.parse import quote` hoisted to module scope.
+`authorize_url()` is unchanged; it still also emits a top-level `state`, which
+GoTrue ignores (see A3.4). The callback handler is unchanged.
+
+**Can-fail proof.** Reverting only the `state=` key (to `?{quote(state)}`) makes
+`test_supabase_callback_bridges_a_fresh_identity_to_demo_session` fail on the new
+`redirect_to` assertion; restoring the file byte-identically
+(`sha256 3d3c877d7d0586369aa77c1206f523b6f8954e9b6ec8f6ed6614b747a6d27de9`)
+returns it to green.
+
+#### A3.3 Verified — the redirect chain, through the Worker, as measured
+
+App on `127.0.0.1:8100`; Cloudflare Quick Tunnel
+`https://supplement-curves-innocent-change.trycloudflare.com`; Workers KV
+`HELIX_ORIGIN` repointed to it; all requests below made against
+`https://helix-codex.hatemshalaby2025.workers.dev`.
+
+| # | request | status | observed |
+|---|---|---|---|
+| 1 | `GET /app/healthz` | 200 | `{"status":"ok","app":"helix-codex"}` — the Worker forwards live |
+| 2 | `GET /app/auth/supabase/login` | 303 | `redirect_to=…%2Fcallback%3Fstate%3DoFCA7bJ2…` and `state=oFCA7bJ2…` |
+| 3 | `GET <supabase>/auth/v1/authorize` | 302 | → `github.com/login/oauth/authorize?client_id=Ov23lif3ujOTQ69KUt9p`, `redirect_uri=https://cgowfiyzqqqjrytxwmfa.supabase.co/auth/v1/callback`, `redirect_to=…callback?state=oFCA7bJ2…`, `state=94757373-4890-4eda-9af2-1ae5772748a7` |
+| 4 | `GET github.com/login/oauth/authorize` | 302 | → `github.com/login?…return_to=…` — the interactive login wall |
+
+The callback leg was then exercised through the Worker with the **real** state
+cookie and a synthetic `code`:
+
+| # | request | status | observed |
+|---|---|---|---|
+| 5 | `GET /app/auth/supabase/callback?code=…&state=<real state>` | **500** | `{"error":{"code":"internal_error","message":"Something went wrong.","payload":{}}}` |
+| 6 | same route, `state=deliberately-wrong` | 400 | `Sign-in could not be verified.` |
+
+Row 6 is the CSRF control: the strict-equality check still refuses a mismatch, so
+the 500 in row 5 is **not** a CSRF rejection. Row 5 proves the callback now
+receives both `state` and `code` and passes the gate.
+
+#### A3.4 The diagnosis is independently corroborated
+
+`/auth/v1/authorize` was probed directly, without any credential. It returns 302
+to GitHub for **every** `redirect_to` tried — the exact-match callback, the
+query-suffixed callback, `https://evil.example.com/cb?state=…`, and an unrelated
+path on the same host alike. GoTrue therefore does **not** validate `redirect_to`
+at the authorize leg; the allowlist is enforced later, at
+`/auth/v1/callback`. GoTrue also ignores a caller-supplied top-level `state` and
+mints its own UUID, and it forwards the app's `redirect_to` to GitHub verbatim.
+This confirms the recorded diagnosis: the app's `state` can only travel inside
+`redirect_to`'s query string.
+
+Consequence: **whether the dashboard allowlist accepts the query-string suffix
+cannot be observed from outside.** Only the dashboard, or a completed GitHub
+login, can settle it.
+
+#### A3.5 Newly surfaced defect — NOT fixed in this step
+
+`helix_codex_app/modules/identity/supabase.py:43` (and `:52`) raise
+`SupabaseAuthError(msg, status=…, detail=…)`, but the class is
+`class SupabaseAuthError(RuntimeError)` with no `__init__`. `RuntimeError` takes
+no keyword arguments, so the raise itself throws before the handler can catch it:
+
+```text
+File "helix_codex_app\modules\identity\supabase.py", line 43, in exchange_code
+    raise SupabaseAuthError("Supabase authorization code exchange failed", status=response.status_code, detail=_safe_error_detail(response))
+TypeError: SupabaseAuthError() takes no keyword arguments
+```
+
+The route's `except SupabaseAuthError` cannot see a `TypeError`, so the request
+falls through to the app's generic handler and answers **500** instead of the
+intended **401** — and `_safe_error_detail()`'s output is discarded, which is why
+Supabase's own rejection reason is unreachable from the app. `router.py:98` and
+`router.py:92` also read `exc.status` / `exc.detail`, which the class never
+provides.
+
+The request **did** reach `POST /auth/v1/token?grant_type=pkce`. Supabase's real
+response body could not be captured from the app for two independent reasons:
+the crash above, and the fact that this run held no production anon key (see
+A3.6). Called directly with the placeholder key, the endpoint answers:
+
+```json
+{"hint":"Double check your Supabase `anon` or `service_role` API key.","message":"Invalid API key"}
+```
+
+That body is about the placeholder credential, not about the synthetic code, and
+is **not** evidence about the real flow.
+
+#### A3.6 Open — the two owner-held artifacts
+
+1. **The Supabase dashboard allowlist.** The entry
+   `https://helix-codex.hatemshalaby2025.workers.dev/app/auth/supabase/callback**`
+   was not added: this environment has no Supabase dashboard or Management API
+   credential. Which of the two entries to keep is the owner's call; removing the
+   old exact-match entry would make the flow depend on the wildcard alone, so
+   keeping both is the conservative default.
+2. **The production anon key.** `HELIX_APP_SUPABASE_ANON_KEY` is environment-only
+   and was not available; this run used the literal placeholder
+   `PLACEHOLDER-NOT-A-REAL-KEY`, which is sufficient to pass the app's own config
+   gate and to observe the authorize leg, but not to complete a token exchange.
+   The interactive GitHub login also needs the owner's own GitHub session.
+
+**Acceptance criteria met:** no. The redirect-chain leg is verified; the
+fresh-account/no-prior-session sign-in to `/app/ops` is not. A3 stays open.
+
+**Deviations:** `import base64` was moved from inside `supabase_login` to module
+scope alongside the new `quote` import, rather than leaving two import styles for
+two stdlib modules in one function. No behavioural change.
+
+**Halt note:** the two remaining blockers are the same class as the rest of
+Phase 6 — owner-held authority. No further code change moves them.

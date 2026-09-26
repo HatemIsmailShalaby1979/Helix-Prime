@@ -9,8 +9,10 @@ page, so a caller cannot distinguish a bad domain from a bad password.
 """
 from __future__ import annotations
 
+import base64
 import hashlib
 import secrets
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -34,7 +36,6 @@ identity_router = APIRouter(prefix="/app/auth")
 LOGIN_REDIRECT = "/app/"
 
 
-
 @identity_router.get("/demo", response_model=None)
 def demo_entry(request: Request) -> RedirectResponse:
     """Create the scoped demo identity on first use and issue a session."""
@@ -56,18 +57,23 @@ def demo_entry(request: Request) -> RedirectResponse:
     set_session_cookie(response, token, settings)
     return response
 
+
 @identity_router.get("/supabase/login", response_model=None)
 def supabase_login(request: Request) -> RedirectResponse | JSONResponse:
-    """Start the GitHub OAuth PKCE flow through Supabase Auth."""
+    """Start the GitHub OAuth PKCE flow through Supabase Auth.
+
+    Supabase does not forward this app's `state` to the callback. It only
+    preserves the query string already present on `redirect_to` and appends its
+    own `code`, so `state` must travel inside `redirect_to` itself.
+    """
     settings = request.app.state.settings
     if not settings.supabase_url or not settings.supabase_anon_key or not settings.supabase_redirect_uri:
         return JSONResponse({"error": "supabase_auth_not_configured"}, status_code=503)
     state = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(48)
     challenge = hashlib.sha256(verifier.encode()).digest()
-    import base64
     encoded = base64.urlsafe_b64encode(challenge).rstrip(b"=").decode()
-    redirect_uri = f"{settings.supabase_redirect_uri}?{urlencode({'state': state})}"
+    redirect_uri = f"{settings.supabase_redirect_uri}?state={quote(state)}"
     response = RedirectResponse(
         authorize_url(settings.supabase_url, redirect_uri, state=state, challenge=encoded),
         status_code=303,
@@ -106,6 +112,7 @@ async def supabase_callback(request: Request) -> RedirectResponse | HTMLResponse
     response.delete_cookie("supabase_oauth_state")
     response.delete_cookie("supabase_oauth_verifier")
     return response
+
 
 @identity_router.get("/login", response_model=None)
 def login_form(request: Request) -> HTMLResponse | RedirectResponse:

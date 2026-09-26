@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from urllib.parse import parse_qs, urlsplit
+
 import pytest
 
 TestClient = pytest.importorskip("fastapi.testclient").TestClient
@@ -29,9 +31,14 @@ def test_supabase_callback_bridges_a_fresh_identity_to_demo_session(monkeypatch,
 
     started = client.get("/app/auth/supabase/login")
     assert started.status_code == 303
-    assert "provider=github" in started.headers["location"]
+    location = started.headers["location"]
+    assert "provider=github" in location
     state = client.cookies["supabase_oauth_state"]
     client.cookies.set("supabase_oauth_verifier", "fresh-verifier")
+
+    authorize = urlsplit(location)
+    redirect_to = parse_qs(authorize.query)["redirect_to"][0]
+    assert redirect_to == f"{settings.supabase_redirect_uri}?state={state}"
 
     async def fake_exchange(*args):
         return {"id": "github-user-fresh", "email": "visitor@example.com"}

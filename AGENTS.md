@@ -3742,3 +3742,18 @@ Deviations: none.
 Open questions / halts hit: A2 and later are intentionally pending; no provisioning or schema work may begin until A1 is accepted.
 
 Phase A execution note: the A3 cold-state requirement is now mandatory because the B3 correction showed that a completion claim must be proven from the stranger's first-touch state, not from an already-initialized identity.
+
+### 20.14 Phase A A2 — Supabase auth project provisioned — COMPLETE
+
+Step: A2
+Changed files: `AGENTS.md` only
+Provider: Supabase Auth with GitHub OAuth.
+Project: `https://cgowfiyzqqqjrytxwmfa.supabase.co`
+Provider callback: `https://cgowfiyzqqqjrytxwmfa.supabase.co/auth/v1/callback`
+Helix redirect: `https://helix-codex.hatemshalaby2025.workers.dev/app/auth/supabase/callback`
+Secrets/configuration: project URL and publishable anon key remain environment-only; GitHub client credentials and any service-role/database credentials are not committed or recorded here.
+Boundary: no Supabase application data tables were created or moved; `db.py` and the SQLite layer are untouched. A3 identity-to-app-account bridging is the next separate step.
+Tests run: `git diff --check`; ledger-only change.
+Acceptance criteria met: yes, based on owner confirmation that the project, GitHub provider, and Helix redirect registration are configured.
+Deviations: none.
+Open questions / halts hit: A3 remains pending and must include a fresh-account/no-prior-Supabase-session external test.

@@ -3771,3 +3771,23 @@ Failure shape: the callback URL was configured in Supabase **before the Worker t
 Origin decision: use a committed Cloudflare Worker plus Workers KV. The Worker will read the current Quick Tunnel origin from KV on every request, and a small version-controlled update command will replace that value after each `cloudflared` restart. No hardcoded rotating origin is acceptable. Re-verification must restart the tunnel, update KV, then make a real external request through `helix-codex.hatemshalaby2025.workers.dev` and capture the actual response.
 
 Named-tunnel option rejected for now: current Cloudflare documentation requires a named tunnel's DNS hostname to live in a Cloudflare zone controlled by the account; the existing `workers.dev` hostname is a Worker route, not that owned zone. Acquiring a zone would add a separate domain dependency. A future named tunnel remains possible if a zone is obtained.
+
+### 20.17 A2 Worker front door — RE-VERIFIED
+
+The committed Worker front door is `helix-codex`, deployed at
+`https://helix-codex.hatemshalaby2025.workers.dev`, with KV namespace
+`4ca6dd96e86749698983f998dbadbddf`. Commit `e7ca9d1` contains the Worker source,
+Wrangler binding, remote KV updater, and bundled tunnel launcher; generated
+Wrangler state is ignored and not committed.
+
+Verification sequence: the launcher started the app on `127.0.0.1:8100`, created a
+fresh Quick Tunnel at `https://deeper-benchmark-admit-plaza.trycloudflare.com`,
+updated the deployed remote KV value automatically, and held both processes open.
+An external request through the Worker returned `200 {"status":"ok","app":"helix-codex"}`.
+The external callback probe returned the Helix origin's `404`, proving the Worker
+forwarded the request instead of serving the former placeholder. The prior
+unregistered-origin probe returned the Worker-designed HTTP 503.
+
+A2 is re-verified as the auth front-door/proxy layer. A3 remains separate: it must
+implement the Supabase identity bridge and pass the fresh-account/no-prior-session
+external sign-in test before Phase A can be called complete.

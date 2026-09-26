@@ -9,14 +9,20 @@ page, so a caller cannot distinguish a bad domain from a bad password.
 """
 from __future__ import annotations
 
+import hashlib
 import secrets
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from helix_codex_app.db import close, connect
 from helix_codex_app.errors import AuthError
 from helix_codex_app.modules.identity.service import LoginService
+from helix_codex_app.modules.identity.supabase import (
+    SupabaseAuthError,
+    authorize_url,
+    exchange_code,
+)
 from helix_codex_app.security.accounts import AccountRepository, ensure_demo_account
 from helix_codex_app.security.guard import current_account, require_csrf
 from helix_codex_app.security.passwords import hash_password
@@ -48,6 +54,57 @@ def demo_entry(request: Request) -> RedirectResponse:
         close(conn)
     response = RedirectResponse("/app/ops", status_code=303)
     set_session_cookie(response, token, settings)
+    return response
+
+@identity_router.get("/supabase/login", response_model=None)
+def supabase_login(request: Request) -> RedirectResponse | JSONResponse:
+    """Start the GitHub OAuth PKCE flow through Supabase Auth."""
+    settings = request.app.state.settings
+    if not settings.supabase_url or not settings.supabase_anon_key or not settings.supabase_redirect_uri:
+        return JSONResponse({"error": "supabase_auth_not_configured"}, status_code=503)
+    state = secrets.token_urlsafe(32)
+    verifier = secrets.token_urlsafe(48)
+    challenge = hashlib.sha256(verifier.encode()).digest()
+    import base64
+    encoded = base64.urlsafe_b64encode(challenge).rstrip(b"=").decode()
+    redirect_uri = f"{settings.supabase_redirect_uri}?{urlencode({'state': state})}"
+    response = RedirectResponse(
+        authorize_url(settings.supabase_url, redirect_uri, state=state, challenge=encoded),
+        status_code=303,
+    )
+    response.set_cookie("supabase_oauth_state", state, secure=settings.cookie_secure, httponly=True, samesite="lax")
+    response.set_cookie("supabase_oauth_verifier", verifier, secure=settings.cookie_secure, httponly=True, samesite="lax")
+    return response
+
+
+@identity_router.get("/supabase/callback", response_model=None)
+async def supabase_callback(request: Request) -> RedirectResponse | HTMLResponse:
+    """Verify the Supabase user and bridge it to the scoped demo session."""
+    query = request.query_params
+    state = request.cookies.get("supabase_oauth_state")
+    verifier = request.cookies.get("supabase_oauth_verifier")
+    settings = request.app.state.settings
+    if query.get("error") or not state or state != query.get("state") or not verifier:
+        return HTMLResponse("Sign-in could not be verified.", status_code=400)
+    try:
+        user = await exchange_code(settings.supabase_url or "", settings.supabase_anon_key or "", query.get("code", ""), verifier)
+    except SupabaseAuthError as exc:
+        print({"event_type": "supabase_auth_error", "status": exc.status, "detail": exc.detail}, flush=True)
+        return HTMLResponse("Sign-in could not be verified.", status_code=401)
+    conn = connect(db_path=settings.db_path)
+    try:
+        repo = AccountRepository(conn)
+        email = str(user.get("email"))
+        account = ensure_demo_account(repo, password_hash=hash_password(secrets.token_urlsafe(32)), display_name=email)
+        if account.email != email:
+            account = repo.update_account(account.account_id, email=email, display_name=email)
+        token, _session = SessionStore(conn, settings).issue_session(account, ip=_client_ip(request), user_agent=request.headers.get("user-agent"))
+    finally:
+        close(conn)
+    response = RedirectResponse("/app/ops", status_code=303)
+    set_session_cookie(response, token, settings)
+    response.delete_cookie("supabase_oauth_state")
+    response.delete_cookie("supabase_oauth_verifier")
     return response
 
 @identity_router.get("/login", response_model=None)

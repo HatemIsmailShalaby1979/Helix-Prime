@@ -30,6 +30,9 @@ class AppSettings(BaseSettings):
     session_absolute_days: int = 30
     cookie_secure: bool = True
     cors_origins: list[str] = Field(default_factory=list)
+    supabase_url: str | None = None
+    supabase_anon_key: str | None = None
+    supabase_redirect_uri: str | None = None
 
     def require_safe_defaults(self) -> None:
         if not _is_loopback(self.host):

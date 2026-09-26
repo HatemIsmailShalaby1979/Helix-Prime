@@ -3757,3 +3757,9 @@ Tests run: `git diff --check`; ledger-only change.
 Acceptance criteria met: yes, based on owner confirmation that the project, GitHub provider, and Helix redirect registration are configured.
 Deviations: none.
 Open questions / halts hit: A3 remains pending and must include a fresh-account/no-prior-Supabase-session external test.
+
+### 20.15 A2 verification correction — HALTED
+
+The prior A2 provisioning report was not sufficient evidence of a working public auth front door. Live verification of `https://helix-codex.hatemshalaby2025.workers.dev/app/healthz` and `/app/auth/supabase/callback?code=test` returned the same static Cloudflare Worker placeholder: “Your app is live! Replace this placeholder with your Helix Codex application code.” The Worker is not forwarding requests to `helix_codex_app`, its origin is not dynamically configured, and no Worker source or Wrangler configuration exists under `deploy/` or elsewhere in the repository.
+
+A2 is therefore **not verified** and A3 must not start. The earlier A2 COMPLETE label is superseded by this correction. A committed Worker proxy, an explicit origin update mechanism, and a real proxied health/callback proof are required before the Supabase flow can be treated as live.

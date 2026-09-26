@@ -1311,6 +1311,8 @@ App-specific rules:
 
 ### P8 — Phase B: the governed public WFM demo (status: P8.1 + P8.2 + P8.3 COMPLETE)
 
+> **Correction recorded 2026-09-26:** the earlier P8.2 DONE claim was wrong. The recorded commit `1c29fd4` never contained `/app/auth/demo`; it only changed the ops implementation. The missing passwordless entry point was added in `7724bf9` and verified against a genuinely empty database by a real HTTP-client test before the hosted B7 run was repeated.
+
 > **What Phase B is.** A demonstrable public-facing WFM demo that runs the *real* governed
 > engine path end to end, under a fixed least-privilege demo identity, without weakening any
 > core control. Phase B stops before the Phase A auth work. Nothing in P8 may edit

@@ -3721,6 +3721,7 @@ not recorded. The evidence is tied to the current Quick Tunnel session: its
 `trycloudflare.com` hostname rotates when `cloudflared` restarts and is not a
 durable public URL. Phase B B1–B7 is complete; durable-hostname acquisition is a
 separate non-blocking follow-up.
+**Correction recorded 2026-09-26:** the first B7 run used the standard login form with a manually provisioned account and did **not** prove the intended passwordless demo flow. The earlier B3/P8.2 DONE claim was wrong: the recorded B3 commit `1c29fd4` contains no `/app/auth/demo` route. Commit `7724bf9` now adds `GET /app/auth/demo`, lazily creates the fixed demo account on a genuinely empty database, issues the normal session cookie, and redirects to `/app/ops`. Its cold-database HTTP test passed in the app test suite (`42 passed`). The authoritative B7 run was repeated through `https://letters-disclosure-success-phases.trycloudflare.com` without a password: entry `303`, demo page `200`, WFM POST `201`, hosted `correlation_id=2d00adea8ae04c16bfbbd5f86077a9c0`, workflow `wf_cb1fec8524eb`, state `closed`, `executed=true`, `succeeded=true`. This URL is a rotating Quick Tunnel hostname, so the evidence is tied to that session.
 ### 20.12 B6 ledger stamp — COMPLETE
 
 **Recorded:** 2026-09-26. Follow-up stamp for B6 work commit `040d6e2`

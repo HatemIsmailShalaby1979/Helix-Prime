@@ -3721,3 +3721,10 @@ not recorded. The evidence is tied to the current Quick Tunnel session: its
 `trycloudflare.com` hostname rotates when `cloudflared` restarts and is not a
 durable public URL. Phase B B1–B7 is complete; durable-hostname acquisition is a
 separate non-blocking follow-up.
+### 20.12 B6 ledger stamp — COMPLETE
+
+**Recorded:** 2026-09-26. Follow-up stamp for B6 work commit `040d6e2`
+(`chore(app): deploy through cloudflare quick tunnel`). That work commit did
+not contain its own SHA in the ledger. B6 is now explicitly pinned after the
+fact; the B6 entry records the loopback bind, public health check, temporary
+Quick Tunnel limitation, deployment artifacts, and `.gitignore` resolution.

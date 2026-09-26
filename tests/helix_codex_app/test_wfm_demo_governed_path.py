@@ -265,7 +265,8 @@ def test_an_out_of_range_input_is_refused_at_the_edge(client, ctx, field, value)
     error = response.json()["error"]
     assert field in error
     if field == "service_level_target" and value in (0, 1):
-        assert "must be greater than 0.0 and less than 1.0" in error
+        low, high = engine_bridge.WFM_DEMO_NUMERIC_RANGES[field]
+        assert f"must be greater than {low} and less than {high}" in error
         assert repr(value) in error
 
 

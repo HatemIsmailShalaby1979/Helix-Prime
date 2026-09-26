@@ -465,6 +465,61 @@ class AccountRepository:
         return None
 
 
+# The public walkthrough identity. One fixed synthetic domain, declared once
+# here so the account that receives a session and the scope the policy bridge
+# tests cannot drift apart. The credential is deliberately NOT declared: the
+# caller supplies a hash, so no fixed secret can end up in the repository.
+DEMO_DOMAIN_NAME = "demo.helix.local"
+DEMO_TENANT_ID = "helix-demo"
+DEMO_CLIENT_ID = "helix-demo"
+DEMO_USERNAME = "demo"
+DEMO_ROLE_ID = "demo"
+
+
+class DemoScopeConflict(ValueError):
+    """The demo name is taken by a domain or account of the wrong scope."""
+
+
+def ensure_demo_account(
+    repo: AccountRepository,
+    *,
+    password_hash: str,
+    display_name: str = "Demo viewer",
+) -> Account:
+    """Create the demo domain and its single demo account, idempotently.
+
+    Re-running is safe: an existing domain or account is reused rather than
+    duplicated, so this may sit on a deployment path without churning accounts.
+    Reuse is only allowed when what is already there is the thing we asked for.
+    A name already held by a different tenant, a different client, or a
+    different role raises DemoScopeConflict instead of quietly adopting it,
+    because adopting it would hand the walkthrough's engine authority to a scope
+    the policy bridge does not recognise as the demo.
+    """
+    domain = repo.get_domain_by_name(DEMO_DOMAIN_NAME)
+    if domain is None:
+        domain = repo.create_domain(DEMO_DOMAIN_NAME, DEMO_TENANT_ID, client_id=DEMO_CLIENT_ID)
+    elif (domain.tenant_id, domain.client_id) != (DEMO_TENANT_ID, DEMO_CLIENT_ID):
+        raise DemoScopeConflict(
+            f"domain {DEMO_DOMAIN_NAME!r} already exists outside the demo scope"
+        )
+    existing = repo.get_account_by_login(DEMO_DOMAIN_NAME, DEMO_USERNAME)
+    if existing is not None:
+        if existing.role_id != DEMO_ROLE_ID:
+            raise DemoScopeConflict(
+                f"account {DEMO_USERNAME!r} already exists in the demo domain "
+                "with a different role"
+            )
+        return existing
+    return repo.create_account(
+        domain.domain_id,
+        DEMO_USERNAME,
+        password_hash=password_hash,
+        display_name=display_name,
+        role_id=DEMO_ROLE_ID,
+    )
+
+
 def _domain_from_row(row: sqlite3.Row) -> Domain:
     return Domain(
         domain_id=row["domain_id"],

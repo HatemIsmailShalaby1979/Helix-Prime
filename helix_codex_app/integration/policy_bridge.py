@@ -12,7 +12,12 @@ from __future__ import annotations
 
 import security.policy as _policy
 from helix_codex_app.errors import PermissionDenied
-from helix_codex_app.security.accounts import Account
+from helix_codex_app.security.accounts import (
+    DEMO_CLIENT_ID,
+    DEMO_ROLE_ID,
+    DEMO_TENANT_ID,
+    Account,
+)
 from helix_codex_app.security.permissions import PRIVILEGED_CATALOG_ROLE_IDS
 from security.identity import Identity
 
@@ -43,6 +48,28 @@ APP_ROLE_ENGINE_CATALOG_ROLE: dict[str, str] = {
     "manager": "ops_gm",
 }
 
+# The public walkthrough. Its scope is imported from the account layer, which
+# declares it once, so the scope that grants the voice and the scope the walkthrough
+# account actually resolves to cannot drift apart. "demo" is deliberately NOT a
+# key of APP_ROLE_ENGINE_CATALOG_ROLE: that table grants unconditionally, so an
+# entry there would hand ops_gm authority to a demo-role account in ANY tenant.
+# This voice is granted on an exact tenant+client match, and to nobody else.
+DEMO_ENGINE_ROLE: str = "ops_gm"
+
+
+def demo_voice_allowed(account: Account) -> bool:
+    """True only for a demo account inside the one fixed synthetic tenant.
+
+    Both halves must match. A demo-role account in any other tenant, or in the
+    demo tenant under a different client, answers False and is refused before
+    the engine is consulted.
+    """
+    return (
+        account.role_id == DEMO_ROLE_ID
+        and account.tenant_id == DEMO_TENANT_ID
+        and account.client_id == DEMO_CLIENT_ID
+    )
+
 
 def to_engine_identity(account: Account) -> Identity:
     """The identity an account uses when it calls a governed engine.
@@ -55,6 +82,8 @@ def to_engine_identity(account: Account) -> Identity:
     """
     if account.role_id in PRIVILEGED_CATALOG_ROLE_IDS:
         role_id: str | None = account.role_id
+    elif account.role_id == DEMO_ROLE_ID:
+        role_id = DEMO_ENGINE_ROLE if demo_voice_allowed(account) else None
     else:
         role_id = APP_ROLE_ENGINE_CATALOG_ROLE.get(account.role_id or "")
     return Identity(

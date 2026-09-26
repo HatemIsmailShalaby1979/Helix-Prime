@@ -33,7 +33,16 @@ PERMISSIONS: tuple[str, ...] = (
     "packs.manage",
 )
 
-APP_ROLE_IDS: tuple[str, ...] = ("owner", "manager", "employee", "contractor", "external")
+# "demo" is the public walkthrough role. It is scoped by the policy bridge to one
+# fixed synthetic tenant, so a demo-role account anywhere else has no engine voice.
+APP_ROLE_IDS: tuple[str, ...] = (
+    "owner",
+    "manager",
+    "employee",
+    "contractor",
+    "external",
+    "demo",
+)
 
 _PERMISSION_KEYS = PERMISSIONS
 
@@ -95,6 +104,21 @@ PERMISSION_MATRIX: dict[str, dict[str, bool | str]] = {
         "memory.propose": False,
         "memory.review": False,
         "ops.view": False,
+        "cockpit.view": False,
+        "admin.users": False,
+        "packs.manage": False,
+    },
+    "demo": {
+        "chat.use": False,
+        "docs.read": False,
+        "docs.write": False,
+        "tasks.use": False,
+        "calendar.use": False,
+        "attendance.punch": False,
+        "notifications.use": False,
+        "memory.propose": False,
+        "memory.review": False,
+        "ops.view": True,
         "cockpit.view": False,
         "admin.users": False,
         "packs.manage": False,

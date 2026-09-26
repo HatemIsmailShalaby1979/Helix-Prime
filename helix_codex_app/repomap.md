@@ -39,9 +39,15 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `AccountRepository`; every account read takes tenant scope from the owning domain, never the
   caller), `limits.py` (role defaults + `check_and_consume`, `LimitExceeded`), `sessions.py`
   (SessionStore: opaque tokens stored as SHA-256 only + a CSRF token; `verify` rejects revoked/
-  expired/idle/locked-account sessions; `set_session_cookie`), `permissions.py` (the app permission
-  catalog mirroring master plan §5.5 —   `PERMISSION_MATRIX` over owner/manager/employee/contractor/
-  external plus a `catalog` column, `permissions_for`, `has_permission`, `capabilities_for`,
+   expired/idle/locked-account sessions; `set_session_cookie`), `accounts.py` also carries the
+   fixed public-demo identity — `DEMO_DOMAIN_NAME`/`DEMO_TENANT_ID`/`DEMO_CLIENT_ID`/`DEMO_USERNAME`/
+   `DEMO_ROLE_ID` and `ensure_demo_account(repo, *, password_hash, ...)`, which is idempotent and
+   fails closed with `DemoScopeConflict` on a same-named foreign domain or a username held by
+   another role; the credential is always caller-supplied, never defaulted),
+   `permissions.py` (the app permission
+   catalog mirroring master plan §5.5 —   `PERMISSION_MATRIX` over owner/manager/employee/contractor/
+   external plus a `catalog` column and the P8.1 `demo` row (`ops.view` only, every other key denies),
+   `permissions_for`, `has_permission`, `capabilities_for`,
   and `PRIVILEGED_CATALOG_ROLE_IDS` read from `organization/role_catalog.py` at import
   time; unknown keys and unknown roles deny; with a connection passed, enabled
   `account_capabilities` rows are unioned in so an admin grant is effective immediately),
@@ -53,7 +59,11 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   `to_identity` maps an account to a `security.identity.Identity` with `role_id` set only for the
   nine catalog roles — every app role maps to `None` and is denied by construction;
   `authorize_engine_action` calls `security.policy.authorize` with the account's own tenant/client
-  and raises `PermissionDenied` on any deny). `sse_bridge.py` (live, P2.2: the app's only window
+  and raises `PermissionDenied` on any deny. P8.1 adds `to_engine_identity` (the one live engine
+  path: `demo` + an exact `helix-demo` tenant/client match maps to `ops_gm`, an out-of-scope demo
+  account maps to `role_id=None`) and `demo_voice_allowed` (that same exact match, raised to a
+  `PermissionDenied`), both feeding `authorize_engine_call`; `demo` is deliberately absent from
+  `APP_ROLE_ENGINE_CATALOG_ROLE`, so the catalog table cannot be widened to admit it). `sse_bridge.py` (live, P2.2: the app's only window
   onto `server.sse.EventBus` — `subscribe`/`unsubscribe`/`publish`/`publish_sync`/
   `subscriber_count` + `encode`, one bus per process). `engine_bridge.py` (live, P4.2: the app's
   first engine read — `wfm_coverage` calls `engines.wfm.adapter.adapt` on the canonical sample

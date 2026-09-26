@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P7.5 COMPLETE — P7 delivered; v1 sign-off recorded at `CONTROLLED_PILOT_READY`** |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). Full-suite re-run at the P7.3 checkpoint: **1377 passed, 0 failed** (35:14) — 740 in `tests/helix_codex_app/`, 637 in the parent suite (18 new evidence/backup/restore tests). Full-suite re-run at the P7.4 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (740 + 18 new packaging tests), 637 in the parent suite. Full-suite re-run at the P7.5 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (2022.55 s), 637 in the parent suite (792.88 s). The first parent run this step came up red on the five release-gate tests because this file's own P7.4 note still quoted a `password` keyword assigned an 8+ char value — a fail-closed secrets-scan false positive; the note was reworded (no code change), the scan re-ran at 0 findings, the five re-ran green 5/5, and the full parent chunk then re-ran green 637/637 (see the P7.5 ledger note). **This sandbox is very slow (app chunk 58 min, parent chunk 16 min), so the two chunks were run and observed separately: 758 passed (app, EXIT=0) + 637 passed (parent: 632 + 5 release-gate tests re-run green after the P7.4 secrets-scan fix, see the P7.4 ledger note).** The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. |
-| Last commit | `54a223a` docs(app): record helix codex app v1 signoff |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, P7.3, P7.4, **P7.5** |
+| Current step | **P8.1 COMPLETE — Phase B (governed public WFM demo) in progress; the demo access identity is landed. Next: P8.2, the governed `Engine.execute` path.** |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). Full-suite re-run at the P7.3 checkpoint: **1377 passed, 0 failed** (35:14) — 740 in `tests/helix_codex_app/`, 637 in the parent suite (18 new evidence/backup/restore tests). Full-suite re-run at the P7.4 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (740 + 18 new packaging tests), 637 in the parent suite. Full-suite re-run at the P7.5 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (2022.55 s), 637 in the parent suite (792.88 s). The first parent run this step came up red on the five release-gate tests because this file's own P7.4 note still quoted a `password` keyword assigned an 8+ char value — a fail-closed secrets-scan false positive; the note was reworded (no code change), the scan re-ran at 0 findings, the five re-ran green 5/5, and the full parent chunk then re-ran green 637/637 (see the P7.5 ledger note). **This sandbox is very slow (app chunk 58 min, parent chunk 16 min), so the two chunks were run and observed separately: 758 passed (app, EXIT=0) + 637 passed (parent: 632 + 5 release-gate tests re-run green after the P7.4 secrets-scan fix, see the P7.4 ledger note).** The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. **P8.1 checkpoint: app chunk 847 passed, 0 failed (195.62 s) — 816 pre-existing + 31 new; parent chunk 952 passed, 1 failed, 4 skipped, 19 deselected (224.42 s).** The single parent failure is `tests/test_production_evidence.py::test_a_signature_from_another_key_is_rejected`, which dies with `FileNotFoundError: [WinError 2]` from `subprocess` because **`openssl` is not on PATH in this sandbox**; it was proven pre-existing by stashing all three P8.1 source files and re-running it at clean HEAD, where it fails identically. It is an environment gap, not a repo or P8.1 defect. |
+| Last commit | `6b7d923` (parent HEAD, pre-dating this step) |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, P7.3, P7.4, P7.5, **P8.1** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1308,6 +1308,88 @@ App-specific rules:
       format`; the tree is now `ruff check` clean + `ruff format --check` clean ("125 files
       already formatted"). The v1 record is deliberately NOT a production approval: an
       unqualified `PRODUCTION` label remains unreachable by the gate by design.
+
+### P8 — Phase B: the governed public WFM demo (status: P8.1 COMPLETE)
+
+> **What Phase B is.** A demonstrable public-facing WFM demo that runs the *real* governed
+> engine path end to end, under a fixed least-privilege demo identity, without weakening any
+> core control. Phase B stops before the Phase A auth work. Nothing in P8 may edit
+> `helix_codex_app/config.py`, weaken `AppSettings.require_safe_defaults()`, add Supabase, or
+> bypass `security/sessions.py`; the demo uses the ordinary enterprise login flow.
+>
+> **Two seams are load-bearing and were traced before any code was written.**
+> 1. The live authorization path is `policy_bridge.authorize_engine_call(...)`, which resolves
+>    the identity through `to_engine_identity(account)` (not `to_identity`) and always targets
+>    the account's own tenant/client. `authorize_engine_action(...)` — the older P1.4 function —
+>    has **no production callers**; it uses `to_identity` and is deliberately left alone. A
+>    demo voice added to `to_identity` would therefore have been dead code that *looked* like
+>    a grant.
+> 2. `demo` is in `PRIVILEGED_CATALOG_ROLE_IDS` only via the nine real catalog ids, so
+>    `to_identity(demo)` correctly still yields `role_id=None` and the app-identity path keeps
+>    denying by construction (P1.4 stays true and its pins are untouched).
+
+- [x] **P8.1** The least-privilege demo identity — **COMPLETE.**
+      `helix_codex_app/security/permissions.py` — `demo` added to `APP_ROLE_IDS` with a
+      `PERMISSION_MATRIX` row holding **`ops.view: True` and nothing else**, so all 12 other
+      permission keys deny. The existing matrix test derives its cases dynamically, so the
+      (role, permission) sweep grew from 65 to 78 pairs with no edit to the test.
+      `helix_codex_app/security/accounts.py` — the fixed identity constants
+      (`DEMO_DOMAIN_NAME="demo.helix.local"`, `DEMO_TENANT_ID`/`DEMO_CLIENT_ID="helix-demo"`,
+      `DEMO_USERNAME="demo"`, `DEMO_ROLE_ID="demo"`) and `ensure_demo_account(repo, *,
+      password_hash, display_name="Demo viewer")`. It is **idempotent**, creates the domain only
+      when absent, and **fails closed** with `DemoScopeConflict` when a domain of that name
+      already exists outside the demo scope, or when the username is already taken by a
+      different role. The caller supplies the credential: the function has **no default** for
+      `password_hash`, so no fixed secret can enter the source tree.
+      `helix_codex_app/integration/policy_bridge.py` — the constants are imported from
+      `accounts.py` (single source; the governance layer does not restate them), while
+      `DEMO_ENGINE_ROLE = "ops_gm"` stays here because it is a *governance* fact, not an
+      identity fact. `demo_voice_allowed(account)` requires the role **and** the exact
+      tenant **and** the exact client, and `to_engine_identity` consults it on a branch that
+      precedes the `APP_ROLE_ENGINE_CATALOG_ROLE` lookup. `demo` was deliberately **not** added
+      to `APP_ROLE_ENGINE_CATALOG_ROLE`, which is tenant-blind and would hand the voice to
+      every demo-role account in every tenant. Out-of-scope demo accounts get `role_id=None`
+      and are refused.
+      Tests: `tests/helix_codex_app/test_demo_role.py` (**31**) — the matrix row, all 13
+      permission keys, that `demo` is not a privileged catalog role, that the voice is absent
+      from the unconditional table, the three scope predicates, the **positive**
+      `authorize_engine_call(capability="wfm_forecast", action="submit", owning_role_id=
+      "ops_gm")` decision plus the two negative ones at the same call shape, that the voice
+      keeps the account's own scope, provisioning/idempotence/both conflict refusals, that a
+      provisioned account really reaches the engine voice, and that `password_hash` has no
+      default.
+      **Two can-fail proofs, both run, and they cover different defects** — which is the point:
+      - *Dropping the tenant/client check* from `demo_voice_allowed` fails **6 tests**,
+        including both behavioural `authorize_engine_call` refusals. This is the load-bearing
+        scope guard.
+      - *Adding a `demo` row to `APP_ROLE_ENGINE_CATALOG_ROLE`* (the naive implementation)
+        fails only the structural `test_demo_voice_is_not_granted_through_the_unconditional_table`,
+        because the scoped `elif` branch takes precedence and masks the dict entry. Recorded
+        honestly: the behavioural tests are **not** independently load-bearing for that defect,
+        which is exactly why the structural guard exists as a second line.
+      **Two failures on the first run were bugs in the new test, not the code, and both are
+      worth recording.** (1) The cross-tenant test called `authorize_engine_action` with the
+      wrong signature *and* the wrong seam; it now calls `authorize_engine_call` exactly as
+      `engine_bridge.submit_workflow` does. (2) A loop over `client_id in ("", None)` expected
+      `PermissionDenied`, but a blank client is refused **earlier and more strictly** by
+      `security/identity.py::Identity.__post_init__` with `ValueError`; rather than loosen the
+      assertion, the blank-client case is now its own test documenting that two-layer
+      fail-closed. The fixture also called a non-existent `init_schema`; the real helper is
+      `db._init_schema`.
+      Gate: app chunk **847 passed, 0 failed** (195.62 s). Parent chunk **952 passed, 1 failed,
+      4 skipped, 19 deselected** (224.42 s), the one failure proven pre-existing and
+      environmental (openssl absent from PATH, fails identically at clean HEAD with these
+      changes stashed). `ruff check` and `ruff format --check` clean on all four files — the
+      latter caught a line-join in the new `accounts.py` code that would have failed the
+      repo-wide `ruff format --check .` CI step. `release.security_gate.scan_for_secrets(
+      ['helix_codex_app'])` → **0 findings** (re-checked because the P7.4/P7.5 lesson was this
+      repo's own ledger prose tripping the scan; this entry deliberately describes the
+      credential parameter by name and never quotes an assignment). Read the result as
+      `result["count"]` / `result["findings"]`: the function returns a **mapping**, so
+      `len(result)` counts its two keys and will read as a false "2 findings".
+      **Not done in P8.1, by design:** the demo has no route, no template, and no way to
+      execute a workflow yet — it can reach the engine policy but nothing calls it. That is
+      P8.2, and the app is not demonstrable until it lands.
 
 ## Git protocol
 

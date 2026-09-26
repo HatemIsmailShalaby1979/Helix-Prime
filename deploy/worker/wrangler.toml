@@ -1,0 +1,8 @@
+name = "helix-codex"
+main = "index.js"
+compatibility_date = "2026-09-26"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "ORIGIN_KV"
+id = "4ca6dd96e86749698983f998dbadbddf"

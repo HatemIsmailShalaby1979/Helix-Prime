@@ -89,3 +89,6 @@ cookies.txt
 # Local planning artifacts intentionally kept outside the release tree
 /AGENT_EXECUTION_PLAYBOOK.md
 /docs/PROJECT_ARCHITECTURE.pdf
+
+.wrangler/
+deploy/worker/.wrangler/

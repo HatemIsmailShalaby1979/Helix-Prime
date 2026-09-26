@@ -3713,8 +3713,7 @@ explicitly ignored in `.gitignore`; they were not added to the release tree.
 **Recorded:** 2026-09-26. Through the current Cloudflare Quick Tunnel session at
 `https://websites-dresses-jim-lucky.trycloudflare.com`, the ordinary login flow
 returned `303`, the authenticated demo screen returned `200`, and the real WFM
-POST returned `201`. Hosted evidence: `correlation_id=
- f56436b5ae81479b9f238709e0b28584`, `workflow_id=wf_88c0fce9e43a`,
+POST returned `201`. Hosted evidence: `correlation_id=f56436b5ae81479b9f238709e0b28584`, `workflow_id=wf_88c0fce9e43a`,
 `state=closed`, `executed=true`, `succeeded=true`. The request was made from
 outside the loopback app through the public HTTPS URL; this is not a local test
 identifier. The temporary demo credential was generated for this run and was

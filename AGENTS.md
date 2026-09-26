@@ -3708,3 +3708,17 @@ uptime guarantee. B7 evidence must identify the current Quick Tunnel session.
 Repeatable launcher and limitation record: `deploy/quick-tunnel.ps1` and
 `deploy/README.md`. The two pre-existing local planning artifacts are now
 explicitly ignored in `.gitignore`; they were not added to the release tree.
+### 20.11 B7 hosted evidence — COMPLETE; Phase B COMPLETE
+
+**Recorded:** 2026-09-26. Through the current Cloudflare Quick Tunnel session at
+`https://websites-dresses-jim-lucky.trycloudflare.com`, the ordinary login flow
+returned `303`, the authenticated demo screen returned `200`, and the real WFM
+POST returned `201`. Hosted evidence: `correlation_id=
+ f56436b5ae81479b9f238709e0b28584`, `workflow_id=wf_88c0fce9e43a`,
+`state=closed`, `executed=true`, `succeeded=true`. The request was made from
+outside the loopback app through the public HTTPS URL; this is not a local test
+identifier. The temporary demo credential was generated for this run and was
+not recorded. The evidence is tied to the current Quick Tunnel session: its
+`trycloudflare.com` hostname rotates when `cloudflared` restarts and is not a
+durable public URL. Phase B B1–B7 is complete; durable-hostname acquisition is a
+separate non-blocking follow-up.

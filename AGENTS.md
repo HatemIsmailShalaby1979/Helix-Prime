@@ -3763,3 +3763,11 @@ Open questions / halts hit: A3 remains pending and must include a fresh-account/
 The prior A2 provisioning report was not sufficient evidence of a working public auth front door. Live verification of `https://helix-codex.hatemshalaby2025.workers.dev/app/healthz` and `/app/auth/supabase/callback?code=test` returned the same static Cloudflare Worker placeholder: “Your app is live! Replace this placeholder with your Helix Codex application code.” The Worker is not forwarding requests to `helix_codex_app`, its origin is not dynamically configured, and no Worker source or Wrangler configuration exists under `deploy/` or elsewhere in the repository.
 
 A2 is therefore **not verified** and A3 must not start. The earlier A2 COMPLETE label is superseded by this correction. A committed Worker proxy, an explicit origin update mechanism, and a real proxied health/callback proof are required before the Supabase flow can be treated as live.
+
+### 20.16 Worker origin decision — KV forwarder selected
+
+Failure shape: the callback URL was configured in Supabase **before the Worker that should serve it was built**. The hostname was registered as a destination before the destination existed; it was not merely a Worker with additional configuration missing.
+
+Origin decision: use a committed Cloudflare Worker plus Workers KV. The Worker will read the current Quick Tunnel origin from KV on every request, and a small version-controlled update command will replace that value after each `cloudflared` restart. No hardcoded rotating origin is acceptable. Re-verification must restart the tunnel, update KV, then make a real external request through `helix-codex.hatemshalaby2025.workers.dev` and capture the actual response.
+
+Named-tunnel option rejected for now: current Cloudflare documentation requires a named tunnel's DNS hostname to live in a Cloudflare zone controlled by the account; the existing `workers.dev` hostname is a Worker route, not that owned zone. Acquiring a zone would add a separate domain dependency. A future named tunnel remains possible if a zone is obtained.

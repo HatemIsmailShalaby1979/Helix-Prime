@@ -4130,3 +4130,49 @@ One qualification, so the label is not read wider than the evidence: the identit
 is fresh, the database row is the fixed demo account by design (A3.16). If "fresh
 account" is intended to mean a second, newly created row, that specific form was
 not exercised and should be named as its own step.
+
+### 20.21 Post-A3 teardown — COMPLETE, with one Worker finding
+
+**Recorded:** 2026-09-27. The public demo was taken down rather than left running:
+a real, Supabase-connected, working sign-in reachable on a public URL with nobody
+watching it is a standing exposure between sessions.
+
+**Verified off, not assumed off:**
+
+| Surface | State | Evidence |
+|---|---|---|
+| uvicorn on `127.0.0.1:8100` | down | `curl` → connection refused; nothing listening on 8100 |
+| `cloudflared` Quick Tunnel | down | process gone from `tasklist`; the hostname answers 530 |
+| Workers KV `HELIX_ORIGIN` | deleted | `wrangler kv key list` → `[]` |
+| public URL | fails closed | `503 {"error":"origin_unavailable","message":"Demo temporarily offline: origin not registered."}` |
+
+#### A3.18 Finding — the Worker passes through Cloudflare's 530
+
+`deploy/worker/README.md` claimed that missing, malformed, **or unreachable** origins
+return a typed HTTP 503 instead of a Cloudflare generic upstream error. Measured, the
+"unreachable" third is false.
+
+With `cloudflared` stopped and the KV key still present, `/app/healthz` through the
+Worker answered **530** with Cloudflare's own "Cloudflare Tunnel error" page for the
+dead `trycloudflare.com` hostname. The reason is structural: `fetch()` to a dead
+tunnel host returns a *valid* Response carrying Cloudflare's error page, so the
+Worker's `try/catch` never fires and the page is passed through unchanged. Only a
+missing or malformed origin — and a fetch that genuinely throws — reaches the typed
+503.
+
+The README is corrected to state this. The Worker code is **not** changed: treating a
+5xx from the origin as an offline signal is a behaviour decision, not a doc fix, and
+it was not in scope here. Recorded as an open option.
+
+Operationally: **a 530 through `helix-codex.hatemshalaby2025.workers.dev` means
+"origin registered, tunnel dead", not a Worker fault** — which is the ordinary state
+after any `cloudflared` restart, and it is not self-healing.
+
+#### A3.19 Still owner-only
+
+Whether the old exact-match redirect entry survives alongside `**` is visible only in
+the Supabase dashboard, and no dashboard or Management API credential exists in this
+environment (and no Supabase connector exists in the catalogue). It is unobservable
+from outside: `/auth/v1/authorize` returns 302 for every `redirect_to`, including
+`https://evil.example.com`, and the observed success in §20.20 is consistent with
+either entry set. The owner checks it; the agent cannot.

@@ -3730,3 +3730,15 @@ not contain its own SHA in the ledger. B6 is now explicitly pinned after the
 fact; the B6 entry records the loopback bind, public health check, temporary
 Quick Tunnel limitation, deployment artifacts, and `.gitignore` resolution.
 **Known structural risk:** AGENTS.md (B1–B7) and helix_codex_app/agents.md (P8.1–P8.3) overlap as separate status surfaces. They were corrected together here, but should eventually designate one ledger as authoritative rather than restating the same completion claims.
+
+### 20.13 Phase A A1 — Supabase auth-only scope check — COMPLETE
+
+Step: A1
+Changed files: `AGENTS.md` only
+Scope boundary: Supabase is for authentication only. No application data tables move to Supabase. The existing `db.py`/SQLite layer is untouched. A2 provisioning is not started.
+Tests run: `rg -n -i "supabase|postgres|asyncpg|psycopg2"` over the active repository surfaces; no implementation or dependency was added. `git diff --stat` confirms this report-only change.
+Acceptance criteria met: yes — the auth-only boundary is recorded before any A2 work, and the Phase A execution rule is added: A3 must prove a real external email signs in from a fresh account with no prior Supabase session and lands at `/app/ops` with the demo role.
+Deviations: none.
+Open questions / halts hit: A2 and later are intentionally pending; no provisioning or schema work may begin until A1 is accepted.
+
+Phase A execution note: the A3 cold-state requirement is now mandatory because the B3 correction showed that a completion claim must be proven from the stranger's first-touch state, not from an already-initialized identity.

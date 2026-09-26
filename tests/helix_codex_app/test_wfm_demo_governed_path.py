@@ -231,7 +231,8 @@ def test_the_stored_payload_carries_no_client_owned_governance_field(client, ctx
 def test_the_caller_cannot_choose_a_governance_field(client, ctx, field):
     response = _run(client, ctx, ctx.demo, {**GOOD, field: "live"})
     assert response.status_code == 400, response.text
-    assert field in response.json()["error"]
+    error = response.json()["error"]
+    assert field in error
 
 
 def test_an_unrecognised_field_is_refused_rather_than_ignored(client, ctx):
@@ -261,7 +262,11 @@ def test_an_unrecognised_field_is_refused_rather_than_ignored(client, ctx):
 def test_an_out_of_range_input_is_refused_at_the_edge(client, ctx, field, value):
     response = _run(client, ctx, ctx.demo, {**GOOD, field: value})
     assert response.status_code == 400, response.text
-    assert field in response.json()["error"]
+    error = response.json()["error"]
+    assert field in error
+    if field == "service_level_target" and value in (0, 1):
+        assert "must be greater than 0.0 and less than 1.0" in error
+        assert repr(value) in error
 
 
 @pytest.mark.parametrize("field", sorted(GOOD))
@@ -269,7 +274,8 @@ def test_a_missing_required_input_is_refused(client, ctx, field):
     body = {key: value for key, value in GOOD.items() if key != field}
     response = _run(client, ctx, ctx.demo, body)
     assert response.status_code == 400, response.text
-    assert field in response.json()["error"]
+    error = response.json()["error"]
+    assert field in error
 
 
 def test_average_calls_per_period_defaults_and_can_be_set(client, ctx):

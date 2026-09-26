@@ -3677,3 +3677,13 @@ Stated because the absence is part of the record.
 
 Full detail: `E:\_helix_docs_2026-09-25\CHANGE_RECORD_2026-09-25.md` and
 `SECURITY_AUDIT_2026-09-25.md`.
+
+### 20.8 Public WFM range-error coverage — COMPLETE
+
+**Recorded:** 2026-09-26. Strengthened the existing public-endpoint test
+`tests/helix_codex_app/test_wfm_demo_governed_path.py::test_an_out_of_range_input_is_refused_at_the_edge`.
+It now asserts HTTP 400 plus the complete exclusive-bound message for both
+`service_level_target=0` and `service_level_target=1`, including the rejected
+value. Ruff is clean and the WFM screen/governed-path slice is green: 68 passed.
+No held-workflow test was added because the public demo supplies fixed governance
+defaults and cannot reach that branch through its payload whitelist.

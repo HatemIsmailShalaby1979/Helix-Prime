@@ -7,7 +7,24 @@ import httpx
 
 
 class SupabaseAuthError(RuntimeError):
-    """Supabase rejected or could not complete the auth exchange."""
+    """Supabase rejected or could not complete the auth exchange.
+
+    The HTTP status and a short, non-secret reason travel on the exception, so
+    the callback route can log both without re-deriving them and a Supabase
+    rejection stays distinguishable from an unrelated failure. Constructing
+    this class must never raise: it is raised on a path that has already failed.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        status: int | None = None,
+        detail: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.status = status
+        self.detail = detail
 
 
 def authorize_url(base_url: str, redirect_uri: str, *, state: str, challenge: str) -> str:

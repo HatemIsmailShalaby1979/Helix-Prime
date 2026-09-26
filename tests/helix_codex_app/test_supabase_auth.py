@@ -10,6 +10,7 @@ from helix_codex_app import db
 from helix_codex_app.app import create_app
 from helix_codex_app.config import AppSettings
 from helix_codex_app.modules.identity import router
+from helix_codex_app.modules.identity.supabase import SupabaseAuthError
 from helix_codex_app.security.accounts import DEMO_ROLE_ID
 
 
@@ -59,3 +60,45 @@ def test_supabase_callback_bridges_a_fresh_identity_to_demo_session(monkeypatch,
     finally:
         db.close(conn)
     assert tuple(row) == (DEMO_ROLE_ID, "visitor@example.com")
+
+
+def test_supabase_auth_error_carries_a_status_and_a_detail():
+    error = SupabaseAuthError(
+        "Supabase authorization code exchange failed",
+        status=401,
+        detail="Invalid API key",
+    )
+    assert error.status == 401
+    assert error.detail == "Invalid API key"
+    assert str(error) == "Supabase authorization code exchange failed"
+
+    bare = SupabaseAuthError("Supabase did not return an access token")
+    assert bare.status is None
+    assert bare.detail is None
+
+
+def test_a_supabase_rejection_answers_401_and_never_500(monkeypatch, fresh_client, capsys):
+    client, _settings = fresh_client
+
+    started = client.get("/app/auth/supabase/login")
+    assert started.status_code == 303
+    state = client.cookies["supabase_oauth_state"]
+    client.cookies.set("supabase_oauth_verifier", "fresh-verifier")
+
+    async def rejecting_exchange(*args):
+        raise SupabaseAuthError(
+            "Supabase authorization code exchange failed",
+            status=401,
+            detail="Invalid API key",
+        )
+
+    monkeypatch.setattr(router, "exchange_code", rejecting_exchange)
+    callback = client.get("/app/auth/supabase/callback?code=one-use-code&state=" + state)
+
+    assert callback.status_code == 401
+    assert callback.text == "Sign-in could not be verified."
+
+    logged = capsys.readouterr().out
+    assert "'event_type': 'supabase_auth_error'" in logged
+    assert "'status': 401" in logged
+    assert "'detail': 'Invalid API key'" in logged

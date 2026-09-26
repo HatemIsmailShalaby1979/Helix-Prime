@@ -3872,7 +3872,7 @@ Consequence: **whether the dashboard allowlist accepts the query-string suffix
 cannot be observed from outside.** Only the dashboard, or a completed GitHub
 login, can settle it.
 
-#### A3.5 Newly surfaced defect — NOT fixed in this step
+#### A3.5 Newly surfaced defect — NOT fixed in this step (fixed in §20.19)
 
 `helix_codex_app/modules/identity/supabase.py:43` (and `:52`) raise
 `SupabaseAuthError(msg, status=…, detail=…)`, but the class is
@@ -3927,3 +3927,96 @@ two stdlib modules in one function. No behavioural change.
 
 **Halt note:** the two remaining blockers are the same class as the rest of
 Phase 6 — owner-held authority. No further code change moves them.
+
+### 20.19 A3 follow-up — `SupabaseAuthError` constructor — FIXED
+
+**Recorded:** 2026-09-27. Independent of the two owner-held blockers: this defect
+needed neither a GitHub session nor the anon key.
+
+#### A3.7 Provenance — settled with `git blame`, not inferred
+
+`helix_codex_app/modules/identity/supabase.py` has exactly **one commit in its
+entire history**: `e81f52e` (2026-09-26 23:00:08 +0300). `git blame` attributes
+the class declaration, both keyword-argument raises, and the router's `exc.status`
+/ `exc.detail` reads to that commit and to no other. `git log -S` on
+`class SupabaseAuthError` and on `status=response.status_code` returns the same
+single commit.
+
+Therefore:
+
+- **Not a regression from `b3a3f8b`.** That commit's stat is `AGENTS.md`,
+  `router.py`, `test_supabase_auth.py` — `supabase.py` is not in it. Nothing in
+  the previous step touched the class, the raises, or the handler.
+- **Pre-existing relative to the previous step, but brand new relative to the
+  project.** The entire Supabase surface is one commit old. There is no older
+  error-handling implementation that regressed; there is one that was born broken
+  in `e81f52e` and was never exercised until the hosted run recorded in §20.18.
+
+The precise statement is: **the Supabase error path has never worked and has never
+been tested** — not that something used to work and stopped. Every claim about how
+Supabase failures would surface was untested, because the only test that existed
+exercised the success path.
+
+#### A3.8 Fix
+
+`SupabaseAuthError.__init__(message, *, status=None, detail=None)` stores both and
+passes `message` to `RuntimeError`. Keyword-only and both optional, so the two
+argument-less raises (`supabase.py:63`, `:72`) are unaffected. The callback route
+is unchanged — `exc.status` and `exc.detail` now resolve. The route still answers
+a fixed **401**: the status and detail go to the structured log, never to the page,
+which is the module's stated rule.
+
+#### A3.9 Tests
+
+`tests/helix_codex_app/test_supabase_auth.py`:
+
+- `test_supabase_auth_error_carries_a_status_and_a_detail` — the exception itself,
+  including the bare two-argument-free form.
+- `test_a_supabase_rejection_answers_401_and_never_500` — monkeypatches
+  `exchange_code` to raise `SupabaseAuthError(status=401, detail="Invalid API key")`
+  and asserts the route answers **401** with `Sign-in could not be verified.`, and
+  that the log line carries both the status and the detail.
+
+**Can-fail proof.** Reverting only the class to its `e81f52e` form makes both new
+tests fail with `TypeError: SupabaseAuthError() takes no keyword arguments`;
+restoring the file byte-identically (`sha256 2543427e…8c09`) returns them green.
+
+`ruff check` clean on both files.
+
+#### A3.10 Baseline
+
+The full suite was re-run on the fixed tree rather than the app chunk alone.
+Command: `pytest tests/ -q -m "not smoke"` from the repo root with
+`CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=1000000`.
+
+**Measured: 1,876 passed, 0 failed, 0 skipped, 19 deselected in 50m08s.**
+
+Two notes on that number, both measured rather than assumed:
+
+- The 19 deselected are the quarantined `tests/integration/ui/cockpit/` tier,
+  deselected by its own collection hook — the expected behaviour, not a skip.
+- **The 1,758 baseline quoted in §1.1 is stale.** This run is 1,876, i.e. +118.
+  The two tests added here account for 2 of those; the other 116 arrived with the
+  app-suite and Phase A/B work committed after 2026-09-20. The figure to compare
+  against from now on is 1,874 before this step's two tests.
+
+The previous step ran only `tests/helix_codex_app/` — 917 tests — and that was a
+deliberate time tradeoff (31 minutes for the affected directory against roughly 50
+for the whole suite), **not an oversight**. It was still the wrong call to leave
+unqualified, because the change sat on an error path whose entire failure mode is
+converting a specific error into a generic 500 — exactly the blast radius the full
+suite exists to bound.
+
+#### A3.11 Standing lesson — applies forward, and is not a re-litigation
+
+Three times in this execution chain a step was marked done on evidence that never
+crossed the boundary it claimed to serve: B3's route (recorded done; the commit
+contained no `/app/auth/demo` route at all), the Worker (recorded verified while
+still answering with the Cloudflare placeholder), and the Supabase error path
+(unit tests green, the path never executed). Each was caught only when something
+real hit it — a fresh browser, a tunnel restart, a real third-party error.
+
+**The rule:** code that touches an external boundary — auth, network origin, a
+third-party API — is not DONE on mocked unit tests alone. It needs one
+integration-level check that actually crosses that boundary, with the evidence
+recorded, before the label is applied.

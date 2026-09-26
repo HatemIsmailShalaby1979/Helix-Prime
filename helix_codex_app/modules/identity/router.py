@@ -33,12 +33,22 @@ from helix_codex_app.templating import render
 
 identity_router = APIRouter(prefix="/app/auth")
 
+passwordless_demo_router = APIRouter(prefix="/app/auth")
+
 LOGIN_REDIRECT = "/app/"
 
 
-@identity_router.get("/demo", response_model=None)
+@passwordless_demo_router.get("/demo", response_model=None)
 def demo_entry(request: Request) -> RedirectResponse:
-    """Create the scoped demo identity on first use and issue a session."""
+    """Create the scoped demo identity on first use and issue a session.
+
+    A development and test fixture, not a public entry point: it mints a session
+    for the shared demo identity with no password and no identity-provider round
+    trip. `create_app` mounts this router only when
+    `settings.enable_passwordless_demo` is true, so a deployed instance has no
+    such route at all rather than a refused one. GitHub sign-in through Supabase
+    is the one public flow.
+    """
     settings = request.app.state.settings
     conn = connect(db_path=settings.db_path)
     try:

@@ -33,6 +33,7 @@ class AppSettings(BaseSettings):
     supabase_url: str | None = None
     supabase_anon_key: str | None = None
     supabase_redirect_uri: str | None = None
+    enable_passwordless_demo: bool = False
 
     def require_safe_defaults(self) -> None:
         if not _is_loopback(self.host):

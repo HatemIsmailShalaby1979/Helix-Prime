@@ -4176,3 +4176,78 @@ environment (and no Supabase connector exists in the catalogue). It is unobserva
 from outside: `/auth/v1/authorize` returns 302 for every `redirect_to`, including
 `https://evil.example.com`, and the observed success in §20.20 is consistent with
 either entry set. The owner checks it; the agent cannot.
+
+### 20.22 Phase A A4 — the passwordless demo route is gated — COMPLETE
+
+**Recorded:** 2026-09-27. Owner's decision: gate the route behind a settings flag,
+default off, true only in test and local-dev settings; keep the cold-database
+regression test running against it so no coverage is lost; the public deployment
+serves only the GitHub OAuth flow, where `/app/auth/demo` returns **404 because it
+is not registered** rather than a silent 200; and `docs/DEMO_ACCESS_FLOW.md` must
+name GitHub sign-in as the one public flow with the passwordless route described
+explicitly as a dev/test fixture.
+
+#### A4.1 What changed
+
+| File | Change |
+|---|---|
+| `helix_codex_app/config.py` | `enable_passwordless_demo: bool = False` — env `HELIX_APP_ENABLE_PASSWORDLESS_DEMO` |
+| `helix_codex_app/modules/identity/router.py` | `GET /app/auth/demo` moved off `identity_router` onto its own `passwordless_demo_router`; the handler docstring states the fixture contract |
+| `helix_codex_app/app.py` | `passwordless_demo_router` included only when the flag is true |
+| `tests/helix_codex_app/test_wfm_demo_screen.py` | the bootstrap test sets the flag; a negative twin was added |
+| `docs/DEMO_ACCESS_FLOW.md` | §1 and §1.1 lead with GitHub sign-in; new §1.2 names the fixture; §2's credential paragraph corrected |
+
+The route is **absent** when the flag is off, not refused. `create_app` never mounts
+it, so `/app/auth/demo` is an unmatched path and FastAPI answers 404. That
+distinction is the point: a refused route can be re-enabled by a config slip or a
+stale deployment, an unregistered one cannot be reached at all.
+
+No deployment configuration sets the flag. `deploy/quick-tunnel.ps1` does not
+mention it, so the public launcher runs on the default, which is off.
+
+#### A4.2 Tests
+
+- `test_demo_entry_bootstraps_an_empty_database_without_a_password` — unchanged in
+  substance, now constructs `enable_passwordless_demo=True`. The cold-database
+  coverage is intact.
+- `test_the_passwordless_demo_route_is_absent_unless_it_is_enabled` — asserts the
+  field default is `False` (read from `model_fields`, so a developer's local `.env`
+  cannot mask it), then builds an app with the flag off and asserts **404** and no
+  session cookie, and that `/app/ops` is not reachable with the response's cookies.
+
+**Can-fail proof.** Replacing the conditional include with an unconditional one makes
+the new test fail with `assert 303 == 404`; restoring `app.py` byte-identically
+(`sha256 59b94eb8…dcf1`) returns it green.
+
+`ruff check` clean on all four touched Python files.
+
+#### A4.3 Baseline
+
+`pytest tests/ -q -m "not smoke"` from the repo root,
+`CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD=1000000`:
+
+**Measured: 1,877 passed, 0 failed, 0 skipped, 19 deselected in 46m30s.**
+
+That is exactly one more than the §20.19 run (1,876), which is the one test added
+here — the bootstrap test was modified in place rather than duplicated, so the
+cold-database coverage costs nothing. The 19 deselected remain the quarantined
+`tests/integration/ui/cockpit/` tier.
+
+#### A4.4 The doc was describing a flow that did not match the code
+
+`docs/DEMO_ACCESS_FLOW.md` did not mention `/app/auth/demo` at all. It described a
+visitor "logging in with the **demo** account" whose password "is supplied by the
+operator through the environment". So the *documented* public entry point was the
+password form, the *actual* convenience entry point was an undocumented, unlinked,
+passwordless route, and neither was the Supabase flow that now works. §1.1 leads
+with GitHub sign-in; §2 states that on the public path no shared password is
+involved, because the GitHub identity is bridged onto the scoped demo account.
+
+Two things recorded but **not** changed, since both are beyond A4:
+
+- Nothing in the templates links to `/app/auth/supabase/login` either. The login
+  page offers only the domain/username/password form, so the working public entry
+  point is reachable by URL and not by clicking. A visible GitHub button is a UI
+  change and is left open.
+- The Worker still passes through a 530 when the origin is registered but dead
+  (A3.18). Treating an origin 5xx as an offline signal remains an open option.

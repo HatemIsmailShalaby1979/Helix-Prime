@@ -14,18 +14,24 @@ phase ledger.
 
 ## 1. The one-sentence version
 
-A visitor logs in with the **demo** account, whose role holds exactly one
-permission (`ops.view`), opens the demo screen, submits four numbers, and gets a
-workforce-forecast answer produced by the real governed engine path — recorded,
-auditable, and labelled as simulated.
+A visitor signs in with GitHub through Supabase Auth, lands on a session whose
+account holds the **demo** role — exactly one permission, `ops.view` — opens the
+demo screen, submits four numbers, and gets a workforce-forecast answer produced
+by the real governed engine path: recorded, auditable, and labelled as simulated.
 
 ### 1.1 Getting to it
 
 | | |
 |---|---|
+| Sign in | `GET /app/auth/supabase/login` — **the one public flow**: GitHub OAuth through Supabase Auth, bridged onto the scoped demo account |
 | Screen | `/app/ops/demo` — inside the ordinary `ops.view` boundary, not a separate public route |
 | Submit | `POST /app/api/ops/demo/wfm` — session + CSRF, same endpoint an API caller uses |
 | In the UI | Ops page → "Workforce demo" link, and the Ops rail item |
+
+Supabase does not forward this app's `state` to the callback; it preserves the
+query string already on `redirect_to` and appends its own `code`. The app's `state`
+therefore travels inside `redirect_to` itself, and the callback checks it with
+strict equality against the cookie set at login.
 
 The screen is declared **above** the `/app/ops/{engine_id}` catch-all, because
 FastAPI matches routes in declaration order: a screen registered below it would
@@ -36,6 +42,18 @@ an error is not, so a rejected submission returns a JSON error body and the
 `htmx:responseError` handler in `static/js/shell.js` surfaces it. Returning the
 fragment on a refusal would swap a 400 into the result area and report no
 failure at all.
+
+### 1.2 The passwordless route is a fixture, not an entry point
+
+`GET /app/auth/demo` signs the shared demo identity in with **no password and no
+identity-provider round trip**. It is a **development and test fixture**. It is not
+a public entry point and it is not the flow this document describes.
+
+`create_app` mounts that route only when `HELIX_APP_ENABLE_PASSWORDLESS_DEMO` is
+true, and the setting defaults to **false**. A deployed instance — including the
+Worker-fronted demo — therefore has **no such route**: the path answers `404`
+because it was never registered, not because it was refused. Enable it for local
+development and for the test suite, and nowhere else.
 
 ---
 
@@ -59,11 +77,13 @@ Because the role holds no `ops.manage` or `ops.approve`, a demo account cannot
 create, approve, execute, or delete anything by any route other than the single
 purpose-built demo endpoint documented below.
 
-**Credentials are provisioned, never written down here.** The account is
-created by `ensure_demo_account()` at startup and the password is supplied by
-the operator through the environment. This document deliberately contains no
-credential value, and neither should any deployment document, ticket, or
-screenshot.
+**Credentials are provisioned, never written down here.** The account is created
+by `ensure_demo_account()`. On the public path the visitor's verified GitHub
+identity is bridged onto it and its email is rewritten to the GitHub address, so
+**no shared password is involved at all**. Where a password is used — local
+development and the test suite — it is supplied by the operator through the
+environment. This document deliberately contains no credential value, and neither
+should any deployment document, ticket, or screenshot.
 
 ---
 

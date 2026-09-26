@@ -515,9 +515,13 @@ def test_the_numbers_are_shown_in_the_units_the_engine_returned(client, ctx, mon
 
 
 def test_demo_entry_bootstraps_an_empty_database_without_a_password(ctx):
-    """The first public demo hit creates and signs in the scoped demo identity."""
+    """The demo fixture creates and signs in the scoped demo identity."""
     fresh_db = ctx.tmp_path / "fresh-app.db"
-    settings = AppSettings(db_path=str(fresh_db), cookie_secure=False)
+    settings = AppSettings(
+        db_path=str(fresh_db),
+        cookie_secure=False,
+        enable_passwordless_demo=True,
+    )
     with TestClient(create_app(settings), follow_redirects=False) as fresh_client:
         response = fresh_client.get("/app/auth/demo")
         assert response.status_code == 303
@@ -539,3 +543,22 @@ def test_demo_entry_bootstraps_an_empty_database_without_a_password(ctx):
         db.close(conn)
     assert row is not None
     assert tuple(row) == ("demo", "demo", DEMO_TENANT_ID, DEMO_CLIENT_ID)
+
+
+def test_the_passwordless_demo_route_is_absent_unless_it_is_enabled(ctx):
+    """Off by default, and absent rather than refused when off."""
+    assert AppSettings.model_fields["enable_passwordless_demo"].default is False
+
+    fresh_db = ctx.tmp_path / "no-demo-entry.db"
+    settings = AppSettings(
+        db_path=str(fresh_db),
+        cookie_secure=False,
+        enable_passwordless_demo=False,
+    )
+    with TestClient(create_app(settings), follow_redirects=False) as fresh_client:
+        response = fresh_client.get("/app/auth/demo")
+        assert response.status_code == 404
+        assert SESSION_COOKIE not in response.cookies
+
+        landed = fresh_client.get("/app/ops", cookies=response.cookies)
+        assert landed.status_code != 200

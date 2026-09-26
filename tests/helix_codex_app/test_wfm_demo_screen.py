@@ -512,3 +512,30 @@ def test_the_numbers_are_shown_in_the_units_the_engine_returned(client, ctx, mon
     low, high = metrics["confidence_interval"]
     assert _dd(html, "Agent range around that figure") == f"{low:.1f} \u2013 {high:.1f} agents"
     assert "(1.9, 2.1)" not in html
+
+
+def test_demo_entry_bootstraps_an_empty_database_without_a_password(ctx):
+    """The first public demo hit creates and signs in the scoped demo identity."""
+    fresh_db = ctx.tmp_path / "fresh-app.db"
+    settings = AppSettings(db_path=str(fresh_db), cookie_secure=False)
+    with TestClient(create_app(settings), follow_redirects=False) as fresh_client:
+        response = fresh_client.get("/app/auth/demo")
+        assert response.status_code == 303
+        assert response.headers["location"] == "/app/ops"
+        assert response.cookies.get(SESSION_COOKIE)
+        landed = fresh_client.get("/app/ops", cookies=response.cookies)
+        assert landed.status_code == 200
+
+    conn = db.connect(db_path=str(fresh_db))
+    try:
+        row = conn.execute(
+            """
+            SELECT a.username, a.role_id, d.tenant_id, d.client_id
+            FROM accounts a JOIN domains d ON d.domain_id = a.domain_id
+            WHERE a.username = 'demo'
+            """
+        ).fetchone()
+    finally:
+        db.close(conn)
+    assert row is not None
+    assert tuple(row) == ("demo", "demo", DEMO_TENANT_ID, DEMO_CLIENT_ID)

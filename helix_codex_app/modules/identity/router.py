@@ -9,20 +9,46 @@ page, so a caller cannot distinguish a bad domain from a bad password.
 """
 from __future__ import annotations
 
+import secrets
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from helix_codex_app.db import close, connect
 from helix_codex_app.errors import AuthError
 from helix_codex_app.modules.identity.service import LoginService
+from helix_codex_app.security.accounts import AccountRepository, ensure_demo_account
 from helix_codex_app.security.guard import current_account, require_csrf
-from helix_codex_app.security.sessions import SESSION_COOKIE, set_session_cookie
+from helix_codex_app.security.passwords import hash_password
+from helix_codex_app.security.sessions import SESSION_COOKIE, SessionStore, set_session_cookie
 from helix_codex_app.templating import render
 
 identity_router = APIRouter(prefix="/app/auth")
 
 LOGIN_REDIRECT = "/app/"
 
+
+
+@identity_router.get("/demo", response_model=None)
+def demo_entry(request: Request) -> RedirectResponse:
+    """Create the scoped demo identity on first use and issue a session."""
+    settings = request.app.state.settings
+    conn = connect(db_path=settings.db_path)
+    try:
+        account = ensure_demo_account(
+            AccountRepository(conn),
+            password_hash=hash_password(secrets.token_urlsafe(32)),
+        )
+        token, _session = SessionStore(conn, settings).issue_session(
+            account,
+            ip=_client_ip(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    finally:
+        close(conn)
+    response = RedirectResponse("/app/ops", status_code=303)
+    set_session_cookie(response, token, settings)
+    return response
 
 @identity_router.get("/login", response_model=None)
 def login_form(request: Request) -> HTMLResponse | RedirectResponse:

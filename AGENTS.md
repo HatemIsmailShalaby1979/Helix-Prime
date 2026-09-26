@@ -3687,3 +3687,11 @@ It now asserts HTTP 400 plus the complete exclusive-bound message for both
 value. Ruff is clean and the WFM screen/governed-path slice is green: 68 passed.
 No held-workflow test was added because the public demo supplies fixed governance
 defaults and cannot reach that branch through its payload whitelist.
+### 20.9 B-interim source-derived bound assertion — COMPLETE
+
+**Recorded:** 2026-09-26. Follow-up ledger stamp for work commit `14e677f`:
+the endpoint test now derives the expected lower and upper bounds from
+`engine_bridge.WFM_DEMO_NUMERIC_RANGES` instead of duplicating `0.0` and `1.0`.
+Verification: Ruff clean; 12 endpoint boundary cases passed under
+`.venv-py312`. The prior work commit was `b533dec`; this narrow ledger update
+follows the established two-commit pattern.

@@ -1,0 +1,146 @@
+{#- The WFM demo result. Rendered with no `report` as the empty state, and with
+    one after a run, swapped in place by htmx.
+
+    Every number shown here comes out of the execution report. Nothing is
+    recomputed, defaulted or prettified in the template: if the engine did not
+    write a figure, this shows the absence rather than a zero. -#}
+<div id="wfm-demo-result" class="wfm-demo__result">
+  {% if not report %}
+  <div class="empty">
+    <p class="empty__title">No run yet.</p>
+    <p class="empty__body">
+      Fill in the four numbers and run the forecast. You will get the staffing
+      figure the engine calculated, the service level and answer speed behind
+      it, and the id of the governed request that produced all three.
+    </p>
+  </div>
+  {% else %}
+
+  <section class="card">
+    <h2>What the engine returned</h2>
+    <div class="wfm-demo__state">
+      <span class="proposal-card__state proposal-card__state--{{ report.state }}">
+        {{ report.state }}
+      </span>
+      <span class="wfm-demo__run-facts">
+        executed {{ "yes" if report.executed else "no" }} ·
+        succeeded {{ "yes" if report.succeeded else "no" }} ·
+        retries {{ report.retry_count }}
+      </span>
+    </div>
+
+    {% if report.gated %}
+    <div class="callout callout--warn">
+      <span>
+        <strong>The engine was not called.</strong>
+        {{ report.gated_reason }}
+      </span>
+    </div>
+    {% endif %}
+
+    {% if report.error %}
+    <div class="callout callout--danger">
+      <span>
+        <strong>The run failed.</strong>
+        {{ report.error }}
+      </span>
+    </div>
+    {% endif %}
+
+    {% if report.metrics %}
+    <dl class="wfm-demo__metrics">
+      <div class="wfm-demo__metric">
+        <dt>Agents needed</dt>
+        {% if report.metrics.optimal_agents is defined and report.metrics.optimal_agents is not none %}
+        <dd>{{ report.metrics.optimal_agents }}</dd>
+        {% else %}
+        <dd class="wfm-demo__absent">not reported</dd>
+        {% endif %}
+      </div>
+      <div class="wfm-demo__metric">
+        <dt>Probability of waiting</dt>
+        {% if report.metrics.probability_waiting is defined %}
+        <dd>{{ "%.1f"|format(report.metrics.probability_waiting * 100) }}%</dd>
+        {% else %}
+        <dd class="wfm-demo__absent">not reported</dd>
+        {% endif %}
+      </div>
+      <div class="wfm-demo__metric">
+        <dt>Average speed of answer</dt>
+        {% if report.metrics.average_speed_of_answer is defined %}
+        {#- The engine returns ASA in MINUTES (erlang_c.py converts back from
+            hours); a "s" here would misreport every run by 60x. -#}
+        <dd>{{ "%.2f"|format(report.metrics.average_speed_of_answer) }} min</dd>
+        {% else %}
+        <dd class="wfm-demo__absent">not reported</dd>
+        {% endif %}
+      </div>
+      <div class="wfm-demo__metric">
+        <dt>Service level achieved</dt>
+        {% if report.metrics.service_level_achieved is defined %}
+        <dd>{{ "%.1f"|format(report.metrics.service_level_achieved * 100) }}%</dd>
+        {% else %}
+        <dd class="wfm-demo__absent">not reported</dd>
+        {% endif %}
+      </div>
+      <div class="wfm-demo__metric">
+        <dt>Agent range around that figure</dt>
+        {% if report.metrics.confidence_interval is defined %}
+        {#- A tuple, so it is shown as the range it is rather than as a Python
+            repr (Jinja would print "(1.9, 2.1)"). The engine builds it as a flat
+            5% band either side of the calculated optimum, so it is labelled a
+            range and NOT a confidence interval: no sampling error or probability
+            is computed, and naming it "confidence" would overclaim. -#}
+        <dd>{{ "%.1f"|format(report.metrics.confidence_interval[0]) }}
+            – {{ "%.1f"|format(report.metrics.confidence_interval[1]) }} agents</dd>
+        {% else %}
+        <dd class="wfm-demo__absent">not reported</dd>
+        {% endif %}
+      </div>
+    </dl>
+    {% if inputs is defined and inputs.service_level_target is defined %}
+    <p class="wfm-demo__note">
+      This run was given a service-level target of
+      {{ "%.0f"|format(inputs.service_level_target * 100) }}%, an arrival rate of
+      {{ inputs.arrival_rate }} calls per hour, and an average handling time of
+      {{ inputs.average_handling_time }} minutes per call. Handling time is the
+      talk-plus-wrap length of a call, not a speed-of-answer target — the engine
+      is given no waiting-time threshold, so it reports the service level and
+      the average speed of answer it derived above rather than a share answered
+      within some deadline.
+    </p>
+    {% endif %}
+    {% elif not report.gated and not report.error %}
+    {#- Only when nothing else explains the absence. A gated or failed run has
+        already said WHY there are no figures, and repeating it as "the request
+        produced no metrics" would blame the response instead of the gate. -#}
+    <div class="callout callout--warn">
+      <span>
+        <strong>No figures.</strong>
+        The run completed but reported no metrics, so there is nothing to show.
+        The absence is reported rather than filled in with a zero.
+      </span>
+    </div>
+    {% endif %}
+  </section>
+
+  <section class="card wfm-demo__proof">
+    <h2>Proof this really ran</h2>
+    <dl class="wfm-demo__ids">
+      <div><dt>Request</dt><dd><code>{{ report.workflow_id }}</code></dd></div>
+      <div><dt>Correlation</dt><dd><code>{{ report.correlation_id }}</code></dd></div>
+      <div><dt>Tenant</dt><dd><code>{{ report.tenant_id }}</code></dd></div>
+      <div><dt>Client</dt><dd><code>{{ report.client_id }}</code></dd></div>
+      <div><dt>Data mode</dt><dd><code>{{ report.data_mode }}</code></dd></div>
+      <div><dt>Sample run</dt><dd><code>{{ report.is_sample }}</code></dd></div>
+    </dl>
+    {% if report.metrics_digest %}
+    <p class="wfm-demo__note">
+      Metrics digest <code>{{ report.metrics_digest }}</code> — a fingerprint of
+      the exact figures above, so a later reader can tell they were not edited.
+    </p>
+    {% endif %}
+  </section>
+
+  {% endif %}
+</div>

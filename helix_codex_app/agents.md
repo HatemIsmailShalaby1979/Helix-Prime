@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P8.1 + P8.2 COMPLETE — Phase B (governed public WFM demo) has a working governed path end to end: a least-privilege demo identity reaches the real `Engine.submit` → `Engine.execute` lifecycle, and the response reports only what the engine actually wrote. Next: B3–B7 (the public-demo UI, rate limiting, and the remaining surface). Nothing in P8 may edit `config.py`, weaken `require_safe_defaults()`, add Supabase, or bypass `security/sessions.py`.** |
+| Current step | **P8.1 + P8.2 + P8.3 COMPLETE — Phase B (governed public WFM demo) is clickable end to end: a least-privilege demo identity reaches the real `Engine.submit` → `Engine.execute` lifecycle through a permission-gated, CSRF-protected screen, and the result reports only what the engine actually wrote. Next: the remaining non-UI items (rate limiting on the demo endpoint, and an audit-trail reader beyond the correlation id) — those are deliberately **not** numbered P8.4, because they are not screen work and were never a UI phase. Nothing in P8 may edit `config.py`, weaken `require_safe_defaults()`, add Supabase, or bypass `security/sessions.py`.** |
 | Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). Full-suite re-run at the P7.3 checkpoint: **1377 passed, 0 failed** (35:14) — 740 in `tests/helix_codex_app/`, 637 in the parent suite (18 new evidence/backup/restore tests). Full-suite re-run at the P7.4 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (740 + 18 new packaging tests), 637 in the parent suite. Full-suite re-run at the P7.5 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (2022.55 s), 637 in the parent suite (792.88 s). The first parent run this step came up red on the five release-gate tests because this file's own P7.4 note still quoted a `password` keyword assigned an 8+ char value — a fail-closed secrets-scan false positive; the note was reworded (no code change), the scan re-ran at 0 findings, the five re-ran green 5/5, and the full parent chunk then re-ran green 637/637 (see the P7.5 ledger note). **This sandbox is very slow (app chunk 58 min, parent chunk 16 min), so the two chunks were run and observed separately: 758 passed (app, EXIT=0) + 637 passed (parent: 632 + 5 release-gate tests re-run green after the P7.4 secrets-scan fix, see the P7.4 ledger note).** The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. **P8.1 checkpoint: app chunk 847 passed, 0 failed (195.62 s) — 816 pre-existing + 31 new; parent chunk 952 passed, 1 failed, 4 skipped, 19 deselected (224.42 s).** The single parent failure is `tests/test_production_evidence.py::test_a_signature_from_another_key_is_rejected`, which dies with `FileNotFoundError: [WinError 2]` from `subprocess` because **`openssl` is not on PATH in this sandbox**; it was proven pre-existing by stashing all three P8.1 source files and re-running it at clean HEAD, where it fails identically. It is an environment gap, not a repo or P8.1 defect. **P8.2 checkpoint: app chunk 892 passed, 0 failed — 847 pre-existing + 45 new; JUnit cross-checked (`tests=892 failures=0 errors=0 skipped=0`). Parent chunk 957 collected = 952 passed + 1 failed + 4 skipped (19 integration tests deselected) — identical to the P8.1 parent result, so the same single pre-existing openssl failure and no regression. `ruff check` clean on the app and test paths; `release.security_gate.scan_for_secrets([...touched files...])` → 0 findings and `['helix_codex_app']` → 0. **Format, measured rather than assumed:** `ruff format --check .` is **red at HEAD on 7 files that P8.2 does not touch** (`ingest_engine.py`, `supervisor.py`, `telemetry_simulator.py`, `scripts/generate_pdf.py`, 3 × `tests/integration/ui/cockpit/`), so the "format-clean" claims in the §1A and §18.8 parent notes are no longer true and CI's repo-wide format step fails independently of this work. P8.2's own four files are format-clean after binding a local in `engine_bridge.py` (ruff 0.1.15 cannot express a parenthesized right-hand side, so its own suggested fix was the unreadable split-subscript form — see the P8.2 entry). App chunk re-run after that fix: 892 passed, 0 failed in 196.87 s.** |
-| Last commit | `336b1e5` (P8.1). P8.2 is the commit this ledger is landing in: `feat(app): the governed public WFM demo, end to end`. **A commit cannot contain its own SHA**, so resolve it with `git log --oneline -1` rather than reading it here. (This row previously deferred the SHA to "§20.8 of the parent ledger". That section does not exist — the parent ledger ends at §20.7 — so the cross-reference was a dead pointer, and it has been removed rather than repointed. Same class as the §18.8 "rule and a copy of it drifting apart" defect: a reference that cannot be followed is worse than no reference.) |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, P7.3, P7.4, P7.5, **P8.1, P8.2** |
+| Last commit | `336b1e5` (P8.1). P8.2 landed as `feat(app): the governed public WFM demo, end to end`; P8.3 is the commit this ledger is landing in: `feat(app): the clickable WFM demo screen, honest about what it shows`. **A commit cannot contain its own SHA**, so resolve it with `git log --oneline -1` rather than reading it here. (This row previously deferred the SHA to "§20.8 of the parent ledger". That section does not exist — the parent ledger ends at §20.7 — so the cross-reference was a dead pointer, and it has been removed rather than repointed. Same class as the §18.8 "rule and a copy of it drifting apart" defect: a reference that cannot be followed is worse than no reference.) |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, P7.3, P7.4, P7.5, **P8.1, P8.2, P8.3** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1309,7 +1309,7 @@ App-specific rules:
       already formatted"). The v1 record is deliberately NOT a production approval: an
       unqualified `PRODUCTION` label remains unreachable by the gate by design.
 
-### P8 — Phase B: the governed public WFM demo (status: P8.1 + P8.2 COMPLETE)
+### P8 — Phase B: the governed public WFM demo (status: P8.1 + P8.2 + P8.3 COMPLETE)
 
 > **What Phase B is.** A demonstrable public-facing WFM demo that runs the *real* governed
 > engine path end to end, under a fixed least-privilege demo identity, without weakening any
@@ -1494,9 +1494,113 @@ App-specific rules:
       `Start-Process -ArgumentList` **drops the quotes** around a marker expression, so
       `-m "not smoke"` reaches pytest as `-m not smoke` and it reports `file or directory not
       found: smoke`; escape it as `` -m `"not smoke`" `` when launching a background suite.
-      **Still not done (B3–B7):** no template and no UI, so the demo is reachable over HTTP
-      but not yet clickable; no rate limit on the endpoint; no audit-trail reader in the
-      response beyond the correlation id.
+- [x] **P8.3** The clickable screen, honest about what it shows — **COMPLETE.**
+      `modules/ops/router.py` — `GET /app/ops/demo`, **declared above
+      `/ops/{engine_id}`** because FastAPI matches in declaration order, so a
+      screen added below the catch-all is answered as an engine whose id happens
+      to be `demo`. It sits inside the existing router-level `ops.view`
+      boundary, so the demo role and any ops reader reach it and an employee
+      does not. `WFM_DEMO_FORM_FIELDS` is built by zipping `WFM_DEMO_FIELD_HELP`
+      onto **the bridge's own** `WFM_DEMO_NUMERIC_RANGES`, and the import-time
+      check refuses any name that is on one side and not the other — so the form
+      cannot show a field the endpoint would refuse, nor hide one it would
+      accept. Each of the four inputs carries its own unit and hint, because
+      `0.8` is 80% to one reader and 0.8% to another; the form is where that is
+      settled, not the prose above it.
+      `templates/ops_demo.html` + `templates/partials/wfm_demo_result.html` —
+      the result partial is rendered with **no `report`** as the empty state, so
+      there is one template rather than an empty one and a filled one. Every
+      number in it comes out of the execution report: nothing is recomputed,
+      defaulted or prettified in the template, and an absent figure renders
+      `not reported` rather than a zero. The two answer shapes are the same run
+      seen two ways — htmx gets the fragment it swaps in, an API caller gets the
+      JSON report with **201** — and a **refusal stays JSON on both paths**,
+      because the fragment has no error branch and returning it on a refusal
+      would swap a 400 into the result area and report no failure at all.
+      The fragment is handed **the inputs that run was given**, not whatever the
+      form now holds: a user can retype a field after a run, and showing the
+      current value beside an older result would quietly misreport which numbers
+      produced the figures.
+      **Four honesty decisions, each of which is a way this screen could
+      misreport a run rather than a style preference.**
+      1. `closed` is **not** styled as a success. `WorkflowState` is plain string
+         constants and `closed` is reachable from `succeeded`, `compensated`,
+         `cancelled` **and** `dead_letter`, so a green `closed` chip would tell
+         a reader a cancelled run finished cleanly.
+      2. `confidence_interval` is labelled **"Agent range around that figure"**,
+         not a confidence interval. It is a flat ±5% band either side of the
+         optimum: no sampling error and no probability is computed, and
+         `confidence_level=0.95` is unused by the engine. Naming it
+         "confidence" would overclaim a number that is a rounding band.
+      3. The service level is never described as a deadline. The engine is given
+         **no waiting-time threshold**, so the screen carries the correction in
+         full — handling time is "the talk-plus-wrap length of a call, not a
+         speed-of-answer target … rather than a share answered within some
+         deadline". This is the single most likely misreading of a staffing
+         forecast, and a raw `0.8` target or `0.93` service level invites it.
+         **The final review found this correction was carried on the result and
+         missing from the form hint beside the target input** — the line read
+         "answered within the target wait", which is the same misreading, in the
+         one place a visitor reads the target *before* any run has produced a
+         figure. The hint now says "answered immediately" and the deadline test
+         asserts it there as well as on the result. Recorded because the lesson
+         generalises: a rule stated "in the prose above" is only enforced where
+         the assertion is, and the form and the result are two different
+         surfaces that both restate the same claim.
+      4. The `no metrics` branch is gated on **not gated and not error**, so a
+         held or failed run says *why* it has no figures instead of blaming the
+         response for producing none.
+      **One source change outside the new files, and it fixed a real lie.**
+      `_execution_report` computed `succeeded` as `workflow.state in
+      ("succeeded", "closed")`. Given decision 1 above that is wrong in the
+      common case, because this demo's *successful* run also ends `closed` — so
+      the test could not tell a clean finish from a dead-lettered one, and a
+      dead-lettered run with an error beside it was reported as a success. It is
+      now `bool(executed and error is None and metrics)`: a statement about the
+      run's own evidence, with the raw `state` still reported so nothing is
+      hidden. **The first attempt delegated it to `Engine.to_task_result()`, and
+      that was wrong** — `TaskResult.__post_init__` refuses `"failed"` with a
+      null error, so a *gated* workflow raised `ValueError` from inside report
+      construction. Two existing tests caught it. Delegating authority for a
+      display string is the wrong shape anyway: C1's own question ("is this a
+      task result?") is not the screen's question ("did this run produce a
+      result?").
+      **Tests: `tests/helix_codex_app/test_wfm_demo_screen.py` (21, new).**
+      Access is checked on the page **and** the endpoint, because a browser-only
+      gate leaves the URL readable by anyone who learns it. Route order is
+      asserted against `ops_router.routes`, since a misordering is invisible in
+      a template test. Prose assertions go through a whitespace-collapsing
+      helper and each figure is checked **in the `<dd>` it belongs to**, because
+      Jinja preserves the template's own line breaks (a phrase that reads as one
+      line in the source arrives split across three) and because "the right
+      number next to the wrong label" is the failure worth catching. Two tests
+      take the report from the **stream publication of the same request** whose
+      fragment they assert on — two separate runs have two workflow ids, so the
+      looser version only proves some id appears somewhere.
+      **Can-fail proofs, all run against mutated sources with hashes re-verified
+      after each.** The `succeeded` rule: restoring the state-membership version
+      failed both new tests with `assert True is False`. The template: replacing
+      all five `not reported` cells with `0` and deleting the gate copy failed
+      both honesty tests. The `data_mode` spelling: a screen test that asserted
+      the engine's `sample` was itself **wrong**, and the correction is the
+      useful part — the governed record carries `simulated_realistic`, the
+      **connector** spelling, because `sample` is the engine's internal term and
+      no vocabulary declares it as a governed mode. The test now asserts against
+      `contracts.vocabulary` directly, so a regression to the engine's spelling
+      fails rather than reading as valid.
+      Gate: **105 passed** across the four P8.3 files
+      (`test_wfm_demo_screen.py` 21 + `test_wfm_demo_governed_path.py` 47 +
+      `test_demo_role.py` 31 + `test_ops_lifecycle.py` 6) — the governed-path
+      count moved 45 → 47 from the two new `_execution_report` semantics tests.
+      `release/release-manifest.json` and `release/go-no-go.json` SHA-256 hashed
+      before and after, byte-identical (`62da9eaf…`, `707293a2…`).
+      **Still not done, and deliberately not numbered:** no rate limit on the
+      demo endpoint, and no audit-trail reader in the response beyond the
+      correlation id and the metrics digest. These were the tail of the old
+      "B3–B7" label, which was misleading — they are not screen work, so calling
+      them a UI phase was a category error, and **this step does not silently
+      absorb them into a P8.4 that was never planned.** Both are real, both are
+      owner-scoped, and neither is claimed done.
 
 ## Git protocol
 

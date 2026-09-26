@@ -26,6 +26,47 @@ STREAM_KEY_PREFIX = "workflow:"
 # The demo's entire request surface, derived from the bridge's own validation
 # ranges so the two cannot disagree about which fields exist.
 WFM_DEMO_FIELDS = frozenset(engine_bridge.WFM_DEMO_NUMERIC_RANGES)
+# The demo form's labels, defaults and unit explanations. The field ORDER and the
+# set of names come from the bridge's own validation ranges, so a field can never
+# appear on the form that the endpoint would refuse, or hide one it would accept.
+WFM_DEMO_FIELD_HELP: dict[str, dict[str, Any]] = {
+    "arrival_rate": {
+        "label": "Calls per hour",
+        "default": 14.2,
+        "unit": "calls/hour",
+        "hint": "How many calls arrive in an average hour. Must be above zero.",
+    },
+    "average_handling_time": {
+        "label": "Average handling time",
+        "default": 6.0,
+        "unit": "minutes/call",
+        "hint": "How long one call takes, wrap-up included. Must be above zero.",
+    },
+    "service_level_target": {
+        "label": "Service-level target",
+        "default": 0.8,
+        "unit": "fraction",
+        "hint": "The share of callers you want answered immediately. 0.8 means 80%.",
+    },
+    "average_calls_per_period": {
+        "label": "Calls per day (your own history)",
+        "default": engine_bridge.WFM_DEMO_AVERAGE_CALLS_PER_PERIOD,
+        "unit": "calls/day",
+        "hint": "The arrival history the forecast is compared against.",
+    },
+}
+# Built in the engine's order, so the form reads the way the engine validates.
+# A name with no label raises KeyError here at import, and a label with no field
+# raises RuntimeError: the form and the endpoint cannot drift in either direction.
+WFM_DEMO_FORM_FIELDS: list[dict[str, Any]] = [
+    {"name": _name, **WFM_DEMO_FIELD_HELP[_name]} for _name in engine_bridge.WFM_DEMO_NUMERIC_RANGES
+]
+if set(WFM_DEMO_FIELD_HELP) != set(engine_bridge.WFM_DEMO_NUMERIC_RANGES):
+    raise RuntimeError(
+        "WFM_DEMO_FIELD_HELP and the engine's own ranges must name the same fields; "
+        f"labels={sorted(WFM_DEMO_FIELD_HELP)}, "
+        f"fields={sorted(engine_bridge.WFM_DEMO_NUMERIC_RANGES)}"
+    )
 
 ops_router = APIRouter(
     prefix="/app",
@@ -53,6 +94,28 @@ def ops_screen(request: Request) -> HTMLResponse:
         request,
         "ops.html",
         {"active_nav": "ops", "account": account, **overview, "data_mode": "simulated_realistic"},
+    )
+
+
+@ops_router.get("/ops/demo", response_model=None)
+def ops_demo_screen(request: Request) -> HTMLResponse:
+    """The clickable WFM demo: four numbers in, one governed run out.
+
+    Declared before `/ops/{engine_id}` deliberately. FastAPI matches in
+    declaration order, so a screen added below the engine path would be
+    swallowed as an engine whose id is "demo" and answered with an engine-lookup
+    failure rather than this page.
+    """
+    account = _account(request)
+    return render(
+        request,
+        "ops_demo.html",
+        {
+            "active_nav": "ops_demo",
+            "account": account,
+            "fields": WFM_DEMO_FORM_FIELDS,
+            "data_mode": "simulated_realistic",
+        },
     )
 
 
@@ -104,13 +167,18 @@ async def submit_workflow(request: Request) -> JSONResponse:
 
 
 @ops_router.post("/api/ops/demo/wfm", response_model=None, dependencies=[Depends(require_csrf)])
-async def run_wfm_demo(request: Request) -> JSONResponse:
+async def run_wfm_demo(request: Request) -> JSONResponse | HTMLResponse:
     """Run the public WFM demo: governed submit, then governed execute.
 
     One request, one workflow, both lifecycle gates crossed. The four numeric
     inputs are the only thing a caller may set, and an unrecognised key is
     refused rather than ignored — a demo that silently dropped `is_sample` or
     `max_agents` from a request would look like it honoured them.
+
+    A successful run answers JSON (201) to an API caller and the result fragment
+    to htmx, so the screen can swap in place. Failures stay JSON on both paths:
+    `shell.js` turns a non-2xx htmx response into a toast, which is the module's
+    existing error convention rather than a second way to render a refusal.
     """
     account = _account(request)
     try:
@@ -120,22 +188,43 @@ async def run_wfm_demo(request: Request) -> JSONResponse:
             raise ValueError(
                 f"the WFM demo accepts only {sorted(WFM_DEMO_FIELDS)}; refused {unknown}"
             )
+        arrival_rate = _number_field(raw, "arrival_rate")
+        average_handling_time = _number_field(raw, "average_handling_time")
+        service_level_target = _number_field(raw, "service_level_target")
+        average_calls_per_period = _number_field(
+            raw,
+            "average_calls_per_period",
+            default=engine_bridge.WFM_DEMO_AVERAGE_CALLS_PER_PERIOD,
+        )
         report = OpsService().wfm_demo(
             account,
-            arrival_rate=_number_field(raw, "arrival_rate"),
-            average_handling_time=_number_field(raw, "average_handling_time"),
-            service_level_target=_number_field(raw, "service_level_target"),
-            average_calls_per_period=_number_field(
-                raw,
-                "average_calls_per_period",
-                default=engine_bridge.WFM_DEMO_AVERAGE_CALLS_PER_PERIOD,
-            ),
+            arrival_rate=arrival_rate,
+            average_handling_time=average_handling_time,
+            service_level_target=service_level_target,
+            average_calls_per_period=average_calls_per_period,
         )
     except AppError as exc:
         return JSONResponse(exc.to_dict(), status_code=exc.status_code)
     except ValueError as exc:
         return JSONResponse({"error": str(exc)}, status_code=400)
     publish(STREAM_KEY_PREFIX + report["workflow_id"], "execution", report)
+    if request.headers.get("hx-request") == "true":
+        return render(
+            request,
+            "partials/wfm_demo_result.html",
+            {
+                "report": report,
+                # What THIS run was given, not what the form now holds. A user
+                # can retype a field after a run; showing the current value
+                # beside the old result would quietly misreport the request.
+                "inputs": {
+                    "arrival_rate": arrival_rate,
+                    "average_handling_time": average_handling_time,
+                    "service_level_target": service_level_target,
+                    "average_calls_per_period": average_calls_per_period,
+                },
+            },
+        )
     return JSONResponse(report, status_code=201)
 
 

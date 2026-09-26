@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
+{% block title %}WFM demo — Helix Codex{% endblock %}
+{% block content %}
+<div class="wfm-demo">
+  {% call head.page_head("Workforce demo", "Four numbers in. One real governed run out, with the whole decision recorded. Nothing here is a mock-up: the request is submitted to the core, executed by the WFM engine, and the figures below are exactly what the engine wrote.", "Governance") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
+
+  <div class="callout callout--info">
+    <span>
+      <strong>Every run is a governed request.</strong>
+      It is submitted under a fixed demo identity, executed by the real Erlang-C
+      engine, and stamped with a correlation id you can quote. The forecast is
+      computed from synthetic data — a sample, not your call volumes.
+    </span>
+  </div>
+
+  <section class="card">
+    <h2>Your numbers</h2>
+    {#- The form posts every field, so a browser refresh or a "change one thing
+        and re-run" both start from what you last typed. -#}
+    <form class="wfm-demo__form"
+          hx-post="/app/api/ops/demo/wfm"
+          hx-headers='{"X-CSRF-Token": "{{ csrf_token }}"}'
+          hx-target="#wfm-demo-result"
+          hx-swap="outerHTML">
+      {% for field in fields %}
+      <div class="field">
+        <label class="field__label" for="wfm-{{ field.name }}">
+          {{ field.label }}
+          <span class="wfm-demo__unit">{{ field.unit }}</span>
+        </label>
+        <input class="field__input"
+               id="wfm-{{ field.name }}"
+               name="{{ field.name }}"
+               type="number"
+               step="any"
+               inputmode="decimal"
+               value="{{ field.default }}">
+        <p class="field__hint">{{ field.hint }}</p>
+      </div>
+      {% endfor %}
+      <div class="wfm-demo__actions">
+        <button class="btn btn--primary" type="submit">
+          {{ icons.icon("arrow-right") }} Run the forecast
+        </button>
+        <span class="wfm-demo__note">Takes a moment. Nothing is stored about you.</span>
+      </div>
+    </form>
+  </section>
+
+  {% include "partials/wfm_demo_result.html" %}
+</div>
+{% endblock %}

@@ -464,3 +464,70 @@ def test_the_engine_unavailable_error_is_raised_for_a_dead_provider(monkeypatch)
     monkeypatch.setattr("server.deps.get_provider", dead)
     with pytest.raises(EngineUnavailableError):
         engine_bridge.execute_workflow(SimpleNamespace(tenant_id="t"), "wf_1")
+
+
+def _closed(*, output, error=None):
+    """A workflow in the state a real finished run of this demo lands in."""
+    return SimpleNamespace(
+        workflow_id="wf_closed",
+        capability="wfm_forecast",
+        state="closed",
+        correlation=SimpleNamespace(correlation_id="cor_1"),
+        tenant_id="tenant-a",
+        client_id="client-a",
+        input_payload={},
+        output_payload=output,
+        retry_count=0,
+        error=None if error is None else SimpleNamespace(message=error),
+    )
+
+
+def test_a_closed_state_alone_is_never_reported_as_success():
+    """`closed` is not a success state; it is where four outcomes land.
+
+    `WorkflowState` is a class of plain string constants and `closed` is
+    reachable from `succeeded`, `compensated`, `cancelled` AND `dead_letter`
+    (`control_plane/workflow.py`). This demo's own successful run finishes
+    `closed` (`control_plane/engine.py`), so the ambiguous state is the COMMON
+    one, not an edge case. A test that reads "the state is closed" as "the run
+    succeeded" therefore prints the figures of a dead-lettered or cancelled run
+    as a result the engine stands behind, and reports a closed run that wrote
+    nothing as if it had.
+
+    Every case below is one the state-membership test answered `True`; the
+    third is pinned so the fix cannot over-correct into "never successful".
+    """
+    # Closed, no output: the engine produced nothing, so there is no result.
+    assert (
+        engine_bridge._execution_report(_closed(output=None), executed=True)["succeeded"] is False
+    )
+    # Closed, output AND a recorded error: figures exist, but they are not a
+    # clean result and the error is shown beside them.
+    assert (
+        engine_bridge._execution_report(
+            _closed(output={"optimal_agents": 2}, error="the engine reported a fault"),
+            executed=True,
+        )["succeeded"]
+        is False
+    )
+    # Closed, output, no error: the real path, and it must still read as a success.
+    assert (
+        engine_bridge._execution_report(_closed(output={"optimal_agents": 2}), executed=True)[
+            "succeeded"
+        ]
+        is True
+    )
+
+
+def test_success_is_not_claimed_for_a_run_the_bridge_did_not_perform():
+    """A held workflow is reported, not executed, whatever payload it carries.
+
+    `executed` is load-bearing on its own: the governance gate can hold a
+    workflow that already has an output payload, and reporting that as this
+    request's success would claim a result nobody ran.
+    """
+    report = engine_bridge._execution_report(_closed(output={"optimal_agents": 2}), executed=False)
+    assert report["executed"] is False
+    assert report["gated"] is True
+    assert report["gated_reason"]
+    assert report["succeeded"] is False

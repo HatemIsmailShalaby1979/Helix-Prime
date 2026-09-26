@@ -217,7 +217,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Attendance (live, P4.3) | `/app/attendance`, `/app/api/attendance/punch`, `/app/api/attendance/records`, `/app/api/attendance/summary` | `attendance.punch` at the boundary; CSRF on the punch toggle; records/summary read APIs apply the same boundary gate |
 | Memory (live, P5.3–P5.6) | `/app/memory`, `/app/memory/proposals`, `/app/memory/proposals/{id}`, `/app/memory/ledger/verify`, `/app/memory/promotions`, `/app/api/memory/proposals`, `/app/api/memory/proposals/{id}/evaluate`, `/approve`, `/reject`, `/rollback`, `/app/api/memory/promotions`, `/app/api/memory/promotions/{id}/approve`, `/reject`, `/rollback` | `memory.propose` at the boundary; `memory.review` + CSRF on the review and promotion routes. A proposal is only readable by its author, or by a reviewer in a different role; a same-role peer is told it does not exist. Promotion needs a manager or owner who is not the author |
 | Ops (live, P6.2) | `/app/ops`, `/app/ops/{engine}`, `/app/api/ops/workflows`, `/app/api/ops/workflows/{id}`, `/app/api/ops/workflows/{id}/approve`, `/app/api/ops/stream/{id}` | `ops.view` at the boundary; CSRF on the submit and decide routes; the stream is a tenant check before it opens, then a keep-alive loop |
-| Public WFM demo (live, P8.2) | `/app/api/ops/demo/wfm` | `ops.view` at the boundary — which the `demo` role holds and nothing else; CSRF on the route; a JSON body or an HTMX urlencoded form, and an unrecognised key is a 400 naming it rather than a silent drop. Submits `wfm_forecast` with a four-number server-built payload (`is_sample` and `data_mode` injected, never caller-set) and immediately `execute`s it, publishing the execution report on the workflow's own SSE channel. The existing P6.2 submit/decide routes are untouched: this is a second, narrower entry point, not a replacement |
+| Public WFM demo (live, P8.2–P8.3) | `/app/ops/demo`, `/app/api/ops/demo/wfm` | `ops.view` at the boundary — which the `demo` role holds and nothing else; CSRF on the route; a JSON body or an HTMX urlencoded form, and an unrecognised key is a 400 naming it rather than a silent drop. Submits `wfm_forecast` with a four-number server-built payload (`is_sample` and `data_mode` injected, never caller-set) and immediately `execute`s it, publishing the execution report on the workflow's own SSE channel. The existing P6.2 submit/decide routes are untouched: this is a second, narrower entry point, not a replacement. **P8.3 adds the screen**, declared *above* `/ops/{engine}` because FastAPI matches in order and a screen below the catch-all is answered as an engine whose id is `demo`; its four inputs are generated from the bridge's own `WFM_DEMO_NUMERIC_RANGES`, and the import-time check refuses a name on one side only, so the form cannot offer a field the endpoint refuses. htmx gets the result fragment, an API caller gets the JSON report with 201, and a **refusal stays JSON on both paths** (the fragment has no error branch, so returning it on a 400 would swap the refusal into the result area and report no failure) |
 | Cockpit (live, P6.3–P6.4) | `/app/cockpit`, `/app/cockpit/owner`, `/app/cockpit/coach`, `/app/cockpit/parent`, `/app/cockpit/control-plane`, `/app/api/cockpit/summary` | `cockpit.view` at the boundary, re-checked in the service, and enforced by the bridge's own `policy_bridge` call |
 | Low-code (live, P7.1) | `/app/api/sections`, `/app/api/packs`, `/app/admin/sections`, `/app/admin/packs/reload` | session at the router boundary; the two admin POSTs also carry `packs.manage` (owner-only) + CSRF |
 
@@ -396,6 +396,14 @@ session/CSRF boundary, the 12-denied-permission surface, and the typed 503). Sui
 P8.2 checkpoint: **app chunk 892 passed, 0 failed**; **parent chunk 952 passed, 1 failed,
 4 skipped** — the one failure is the pre-existing `openssl`-not-on-`PATH` gap, proven at
 clean HEAD with these changes stashed.
+
+P8.3 added `test_wfm_demo_screen.py` (21 — access on the page *and* the endpoint, route
+order against `ops_router.routes`, the four form fields and their units, the htmx/JSON
+answer shapes, a refusal staying JSON, the 201, the same-run stream publication, the
+"never a deadline" and "never a figure the engine did not write" prose guarantees, and each
+figure asserted in the `<dd>` it belongs to) and grew the governed-path module 45 → 47 with
+the two `_execution_report` `succeeded` semantics tests. **105 passed** across the four P8.3
+files (21 + 47 + 31 + 6).
 
 ## How to add a module
 Follow the proven `router → service → repository` shape from `server/features/workflows/`. Add

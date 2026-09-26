@@ -318,16 +318,36 @@ def _execution_report(workflow: Any, *, executed: bool) -> dict[str, Any]:
     verified one. What is reported instead is what the engine really wrote — the
     workflow and correlation ids, the terminal state, and a digest of the stored
     metrics — all of which the audit trail and the event stream corroborate.
-    """
-    from control_plane.workflow import WorkflowState
 
+    `succeeded` is derived from the report's OWN evidence — it was executed, it
+    recorded no error, and it wrote figures — rather than from a set of terminal
+    states. `closed` is not a success state on its own: it is reachable from
+    `succeeded`, `compensated`, `cancelled` and `dead_letter`
+    (`control_plane/workflow.py`), and a successful run of this demo ends
+    `closed` (`control_plane/engine.py`), so the ambiguous state is the COMMON
+    case rather than an edge one. A state-membership test therefore reports a
+    dead-lettered or cancelled run as successful, and reports a closed run that
+    produced no output as successful too.
+
+    It is deliberately NOT delegated to `Engine.to_task_result`, which owns the
+    related C1 mapping. That was tried and measured: `TaskResult.__post_init__`
+    refuses `"failed"` with a null error, so calling it on the non-terminal
+    workflow this function also reports (the governance gate holding one) raises
+    rather than answering — and it answers a different question anyway, which
+    TaskResult status a terminal workflow carries in the task queue.
+
+    The raw `state` is reported beside the boolean, so nothing is hidden behind
+    it, and every other field in this report describes the same evidence the
+    boolean summarises.
+    """
     metrics = dict(workflow.output_payload or {})
+    error = workflow.error.message if workflow.error is not None else None
     report = {
         "workflow_id": workflow.workflow_id,
         "capability": workflow.capability,
         "state": workflow.state,
         "executed": executed,
-        "succeeded": workflow.state in (WorkflowState.SUCCEEDED, WorkflowState.CLOSED),
+        "succeeded": bool(executed and error is None and metrics),
         "correlation_id": workflow.correlation.correlation_id,
         "tenant_id": workflow.tenant_id,
         "client_id": workflow.client_id,
@@ -336,7 +356,7 @@ def _execution_report(workflow: Any, *, executed: bool) -> dict[str, Any]:
         "metrics": metrics,
         "metrics_digest": _metrics_digest(metrics) if metrics else None,
         "retry_count": workflow.retry_count,
-        "error": workflow.error.message if workflow.error is not None else None,
+        "error": error,
     }
     if not executed:
         report["gated"] = True

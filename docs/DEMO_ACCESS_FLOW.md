@@ -4,18 +4,38 @@ How a demonstration visitor gets from the login screen to a governed workforce-
 management answer, and what that answer is allowed to claim.
 
 This document describes the surface shipped in **P8.1** (least-privilege demo
-identity) and **P8.2** (the governed demo endpoint). Phases **B3–B7** — the
-broader public-demo experience — are not built yet. See
-`helix_codex_app/agents.md` for the phase ledger.
+identity), **P8.2** (the governed demo endpoint) and **P8.3** (the clickable
+screen). Two items remain unbuilt and are **not** numbered as phases: a rate
+limit on the demo endpoint, and an audit-trail reader in the response beyond the
+correlation id and the metrics digest. See `helix_codex_app/agents.md` for the
+phase ledger.
 
 ---
 
 ## 1. The one-sentence version
 
 A visitor logs in with the **demo** account, whose role holds exactly one
-permission (`ops.view`), posts four numbers, and receives a workforce-forecast
-answer produced by the real governed engine path — recorded, auditable, and
-labelled as simulated.
+permission (`ops.view`), opens the demo screen, submits four numbers, and gets a
+workforce-forecast answer produced by the real governed engine path — recorded,
+auditable, and labelled as simulated.
+
+### 1.1 Getting to it
+
+| | |
+|---|---|
+| Screen | `/app/ops/demo` — inside the ordinary `ops.view` boundary, not a separate public route |
+| Submit | `POST /app/api/ops/demo/wfm` — session + CSRF, same endpoint an API caller uses |
+| In the UI | Ops page → "Workforce demo" link, and the Ops rail item |
+
+The screen is declared **above** the `/app/ops/{engine_id}` catch-all, because
+FastAPI matches routes in declaration order: a screen registered below it would
+be answered as an engine whose id happens to be `demo`.
+
+**A refusal is JSON on both paths.** With htmx the result fragment is swapped in;
+an error is not, so a rejected submission returns a JSON error body and the
+`htmx:responseError` handler in `static/js/shell.js` surfaces it. Returning the
+fragment on a refusal would swap a 400 into the result area and report no
+failure at all.
 
 ---
 
@@ -76,12 +96,23 @@ That is the complete request. A caller may set **four numeric fields**:
 |---|---|---|
 | `arrival_rate` | `> 0`, unbounded above | calls arriving per period |
 | `average_handling_time` | `> 0`, unbounded above | average contact duration |
-| `service_level_target` | `> 0` and `< 1` | fraction answered within target |
+| `service_level_target` | `> 0` and `< 1` | minimum share of contacts **answered immediately**; see the note below |
 | `average_calls_per_period` | `> 0`, unbounded above | optional; **defaults to 17.0** |
 
 The ranges are not invented by the app. They mirror the WFM engine's own
 validation in `engines/wfm/adapter.py`, so the demo refuses a value at the edge
 that the engine would refuse anyway.
+
+**On the third field's name.** `service_level_target` sounds like a
+speed-of-answer target, and the engine's own dataclass comment says "Desired
+service level". Read the code rather than the name: `optimize_agents()` compares
+`calculate_service_level(...)` against this target, and that function is
+`exp(-agents * (1 - utilisation) * ASA)` — the probability a contact is
+**answered immediately**. The engine is never given a waiting-time threshold, so
+there is no "answered within 20 seconds" anywhere in this system. The name is
+the engine's and is passed through unchanged; the *explanation* of what it
+compares against belongs to the surface, which is why the screen states it
+rather than letting a reader supply their own deadline.
 
 Booleans, strings, `null`, `NaN` and `Infinity` are all rejected — `True` is not
 accepted as `1`, because that is a category error, not a coercion.
@@ -181,17 +212,34 @@ fields:
 
 Read it like this:
 
-- `metrics` are Erlang C workforce-planning figures for the inputs given. Two
-  agents to hold 62.5% utilisation, 93.9% of contacts answered within target.
-- `state` / `succeeded` / `executed` are the governed outcome, reported plainly.
-  `state: "closed"` with `succeeded: true` is a completed run.
+- `metrics` are Erlang C workforce-planning figures for the inputs given: two
+  agents to hold 62.5% utilisation, with 93.9% **answered immediately** and a
+  41.1% probability that a contact waits. There is **no "within target"** in
+  that sentence and no such field in the payload — see §3.1. The service level
+  is the share answered at once, because the engine is never given a
+  waiting-time threshold, and calling it a "share answered within target" is
+  the single most likely way to misread a staffing forecast.
+- `succeeded` is derived from the run's own evidence — `executed and error is
+  None and metrics` — and `state` is reported beside it rather than instead of
+  it. **`closed` on its own does not mean the run finished cleanly:**
+  `WorkflowState` is plain string constants, and `closed` is also reached by
+  cancellation, compensation and dead-lettering. A successful demo run ends
+  `closed` too, so reading `closed` as success was the bug this response had.
 - `correlation_id` ties this answer to the audit trail and the event stream.
 - `metrics_digest` is the first 16 hex characters of a SHA-256 over the
   canonical JSON of `metrics`. The same inputs give the same digest; changing an
   input changes it. It is a fingerprint, **not** a signature and **not** an
   attestation.
+- `confidence_interval` is `[1.9, 2.1]` — a flat ±5% band around the optimum.
+  It is **not** a statistical confidence interval: no sampling error and no
+  probability is computed, and the engine's `confidence_level` field is
+  unused. The screen labels it "Agent range around that figure" for that
+  reason.
 - `is_sample: true` and `data_mode: "simulated_realistic"` are on the response on
   purpose, so no downstream renderer can quietly drop the label.
+  `simulated_realistic` is the **connector** spelling and the one the governed
+  vocabulary declares; `sample` is the engine's internal term and is not a
+  governed data mode, so it must not appear here.
 
 ---
 
@@ -217,8 +265,12 @@ plainly.
   events, audit and the workflow record. It is a fast preview, and it must
   never be presented as the result of a governed run. Only the demo endpoint
   described here is the governed path.
-- **No confidence or classification claim.** The caller cannot set them and the
-  response does not assert them.
+- **No confidence or classification claim.** The caller cannot set them, and the
+  response asserts no such claim. `metrics.confidence_interval` is *not* a
+  counter-example: it is a flat ±5% band around the optimum that the engine
+  computes, with no sampling error and no probability behind it, and the screen
+  labels it "Agent range around that figure" for exactly that reason. The
+  engine's `confidence_level=0.95` is never used.
 
 **Provenance, restated:** every record this flow writes carries
 `data_mode: "simulated_realistic"` and `is_sample: true`. A demonstration of
@@ -272,10 +324,11 @@ product.
 
 ## 9. See also
 
-- `helix_codex_app/agents.md` — the P8 phase ledger, test counts, and the B3–B7
-  remainder.
+- `helix_codex_app/agents.md` — the P8 phase ledger, test counts, and the two
+  unbuilt items (endpoint rate limiting, audit-trail reader).
 - `helix_codex_app/repomap.md` — module map and the seam descriptions for
   `engine_bridge.py` and the ops routes.
 - `helix_codex_app/governance.md` — entry 32, the P8.2 governance record.
-- `tests/helix_codex_app/test_wfm_demo_governed_path.py` — the 45-test gate.
+- `tests/helix_codex_app/test_wfm_demo_governed_path.py` — the 47-test gate.
+- `tests/helix_codex_app/test_wfm_demo_screen.py` — the 21-test screen gate.
 - `tests/helix_codex_app/test_demo_role.py` — the 31-test least-privilege gate.

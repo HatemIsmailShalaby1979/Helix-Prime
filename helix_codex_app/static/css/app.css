@@ -1300,6 +1300,10 @@ select[multiple] option:checked {
   border-left-color: var(--info);
 }
 
+.callout--danger {
+  border-left-color: var(--danger);
+}
+
 .callout strong {
   color: var(--ink);
 }
@@ -3121,6 +3125,109 @@ a.engine-row:hover {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--muted);
+}
+
+/* --- WFM demo ------------------------------------------------------------
+   Four numbers in, one governed result out. The form is a two-column grid on
+   wide screens and a single stack on a phone; the result mirrors it. */
+
+.wfm-demo__form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.wfm-demo__unit {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.wfm-demo__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.wfm-demo__note {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.wfm-demo__state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.wfm-demo__run-facts {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.wfm-demo__metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.wfm-demo__metric {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.wfm-demo__metric dt {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.wfm-demo__metric dd {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  line-height: 1.1;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* An absent figure is labelled, never zeroed. */
+.wfm-demo__absent {
+  font-family: var(--font) !important;
+  font-size: var(--text-sm) !important;
+  color: var(--muted) !important;
+}
+
+.wfm-demo__ids {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.wfm-demo__ids dt {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+
+.wfm-demo__ids dd {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.wfm-demo__proof .wfm-demo__note {
+  margin-top: var(--space-4);
 }
 
 /* ==========================================================================

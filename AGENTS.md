@@ -3729,3 +3729,4 @@ separate non-blocking follow-up.
 not contain its own SHA in the ledger. B6 is now explicitly pinned after the
 fact; the B6 entry records the loopback bind, public health check, temporary
 Quick Tunnel limitation, deployment artifacts, and `.gitignore` resolution.
+**Known structural risk:** AGENTS.md (B1–B7) and helix_codex_app/agents.md (P8.1–P8.3) overlap as separate status surfaces. They were corrected together here, but should eventually designate one ledger as authoritative rather than restating the same completion claims.

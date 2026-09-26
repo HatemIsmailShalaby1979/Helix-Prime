@@ -4020,3 +4020,113 @@ real hit it — a fresh browser, a tunnel restart, a real third-party error.
 third-party API — is not DONE on mocked unit tests alone. It needs one
 integration-level check that actually crosses that boundary, with the evidence
 recorded, before the label is applied.
+
+### 20.20 Phase A A3 — hosted sign-in — COMPLETE
+
+**Recorded:** 2026-09-27, 01:43 GMT+3. **This is the first run in which the
+Supabase flow carried an app-generated `state` all the way back to the callback,
+and the first in which a real external identity signed in through the Worker and
+landed on `/app/ops`.**
+
+#### A3.12 Configuration, verified before the run
+
+`HELIX_APP_SUPABASE_ANON_KEY` arrived via a root `.env` (UTF-8 **with BOM**,
+79 bytes). `HELIX_APP_SUPABASE_URL` and `HELIX_APP_SUPABASE_REDIRECT_URI` were
+supplied as inline process environment from §20.14; the owner's `.env` was not
+modified.
+
+**The preflight is why the run was not wasted.** Raw `os.environ` reported the anon
+key EMPTY while `AppSettings` resolved it SET — the value comes from the `.env`
+file, so a bare `os.environ.get("HELIX_APP_SUPABASE_ANON_KEY")` check would have
+returned a false negative and refused a correctly configured run. The preflight
+therefore resolves through the app's own settings path, prints presence only, and
+never a value.
+
+The credential was confirmed against Supabase **before** the owner clicked:
+`POST /auth/v1/token?grant_type=pkce` with the real publishable key and a synthetic
+code returned **404**
+`{"code":404,"error_code":"flow_state_not_found","msg":"invalid flow state, no valid flow state found"}`
+— the gateway accepted the key and rejected the code, so a bad credential could not
+have been mistaken for a bad code.
+
+#### A3.13 The redirect chain, as observed
+
+Steps 5 and 6 are read directly from the app's structured log. Steps 1–4 were
+observed as redirect targets in the preceding verification and are reconstructed
+here; the decisive point is that step 5 arrives carrying **both** parameters.
+
+| # | Hop | Status | Notes |
+|---|---|---|---|
+| 1 | `GET …workers.dev/app/auth/supabase/login` | 303 | `redirect_to=…%2Fcallback%3Fstate%3D<app state>` |
+| 2 | `GET <project>/auth/v1/authorize` | 302 | → GitHub; `client_id=Ov23lif3ujOTQ69KUt9p`; GoTrue's own `state` UUID |
+| 3 | `GET github.com/login/oauth/authorize` | — | owner authenticates and consents |
+| 4 | `GET <project>/auth/v1/callback` | 302 | → app callback, appending its own `code` |
+| 5 | `GET …workers.dev/app/auth/supabase/callback?code=…&state=…` | **303** | see A3.14 |
+| 6 | `GET …workers.dev/app/ops` | **200** | session presented, `tenant_id=helix-demo` |
+
+#### A3.14 The evidence
+
+The callback request, verbatim from the app log:
+
+```text
+GET /app/auth/supabase/callback?code=3207405e-f208-49af-b1ea-30bb8667a500&state=zoI3moGaFu4i6511Mn2Vc7uImIuD2zTTOKkZ3Fqg7vY
+  -> 303 See Other, duration_ms 1484
+```
+
+Four things follow from that one line:
+
+- **`state` and `code` both arrived.** This is the exact confirmation the fix was
+  written for.
+- **The `state` is the app's own value**, a `secrets.token_urlsafe(32)` string — not
+  GoTrue's UUID. The app's state therefore survived the whole round trip inside
+  `redirect_to`, which is the only channel the §20.18 diagnosis left open.
+- **It passed the strict CSRF check** — 303, not 400.
+- **1,484 ms** is the real network round trip to Supabase's token exchange. The
+  local-only rejections measured earlier in this thread returned in 0 ms.
+
+No `supabase_auth_error` event was logged, so the token exchange succeeded. The
+session and the identity bridge, read from the database:
+
+| Field | Value |
+|---|---|
+| session | `session-2aef4631f5784cacb24a81bd1600fb19`, issued `2026-09-26T22:43:42Z`, expires `2026-10-26` |
+| account | `account-c27e7988cd544c798288d92168d5cf83`, username `demo` |
+| email / display name | `hatemshalaby2025@gmail.com` |
+| role | `demo` |
+| session IP | `2a06:98c0:3600::103` (Cloudflare egress) |
+| user agent | `WorkBuddyAI/5.6.2 … Electron/37.10.3` — the owner's built-in browser |
+| `/app/ops` | 200, `tenant_id=helix-demo`, `actor=account-c27e7988…` |
+
+#### A3.15 The dashboard allowlist item is now closed by outcome
+
+§20.18 recorded that whether the allowlist accepts the query-string suffix could
+not be observed from outside, because `/auth/v1/authorize` returns 302 for every
+`redirect_to` tried, including `https://evil.example.com`. That gap is now closed
+**by result rather than by inspection**: the callback was reached with the app's own
+`state` intact. Had the allowlist refused the suffixed `redirect_to`, GoTrue would
+have fallen back to the Site URL and the app's callback would never have been
+reached at all. The suffix is therefore honoured.
+
+The owner's choice of entry is still unrecorded — whether the old exact-match entry
+was kept alongside the `**` entry is known only from the dashboard.
+
+#### A3.16 Honest scope of "fresh account"
+
+The Supabase side is genuinely fresh: a real GitHub identity authenticated with no
+prior Helix session, and the `state`/`verifier` cookies were minted per flow. The
+**database row is not new**, and is not meant to be — `ensure_demo_account` reuses
+the fixed scoped demo account and rewrites its email, which is why
+`accounts.updated_at` moved to `2026-09-26T22:43:42.362888Z` while `created_at`
+stayed at `2026-09-26T13:52:37Z`. A3's "fresh account" criterion is satisfied at the
+identity level, not by creating a second row.
+
+#### A3.17 Phase A status
+
+A1, A2, A3 are now COMPLETE. The Supabase identity bridge signs a real external
+identity in, through the public Worker front door, and lands it on `/app/ops` with
+the demo role.
+
+One qualification, so the label is not read wider than the evidence: the identity
+is fresh, the database row is the fixed demo account by design (A3.16). If "fresh
+account" is intended to mean a second, newly created row, that specific form was
+not exercised and should be named as its own step.

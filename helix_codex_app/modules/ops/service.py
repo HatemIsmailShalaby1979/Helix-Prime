@@ -78,6 +78,41 @@ class OpsService:
             idempotency_key=idempotency_key,
         )
 
+    def wfm_demo(
+        self,
+        account: Account,
+        *,
+        arrival_rate: Any,
+        average_handling_time: Any,
+        service_level_target: Any,
+        average_calls_per_period: Any = engine_bridge.WFM_DEMO_AVERAGE_CALLS_PER_PERIOD,
+    ) -> dict[str, Any]:
+        """Run the public WFM demo through the real governed path, end to end.
+
+        Submit and execute, in that order, with nothing in between: the demo is
+        a demonstration of the governed path, not a workflow that skips the
+        gate. `requires_approval=False` is a parameter of the *demo*, not a
+        weakened control — the core's bounded-autonomy rules still decide, and
+        the workflow only reaches `executing` if they allow it. If they do not,
+        `execute_workflow` reports the held state and the engine is never
+        called, which is the honest answer for a demonstration.
+
+        The payload is built by the bridge rather than assembled here, so the
+        fields a caller may influence are exactly the four named arguments.
+        """
+        workflow = self.submit(
+            account,
+            capability=engine_bridge.WFM_DEMO_CAPABILITY,
+            input_payload=engine_bridge.wfm_demo_input_payload(
+                arrival_rate=arrival_rate,
+                average_handling_time=average_handling_time,
+                service_level_target=service_level_target,
+                average_calls_per_period=average_calls_per_period,
+            ),
+            requires_approval=False,
+        )
+        return engine_bridge.execute_workflow(account, workflow.workflow_id)
+
     def list(self, account: Account, *, state: str | None = None, limit: int = 50) -> list[Any]:
         """Workflows in the account's tenant, newest first."""
         return engine_bridge.list_workflows(account, limit=limit, state=state)

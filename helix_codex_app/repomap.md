@@ -70,6 +70,21 @@ Folders marked "planned" do not exist yet. Create them only under the prompt tha
   baseline with `owning_role_id="ops_gm"`, lazily imported at call time, and raises
   `EngineUnavailableError` on import failure, a non-None `result.error`, or a missing
   `optimal_agents` figure — an unavailable engine never yields an empty/degraded answer).
+  **P8.2 adds the governed path, and it is deliberately a different function from the read
+  above:** `execute_workflow(account, workflow_id)` loads through `get_workflow` (the
+  tenant-ownership seam) *before* authorizing, authorizes `action="execute"` against the
+  workflow's own `owning_role_id`, and only then inspects state — a workflow that is not
+  `executing` returns `gated: true` with a reason instead of reaching the engine, so a
+  held workflow cannot be executed by the demo. `_metrics_digest` is a 16-hex-char SHA-256
+  over the canonical JSON form, matching the private `engines/contracts.py::_hash_payload`.
+  `wfm_demo_input_payload` is the demo's whitelist, and **the whitelist is the signature** —
+  four named numbers, no `**extra`, so a field that is never read cannot be forwarded; it
+  injects `is_sample=True` and `data_mode=CONNECTOR_SIMULATED_REALISTIC` server-side and
+  refuses `bool`, non-numerics, `NaN`/`Infinity`, and out-of-range values. `_execution_report`
+  assembles the response and **omits `data_classification`, `estimated_financial_cost`,
+  `confidence_score`, and `max_agents` on purpose** — the first would let a caller relabel the
+  run, the next two are bridge-owned `TaskRequest` fields, and the last is never read by the
+  adapter, so accepting it would imply a staffing cap that does not exist.
   `memory_bridge.py` (live, P5.3 + P7.3: `AccountMemoryStore`, the per-account governed memory
   provider — `resolve_store_path`, `safe_component`, the store's read/verify/record/
   rollback surface; the org store is the same class with `account_id=None`. `verify_store_file`
@@ -202,6 +217,7 @@ All app routes sit under `/app`. Ops passthrough routes keep their existing pare
 | Attendance (live, P4.3) | `/app/attendance`, `/app/api/attendance/punch`, `/app/api/attendance/records`, `/app/api/attendance/summary` | `attendance.punch` at the boundary; CSRF on the punch toggle; records/summary read APIs apply the same boundary gate |
 | Memory (live, P5.3–P5.6) | `/app/memory`, `/app/memory/proposals`, `/app/memory/proposals/{id}`, `/app/memory/ledger/verify`, `/app/memory/promotions`, `/app/api/memory/proposals`, `/app/api/memory/proposals/{id}/evaluate`, `/approve`, `/reject`, `/rollback`, `/app/api/memory/promotions`, `/app/api/memory/promotions/{id}/approve`, `/reject`, `/rollback` | `memory.propose` at the boundary; `memory.review` + CSRF on the review and promotion routes. A proposal is only readable by its author, or by a reviewer in a different role; a same-role peer is told it does not exist. Promotion needs a manager or owner who is not the author |
 | Ops (live, P6.2) | `/app/ops`, `/app/ops/{engine}`, `/app/api/ops/workflows`, `/app/api/ops/workflows/{id}`, `/app/api/ops/workflows/{id}/approve`, `/app/api/ops/stream/{id}` | `ops.view` at the boundary; CSRF on the submit and decide routes; the stream is a tenant check before it opens, then a keep-alive loop |
+| Public WFM demo (live, P8.2) | `/app/api/ops/demo/wfm` | `ops.view` at the boundary — which the `demo` role holds and nothing else; CSRF on the route; a JSON body or an HTMX urlencoded form, and an unrecognised key is a 400 naming it rather than a silent drop. Submits `wfm_forecast` with a four-number server-built payload (`is_sample` and `data_mode` injected, never caller-set) and immediately `execute`s it, publishing the execution report on the workflow's own SSE channel. The existing P6.2 submit/decide routes are untouched: this is a second, narrower entry point, not a replacement |
 | Cockpit (live, P6.3–P6.4) | `/app/cockpit`, `/app/cockpit/owner`, `/app/cockpit/coach`, `/app/cockpit/parent`, `/app/cockpit/control-plane`, `/app/api/cockpit/summary` | `cockpit.view` at the boundary, re-checked in the service, and enforced by the bridge's own `policy_bridge` call |
 | Low-code (live, P7.1) | `/app/api/sections`, `/app/api/packs`, `/app/admin/sections`, `/app/admin/packs/reload` | session at the router boundary; the two admin POSTs also carry `packs.manage` (owner-only) + CSRF |
 
@@ -366,6 +382,20 @@ and a tampered chain (fails); backup writes `backup-manifest.json` with the node
 reports every memory chain verified; restore round-trips the node count and the backup
 created under a pre-existing target dir still has its manifest readable). Suite at the
 P7.3 checkpoint: **1377 passed, 0 failed** (740 in `tests/helix_codex_app/`, 637 parent).
+
+P8 added `test_demo_role.py` (P8.1: 31 — the `demo` matrix row holding `ops.view` and
+nothing else, `demo` never appearing in the tenant-blind `APP_ROLE_ENGINE_CATALOG_ROLE`, the
+three scope predicates, the positive `authorize_engine_call` decision plus both negatives at
+the same call shape, and provisioning idempotence with both conflict refusals) and
+`test_wfm_demo_governed_path.py` (P8.2: 45 — the governed lifecycle end to end with the stored
+payload compared against the report, the digest's stability/input-sensitivity/format, the
+whitelist (9 unownable keys, 12 bad numbers including `inf`/`nan`/`True`, 3 missing fields,
+form/JSON parity), a structural guard that the builder takes no `**extra`, the held-workflow
+refusal asserted against an `Engine.execute` that raises if reached, tenant isolation, the
+session/CSRF boundary, the 12-denied-permission surface, and the typed 503). Suite at the
+P8.2 checkpoint: **app chunk 892 passed, 0 failed**; **parent chunk 952 passed, 1 failed,
+4 skipped** — the one failure is the pre-existing `openssl`-not-on-`PATH` gap, proven at
+clean HEAD with these changes stashed.
 
 ## How to add a module
 Follow the proven `router → service → repository` shape from `server/features/workflows/`. Add

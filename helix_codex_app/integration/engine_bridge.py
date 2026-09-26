@@ -11,8 +11,11 @@ engines/.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from datetime import datetime, timezone
+from math import isfinite
 from typing import Any
 
 from helix_codex_app.errors import EngineUnavailableError, NotFoundError
@@ -30,6 +33,30 @@ DEFAULT_APPROVAL_DECISION = "approve"
 # translation lives here, at the boundary, so neither side has to learn the
 # other's vocabulary.
 DECISION_TO_CONTRACT: dict[str, str] = {"approve": "approved", "reject": "denied"}
+
+# --- The governed public WFM demo (P8.2) ---------------------------------
+#
+# The demo runs the REAL engine path, so the payload the app builds is declared
+# once, here, and the service cannot widen it.
+#
+# `is_sample` is the control that matters. `engines/registry.py::_make_handler`
+# reads it out of the input payload and hands it to the adapter as a parameter,
+# and the adapter reports `data_mode="sample"` because of it. Nothing else in
+# the payload can turn a sample run into a live one, which is why this is a
+# server-owned field and never a request field.
+WFM_DEMO_CAPABILITY = "wfm_forecast"
+WFM_DEMO_IS_SAMPLE = True
+WFM_DEMO_AVERAGE_CALLS_PER_PERIOD = 17.0
+# Every field the WFM engine itself validates, as (low, high) with BOTH ends
+# exclusive. These mirror `engines/wfm/adapter.py`'s own checks exactly, so the
+# demo rejects a value at the edge that the engine would refuse anyway. `inf` is
+# the engine's real absence of an upper bound, not a licence for a large one.
+WFM_DEMO_NUMERIC_RANGES: dict[str, tuple[float, float]] = {
+    "arrival_rate": (0.0, float("inf")),
+    "average_handling_time": (0.0, float("inf")),
+    "service_level_target": (0.0, 1.0),
+    "average_calls_per_period": (0.0, float("inf")),
+}
 
 
 def _engine() -> Any:
@@ -240,6 +267,86 @@ def approve_workflow(
         raise EngineUnavailableError(f"approval failed: {exc}") from exc
 
 
+def execute_workflow(account: Account, workflow_id: str) -> dict[str, Any]:
+    """Run one already-submitted workflow, and report what actually happened.
+
+    The third lifecycle gate and the first that reaches the engine handler:
+    `submit_workflow` only validates and routes, so until here nothing has been
+    computed. The workflow is loaded through `get_workflow` first, which is the
+    tenant-ownership check — a foreign workflow raises `NotFoundError` before
+    any authorization decision or engine call happens.
+
+    The state is inspected *before* the engine is asked, because
+    `Engine.execute` raises `ValueError` for every state except `executing`.
+    That refusal is deliberate on the core's part, and it is why a workflow the
+    governance gate held at `awaiting_approval` is reported as a governance
+    outcome rather than as an engine failure: a held workflow is never forced
+    through, and the reason travels back to the caller instead of being
+    swallowed into a 503.
+    """
+    from control_plane.workflow import WorkflowState
+
+    workflow = get_workflow(account, workflow_id)
+    policy_bridge.authorize_engine_call(
+        account,
+        capability=workflow.capability,
+        action="execute",
+        owning_role_id=workflow.owning_role_id or OPS_OWNING_ROLE,
+    )
+    if workflow.state != WorkflowState.EXECUTING:
+        return _execution_report(workflow, executed=False)
+    try:
+        executed = _engine().execute(workflow_id)
+    except Exception as exc:  # noqa: BLE001 - translate, never leak a traceback
+        raise EngineUnavailableError(f"workflow execution failed: {exc}") from exc
+    return _execution_report(executed, executed=True)
+
+
+def _metrics_digest(metrics: dict[str, Any]) -> str:
+    """A stable fingerprint of one engine result, for the evidence block."""
+    canonical = json.dumps(metrics, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
+def _execution_report(workflow: Any, *, executed: bool) -> dict[str, Any]:
+    """What one execution produced, and the evidence it left behind.
+
+    Deliberately no computation evidence. The registered handler returns
+    `EngineResult.metrics` and drops `computation_evidence`
+    (`engines/registry.py::_make_handler`), so there is none to report: naming a
+    field the engine never produced is how a sample run gets dressed up as a
+    verified one. What is reported instead is what the engine really wrote — the
+    workflow and correlation ids, the terminal state, and a digest of the stored
+    metrics — all of which the audit trail and the event stream corroborate.
+    """
+    from control_plane.workflow import WorkflowState
+
+    metrics = dict(workflow.output_payload or {})
+    report = {
+        "workflow_id": workflow.workflow_id,
+        "capability": workflow.capability,
+        "state": workflow.state,
+        "executed": executed,
+        "succeeded": workflow.state in (WorkflowState.SUCCEEDED, WorkflowState.CLOSED),
+        "correlation_id": workflow.correlation.correlation_id,
+        "tenant_id": workflow.tenant_id,
+        "client_id": workflow.client_id,
+        "data_mode": (workflow.input_payload or {}).get("data_mode"),
+        "is_sample": bool((workflow.input_payload or {}).get("is_sample", False)),
+        "metrics": metrics,
+        "metrics_digest": _metrics_digest(metrics) if metrics else None,
+        "retry_count": workflow.retry_count,
+        "error": workflow.error.message if workflow.error is not None else None,
+    }
+    if not executed:
+        report["gated"] = True
+        # `WorkflowState` is a class of plain string constants, not an Enum, so
+        # `workflow.state` is a `str` and `.value` on it would raise.
+        reason = f"workflow is {workflow.state!r}, not 'executing' - the engine was not called"
+        report["gated_reason"] = reason
+    return report
+
+
 def kill_switch_status(tenant_id: str | None = None) -> dict[str, Any]:
     """The halt state, read-only. Nothing here engages or releases the switch."""
     return _engine().kill_switch.status(tenant_id=tenant_id)
@@ -341,3 +448,65 @@ def wfm_coverage(
 def utc_now() -> str:
     """The one clock this module uses, so timestamps are consistent."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def wfm_demo_input_payload(
+    *,
+    arrival_rate: Any,
+    average_handling_time: Any,
+    service_level_target: Any,
+    average_calls_per_period: Any = WFM_DEMO_AVERAGE_CALLS_PER_PERIOD,
+) -> dict[str, Any]:
+    """Build the one payload the public WFM demo is allowed to run.
+
+    The signature *is* the whitelist. There is no `**extra` and no caller dict,
+    so a request cannot smuggle in a key: not `is_sample`, not `data_mode`, not
+    `data_classification`, not `max_agents`, not an estimated cost or a
+    confidence score. The returned dict is built here from the named arguments
+    alone, which is a stronger guarantee than filtering a payload after the
+    fact — a field that was never read cannot be forwarded.
+
+    Two of those omissions are deliberate and worth stating, because they look
+    like gaps:
+
+    * `data_classification` is left out on purpose. Both the core and
+      `engines/wfm/adapter.py` read it out of the input payload, so a client
+      able to set it could relabel a demo run. Omitting it takes the internal
+      default the engine already applies. `estimated_financial_cost` and
+      `confidence_score` are omitted for the same reason — they are
+      `TaskRequest` fields the bridge owns, and the demo runs at the bounded
+      autonomy defaults.
+    * `max_agents` is omitted because `engines/wfm/adapter.py` never reads it.
+      Accepting it would imply the demo caps staffing by a number that has no
+      effect on the result.
+
+    The numeric ranges mirror the adapter's own checks, so an impossible value
+    is refused at the edge with a readable message instead of becoming a
+    `DEAD_LETTER` further down.
+    """
+    try:
+        from contracts.vocabulary import CONNECTOR_SIMULATED_REALISTIC as DATA_MODE
+    except ImportError as exc:  # pragma: no cover - contracts is a hard dependency
+        raise EngineUnavailableError(f"data vocabulary unavailable: {exc}") from exc
+
+    given = {
+        "arrival_rate": arrival_rate,
+        "average_handling_time": average_handling_time,
+        "service_level_target": service_level_target,
+        "average_calls_per_period": average_calls_per_period,
+    }
+    payload: dict[str, Any] = {}
+    for field, (low, high) in WFM_DEMO_NUMERIC_RANGES.items():
+        value = given[field]
+        # `bool` is an `int` subclass, so `True` would sail through as 1.0.
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{field} must be a number, got {value!r}")
+        value = float(value)
+        if not isfinite(value) or not low < value < high:
+            raise ValueError(
+                f"{field} must be greater than {low} and less than {high}, got {value!r}"
+            )
+        payload[field] = value
+    payload["is_sample"] = WFM_DEMO_IS_SAMPLE
+    payload["data_mode"] = DATA_MODE
+    return payload

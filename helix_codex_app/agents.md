@@ -47,10 +47,10 @@ App-specific rules:
 
 | Field | Value |
 |---|---|
-| Current step | **P8.1 COMPLETE — Phase B (governed public WFM demo) in progress; the demo access identity is landed. Next: P8.2, the governed `Engine.execute` path.** |
-| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). Full-suite re-run at the P7.3 checkpoint: **1377 passed, 0 failed** (35:14) — 740 in `tests/helix_codex_app/`, 637 in the parent suite (18 new evidence/backup/restore tests). Full-suite re-run at the P7.4 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (740 + 18 new packaging tests), 637 in the parent suite. Full-suite re-run at the P7.5 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (2022.55 s), 637 in the parent suite (792.88 s). The first parent run this step came up red on the five release-gate tests because this file's own P7.4 note still quoted a `password` keyword assigned an 8+ char value — a fail-closed secrets-scan false positive; the note was reworded (no code change), the scan re-ran at 0 findings, the five re-ran green 5/5, and the full parent chunk then re-ran green 637/637 (see the P7.5 ledger note). **This sandbox is very slow (app chunk 58 min, parent chunk 16 min), so the two chunks were run and observed separately: 758 passed (app, EXIT=0) + 637 passed (parent: 632 + 5 release-gate tests re-run green after the P7.4 secrets-scan fix, see the P7.4 ledger note).** The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. **P8.1 checkpoint: app chunk 847 passed, 0 failed (195.62 s) — 816 pre-existing + 31 new; parent chunk 952 passed, 1 failed, 4 skipped, 19 deselected (224.42 s).** The single parent failure is `tests/test_production_evidence.py::test_a_signature_from_another_key_is_rejected`, which dies with `FileNotFoundError: [WinError 2]` from `subprocess` because **`openssl` is not on PATH in this sandbox**; it was proven pre-existing by stashing all three P8.1 source files and re-running it at clean HEAD, where it fails identically. It is an environment gap, not a repo or P8.1 defect. |
-| Last commit | `336b1e5` (P8.1) |
-| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, P7.3, P7.4, P7.5, **P8.1** |
+| Current step | **P8.1 + P8.2 COMPLETE — Phase B (governed public WFM demo) has a working governed path end to end: a least-privilege demo identity reaches the real `Engine.submit` → `Engine.execute` lifecycle, and the response reports only what the engine actually wrote. Next: B3–B7 (the public-demo UI, rate limiting, and the remaining surface). Nothing in P8 may edit `config.py`, weaken `require_safe_defaults()`, add Supabase, or bypass `security/sessions.py`.** |
+| Baseline test count | P5.1 checkpoint, full suite: **1186 passed, 2 failed, 1188 collected (29 min)**; the 2 are the pre-existing flakes described below. P6.1–P6.5 add 72 tests by collection. Full-suite re-run at the P6.5 checkpoint: **1326 passed, 0 failed** (30:37) — 689 in `tests/helix_codex_app/`, 637 in the parent suite; neither pre-existing flake appeared. Full-suite re-run at the P7.1 checkpoint: **1342 passed, 0 failed** (26:46) — 705 in `tests/helix_codex_app/`, 637 in the parent suite (16 new loader tests). Full-suite re-run at the P7.2 checkpoint: **1359 passed, 0 failed** (26:40) — 722 in `tests/helix_codex_app/`, 637 in the parent suite (17 new app release-gate tests). Full-suite re-run at the P7.3 checkpoint: **1377 passed, 0 failed** (35:14) — 740 in `tests/helix_codex_app/`, 637 in the parent suite (18 new evidence/backup/restore tests). Full-suite re-run at the P7.4 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (740 + 18 new packaging tests), 637 in the parent suite. Full-suite re-run at the P7.5 checkpoint: **1395 passed, 0 failed** — 758 in `tests/helix_codex_app/` (2022.55 s), 637 in the parent suite (792.88 s). The first parent run this step came up red on the five release-gate tests because this file's own P7.4 note still quoted a `password` keyword assigned an 8+ char value — a fail-closed secrets-scan false positive; the note was reworded (no code change), the scan re-ran at 0 findings, the five re-ran green 5/5, and the full parent chunk then re-ran green 637/637 (see the P7.5 ledger note). **This sandbox is very slow (app chunk 58 min, parent chunk 16 min), so the two chunks were run and observed separately: 758 passed (app, EXIT=0) + 637 passed (parent: 632 + 5 release-gate tests re-run green after the P7.4 secrets-scan fix, see the P7.4 ledger note).** The per-step arithmetic in the ledger is approximate; the full-suite count above is the one that was actually run and observed. **P8.1 checkpoint: app chunk 847 passed, 0 failed (195.62 s) — 816 pre-existing + 31 new; parent chunk 952 passed, 1 failed, 4 skipped, 19 deselected (224.42 s).** The single parent failure is `tests/test_production_evidence.py::test_a_signature_from_another_key_is_rejected`, which dies with `FileNotFoundError: [WinError 2]` from `subprocess` because **`openssl` is not on PATH in this sandbox**; it was proven pre-existing by stashing all three P8.1 source files and re-running it at clean HEAD, where it fails identically. It is an environment gap, not a repo or P8.1 defect. **P8.2 checkpoint: app chunk 892 passed, 0 failed — 847 pre-existing + 45 new; JUnit cross-checked (`tests=892 failures=0 errors=0 skipped=0`). Parent chunk 957 collected = 952 passed + 1 failed + 4 skipped (19 integration tests deselected) — identical to the P8.1 parent result, so the same single pre-existing openssl failure and no regression. `ruff check` clean on the app and test paths; `release.security_gate.scan_for_secrets([...touched files...])` → 0 findings and `['helix_codex_app']` → 0. **Format, measured rather than assumed:** `ruff format --check .` is **red at HEAD on 7 files that P8.2 does not touch** (`ingest_engine.py`, `supervisor.py`, `telemetry_simulator.py`, `scripts/generate_pdf.py`, 3 × `tests/integration/ui/cockpit/`), so the "format-clean" claims in the §1A and §18.8 parent notes are no longer true and CI's repo-wide format step fails independently of this work. P8.2's own four files are format-clean after binding a local in `engine_bridge.py` (ruff 0.1.15 cannot express a parenthesized right-hand side, so its own suggested fix was the unreadable split-subscript form — see the P8.2 entry). App chunk re-run after that fix: 892 passed, 0 failed in 196.87 s.** |
+| Last commit | `336b1e5` (P8.1). P8.2 is the commit this ledger is landing in: `feat(app): the governed public WFM demo, end to end`. **A commit cannot contain its own SHA**, so resolve it with `git log --oneline -1` rather than reading it here. (This row previously deferred the SHA to "§20.8 of the parent ledger". That section does not exist — the parent ledger ends at §20.7 — so the cross-reference was a dead pointer, and it has been removed rather than repointed. Same class as the §18.8 "rule and a copy of it drifting apart" defect: a reference that cannot be followed is worse than no reference.) |
+| Completed steps | P0.1–P0.4, P1.1–P1.7, P2.1–P2.4, P3.1–P3.4, P4.1–P4.4, P5.1–P5.6, P6.1–P6.5, P7.1, P7.2, P7.3, P7.4, P7.5, **P8.1, P8.2** |
 
 > **GIT OBJECT-STORE INCIDENT + RECOVERY (2026-09-15).** While writing the P4.4
 > commit, the object store was found corrupt. Lost permanently: `5794fad` (P4.1),
@@ -1309,7 +1309,7 @@ App-specific rules:
       already formatted"). The v1 record is deliberately NOT a production approval: an
       unqualified `PRODUCTION` label remains unreachable by the gate by design.
 
-### P8 — Phase B: the governed public WFM demo (status: P8.1 COMPLETE)
+### P8 — Phase B: the governed public WFM demo (status: P8.1 + P8.2 COMPLETE)
 
 > **What Phase B is.** A demonstrable public-facing WFM demo that runs the *real* governed
 > engine path end to end, under a fixed least-privilege demo identity, without weakening any
@@ -1390,6 +1390,113 @@ App-specific rules:
       **Not done in P8.1, by design:** the demo has no route, no template, and no way to
       execute a workflow yet — it can reach the engine policy but nothing calls it. That is
       P8.2, and the app is not demonstrable until it lands.
+
+- [x] **P8.2** Submit, execute, and honest evidence — **COMPLETE** (one commit,
+      `feat(app): the governed public WFM demo, end to end`).
+      `integration/engine_bridge.py` — three additions and no change to any existing bridge
+      function. `execute_workflow(account, workflow_id)` loads the workflow through
+      `get_workflow` (the tenant-ownership seam) **before** authorizing, authorizes with
+      `action="execute"` and the workflow's own `owning_role_id`, and only then inspects the
+      state. `_metrics_digest(metrics)` is a 16-hex-char SHA-256 over
+      `json.dumps(..., sort_keys=True, separators=(",", ":"), default=str)`, matching
+      `engines/contracts.py::_hash_payload`, which is private. `_execution_report(workflow,
+      executed=)` assembles the response: ids, terminal state, `succeeded`, `retry_count`,
+      `error`, the stored `metrics`, the digest, and — **only when not executed** —
+      `gated: true` with a `gated_reason` naming the state. A handler failure is translated
+      to `EngineUnavailableError` **inside** the try, so ownership and authorization are never
+      swallowed into a 503.
+      `wfm_demo_input_payload(*, arrival_rate, average_handling_time, service_level_target,
+      average_calls_per_period=17.0)` is the whitelist, and the whitelist is the **signature**:
+      no `**extra`, so a field that is never read cannot be forwarded. It injects
+      `is_sample=True` and `data_mode=CONNECTOR_SIMULATED_REALISTIC` server-side, and validates
+      every number against `WFM_DEMO_NUMERIC_RANGES` with exclusive bounds — `bool` is
+      rejected before the numeric check because it is an `int` subclass, and `isfinite` is
+      checked so `inf` and `nan` cannot cross as "in range".
+      `modules/ops/service.py` — `OpsService.wfm_demo(...)` submits
+      (`requires_approval=False`) and then executes, with nothing in between. It builds no
+      payload of its own.
+      `modules/ops/router.py` — `POST /app/api/ops/demo/wfm` behind the existing
+      `require_csrf` and `_account`, deriving `WFM_DEMO_FIELDS` from the bridge's own ranges so
+      the two cannot disagree. `_number_field` does **transport coercion only** (form strings
+      and JSON numbers alike); whether a number is in range stays the bridge's rule. An
+      unrecognised key is a **400 naming the field**, never a silent drop. The report is
+      published on the workflow's own SSE channel as an `execution` frame.
+      **Three things deliberately left out of the payload, each for a reason worth keeping.**
+      `data_classification` — both the core and `engines/wfm/adapter.py` read it *out of the
+      input payload*, so a caller who could set it would relabel the run; omitting it takes
+      the internal default. `estimated_financial_cost` / `confidence_score` — `TaskRequest`
+      fields the bridge owns, and the demo runs at the bounded-autonomy defaults (cost `0.0`,
+      confidence `1.0`). `max_agents` — `engines/wfm/adapter.py` never reads it, so accepting
+      it would imply a staffing cap that does not exist.
+      **A real defect found while writing the tests, of the same class as §18.2 A0.1:**
+      `WorkflowState` is a class of **plain string constants, not an `Enum`**, so the
+      `gated_reason` f-string's `workflow.state.value!r` raised `AttributeError` on the only
+      path that builds it. No test had ever executed it, because nothing had ever held a
+      workflow. Fixed to `workflow.state!r`, and
+      `test_the_bridge_reports_a_missing_figure_rather_than_zero` pins the shape directly.
+      **Tests: `tests/helix_codex_app/test_wfm_demo_governed_path.py` (45)** — the governed
+      lifecycle end to end with the stored payload compared to the report, the digest
+      (stability, input-sensitivity, format), the whitelist (9 unownable keys, 12 bad numbers
+      including `inf`/`nan`/`True`, 3 missing fields, form/JSON parity), the structural
+      signature guard, the held-workflow refusal **asserted against an `Engine.execute` that
+      raises if reached**, tenant isolation (404, no state change), the session and CSRF
+      boundary, the 12-denied-permission surface, and the typed 503.
+      **Seven can-fail proofs, all run against mutated sources with the file hash re-verified
+      after each:** skipping the execute call; adding `**extra` to the builder; deleting the
+      non-executing pre-check; removing the tenant check from `get_workflow`; returning a
+      constant digest; making the route ignore unknown keys; clearing the injected sample
+      flag. All seven were caught. **The sixth was wrong on the first attempt and that is the
+      useful part:** it mutated the builder to read `data_mode` from the dict of four numeric
+      fields, so the mutation was a **no-op** and the test passed — proving nothing. A
+      can-fail proof has to actually create the defect it names; it was repointed at the
+      route's unknown-key refusal, which is the real enforcement point.
+      Gate: app chunk **892 passed, 0 failed** = 847 + 45, no regressions, JUnit
+      cross-checked (`tests=892 failures=0 errors=0 skipped=0`). Parent chunk **957 collected
+      = 952 passed + 1 failed + 4 skipped**, with the 19-test `tests/integration/` tier
+      deselected by `--ignore` — identical to the P8.1 parent result, so the one failure is
+      the same pre-existing openssl-missing baseline
+      (`tests/test_production_evidence.py::test_a_signature_from_another_key_is_rejected`,
+      `FileNotFoundError: [WinError 2]`) and P8.2 introduced no parent-suite regression.
+      `release/release-manifest.json` and `release/go-no-go.json` were SHA-256 hashed before
+      and after both chunks and are byte-identical (`62da9eaf…`, `707293a2…`) — no gate run
+      in this step wrote evidence. `release.security_gate.scan_for_secrets([...the touched
+      files...])` → **0 findings** and `['helix_codex_app']` → **0**. Every number here is
+      also carried in the Status table's baseline row above, which is the single place a
+      reader should take counts from.
+      **`ruff format --check .` is the step that caught a real defect, and it is not
+      optional** (see §18.8 of the parent ledger). The `gated_reason` assignment in
+      `engine_bridge.py` exceeded the 100-char limit, and the file was fixed — but note the
+      fix is *not* the one ruff proposes: **ruff 0.1.15 predates parenthesized
+      right-hand sides**, so both a `(...)`-wrapped f-string and the obvious split are
+      rejected, and its own suggestion is the unreadable
+      `report[` / `"gated_reason"` / `] = …` form. The assignment was therefore rewritten to
+      bind a local `reason` first, which is what the file now carries. **A can-fail lesson
+      for whoever hits this again: "ruff would reformat it" is not the same question as
+      "ruff's fix is acceptable".** The app chunk was re-run after the fix: **892 passed,
+      0 failed** in 196.87 s (the first run's 1172.02 s was the same passing suite under
+      load), and the P8.2 module plus the P8.1 module re-ran **76 passed** (45 + 31).
+      **Pre-existing, NOT caused by P8.2, and worth stating plainly:** the repo-wide
+      `ruff format --check .` reports **7 files that would be reformatted** —
+      `ingest_engine.py`, `supervisor.py`, `telemetry_simulator.py`, `scripts/generate_pdf.py`
+      and the three `tests/integration/ui/cockpit/test_cockpit_*.py` files. All seven were
+      verified **untouched by this step** (`git status --porcelain` clean for each), so CI's
+      repo-wide format step is **already red at HEAD, independently of P8.2**. That
+      contradicts the "format-clean" claims in the §1A and §18.8 parent notes, which is
+      exactly the §18.8 failure mode — a recorded claim that stopped being true. They are
+      left unfixed here because reformatting 7 unrelated files (4 of them the out-of-band
+      §19 cockpit tier, which the governed core does not own) is not this step's diff, and
+      because 3 of the 7 are the tier §19.1 deliberately quarantines. **Owner decision, not
+      a hidden deferral.**
+      **Two environment facts, recorded because they cost time.** (1) The PowerShell console
+      renders UTF-8 em-dashes as `?`, so a `?` in tool output is **not** evidence of mojibake;
+      check the file's codepoints instead (`t.count('\ufffd')`) before "fixing" an encoding bug
+      that does not exist — this file and `engine_bridge.py` are both clean. (2)
+      `Start-Process -ArgumentList` **drops the quotes** around a marker expression, so
+      `-m "not smoke"` reaches pytest as `-m not smoke` and it reports `file or directory not
+      found: smoke`; escape it as `` -m `"not smoke`" `` when launching a background suite.
+      **Still not done (B3–B7):** no template and no UI, so the demo is reachable over HTTP
+      but not yet clickable; no rate limit on the endpoint; no audit-trail reader in the
+      response beyond the correlation id.
 
 ## Git protocol
 

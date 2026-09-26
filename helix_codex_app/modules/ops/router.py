@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 from helix_codex_app.errors import AppError
+from helix_codex_app.integration import engine_bridge
 from helix_codex_app.integration.sse_bridge import encode, publish, subscribe, unsubscribe
 from helix_codex_app.modules.ops.service import OpsService, workflow_card
 from helix_codex_app.security.accounts import Account
@@ -22,6 +23,9 @@ from helix_codex_app.templating import render
 
 HEARTBEAT_SECONDS = 15
 STREAM_KEY_PREFIX = "workflow:"
+# The demo's entire request surface, derived from the bridge's own validation
+# ranges so the two cannot disagree about which fields exist.
+WFM_DEMO_FIELDS = frozenset(engine_bridge.WFM_DEMO_NUMERIC_RANGES)
 
 ops_router = APIRouter(
     prefix="/app",
@@ -97,6 +101,42 @@ async def submit_workflow(request: Request) -> JSONResponse:
     card = workflow_card(workflow)
     publish(STREAM_KEY_PREFIX + workflow.workflow_id, "state", card)
     return JSONResponse(card, status_code=201)
+
+
+@ops_router.post("/api/ops/demo/wfm", response_model=None, dependencies=[Depends(require_csrf)])
+async def run_wfm_demo(request: Request) -> JSONResponse:
+    """Run the public WFM demo: governed submit, then governed execute.
+
+    One request, one workflow, both lifecycle gates crossed. The four numeric
+    inputs are the only thing a caller may set, and an unrecognised key is
+    refused rather than ignored — a demo that silently dropped `is_sample` or
+    `max_agents` from a request would look like it honoured them.
+    """
+    account = _account(request)
+    try:
+        raw = await _payload(request)
+        unknown = sorted(set(raw) - WFM_DEMO_FIELDS)
+        if unknown:
+            raise ValueError(
+                f"the WFM demo accepts only {sorted(WFM_DEMO_FIELDS)}; refused {unknown}"
+            )
+        report = OpsService().wfm_demo(
+            account,
+            arrival_rate=_number_field(raw, "arrival_rate"),
+            average_handling_time=_number_field(raw, "average_handling_time"),
+            service_level_target=_number_field(raw, "service_level_target"),
+            average_calls_per_period=_number_field(
+                raw,
+                "average_calls_per_period",
+                default=engine_bridge.WFM_DEMO_AVERAGE_CALLS_PER_PERIOD,
+            ),
+        )
+    except AppError as exc:
+        return JSONResponse(exc.to_dict(), status_code=exc.status_code)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    publish(STREAM_KEY_PREFIX + report["workflow_id"], "execution", report)
+    return JSONResponse(report, status_code=201)
 
 
 @ops_router.get("/api/ops/workflows/{workflow_id}", response_model=None)
@@ -212,3 +252,29 @@ def _bool_field(raw: dict[str, Any], key: str, *, default: bool) -> bool:
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _number_field(
+    raw: dict[str, Any],
+    key: str,
+    *,
+    default: float | None = None,
+) -> Any:
+    """One numeric request field, coerced from a form string or a JSON number.
+
+    Only transport coercion happens here. Whether the number is in range is the
+    bridge's business, so the same rule applies to a form post and a JSON body.
+    """
+    value = raw.get(key)
+    if value is None or (isinstance(value, str) and not value.strip()):
+        if default is None:
+            raise ValueError(f"{key} is required")
+        return default
+    if isinstance(value, bool):
+        raise ValueError(f"{key} must be a number, got {value!r}")
+    if isinstance(value, (int, float)):
+        return value
+    try:
+        return float(str(value).strip())
+    except ValueError:
+        raise ValueError(f"{key} must be a number, got {value!r}") from None

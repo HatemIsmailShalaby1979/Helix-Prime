@@ -3695,3 +3695,16 @@ the endpoint test now derives the expected lower and upper bounds from
 Verification: Ruff clean; 12 endpoint boundary cases passed under
 `.venv-py312`. The prior work commit was `b533dec`; this narrow ledger update
 follows the established two-commit pattern.
+### 20.10 B6 Quick Tunnel deployment — COMPLETE
+
+**Recorded:** 2026-09-26. The app was started with Uvicorn on
+`127.0.0.1:8100`; local `/app/healthz` returned HTTP 200. Cloudflare
+`cloudflared` Quick Tunnel version 2026.9.3 forwarded
+`https://websites-dresses-jim-lucky.trycloudflare.com` to that loopback address;
+the public HTTPS `/app/healthz` returned HTTP 200 with `{"status":"ok","app":"helix-codex"}`.
+This is a real reachability proof, not a durable deployment: the unauthenticated
+`trycloudflare.com` hostname rotates whenever `cloudflared` restarts and has no
+uptime guarantee. B7 evidence must identify the current Quick Tunnel session.
+Repeatable launcher and limitation record: `deploy/quick-tunnel.ps1` and
+`deploy/README.md`. The two pre-existing local planning artifacts are now
+explicitly ignored in `.gitignore`; they were not added to the release tree.

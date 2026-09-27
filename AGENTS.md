@@ -4644,3 +4644,119 @@ as separate status surfaces, each restating the same completion claims.
 Going forward: a completion claim is asserted **here** and nowhere else. The app ledger
 records what each phase did and why, in the past tense, and never says what is currently
 done.
+
+### 20.28 Rate limits on the public routes, and the address they key on
+
+**Recorded:** 2026-09-27.
+
+#### 20.28.1 The topology question, answered by measurement
+
+The brief was to establish what actually carries the visitor's address through
+Worker → Quick Tunnel → loopback **before** choosing a rate-limit key. It does not behave
+the way the obvious reading suggests.
+
+Measured by running an echo server on `127.0.0.1:8100` behind the real chain, with the
+caller's egress address known independently (`197.132.77.25`, from `api.ipify.org`):
+
+| Path | `cf-connecting-ip` at the origin | socket peer |
+|---|---|---|
+| loopback direct | *absent* | `127.0.0.1` |
+| tunnel direct, no Worker | `197.132.77.25` — the visitor ✅ | `127.0.0.1` |
+| **through the Worker** | `2a06:98c0:3600::103` — Cloudflare's egress ❌ | `127.0.0.1` |
+
+**`CF-Connecting-IP` is the right header in principle and the wrong one in this topology.**
+Cloudflare rewrites it on the Worker's outbound `fetch`, so once the Worker is in the path
+the value describes Cloudflare, not the caller. Keying on it would have put **every visitor
+in one bucket** — precisely the failure the brief warned about. `x-forwarded-for` carried
+the same Cloudflare value, and the socket peer was `127.0.0.1` throughout, so neither was
+an alternative.
+
+**The fix belongs at the Worker.** It reads the visitor's address from its *own incoming*
+`cf-connecting-ip` — measured present and correct, `197.132.77.25` — and writes it to
+`x-helix-client-ip`, which Cloudflare does not rewrite. It always **sets or deletes** that
+header, never passing a caller's own value through, which is what makes it trustworthy at
+the origin.
+
+Verified after deploying: the origin receives `x-helix-client-ip: 197.132.77.25`, equal to
+the independently measured egress, while `cf-connecting-ip` still reads
+`2a06:98c0:3600::103`.
+
+#### 20.28.2 The resolver
+
+`helix_codex_app/security/client_ip.py` prefers `x-helix-client-ip`, then
+`cf-connecting-ip` (the tunnel-direct path), then the socket peer. A value is used only
+when it parses as an IP address, so a malformed or oversized header cannot become a bucket
+key.
+
+The header is trusted for a **topological** reason, not a cryptographic one, and the module
+says so: the app binds to loopback, the Worker is the only path in from outside, and the
+Worker always sets or deletes the header. **If the app is ever exposed without the Worker,
+that trust must be revisited.**
+
+#### 20.28.3 The limits
+
+`helix_codex_app/security/route_limits.py` — fixed-window counters in a new `route_throttle`
+table, keyed on `route:<name>:ip:<client>`.
+
+| Route | Ceiling |
+|---|---|
+| `GET /app/auth/supabase/login` | 30 / 60 s |
+| `GET /app/auth/supabase/callback` | 30 / 60 s |
+| `GET /app/auth/demo` (passwordless; gated off by default, §20.22) | 10 / 60 s |
+| `GET /app/ops/demo` | 60 / 60 s |
+| `POST /app/api/ops/demo/wfm` | 10 / 60 s |
+
+The route name is part of the key, so a submit flood cannot close the demo screen for that
+visitor and the demo cannot lock anyone out of sign-in. A refusal is the app's typed
+`LimitExceeded` → **429** `{"error":{"code":"limit_exceeded",…}}`.
+
+**The enterprise sign-in path is untouched.** `POST /app/auth/login` keeps `LoginThrottle`
+exactly as it was, and the new counters live in their own table so the two cannot collide.
+The fixed-window logic deliberately *mirrors* `LoginThrottle` rather than sharing code with
+it: sharing would mean refactoring a working security control as a side effect of adding a
+new one. Unifying them is a reasonable follow-up in its own right — recorded, not done.
+
+**Schema:** `route_throttle` added to `db.py::_SCHEMA_DDL` and mirrored by migration
+`0002_route_throttle`. `helix_codex_app/scripts/check_app_migration_drift.py` reports
+**63 objects on each side, no drift**.
+
+#### 20.28.4 Tests
+
+`tests/helix_codex_app/test_route_limits.py`, **10 tests, all passing**:
+
+- Resolver precedence: the Worker header beats the edge header; the edge header is used
+  when no Worker set one; the peer is the last resort; a non-address value is ignored.
+- The ceiling is real: `RouteThrottle` raises `LimitExceeded`; `GET /app/auth/supabase/login`
+  and `GET /app/ops/demo` each answer 429 `limit_exceeded` past their ceilings.
+- **No false positive on ordinary use:** a normal sign-in sequence, and a normal demo visit
+  (open the screen, submit twice, reopen) both complete with no refusal. A limit that fires
+  on ordinary use is a worse defect than no limit, because the customer sees it.
+- Bucket independence: exhausting the submit ceiling leaves the demo screen reachable.
+
+**Chunks re-run, and the delta checked as a set difference** (the §20.27.2 method):
+
+| Chunk | Before | Now |
+|---|---|---|
+| app — `tests/helix_codex_app/` | 922 passed | **932 passed, 0 failed** (30m31s) |
+| parent — `tests/ --ignore=tests/helix_codex_app` | 957 | **957** — unchanged |
+| collected | 1879 | **1889** |
+
+Exactly **10 added, 0 removed**, all ten from the new test file. The parent chunk is
+untouched, which is correct: this step changed no parent-suite behaviour, and the enterprise
+sign-in path it protects was deliberately left alone.
+
+#### 20.28.5 Two process failures worth recording
+
+**A temporary diagnostic nearly shipped a regression.** To find out what the Worker actually
+received I inserted a diagnostic `return` above the 530 branch. That left the 530 conversion
+as dead code after a `return` — a live regression in the deployed Worker — and the backup I
+took to undo it was itself contaminated, so restoring it put the diagnostic *back*.
+Recovered by rewriting the file from scratch rather than trusting the backup, then
+re-verifying all three behaviours: the forwarded header, the absence of the diagnostic, and
+the 530 conversion still answering its typed 503.
+
+**Three false negatives from truncated output, in one session.** Twice here I read a
+`head`-truncated response as proof of absence and concluded `x-helix-client-ip` was not
+being forwarded when it was, two lines below the cut. Earlier the same day, an
+`audit_id`-sorted chain "proved" tamper (§A5.8). **The rule: do not infer absence from a
+truncated view — print the whole structure, or ask the structure a direct question.**

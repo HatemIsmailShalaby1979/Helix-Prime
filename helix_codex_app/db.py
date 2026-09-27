@@ -178,6 +178,13 @@ _SCHEMA_DDL: tuple[str, ...] = (
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS route_throttle (
+        bucket TEXT PRIMARY KEY,
+        attempts INTEGER,
+        window_start TEXT
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS conversations (
         conversation_id TEXT PRIMARY KEY,
         tenant_id TEXT,

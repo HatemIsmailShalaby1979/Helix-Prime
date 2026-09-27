@@ -28,6 +28,12 @@ from helix_codex_app.modules.identity.supabase import (
 from helix_codex_app.security.accounts import AccountRepository, ensure_demo_account
 from helix_codex_app.security.guard import current_account, require_csrf
 from helix_codex_app.security.passwords import hash_password
+from helix_codex_app.security.route_limits import (
+    PASSWORDLESS_DEMO,
+    SUPABASE_CALLBACK,
+    SUPABASE_LOGIN,
+    limit_route,
+)
 from helix_codex_app.security.sessions import SESSION_COOKIE, SessionStore, set_session_cookie
 from helix_codex_app.templating import render
 
@@ -38,7 +44,11 @@ passwordless_demo_router = APIRouter(prefix="/app/auth")
 LOGIN_REDIRECT = "/app/"
 
 
-@passwordless_demo_router.get("/demo", response_model=None)
+@passwordless_demo_router.get(
+    "/demo",
+    response_model=None,
+    dependencies=[Depends(limit_route(PASSWORDLESS_DEMO))],
+)
 def demo_entry(request: Request) -> RedirectResponse:
     """Create the scoped demo identity on first use and issue a session.
 
@@ -68,7 +78,11 @@ def demo_entry(request: Request) -> RedirectResponse:
     return response
 
 
-@identity_router.get("/supabase/login", response_model=None)
+@identity_router.get(
+    "/supabase/login",
+    response_model=None,
+    dependencies=[Depends(limit_route(SUPABASE_LOGIN))],
+)
 def supabase_login(request: Request) -> RedirectResponse | JSONResponse:
     """Start the GitHub OAuth PKCE flow through Supabase Auth.
 
@@ -93,7 +107,11 @@ def supabase_login(request: Request) -> RedirectResponse | JSONResponse:
     return response
 
 
-@identity_router.get("/supabase/callback", response_model=None)
+@identity_router.get(
+    "/supabase/callback",
+    response_model=None,
+    dependencies=[Depends(limit_route(SUPABASE_CALLBACK))],
+)
 async def supabase_callback(request: Request) -> RedirectResponse | HTMLResponse:
     """Verify the Supabase user and bridge it to the scoped demo session."""
     query = request.query_params

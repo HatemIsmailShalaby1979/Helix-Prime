@@ -22,6 +22,13 @@ export default {
     headers.set("x-forwarded-host", incoming.host);
     headers.set("x-forwarded-proto", incoming.protocol.replace(":", ""));
 
+    const visitor = request.headers.get("cf-connecting-ip");
+    if (visitor) {
+      headers.set("x-helix-client-ip", visitor);
+    } else {
+      headers.delete("x-helix-client-ip");
+    }
+
     try {
       const response = await fetch(new Request(target, { method: request.method, headers, body: request.body, redirect: "manual" }));
       if (response.status === 530) {

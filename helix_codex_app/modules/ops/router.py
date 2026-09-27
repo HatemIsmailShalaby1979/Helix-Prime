@@ -19,6 +19,11 @@ from helix_codex_app.integration.sse_bridge import encode, publish, subscribe, u
 from helix_codex_app.modules.ops.service import OpsService, workflow_card
 from helix_codex_app.security.accounts import Account
 from helix_codex_app.security.guard import current_account, require_csrf, require_permission
+from helix_codex_app.security.route_limits import (
+    WFM_DEMO_SCREEN,
+    WFM_DEMO_SUBMIT,
+    limit_route,
+)
 from helix_codex_app.templating import render
 
 HEARTBEAT_SECONDS = 15
@@ -97,7 +102,11 @@ def ops_screen(request: Request) -> HTMLResponse:
     )
 
 
-@ops_router.get("/ops/demo", response_model=None)
+@ops_router.get(
+    "/ops/demo",
+    response_model=None,
+    dependencies=[Depends(limit_route(WFM_DEMO_SCREEN))],
+)
 def ops_demo_screen(request: Request) -> HTMLResponse:
     """The clickable WFM demo: four numbers in, one governed run out.
 
@@ -166,7 +175,11 @@ async def submit_workflow(request: Request) -> JSONResponse:
     return JSONResponse(card, status_code=201)
 
 
-@ops_router.post("/api/ops/demo/wfm", response_model=None, dependencies=[Depends(require_csrf)])
+@ops_router.post(
+    "/api/ops/demo/wfm",
+    response_model=None,
+    dependencies=[Depends(require_csrf), Depends(limit_route(WFM_DEMO_SUBMIT))],
+)
 async def run_wfm_demo(request: Request) -> JSONResponse | HTMLResponse:
     """Run the public WFM demo: governed submit, then governed execute.
 

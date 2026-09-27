@@ -1,41 +1,51 @@
 # AGENTS.md — Helix Codex OS Build Ledger
 
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
-> **ACTIVE WORK: §18 (governance streamlining + minimum production track, GOV-1).**
-> Phases 1 (A0 — correctness fixes), 2 (A1 — vocabulary single-sourcing),
-> 3 (A2 — structural mirror removal), 4 (A3 unify SOD + A4 dead-code cleanup) and
-> 5 (B1 — production evidence loader) are COMPLETE, the §18.5 chat-paging debt is
-> closed in §18.7, and §18.9 (can-fail proof for the seven remaining core gates,
-> plus the scratch-directory hygiene sweep) is COMPLETE. §18.9 also closed a
-> systemic leak: all eleven `tempfile.mkdtemp` sites in the release path now route
-> through `release/scratch.py`, and the Windows bulk-delete guard was finally
-> explained (§18.4) — **pytest always deletes via a `\\?\` path, so the guard's
-> temp-dir exemption never applies; raise
-> `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for any broad run.** §18.10 then closed the
-> long-standing "full suite never ran in one process" item — **1,758 passed, 0
-> failed, 0 skipped in 50m20s** — and re-measured every status surface in the
-> repository (root docs, marketing, and the whole `docs/handoff/` set) against it.
-> What remains is
-> Phase 6 (B2–B4), which is owner-driven:
-> infrastructure spend, paid external parties, and legal/human authority.
-> **No code change can unblock Phase 6** — the nine production-only gates need
-> signatures from keys held outside this repository.
+> **ACTIVE WORK: no engineering work is open.** The §20 B-, A- and follow-up
+> sections are CLOSED — **§20.30 carries the closure table with the commit SHAs for
+> each, and the suite's final run: 1,897 passed, 0 failed across both chunks.**
+> §18 (GOV-1) is marked IN PROGRESS above only because of the owner-driven item
+> below; its engineering work is complete, and §18.10 closed its last open item.
 >
-> **One owner decision is also still open and is not engineering work:** the
-> unpushed backlog (`origin/main = b9d8fb6`). The other — repository visibility —
-> was **recorded as closed on 2026-09-21 with the repository set to private. That
-> record was superseded.** Measured 2026-09-25, an unauthenticated request to
-> `https://api.github.com/repos/HatemIsmailShalaby1979/Helix-Prime` returns HTTP
-> 200 and `"private": false`. **The repository is public, and the owner confirmed
-> on 2026-09-25 that public is the intended state.** See §20.5. **Re-measure the backlog with
-> `git rev-list --count origin/main..HEAD` rather than trusting a number written
-> here** — it moves with every commit, and §18.8 records two figures that were
-> wrong for exactly that reason.
-> Everything else is
-> COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app UI modernization,
-> UI-1), the sports-academy pack (S0–S7), and §2–§17. Do not restart completed
-> sections. Read this file top-to-bottom, then pick up from §18, or §5
-> ("Suggested next work") if §18 is closed. Update this file immediately after
+> §18.9 closed a systemic leak worth keeping in view: all eleven
+> `tempfile.mkdtemp` sites in the release path route through
+> `release/scratch.py`, and the Windows bulk-delete guard was finally explained
+> (§18.4) — **pytest always deletes via a `\\?\` path, so the guard's temp-dir
+> exemption never applies; raise `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` for any
+> broad run.**
+>
+> What remains is owner-driven: Phase 6 (B2–B4) — infrastructure spend, paid
+> external parties, and legal/human authority. **No code change can unblock
+> Phase 6** — the nine production-only gates need signatures from keys held
+> outside this repository.
+>
+> **Two owner decisions are open, and neither is engineering work:**
+>
+> 1. **The unpushed backlog.** Measured 2026-09-27: `origin/main` is **`6b7d923`**
+>    and HEAD is **32 commits ahead**, a clean fast-forward — see §20.30.5. The
+>    figure previously written here (`b9d8fb6`) is stale; the remote advanced past
+>    it. **The documented measurement command no longer runs:** the local
+>    `origin/main` tracking ref has been pruned (`git branch -vv` reports
+>    `[origin/main: gone]`), so `git rev-list --count origin/main..HEAD` fails with
+>    `unknown revision`. Measure against the remote instead —
+>    `git ls-remote --heads origin main`, then `git rev-list --count <sha>..HEAD`.
+>    **Never trust a number written here; it moves with every commit.**
+> 2. **Repository visibility.** Recorded as closed on 2026-09-21 with the
+>    repository set to private; that record was superseded. Measured 2026-09-25,
+>    an unauthenticated request to
+>    `https://api.github.com/repos/HatemIsmailShalaby1979/Helix-Prime` returns
+>    HTTP 200 and `"private": false`. **The repository is public, and the owner
+>    confirmed on 2026-09-25 that public is the intended state.** See §20.5.
+>
+> **A push is gated on explicit human authorization.** Commits inside the
+> workspace follow the standing authorization; pushes do not, and **none has been
+> performed.**
+>
+> Everything else is COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app
+> UI modernization, UI-1), the sports-academy pack (S0–S7), §2–§19, and §20
+> (PORTFOLIO-DOCS-1) with its B-, A- and follow-up sections. Do not restart
+> completed sections. Read this file top-to-bottom, then **§20.30** for the current
+> closure state, or §5 ("Suggested next work"). Update this file immediately after
 > completing each step.
 >
 > **Out-of-band tooling (§19):** four standalone modules at the repository root —
@@ -4856,3 +4866,102 @@ that is short is a defect; a plan that is old is a plan.**
 **Chunks:** app **940 passed, 0 failed** (29m06s) — was 932, so +8, exactly the tests added
 here. Parent chunk untouched at **957**, which is correct: this step added no parent-suite
 behaviour. Collected total **1897 = 1889 + 8**.
+
+### 20.30 Final verification and phase closure
+
+**Recorded:** 2026-09-27. The last step before a push decision. **No push was performed.**
+
+#### 20.30.1 The suite, final run
+
+| Chunk | Command | Result | Time |
+|---|---|---|---|
+| app | `pytest tests/helix_codex_app/ -q -m "not smoke"` | **940 passed, 0 failed** | 29m04s |
+| parent | `pytest tests/ --ignore=tests/helix_codex_app -q -m "not smoke"` | **957 passed, 0 failed, 0 skipped, 19 deselected** | 19m21s |
+| — | total | **1,897 passed** | |
+
+1,897 = 940 + 957, and that is the collected total exactly. The 19 deselected are the
+quarantined `tests/integration/ui/cockpit/` tier, dropped by its own collection hook. There
+is **no openssl failure**: the named test passes because `openssl` resolves on PATH here
+(§20.27.3).
+
+#### 20.30.2 Phase closure, with commit SHAs
+
+| Phase | State | Closure commit | Evidence |
+|---|---|---|---|
+| **Phase B** — hosted public demo (B1–B7, P8.1–P8.3) | **CLOSED** | `d5121e3` first asserted it; **corrected by `97211f2`** | §20.11 |
+| **Phase A** — Supabase auth (A1–A5) | **CLOSED** | `41ec1cd` | §20.26 A5.9, §20.27 |
+| **Phase C** | **NOT RECORDED — cannot be confirmed** | — | §20.30.3 |
+
+`d5121e3` is the commit that first asserted "Phase B COMPLETE", but B's closure was
+**corrected** in `97211f2` after the B3/P8.2 DONE claim was found false — `1c29fd4` contains
+no `/app/auth/demo` route at all. Both SHAs are named because quoting only the first would
+quote a claim that was subsequently withdrawn. Phase A's closure is `41ec1cd`, the A5
+confirmation run carrying the §A5.9 table.
+
+#### 20.30.3 Phase C is not defined anywhere, and is not closed
+
+**The ledger does not record Phase C as started, let alone closed.** Its only two mentions
+are the same sentence, in `afb826b` and `41ec1cd`: *"Remaining before Phase C: the
+full-suite and ledger-consolidation step."* That step was then completed in `864b71d`, which
+**unblocked** Phase C without entering it.
+
+`git log -S "Phase C" -- AGENTS.md` returns exactly those two commits and no other. The
+phrase appears nowhere else in the repository and no plan document defines it.
+`docs/archive/HELIX_CODEX_UPGRADE_PLAN.md` has C0–C8, but that is the archived **core**
+upgrade plan, unrelated to the A/B/C sequence; the blueprint's "Phase C — Expansion
+(months 9+)" is a commercial phase.
+
+The two steps since `864b71d` — §20.28 (rate limits on the public routes, `72ab82b`) and
+§20.29 (the read-only audit-trail view, `aa0e5a9`) — **carry no phase label.** They are the
+two P8 tail items the demo doc had called unbuilt, and so are the most likely referent of
+"Phase C", but that is an **inference and is not asserted here.**
+
+**The honest answer to "confirm Phase C is closed" is that it cannot be confirmed, because
+nothing in the repository says what Phase C is or that it happened.** Recording it needs the
+owner's definition of its scope. Labelling those two commits on a guess would put a claim
+into the authoritative status surface that no evidence supports — the exact failure §20.15,
+§20.18 and §20.27 were each about.
+
+#### 20.30.4 Everything shipped since the start of this plan
+
+The plan is the unpushed range: **32 commits**, `6b7d923..aa0e5a9`, **39 files, +5,563 / −19**.
+
+| Group | Commits | What shipped |
+|---|---|---|
+| P8.1–P8.3 — the public demo | `336b1e5` … `14e677f` | least-privilege demo identity with a scope-checked engine voice; the governed WFM endpoint; the clickable screen; range errors derived from the source |
+| B6–B7 — hosting | `040d6e2` … `97211f2` | Quick Tunnel deployment; the KV-backed Worker front door; hosted WFM evidence; the B3 correction |
+| A1–A2 — provisioning | `8005d4d` … `9ae17c8` | the auth-only scope boundary; the Supabase project; the Worker front door re-verified |
+| A3 — the identity bridge | `e81f52e` … `39d3ccf` | the Supabase PKCE bridge; the `state` carriage fix; the `SupabaseAuthError` fix; the first hosted sign-in |
+| A4 — closing the bypass | `1011df6`, `432338b` | the passwordless route gated behind a setting; the visible GitHub entry; origin 530 converted to a typed 503 |
+| A5 — hosted evidence | `afb826b`, `41ec1cd` | two hosted runs, correlation ids captured and verified from the stores |
+| Consolidation | `864b71d` | the test delta proved by set difference; the two-ledger risk resolved |
+| Follow-ups | `72ab82b`, `aa0e5a9` | rate limits keyed on the forwarded visitor; the read-only audit-trail view |
+
+#### 20.30.5 Push state — measured, not quoted
+
+- `origin/main` = **`6b7d923`** (`chore: name the copyright holder as the person, not the
+  project`), read with `git ls-remote --heads origin main`.
+- HEAD = `aa0e5a9`. **32 commits ahead.**
+- `git merge-base --is-ancestor 6b7d923 HEAD` → **true**, so the push would be a
+  **fast-forward**.
+- Working tree **clean**; nothing uncommitted.
+- **The ledger's documented command no longer runs.** The local `origin/main` tracking ref
+  has been pruned — `git branch -vv` reports `[origin/main: gone]` and `git show-ref` lists
+  no `origin/*` at all — so `git rev-list --count origin/main..HEAD` fails with
+  `unknown revision`. Measured against the remote instead.
+- **No push was performed.** Pushes require explicit human authorization; none was given for
+  this step, and this is a deliberate gate rather than an oversight.
+
+#### 20.30.6 Ledger accuracy — corrected, not just confirmed
+
+Checking the ledger against the repository found the header — the first thing any agent
+reads — materially stale, and it has been corrected rather than reported around:
+
+| Was | Is |
+|---|---|
+| "ACTIVE WORK: §18" | §18's engineering is complete; the §20 B/A/follow-up sections are closed |
+| "Read this file top-to-bottom, then pick up from §18" | then §20.30 for the closure state |
+| "the unpushed backlog (`origin/main = b9d8fb6`)" | `origin/main` is `6b7d923`; 32 ahead |
+| "Re-measure the backlog with `git rev-list --count origin/main..HEAD`" | that command no longer runs; measure against the remote |
+| "Everything else is COMPLETE history: … and §2–§17" | … §2–§19, and §20 with its B-, A- and follow-up sections |
+| no statement about pushes | a push is gated on explicit human authorization, and none has been performed |

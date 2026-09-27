@@ -4952,6 +4952,10 @@ The plan is the unpushed range: **32 commits**, `6b7d923..aa0e5a9`, **39 files, 
 - **No push was performed.** Pushes require explicit human authorization; none was given for
   this step, and this is a deliberate gate rather than an oversight.
 
+**The measurement moved while this entry was being written**, which is the point the header
+makes: writing §20.30 added its own commit, so HEAD is now `56deb7d` and the backlog is
+**33**. A reader should re-measure rather than quote either figure.
+
 #### 20.30.6 Ledger accuracy — corrected, not just confirmed
 
 Checking the ledger against the repository found the header — the first thing any agent

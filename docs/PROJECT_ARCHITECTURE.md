@@ -6,6 +6,8 @@
 >
 > **Last verified:** 2026-09-20 — full suite: **1,758 passed, 0 failed, 0 skipped, in one uninterrupted process**
 >
+> **Correction, 2026-09-27.** That figure is a dated snapshot, not the current state. Re-measured on 2026-09-27 the suite is **1,897 passed / 0 failed** (940 app chunk + 957 parent, 19 deselected as a quarantined UI tier), and **`ruff check` is no longer clean** (3 errors across the CI paths) while `ruff format --check .` would reformat 346 files. The "ruff clean, mypy clean, bandit clean" cell below is therefore no longer true and is retained only as the record of what was verified on the date above.
+>
 > **Commit:** `003709b`
 
 ---

@@ -4773,6 +4773,19 @@ being forwarded when it was, two lines below the cut. Earlier the same day, an
 `audit_id`-sorted chain "proved" tamper (§A5.8). **The rule: do not infer absence from a
 truncated view — print the whole structure, or ask the structure a direct question.**
 
+**Forward rule — a Worker change never mutates the live front door.** Both incidents above
+came from editing `deploy/worker/index.js` and deploying it to the one instance that **is**
+the public front door, in order to answer a diagnostic question. It worked out because each
+was caught, but **the proxy was in a degraded state at least twice during ordinary
+iteration**, and the second time the safety net — the backup taken to undo the change — was
+itself contaminated.
+
+From here, a Worker change is exercised against a local `wrangler dev` instance or a
+disposable second Worker first, and the front door is updated **once**, after the behaviour
+has been observed somewhere that is not the front door. The front door is currently torn down
+between sessions, which is exactly why this is easy to defer — and exactly why it would be
+forgotten the first time it is not.
+
 ### 20.29 Read-only audit-trail view, and the reader defect it surfaced
 
 **Recorded:** 2026-09-27.
@@ -4892,7 +4905,7 @@ is **no openssl failure**: the named test passes because `openssl` resolves on P
 |---|---|---|---|
 | **Phase B** — hosted public demo (B1–B7, P8.1–P8.3) | **CLOSED** | `d5121e3` first asserted it; **corrected by `97211f2`** | §20.11 |
 | **Phase A** — Supabase auth (A1–A5) | **CLOSED** | `41ec1cd` | §20.26 A5.9, §20.27 |
-| **Phase C** | **NOT RECORDED — cannot be confirmed** | — | §20.30.3 |
+| **Phase C** — §20.28 + §20.29 | **CLOSED** (scope owner-confirmed 2026-09-27) | `72ab82b`, `aa0e5a9` | §20.30.7 |
 
 `d5121e3` is the commit that first asserted "Phase B COMPLETE", but B's closure was
 **corrected** in `97211f2` after the B3/P8.2 DONE claim was found false — `1c29fd4` contains
@@ -4901,6 +4914,10 @@ quote a claim that was subsequently withdrawn. Phase A's closure is `41ec1cd`, t
 confirmation run carrying the §A5.9 table.
 
 #### 20.30.3 Phase C is not defined anywhere, and is not closed
+
+> **SUPERSEDED on 2026-09-27 — the owner confirmed the scope. See §20.30.7.** This
+> subsection is kept as written, because the record of *not* being able to confirm
+> something is more useful than a tidy history that never shows the gap.
 
 **The ledger does not record Phase C as started, let alone closed.** Its only two mentions
 are the same sentence, in `afb826b` and `41ec1cd`: *"Remaining before Phase C: the
@@ -4972,3 +4989,54 @@ reads — materially stale, and it has been corrected rather than reported aroun
 | "Re-measure the backlog with `git rev-list --count origin/main..HEAD`" | that command no longer runs; measure against the remote |
 | "Everything else is COMPLETE history: … and §2–§17" | … §2–§19, and §20 with its B-, A- and follow-up sections |
 | no statement about pushes | a push is gated on explicit human authorization, and none has been performed |
+
+#### 20.30.7 Phase C — scope confirmed by the owner, and CLOSED
+
+§20.30.3 recorded that Phase C could not be confirmed, because nothing in the repository
+defined it, and declined to label the two most recent steps on an inference. **The owner
+confirmed the scope on 2026-09-27**, so it is now recorded rather than inferred:
+
+**Phase C = §20.28 (rate limits on the public routes) + §20.29 (the read-only audit-trail
+view).**
+
+Those two together are the P8 tail: the two items `docs/DEMO_ACCESS_FLOW.md` had listed as
+unbuilt and deliberately not numbered as phases. They were always intended as one phase — the
+label simply never reached the ledger, which is exactly why §20.30.3 could not assert it.
+
+| Phase | State | Commits |
+|---|---|---|
+| **C** — public-surface hardening and the audit reader | **CLOSED** | `72ab82b` (rate limits), `aa0e5a9` (audit-trail view) |
+
+The gap is worth keeping in view rather than tidied away: **the work was done, tested and
+verified, but the phase it belonged to existed only in the owner's head.** A ledger that
+records work without recording which phase it closes cannot answer "is Phase C done?" — it can
+only answer "these two things are done." Both are true statements; only one is the question.
+
+#### 20.30.8 Full-range secrets scan before the push
+
+Everything up to this point had been scanned per-file and per-step. Before an irreversible
+push the whole range was scanned instead, because per-step scanning cannot see a value that
+was committed and later removed.
+
+**Method.** `release.security_gate.scan_for_secrets` reads the **working tree**, so it cannot
+see an intermediate commit's content. Its own patterns, allowlist and function-call filter
+were therefore driven over **every blob reachable from `HEAD` but not from `6b7d923`** —
+229 objects walked, 90 scannable blobs read, 35 commit messages read — plus seven targeted
+patterns for the credential shapes this session actually handled (Supabase
+`sb_publishable_`/`sb_secret_`, JWTs, `gh*_` and `github_pat_` tokens, PEM bodies, and the
+OAuth client-id prefix).
+
+**Result: 26 findings, all one class — the GitHub OAuth *client id* `Ov23li…Ut9p`, appearing
+in successive versions of `AGENTS.md`.** No Supabase anon key (checked against the working
+`.env` value, absent from the range), no JWT, no `sb_publishable_`, no `sb_secret_`, no
+GitHub token, no private key. The repo's own working-tree scanner reports **0 findings**.
+
+An OAuth **client id** is public by design — it travels in the browser's authorize URL, which
+is how it was observed — and this one is recorded deliberately in §20.14, §20.20 and the
+commit messages. The client **secret** is not present anywhere in the range. **The finding was
+reported to the owner before any further action was taken, and the push was held.**
+
+**Session identifiers are not credentials, checked rather than assumed:**
+`SessionStore.issue_session` mints `token = secrets.token_urlsafe(32)` separately from
+`session_id = f"session-{uuid4().hex}"`, and stores **only the token hash**. The `session-…`
+ids recorded in §20.25 and §20.26 are identifiers; possessing one does not authenticate.

@@ -62,6 +62,32 @@ def test_supabase_callback_bridges_a_fresh_identity_to_demo_session(monkeypatch,
     assert tuple(row) == (DEMO_ROLE_ID, "visitor@example.com")
 
 
+def test_the_login_page_offers_the_github_entry(fresh_client):
+    client, _settings = fresh_client
+
+    page = client.get("/app/auth/login")
+
+    assert page.status_code == 200
+    assert 'href="/app/auth/supabase/login"' in page.text
+    assert "Sign in with GitHub" in page.text
+
+
+def test_the_login_page_hides_the_github_entry_when_supabase_is_unconfigured(tmp_path):
+    settings = AppSettings(
+        db_path=str(tmp_path / "no-supabase.db"),
+        cookie_secure=False,
+        supabase_url=None,
+        supabase_anon_key=None,
+        supabase_redirect_uri=None,
+    )
+    with TestClient(create_app(settings), follow_redirects=False) as client:
+        page = client.get("/app/auth/login")
+
+    assert page.status_code == 200
+    assert "Sign in with GitHub" not in page.text
+    assert 'href="/app/auth/supabase/login"' not in page.text
+
+
 def test_supabase_auth_error_carries_a_status_and_a_detail():
     error = SupabaseAuthError(
         "Supabase authorization code exchange failed",

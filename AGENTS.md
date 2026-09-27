@@ -4250,4 +4250,97 @@ Two things recorded but **not** changed, since both are beyond A4:
   point is reachable by URL and not by clicking. A visible GitHub button is a UI
   change and is left open.
 - The Worker still passes through a 530 when the origin is registered but dead
-  (A3.18). Treating an origin 5xx as an offline signal remains an open option.
+  (A3.18). **Resolved in §20.24 — converted.**
+
+### 20.23 A4 follow-up — the login page's GitHub entry — COMPLETE
+
+**Recorded:** 2026-09-27. §20.22 removed the only *clickable* entry point from the
+hosted deployment: the passwordless route was unlinked, and nothing linked to
+`/app/auth/supabase/login` either, so the working public flow was reachable only by
+typing the URL. This closes that gap.
+
+**Changed files:** `helix_codex_app/templates/auth/login.html`,
+`tests/helix_codex_app/test_supabase_auth.py`, `AGENTS.md`.
+
+**No new route, no route logic, no new CSS.** `render()` already places `settings`
+in every template context (`helix_codex_app/templating.py:35`), so the condition is
+evaluated inside the template:
+
+```jinja
+{% if settings.supabase_url and settings.supabase_anon_key and settings.supabase_redirect_uri %}
+<a class="btn btn--ghost btn--block" href="/app/auth/supabase/login">Sign in with GitHub</a>
+<p class="auth-lede">Or sign in with a workspace account.</p>
+{% endif %}
+```
+
+The link renders only when the flow can actually succeed. That is the same standard
+the WFM demo screen is held to — a control that cannot succeed is a control that
+lies — and it keeps a local install with no Supabase from offering a button that
+answers 503.
+
+`btn--ghost`, not `btn--primary`: the password form's submit is already the card's
+primary action, and two primary buttons on one card would misstate which is which.
+`auth-lede` is reused for the divider line, so no CSS was added. No GitHub glyph was
+invented for the sprite; the label carries the meaning.
+
+**Tests** (`tests/helix_codex_app/test_supabase_auth.py`):
+
+- `test_the_login_page_offers_the_github_entry` — with Supabase configured, the page
+  carries `href="/app/auth/supabase/login"` and the label.
+- `test_the_login_page_hides_the_github_entry_when_supabase_is_unconfigured` — with
+  all three Supabase settings explicitly `None`, neither appears. They are passed
+  explicitly rather than left to the environment, so a developer's `.env` cannot make
+  the test vacuous.
+
+**Run:** `test_login_and_auth.py`, `test_auth_hardening.py`, `test_admin.py` →
+**60 passed**; `test_supabase_auth.py` → **5 passed**. `ruff check` clean.
+`test_login_and_auth.py:123` asserts `"Sign in" in resp.text`, which the new label
+still satisfies.
+
+### 20.24 Worker 530 — decided: CONVERT
+
+**Recorded:** 2026-09-27. §20.21 left this open on purpose. The decision is **yes,
+convert**, under a deliberately narrow rule: an origin response of **530** becomes the
+same typed 503 the Worker already returns for a missing or malformed origin. Every
+other status passes through unchanged.
+
+**Why convert 530:**
+
+1. **The contract already claimed it.** `deploy/worker/README.md` promised a typed 503
+   instead of a Cloudflare generic upstream error, and the code made that promise
+   false for the most common failure of all. Correcting the code is the smaller change
+   than weakening the contract.
+2. **530 cannot mask an application fault.** 530 is Cloudflare's own tunnel-failure
+   code and the Helix app never emits it, so the rule is safe by construction. That is
+   the masking risk which argues against converting the rest.
+3. **It closes an information leak.** The passthrough page was Cloudflare-branded and
+   named the rotating upstream in the visitor's browser — the origin hostname appeared
+   in the error page's own text. A public front door should not disclose its origin.
+4. **The visitor-visible failure becomes uniform.** The front door is either up or
+   cleanly offline.
+
+**Why stop there.** An app-generated 500 is real information for the operator.
+Relabelling it "offline" would hide an application fault behind a connectivity label —
+precisely the masking failure that §20.15, §20.18 and §20.19 were each about. 502/503/504
+are not converted for the same reason: the app can emit them.
+
+**Implementation** (`deploy/worker/index.js`): after the fetch,
+`if (response.status === 530) return offline(...)`, with its own message —
+`the registered origin's tunnel is down` — distinct from `is unreachable` (fetch threw)
+and `is invalid` (malformed), so the operator can tell which path fired.
+
+**Verified live on the deployed Worker**, not by reasoning about the code. Deployed as
+version `ebdca03f-1d92-4042-b33d-cf111f5fc15a`, then each path probed through
+`https://helix-codex.hatemshalaby2025.workers.dev/app/healthz`:
+
+| KV `HELIX_ORIGIN` | Result |
+|---|---|
+| key absent | 503 `origin not registered` |
+| `not-a-url` | 503 `registered origin is invalid` |
+| the dead `trycloudflare.com` hostname | 503 `the registered origin's tunnel is down` |
+
+The third row is the fix — before it, the same request returned Cloudflare's 530 page.
+That message is reachable only from the 530 branch, so its presence is the proof the
+branch fired. The fourth path, a live origin passing through unchanged, is exercised by
+the A5 stand-up. Workers KV is eventually consistent; each probe waited ~70 s after the
+write.

@@ -23,7 +23,11 @@ export default {
     headers.set("x-forwarded-proto", incoming.protocol.replace(":", ""));
 
     try {
-      return await fetch(new Request(target, { method: request.method, headers, body: request.body, redirect: "manual" }));
+      const response = await fetch(new Request(target, { method: request.method, headers, body: request.body, redirect: "manual" }));
+      if (response.status === 530) {
+        return offline("Demo temporarily offline: the registered origin's tunnel is down.");
+      }
+      return response;
     } catch {
       return offline("Demo temporarily offline: registered origin is unreachable.");
     }

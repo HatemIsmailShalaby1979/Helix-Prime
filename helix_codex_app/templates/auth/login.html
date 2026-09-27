@@ -11,6 +11,10 @@
     </p>
   </div>
   {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+  {% if settings.supabase_url and settings.supabase_anon_key and settings.supabase_redirect_uri %}
+  <a class="btn btn--ghost btn--block" href="/app/auth/supabase/login">Sign in with GitHub</a>
+  <p class="auth-lede">Or sign in with a workspace account.</p>
+  {% endif %}
   <form method="post" action="/app/auth/login" class="auth-form">
     <label class="field">
       <span class="field__label">Domain</span>

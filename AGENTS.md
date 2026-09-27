@@ -4456,3 +4456,88 @@ than this dev copy.
 
 A1, A2, A3, A4, A5 all COMPLETE. Remaining before Phase C: the full-suite and
 ledger-consolidation step.
+
+### 20.26 A5 confirmation run — COMPLETE, with a scope correction
+
+**Recorded:** 2026-09-27. A second hosted run was requested explicitly through Supabase
+Auth rather than the shared button.
+
+#### A5.6 The stand-up
+
+Preflight exit 0 → app on `127.0.0.1:8100` → Quick Tunnel
+`https://plants-lynn-announced-surfaces.trycloudflare.com` → KV repointed. Verified
+through the Worker **before** hand-over:
+
+| Check | Result |
+|---|---|
+| `/app/healthz` (live passthrough) | 200 |
+| login page renders the GitHub entry | yes |
+| the entry's target | 303 → Supabase `/auth/v1/authorize`, `state` inside `redirect_to` |
+| `GET /app/auth/demo` | **404** |
+
+The last row is the first check of A4's gating at the **real hosted boundary** rather
+than in tests, and it is the distinction A4 asked for: the route is **absent**, not
+refused.
+
+#### A5.7 Evidence — verified, not taken from the screen
+
+| Field | Value |
+|---|---|
+| workflow_id | `wf_c0d357dd0391` |
+| correlation_id | `7164e344e792498b93f29e910e34c991` |
+| created_at | `2026-09-27T00:38:17.745505Z` |
+| tenant / client | `helix-demo` / `helix-demo` |
+| capability | `wfm_forecast` |
+| state / retry_count | `closed` / `0` |
+| is_sample / data_mode | `true` / `simulated_realistic` |
+
+Six events with the same actor handoff as A5, and five audit records forming an
+unbroken sub-chain:
+
+```text
+0e0e6c88… → 06f79fcc… → be792330… → 4252ec3a… → 0ab4b9ea…
+```
+
+The whole-file `verify_chain()` still fails for the known 2026-08-29 reason recorded in
+§A5.4, so the audit chain is again **not** offered as corroboration for this run.
+
+A second run at `00:37:54` (`correlation_id 0843513489ca…`) preceded it — the owner
+submitted twice. The identifiers above are the second.
+
+#### A5.8 Correction — this run did not re-exercise sign-in
+
+The run is genuine hosted evidence, but its **authentication leg was carried over, not
+fresh**. Stated plainly, because the request was specifically for an end-to-end Supabase
+run:
+
+- `/tmp/helix-app4.log` contains **no `/app/auth/supabase/callback` request at all** —
+  measured count `0`. The tunnel log records connection information and no request
+  paths, so it neither corroborates nor contradicts this.
+- **No new session was issued.** The newest row in `sessions` is
+  `session-771cb05ddc4f48…`, issued `2026-09-27T00:12:37.909597Z` — the A5 sign-in.
+- The app log shows the owner clicking the entry at `00:25:14`
+  (`GET /app/auth/supabase/login` → 303) with **no callback following**, then two
+  successful WFM POSTs at `00:37:55` and `00:38:17` carrying `tenant_id=helix-demo`.
+
+So those POSTs were authorised by the session the **A5** sign-in created. The mechanism
+is ordinary and not a defect: the session cookie is scoped to
+`helix-codex.hatemshalaby2025.workers.dev` — a stable hostname — and lives until
+`2026-10-26`, so it survives a Quick Tunnel restart, which is exactly what changed
+between A5 and this run.
+
+It is worth recording because it means **a hosted run can no longer be assumed to have
+exercised sign-in**. To force a fresh one, revoke the session or clear cookies for that
+host first. A5's own acceptance evidence is unaffected: its callback and session are
+recorded in §A5.3.
+
+#### A5.9 Phase A — COMPLETE
+
+| Step | State |
+|---|---|
+| A1 — auth-only scope boundary | COMPLETE — §20.13 |
+| A2 — Supabase project + Worker front door | COMPLETE — §20.14, §20.17 |
+| A3 — identity bridge and `state` carriage | COMPLETE — §20.18, §20.19, §20.20 |
+| A4 — passwordless entry gated | COMPLETE — §20.22, §20.23 |
+| A5 — hosted evidence runs | COMPLETE — §20.25, §20.26 |
+
+Remaining before Phase C: the full-suite and ledger-consolidation step.

@@ -21,10 +21,12 @@
 >
 > **Two owner decisions are open, and neither is engineering work:**
 >
-> 1. **The unpushed backlog.** Measured 2026-09-27: `origin/main` is **`6b7d923`**
->    and HEAD is **32 commits ahead**, a clean fast-forward — see §20.30.5. The
->    figure previously written here (`b9d8fb6`) is stale; the remote advanced past
->    it. **The documented measurement command no longer runs:** the local
+> 1. **The unpushed backlog.** `origin/main` is **`6b7d923`**; measured at
+>    `aa0e5a9` on 2026-09-27 the backlog was **32 commits** and the push a clean
+>    fast-forward — see §20.30.5. **The count moves with every commit, including
+>    the one that records it; re-measure, never quote it.** The figure previously
+>    written here (`b9d8fb6`) is stale; the remote advanced past it. **The
+>    documented measurement command no longer runs:** the local
 >    `origin/main` tracking ref has been pruned (`git branch -vv` reports
 >    `[origin/main: gone]`), so `git rev-list --count origin/main..HEAD` fails with
 >    `unknown revision`. Measure against the remote instead —
@@ -4952,9 +4954,10 @@ The plan is the unpushed range: **32 commits**, `6b7d923..aa0e5a9`, **39 files, 
 - **No push was performed.** Pushes require explicit human authorization; none was given for
   this step, and this is a deliberate gate rather than an oversight.
 
-**The measurement moved while this entry was being written**, which is the point the header
-makes: writing §20.30 added its own commit, so HEAD is now `56deb7d` and the backlog is
-**33**. A reader should re-measure rather than quote either figure.
+**The measurement moves with every commit that records it**, which is the point the header
+makes: writing §20.30 raised it, and the note recording that raised it again. The figure
+above is a snapshot taken at `aa0e5a9` and is stale one commit later. **Re-measure; do not
+quote a number from this file.**
 
 #### 20.30.6 Ledger accuracy — corrected, not just confirmed
 

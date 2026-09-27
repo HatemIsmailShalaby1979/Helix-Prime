@@ -1610,13 +1610,15 @@ App-specific rules:
       count moved 45 → 47 from the two new `_execution_report` semantics tests.
       `release/release-manifest.json` and `release/go-no-go.json` SHA-256 hashed
       before and after, byte-identical (`62da9eaf…`, `707293a2…`).
-      **Still not done, and deliberately not numbered:** no rate limit on the
-      demo endpoint, and no audit-trail reader in the response beyond the
+      **Left undone at the time, and deliberately not numbered:** no rate limit on
+      the demo endpoint, and no audit-trail reader in the response beyond the
       correlation id and the metrics digest. These were the tail of the old
       "B3–B7" label, which was misleading — they are not screen work, so calling
-      them a UI phase was a category error, and **this step does not silently
-      absorb them into a P8.4 that was never planned.** Both are real, both are
-      owner-scoped, and neither is claimed done.
+      them a UI phase was a category error, and **this step did not silently
+      absorb them into a P8.4 that was never planned.** Both were real and both
+      were owner-scoped. **Whether they are still outstanding is not recorded in
+      this file** — see `E:\Helix-Prime\AGENTS.md`, which is the single
+      authoritative status surface.
 
 ## Git protocol
 

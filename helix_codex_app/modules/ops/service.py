@@ -55,6 +55,27 @@ def _error_text(workflow: Any) -> str | None:
     return str(error)
 
 
+def _chain_summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Whether the rows shown link to each other, and where the linkage stops.
+
+    A statement about *these* rows, not about the trail as a whole. The whole trail
+    can fail to verify for a reason outside this run — a fork recorded months
+    earlier — and reporting that here would blame this run for someone else's break.
+    The screen says which of the two it is showing.
+    """
+    linked = True
+    for previous, current in zip(rows, rows[1:], strict=False):
+        if current.get("previous_hash") != previous.get("current_hash"):
+            linked = False
+            break
+    return {
+        "rows": len(rows),
+        "linked": linked,
+        "head_previous_hash": rows[0].get("previous_hash") if rows else None,
+        "tail_hash": rows[-1].get("current_hash") if rows else None,
+    }
+
+
 class OpsService:
     """Submit, list, inspect, and decide governed workflows."""
 
@@ -120,6 +141,41 @@ class OpsService:
     def detail(self, account: Account, workflow_id: str) -> Any:
         """One workflow, or NotFound. A foreign tenant's is NotFound too."""
         return engine_bridge.get_workflow(account, workflow_id)
+
+    def audit_trail(self, account: Account, correlation_id: str) -> dict[str, Any]:
+        """The governance trail already recorded for one correlation id.
+
+        Strictly read-only, and strictly a reading of what the core wrote: no row is
+        created, no decision is re-made, and nothing is recomputed. The gate decision
+        comes from the audit chain's own `decision` field, the timestamps and actor
+        handoff from the workflow's event stream, and the executed/succeeded state
+        from the workflow record — three existing sources, none of them new.
+
+        A correlation id this tenant does not own is reported as not found rather
+        than as an empty trail, so "no such run" and "a run with nothing recorded"
+        cannot be confused.
+        """
+        entries = engine_bridge.audit_entries_for_correlation(correlation_id)
+        scoped = [row for row in entries if row.get("tenant_id") == account.tenant_id]
+        workflow = None
+        if scoped:
+            workflow_id = next(
+                (row.get("workflow_id") for row in scoped if row.get("workflow_id")), None
+            )
+            if workflow_id is not None:
+                workflow = engine_bridge.get_workflow(account, workflow_id)
+        return {
+            "correlation_id": correlation_id,
+            "tenant_id": account.tenant_id,
+            "found": bool(scoped),
+            "workflow": workflow_card(workflow) if workflow is not None else None,
+            "execution": engine_bridge.recorded_execution(workflow) if workflow is not None else None,
+            "events": engine_bridge.workflow_events(workflow.workflow_id) if workflow is not None else [],
+            "audit": scoped,
+            "chain": _chain_summary(scoped),
+            "chain_verified": engine_bridge.audit_chain_verified(),
+            "scan_limit": engine_bridge.AUDIT_CORRELATION_SCAN,
+        }
 
     def approvals(self, account: Account) -> list[Any]:
         """Everything in this tenant waiting on a decision."""

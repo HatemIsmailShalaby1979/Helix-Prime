@@ -28,6 +28,11 @@ OPS_CAPABILITY = "ops_execution"
 OPS_OWNING_ROLE = "ops_gm"
 ENGINE_IDS: tuple[str, ...] = ("wfm", "rta", "cx", "b2b", "personnel", "crm")
 AUDIT_SCAN_LIMIT = 500
+# How many of the newest audit rows a correlation lookup scans. The trail has no
+# index on correlation_id, so a lookup is a bounded scan of the recent tail rather
+# than a query. A run older than this window reports "no rows" — see
+# audit_entries_for_correlation.
+AUDIT_CORRELATION_SCAN = 5000
 DEFAULT_APPROVAL_DECISION = "approve"
 # The app says approve/reject; the core's contract says approved/denied. The
 # translation lives here, at the boundary, so neither side has to learn the
@@ -367,6 +372,21 @@ def _execution_report(workflow: Any, *, executed: bool) -> dict[str, Any]:
     return report
 
 
+def recorded_execution(workflow: Any) -> dict[str, Any]:
+    """What a workflow's own record says it produced, read-only.
+
+    `executed` is read off the event stream — a `handler_*` event means the engine
+    was actually called — and everything else comes from `_execution_report`, the
+    same derivation the demo endpoint uses. Reusing that function rather than
+    re-deriving `succeeded` here is deliberate: two implementations of one rule is
+    exactly how the two drift apart, and `succeeded` is the field a reader is most
+    likely to take at face value.
+    """
+    events = workflow_events(workflow.workflow_id)
+    executed = any(str(event.get("event_type", "")).startswith("handler_") for event in events)
+    return _execution_report(workflow, executed=executed)
+
+
 def kill_switch_status(tenant_id: str | None = None) -> dict[str, Any]:
     """The halt state, read-only. Nothing here engages or releases the switch."""
     return _engine().kill_switch.status(tenant_id=tenant_id)
@@ -387,17 +407,49 @@ def _audit_trail() -> Any:
     return AuditTrail(db_path=_engine().audit_db_path)
 
 
-def recent_audit_entries(*, limit: int = 20) -> list[dict[str, Any]]:
-    """The most recent audit rows, read-only.
+def _audit_rows_newest_first(limit: int) -> list[dict[str, Any]]:
+    """The newest `limit` audit rows as stored, newest first.
 
-    The trail lists oldest-first, so this reads a wider window and keeps the tail.
+    `AuditTrail.list_records` orders by `rowid ASC` and *then* applies the limit, so
+    asking it for N rows returns the OLDEST N. Keeping "the tail" of that window
+    therefore keeps a month-old tail rather than a recent one. Measured 2026-09-27 on
+    `security/audit.db` (36,124 rows): `list_records(500)` returned rows from
+    2026-08-28 while the newest row was 2026-09-27, so the cockpit's audit panel had
+    been showing August. The newest rows are read through the trail's own connection
+    instead, which also keeps every stored field rather than the subset
+    `AuditRecord.to_dict()` reconstructs.
     """
     trail = _audit_trail()
     try:
-        records = trail.list_records(limit=max(limit, AUDIT_SCAN_LIMIT))
-        return [record.to_dict() for record in records[-limit:]]
+        rows = trail.conn.execute(
+            "SELECT data FROM audit ORDER BY rowid DESC LIMIT ?", (limit,)
+        ).fetchall()
     finally:
         trail.close()
+    return [json.loads(row[0]) for row in rows]
+
+
+def recent_audit_entries(*, limit: int = 20) -> list[dict[str, Any]]:
+    """The most recent audit rows, read-only, oldest-first as the trail writes them."""
+    return list(reversed(_audit_rows_newest_first(limit)))
+
+
+def audit_entries_for_correlation(
+    correlation_id: str, *, scan_limit: int = AUDIT_CORRELATION_SCAN
+) -> list[dict[str, Any]]:
+    """Every recorded audit row carrying this correlation id, oldest-first.
+
+    Read-only. **Bounded, and honest about it:** the trail indexes nothing by
+    correlation id, so this scans the newest `scan_limit` rows and filters. A run
+    older than that window returns no rows rather than a wrong one, which is why the
+    caller must treat an empty result as "not in the scanned window", not as "this run
+    has no audit trail".
+    """
+    return list(
+        reversed(
+            [row for row in _audit_rows_newest_first(scan_limit) if row.get("correlation_id") == correlation_id]
+        )
+    )
 
 
 def audit_chain_verified() -> bool:

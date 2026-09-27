@@ -128,6 +128,30 @@ def ops_demo_screen(request: Request) -> HTMLResponse:
     )
 
 
+@ops_router.get("/ops/audit/{correlation_id}", response_model=None)
+def ops_audit_screen(request: Request, correlation_id: str) -> HTMLResponse:
+    """The recorded governance trail for one correlation id, read-only.
+
+    Declared before `/ops/{engine_id}` for the same reason `/ops/demo` is: below
+    the catch-all this path would be answered as an engine whose id is "audit".
+
+    Nothing on this page is computed. The gate decision, the timestamps, the actor
+    handoff and the executed/succeeded state are all read back from what the core
+    already wrote, and the page says so rather than implying it re-derived them.
+    """
+    account = _account(request)
+    return render(
+        request,
+        "ops_audit.html",
+        {
+            "active_nav": "ops_audit",
+            "account": account,
+            "trail": OpsService().audit_trail(account, correlation_id),
+            "data_mode": "simulated_realistic",
+        },
+    )
+
+
 @ops_router.get("/ops/{engine_id}", response_model=None)
 def ops_engine_screen(request: Request, engine_id: str) -> HTMLResponse:
     """One engine's status and the tenant's requests on its capabilities."""
@@ -250,6 +274,13 @@ def workflow_detail(request: Request, workflow_id: str) -> JSONResponse:
     except AppError as exc:
         return JSONResponse(exc.to_dict(), status_code=exc.status_code)
     return JSONResponse(workflow_card(workflow))
+
+
+@ops_router.get("/api/ops/audit/{correlation_id}", response_model=None)
+def audit_trail_json(request: Request, correlation_id: str) -> JSONResponse:
+    """The same recorded trail the screen shows, for a machine caller."""
+    account = _account(request)
+    return JSONResponse(OpsService().audit_trail(account, correlation_id))
 
 
 @ops_router.post(

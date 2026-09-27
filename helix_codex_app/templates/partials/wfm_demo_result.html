@@ -128,7 +128,7 @@
     <h2>Proof this really ran</h2>
     <dl class="wfm-demo__ids">
       <div><dt>Request</dt><dd><code>{{ report.workflow_id }}</code></dd></div>
-      <div><dt>Correlation</dt><dd><code>{{ report.correlation_id }}</code></dd></div>
+      <div><dt>Correlation</dt><dd><a href="/app/ops/audit/{{ report.correlation_id }}"><code>{{ report.correlation_id }}</code></a></dd></div>
       <div><dt>Tenant</dt><dd><code>{{ report.tenant_id }}</code></dd></div>
       <div><dt>Client</dt><dd><code>{{ report.client_id }}</code></dd></div>
       <div><dt>Data mode</dt><dd><code>{{ report.data_mode }}</code></dd></div>

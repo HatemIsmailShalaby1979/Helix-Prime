@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% import "partials/icons.html" as icons %}
+{% import "partials/page_head.html" as head %}
+{% block title %}Audit trail — Helix Codex{% endblock %}
+{% block content %}
+<div class="audit-trail">
+  {% call head.page_head("Audit trail", "Everything the core already recorded for one correlation id — the gate decision, the timestamps, the actor handoff, and what the run produced. This page reads the record. It does not make one, re-decide anything, or recompute a figure.", "Governance") %}
+  {% include "partials/data_mode_badge.html" %}
+  {% endcall %}
+
+  {% if not trail.found %}
+  <div class="callout callout--info">
+    <span>
+      <strong>Nothing recorded for this correlation id in the scanned window.</strong>
+      The trail indexes nothing by correlation id, so this lookup scans the newest
+      {{ trail.scan_limit }} audit rows. A run older than that returns nothing here,
+      which is not the same as a run with no trail behind it.
+      <br><code>{{ trail.correlation_id }}</code>
+    </span>
+  </div>
+  {% else %}
+
+  {% if trail.execution %}
+  <section class="card">
+    <h2>The run</h2>
+    <table class="table">
+      <tbody>
+        <tr><th>Correlation id</th><td><code>{{ trail.correlation_id }}</code></td></tr>
+        <tr><th>Workflow</th><td><code>{{ trail.workflow.workflow_id }}</code></td></tr>
+        <tr><th>Capability</th><td>{{ trail.workflow.capability }}</td></tr>
+        <tr><th>State</th><td>{{ trail.execution.state }}</td></tr>
+        <tr><th>Executed</th><td>{{ "yes" if trail.execution.executed else "no" }}</td></tr>
+        <tr><th>Succeeded</th><td>{{ "yes" if trail.execution.succeeded else "no" }}</td></tr>
+        <tr><th>Tenant / client</th><td>{{ trail.workflow.tenant_id }} / {{ trail.workflow.client_id }}</td></tr>
+        <tr><th>Requested</th><td>{{ trail.workflow.created_at }}</td></tr>
+        <tr><th>Retries</th><td>{{ trail.execution.retry_count }}</td></tr>
+        {% if trail.execution.error %}<tr><th>Error</th><td>{{ trail.execution.error }}</td></tr>{% endif %}
+        {% if trail.execution.gated %}<tr><th>Held by the gate</th><td>{{ trail.execution.gated_reason }}</td></tr>{% endif %}
+      </tbody>
+    </table>
+    <p class="field__hint">
+      <strong>State and Succeeded answer different questions.</strong>
+      <code>closed</code> is reachable from success, cancellation, compensation and
+      dead-lettering, so it is reported beside the boolean rather than instead of it.
+      The boolean is the core's own rule — executed, no error recorded, and output
+      written — not this screen's reading of the state.
+    </p>
+  </section>
+  {% endif %}
+
+  <section class="card">
+    <h2>Gate decisions, as recorded</h2>
+    <p class="field__hint">
+      The decision column is the core's own audit field. Nothing here re-evaluates a
+      gate or infers a decision from a state change.
+    </p>
+    <table class="table">
+      <thead>
+        <tr><th>Event</th><th>Decision</th><th>Actor</th><th>Role</th><th>Recorded</th><th>Hash</th></tr>
+      </thead>
+      <tbody>
+        {% for row in trail.audit %}
+        <tr>
+          <td>{{ row.event_type }}</td>
+          <td>{{ row.decision }}</td>
+          <td>{{ row.actor }}</td>
+          <td>{{ row.role_id or "—" }}</td>
+          <td>{{ row.timestamp }}</td>
+          <td><code>{{ row.current_hash[:12] }}…</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Lifecycle, as recorded</h2>
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Event</th><th>Actor</th><th>Recorded</th></tr>
+      </thead>
+      <tbody>
+        {% for event in trail.events %}
+        <tr>
+          <td>{{ event.sequence }}</td>
+          <td>{{ event.event_type }}</td>
+          <td>{{ event.actor }}</td>
+          <td>{{ event.timestamp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <div class="callout callout--info">
+    <span>
+      <strong>What the hashes say, and what they do not.</strong>
+      The {{ trail.chain.rows }} audit rows above
+      {{ "link to each other" if trail.chain.linked else "do not link to each other" }}.
+      The audit file as a whole verifies:
+      <strong>{{ "yes" if trail.chain_verified else "no" }}</strong>.
+      A whole-file failure can come from a break recorded long before this run, so it
+      is reported as a property of the file rather than charged to this run — the
+      per-run linkage above is what this page can speak to.
+    </span>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

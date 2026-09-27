@@ -5,10 +5,14 @@ management answer, and what that answer is allowed to claim.
 
 This document describes the surface shipped in **P8.1** (least-privilege demo
 identity), **P8.2** (the governed demo endpoint) and **P8.3** (the clickable
-screen). Two items remain unbuilt and are **not** numbered as phases: a rate
-limit on the demo endpoint, and an audit-trail reader in the response beyond the
-correlation id and the metrics digest. See `helix_codex_app/agents.md` for the
-phase ledger.
+screen). Two items P8 left unbuilt and deliberately did not number as phases — a
+rate limit on the demo endpoint, and an audit-trail reader — have since been
+built: the rate limits in `helix_codex_app/security/route_limits.py`, and the
+trail reader at `/app/ops/audit/{correlation_id}` (§1.1 below).
+
+**Status is not maintained in this document.** `E:\Helix-Prime\AGENTS.md` is the
+single authoritative status surface; `helix_codex_app/agents.md` holds the phase
+history and the reasoning.
 
 ---
 
@@ -26,6 +30,7 @@ by the real governed engine path: recorded, auditable, and labelled as simulated
 | Sign in | `GET /app/auth/supabase/login` — **the one public flow**: GitHub OAuth through Supabase Auth, bridged onto the scoped demo account |
 | Screen | `/app/ops/demo` — inside the ordinary `ops.view` boundary, not a separate public route |
 | Submit | `POST /app/api/ops/demo/wfm` — session + CSRF, same endpoint an API caller uses |
+| The trail | `/app/ops/audit/{correlation_id}` — read-only, `ops.view`, and linked from the correlation id on the result. Shows the gate decision, timestamps, actor handoff and executed/succeeded state the core already recorded; it makes no record of its own |
 | In the UI | Ops page → "Workforce demo" link, and the Ops rail item |
 
 Supabase does not forward this app's `state` to the callback; it preserves the
@@ -344,11 +349,15 @@ product.
 
 ## 9. See also
 
-- `helix_codex_app/agents.md` — the P8 phase ledger, test counts, and the two
-  unbuilt items (endpoint rate limiting, audit-trail reader).
+- `helix_codex_app/agents.md` — the P8 phase history, test counts, and the
+  reasoning. It records what each phase did; it does not record current status.
 - `helix_codex_app/repomap.md` — module map and the seam descriptions for
   `engine_bridge.py` and the ops routes.
 - `helix_codex_app/governance.md` — entry 32, the P8.2 governance record.
+- `helix_codex_app/security/route_limits.py` — the ceilings on the routes a
+  stranger can reach, and the reasoning for keying them on the forwarded visitor.
 - `tests/helix_codex_app/test_wfm_demo_governed_path.py` — the 47-test gate.
 - `tests/helix_codex_app/test_wfm_demo_screen.py` — the 21-test screen gate.
 - `tests/helix_codex_app/test_demo_role.py` — the 31-test least-privilege gate.
+- `tests/helix_codex_app/test_route_limits.py` — the rate-limit gate.
+- `tests/helix_codex_app/test_audit_trail_view.py` — the trail-view gate.

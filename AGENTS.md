@@ -4760,3 +4760,99 @@ the 530 conversion still answering its typed 503.
 being forwarded when it was, two lines below the cut. Earlier the same day, an
 `audit_id`-sorted chain "proved" tamper (§A5.8). **The rule: do not infer absence from a
 truncated view — print the whole structure, or ask the structure a direct question.**
+
+### 20.29 Read-only audit-trail view, and the reader defect it surfaced
+
+**Recorded:** 2026-09-27.
+
+#### 20.29.1 What was added
+
+`GET /app/ops/audit/{correlation_id}` (HTML) and `GET /app/api/ops/audit/{correlation_id}`
+(JSON). Both are gated by `ops.view` at the router boundary like the rest of the ops
+surface, and both are declared **above** `/ops/{engine_id}` for the same reason `/ops/demo`
+is — below the catch-all, `audit` would be answered as an engine id.
+
+Strictly read-only. Every field shown comes from something the core already wrote:
+
+| Shown | Source |
+|---|---|
+| gate decision | the audit chain's own `decision` field (`allowed` / `succeeded`) |
+| timestamps, actor handoff | the workflow's recorded event stream |
+| executed / succeeded | `engine_bridge.recorded_execution` — `executed` read off the `handler_*` events, then `_execution_report`, the same derivation the demo endpoint uses |
+| hash linkage | the rows' own `previous_hash` → `current_hash` |
+
+No new storage, no new recording, nothing recomputed. `recorded_execution` deliberately
+**reuses `_execution_report`** rather than re-deriving `succeeded`: two implementations of
+one rule is exactly how the two drift apart, and `succeeded` is the field a reader is most
+likely to take at face value.
+
+#### 20.29.2 A defect found, and fixed: "recent" meant "oldest"
+
+`engine_bridge.recent_audit_entries` — the source for the cockpit's audit panel — was
+returning the OLDEST rows. `AuditTrail.list_records` is `ORDER BY rowid ASC LIMIT n`, so
+asking it for N rows returns the oldest N, and `records[-limit:]` is the tail **of the
+oldest N**.
+
+Measured on the live `security/audit.db` (36,124 rows): the reader returned rows from
+**2026-08-28** while the newest row was **2026-09-27**. The cockpit's audit panel had been
+showing August, and its docstring's reasoning ("reads a wider window and keeps the tail")
+was right while its premise was wrong.
+
+Fixed in the bridge — not in `security/audit.py`, which is parent core the app does not
+edit: the newest rows are read through the trail's own connection with
+`ORDER BY rowid DESC LIMIT ?`, then reversed so callers still receive them oldest-first. The
+docstring now carries the measurement.
+
+Pinned by `test_recent_audit_entries_returns_the_newest_rows_not_the_oldest`, which seeds
+the trail past `AUDIT_SCAN_LIMIT` and asserts the exact five newest rows. An implementation
+that reads the tail of the oldest N fails it.
+
+#### 20.29.3 The lookup is bounded, and says so
+
+The trail indexes nothing by correlation id, so the lookup is a bounded scan of the newest
+`AUDIT_CORRELATION_SCAN` (5,000) rows. A run older than that window reports **"nothing
+recorded in the scanned window"** — a different answer from "this run has no trail", and
+the screen distinguishes them rather than showing an empty table that could mean either. A
+foreign tenant's correlation id reports **not found**, with no rows and no workflow.
+
+#### 20.29.4 Declaration audit
+
+Adding routes and fixing a reader manufactures drift, so every declaration that asserted the
+old behaviour was hunted **by its vocabulary** (`unbuilt`, `remain`, `still not done`) rather
+than by any symbol name:
+
+| Declaration | Was | Now |
+|---|---|---|
+| `docs/DEMO_ACCESS_FLOW.md` header | "Two items remain unbuilt … a rate limit … and an audit-trail reader" | both built; status deferred to this file |
+| `docs/DEMO_ACCESS_FLOW.md` §9 | "the two unbuilt items (endpoint rate limiting, audit-trail reader)" | corrected; the new test files listed |
+| `docs/DEMO_ACCESS_FLOW.md` §1.1 | no trail row | the trail route added |
+| `helix_codex_app/repomap.md` | no audit-trail route row | row added, above the Cockpit row |
+| `helix_codex_app/agents.md` | "**Still not done** … no rate limit … no audit-trail reader" | past tense; **"whether they are still outstanding is not recorded in this file"** — see §20.27 |
+
+The last one is the two-ledger rule (§20.27) catching a survivor: a **current-status claim
+inside the subordinate ledger**, which is exactly what that resolution forbade.
+
+**Not corrected, deliberately:** `docs/HELIX_CODEX_APP_MASTER_PLAN.md` and
+`docs/HELIX_CODEX_APP_AGENT_PROMPTS.md` list P6-era ops routes. They are a plan and a prompt
+set — records of what was intended at the time — not inventories of what exists. Editing a
+plan to include unplanned work would make it a worse record, not a truer one. **An inventory
+that is short is a defect; a plan that is old is a plan.**
+
+#### 20.29.5 Tests
+
+`tests/helix_codex_app/test_audit_trail_view.py` — **8 tests, all passing**:
+
+- The trail shows the core's own record: the exact six-event lifecycle and the exact five
+  `decision` values for a run the suite actually made. Asserted as **equality, not
+  containment** — a view that quietly dropped one event would still "contain" the rest.
+- The screen renders it for a human.
+- The demo result links to the trail: a view nothing links to is unreachable, which is the
+  same defect A4 fixed for the sign-in route.
+- 401 without a session; 403 without `ops.view`.
+- A foreign tenant's correlation id is not-found, with no rows and no workflow.
+- An unknown id is reported rather than raised, and reads differently from an empty table.
+- The reader-ordering pin from §20.29.2.
+
+**Chunks:** app **940 passed, 0 failed** (29m06s) — was 932, so +8, exactly the tests added
+here. Parent chunk untouched at **957**, which is correct: this step added no parent-suite
+behaviour. Collected total **1897 = 1889 + 8**.

@@ -4344,3 +4344,115 @@ That message is reachable only from the 530 branch, so its presence is the proof
 branch fired. The fourth path, a live origin passing through unchanged, is exercised by
 the A5 stand-up. Workers KV is eventually consistent; each probe waited ~70 s after the
 write.
+
+### 20.25 Phase A A5 — hosted evidence run — COMPLETE
+
+**Recorded:** 2026-09-27. The last Phase A item: one more hosted run through the public
+Worker, with the correlation id captured. This is the first such run in which the
+visitor signed in through the **visible GitHub button** on the login page rather than by
+typing a URL.
+
+#### A5.1 Stand-up
+
+Preflight exit 0 → app on `127.0.0.1:8100` (`cookie_secure=true`) → Quick Tunnel
+`https://indie-birds-blond-defines.trycloudflare.com` → Workers KV `HELIX_ORIGIN`
+repointed. All four Worker paths were re-probed on the way up: missing, malformed and
+dead-tunnel each answered the typed 503, and the live origin answered 200 through
+unchanged. The owner's two actions were the click and the form submit.
+
+#### A5.2 The identifiers
+
+| Field | Value |
+|---|---|
+| workflow_id | `wf_a525cc369f6b` |
+| correlation_id | `4ac5a7b6c8174da3b760657a7bb3ff40` |
+| idempotency_key | `c0775b969f554138883ef92c2f8cb6b8` |
+| tenant / client | `helix-demo` / `helix-demo` |
+| capability | `wfm_forecast` |
+| state | `closed` |
+| retry_count | `0` |
+| is_sample / data_mode | `true` / `simulated_realistic` |
+
+#### A5.3 Verified independently, not taken from the screen
+
+Every value above was read back from the stores. The screen was the claim; this is the
+check.
+
+**Sign-in and the request**, from the app's structured log:
+
+| Time (UTC) | Route | Status |
+|---|---|---|
+| 00:12:37.949 | `GET /app/auth/supabase/callback?code=8e7b9250-…&state=QcljzfPs…` | 303, 1618 ms |
+| 00:13:11.616 | `GET /app/ops/demo` | 200, tenant `helix-demo` |
+| 00:13:19.666 | `POST /app/api/ops/demo/wfm` | 200, tenant `helix-demo` |
+
+`code` and `state` both arrived again, and 1618 ms is a real network round trip.
+
+The POST answered **200, not 201**, because the screen submits over htmx and receives
+the result fragment. `run_wfm_demo`'s own docstring states that a successful run answers
+JSON **201** to an API caller and the fragment to htmx, so this is the documented
+behaviour rather than a discrepancy — worth stating because §20.11's B7 evidence records
+a 201 from the API path and the two are easy to conflate.
+
+**The workflow record** (`control_plane/workflow.db`): one row, matching every identifier
+above.
+
+**The event stream** — six events, in order, with the actor handoff visible:
+
+```text
+0  workflow_created    actor=account-c27e7988…  00:13:19.316541Z
+1  workflow_validated  actor=account-c27e7988…  00:13:19.441397Z
+2  workflow_executing  actor=account-c27e7988…  00:13:19.490047Z
+3  handler_succeeded   actor=ops_gm             00:13:19.652812Z
+4  workflow_succeeded  actor=ops_gm             00:13:19.652812Z
+5  workflow_closed     actor=ops_gm             00:13:19.658428Z
+```
+
+The engine's output in the `workflow_succeeded` payload: `optimal_agents=2`,
+`service_level_achieved=0.9314618921275921`, `probability_waiting=0.3798542569873628`,
+`traffic_intensity = utilization = 0.71`, `confidence_interval=[1.9, 2.1]` — Erlang C
+figures for `arrival_rate=14.2`, `average_handling_time=6.0`, `service_level_target=0.8`.
+
+The stored input payload carries the two server-owned labels, `is_sample: true` and
+`data_mode: "simulated_realistic"`, and nothing a caller could have set.
+
+#### A5.4 The audit chain does not clear this run — and that is not new
+
+`security/audit.db` holds five records for this correlation_id and they form an unbroken
+sub-chain, walked head-first:
+
+```text
+090dac… → 4b6b88… → 1df631… → 6ab66c… → b1a6ed… → e89dca…
+```
+
+But `AuditTrail.verify_chain()` on the file returns **False**:
+
+```text
+tamper detected: record feb0e5d17d2543b1b7fe781d6f4550db
+previous_hash 'fdcd4adb49b7aab3d632872f5a0b4ade1070c2a1db2ed98722594b5589349fb9'
+   != expected '0cfd0b5f0b153eae75658d08229faca6cd551f26f55d5d02dbf6b4cd197ef317'
+```
+
+**This was checked against the ledger before being reported as anything new, and it is
+not new.** §H1.6 already records that the local dev `security/audit.db` "is genuinely
+forked from a 2026-08-29 concurrent-append race predating the chain-tip cache fix — it is
+NOT evidence of a regression", and §H2.2 records the root cause and the fix: the chain
+tip was ordered by `timestamp DESC, audit_id DESC`, so appends sharing a microsecond
+returned the wrong tip; chain order is now insertion order (`rowid`).
+
+Independently reproduced here: **18 break points**, the first at rowid 7016
+(`wfm_executed`, actor `suby`, `2026-08-29T02:42:04.933538Z`), and the fork signature is
+unambiguous — **17 distinct `previous_hash` values are each claimed by two records**. The
+file has grown from the 16,545 records recorded in §H1.6 to **35,913**; our five sit at
+rowid 35908–35912, a month and ~29,000 records after the fork.
+
+The consequence for A5 is a scope limit, stated plainly: **the whole-file chain cannot
+corroborate this run, so it is not offered as corroboration.** What corroborates A5 is the
+app log, the workflow record, and the event stream. The audit file is gitignored and never
+shipped, and the release gate verifies the chain named by `HELIX_AUDIT_DB_PATH` rather
+than this dev copy.
+
+#### A5.5 Phase A status
+
+A1, A2, A3, A4, A5 all COMPLETE. Remaining before Phase C: the full-suite and
+ledger-consolidation step.

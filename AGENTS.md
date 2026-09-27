@@ -56,6 +56,12 @@
 > implementation. `MASTER_STORY.md`, `ROADMAP.md`, `CHANGELOG.md`, and `docs/`
 > status summaries are subordinate records — they never outrank the constitution
 > or the blueprint, and they are replaced/archived as they stale.
+>
+> **This file is the single authoritative status surface.** `helix_codex_app/agents.md`
+> is a subordinate record: it keeps the app's own phase history, design rationale,
+> constraints, and dated baselines, and it asserts no current status of its own. If the
+> two ever disagree about what is done, this file is right and the other is stale. See
+> §20.12 for how that was resolved.
 
 - **Repo:** `E:\Helix-Prime` (Helix Prime → being commercialized as "Helix Codex OS")
 - **Mission:** Build `capabilities/sports_academy/` — the first vertical capability
@@ -3729,7 +3735,9 @@ separate non-blocking follow-up.
 not contain its own SHA in the ledger. B6 is now explicitly pinned after the
 fact; the B6 entry records the loopback bind, public health check, temporary
 Quick Tunnel limitation, deployment artifacts, and `.gitignore` resolution.
-**Known structural risk:** AGENTS.md (B1–B7) and helix_codex_app/agents.md (P8.1–P8.3) overlap as separate status surfaces. They were corrected together here, but should eventually designate one ledger as authoritative rather than restating the same completion claims.
+**Structural risk, raised here — RESOLVED 2026-09-27 (§20.27).** AGENTS.md (B1–B7) and
+`helix_codex_app/agents.md` (P8.1–P8.3) overlapped as separate status surfaces, each
+restating the same completion claims. One is now authoritative; see §20.27.
 
 ### 20.13 Phase A A1 — Supabase auth-only scope check — COMPLETE
 
@@ -4541,3 +4549,98 @@ recorded in §A5.3.
 | A5 — hosted evidence runs | COMPLETE — §20.25, §20.26 |
 
 Remaining before Phase C: the full-suite and ledger-consolidation step.
+
+### 20.27 Post-Phase-A verification and the two-ledger resolution
+
+**Recorded:** 2026-09-27. Both chunks re-run with Phase A closed, and the structural
+risk raised in §20.12 resolved.
+
+#### 20.27.1 The chunks
+
+| Chunk | Command | Result | Time |
+|---|---|---|---|
+| app | `pytest tests/helix_codex_app/ -q -m "not smoke"` | **922 passed, 0 failed** | 29m54s |
+| parent | `pytest tests/ --ignore=tests/helix_codex_app -q -m "not smoke"` | **957 passed, 0 failed, 0 skipped, 19 deselected** | 20m04s |
+| — | total | **1879 passed** | |
+
+#### 20.27.2 The delta is a verified set difference, not arithmetic
+
+Subtracting and hoping is not evidence, so the **collected test-id sets** were compared
+across a `git worktree` pinned at the commit before Phase A began.
+
+- Worktree at `3db8a53` (the commit immediately before Phase A's first, `8005d4d`):
+  `pytest tests/ --collect-only -q -m "not smoke"` → **1873 collected, 19 deselected**.
+- At HEAD: **1879 collected, 19 deselected**.
+
+Set difference — **added 6, removed 0**, and all six are Phase A's own, all in the app chunk:
+
+```text
++ test_supabase_auth.py::test_supabase_callback_bridges_a_fresh_identity_to_demo_session
++ test_supabase_auth.py::test_supabase_auth_error_carries_a_status_and_a_detail
++ test_supabase_auth.py::test_a_supabase_rejection_answers_401_and_never_500
++ test_supabase_auth.py::test_the_login_page_offers_the_github_entry
++ test_supabase_auth.py::test_the_login_page_hides_the_github_entry_when_supabase_is_unconfigured
++ test_wfm_demo_screen.py::test_the_passwordless_demo_route_is_absent_unless_it_is_enabled
+```
+
+**1873 + 6 = 1879, and 1879 = 922 + 957.** Phase A grew the suite by exactly its own six
+tests and nothing else moved. The parent chunk gained none, which is correct: Phase A's
+only non-Python artefact is `deploy/worker/index.js`, which no pytest covers. The worktree
+was removed afterwards; `git worktree list` shows only the main tree.
+
+#### 20.27.3 The known openssl failure — it does not reproduce here, and the cause is named
+
+The app ledger's P8.1 and P8.2 checkpoints record a single parent failure,
+`tests/test_production_evidence.py::test_a_signature_from_another_key_is_rejected`, dying
+with `FileNotFoundError: [WinError 2]` from `subprocess` because **`openssl` is not on
+PATH in this sandbox**.
+
+Re-checked rather than assumed, and the answer is not "still failing":
+
+- `shutil.which("openssl")` →
+  `C:\Users\Thomas\.workbuddy-ai\binaries\PortableGit\versions\1.2.0\usr\bin\openssl.EXE`
+  — **present**.
+- `openssl version` → `OpenSSL 3.5.7 9 Jun 2026`.
+- The named test alone → **1 passed**.
+- The parent chunk → **957 passed, 0 failed, 0 skipped**. The four skips the P8.1/P8.2
+  notes also recorded are gone with it, because they are the same openssl-gated tests.
+
+So the failure was never a repo defect, and it is not currently live: it is
+**PATH-conditional**, and the interpreter's PATH now carries an openssl. The P8.1 note's
+own conclusion — "an environment gap, not a repo or P8.1 defect" — is confirmed; its
+precondition has simply changed. **Do not go looking for that failure; it will not appear
+in this sandbox.** It will reappear on any host without openssl on PATH, and that is the
+signal it carries.
+
+#### 20.27.4 The two-ledger risk — RESOLVED
+
+§20.12 raised it: this file (B1–B7) and `helix_codex_app/agents.md` (P8.1–P8.3) overlapped
+as separate status surfaces, each restating the same completion claims.
+
+**Decision: this file is the single authoritative status surface.** Reasons, in order:
+
+1. It is the repository's designated entry point — the file an agent is told to read first,
+   and the one this session's work landed in.
+2. The app ledger already defers to it for the non-negotiables ("stated once in
+   `E:\Helix-Prime\AGENTS.md` section 0 and are not repeated here"), so the single-source
+   role was already half-established.
+3. Status is a repository-level fact. The app ledger's value is *why* the app is built the
+   way it is, which is not a status question.
+
+**What changed:**
+
+- `helix_codex_app/agents.md` now carries a banner stating that it maintains no current
+  status and pointing here, and its "Current step" row says the same instead of restating
+  completion.
+- **Nothing was deleted.** The phase entries, dated baselines, and per-phase test
+  arithmetic remain exactly as written.
+- The app ledger's P8 constraint block was preserved, with one clause marked **retired**:
+  "do not add Supabase" was superseded by Phase A A2–A3, which added Supabase Auth
+  deliberately. Recorded rather than quietly dropped — a constraint that is silently
+  contradicted is worse than one explicitly retired.
+- §0's authority chain now names `helix_codex_app/agents.md` as a subordinate record that
+  asserts no status of its own.
+
+Going forward: a completion claim is asserted **here** and nowhere else. The app ledger
+records what each phase did and why, in the past tense, and never says what is currently
+done.

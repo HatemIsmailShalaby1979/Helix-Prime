@@ -621,13 +621,18 @@ def test_reproducible_install_counts_declarations_not_indented_comments(monkeypa
     217 comments were counted as dependencies, and a lock file containing nothing
     but an indented comment passed the gate. This is the §18.2 A0.1 class: a
     control reporting a quantity it never measured.
+
+    The expected count moved 120 -> 122 on 2026-09-28, when the lock gained
+    `build` and `hatchling` so CI could run `python -m build`. It is the number
+    of real pins in release/requirements.lock.txt; the two assertions that catch
+    the original defect are the `337` exclusion and the can-fail block below.
     """
     from release import gate
 
     # The real file: the count is now the number of real pins.
     ok, reason = gate.GATE_IMPL["reproducible_install"]()
     assert ok is True
-    assert "120 declared deps" in reason
+    assert "122 declared deps" in reason
     assert "337" not in reason
 
     # Can-fail: a lock file whose only line is an indented comment declares

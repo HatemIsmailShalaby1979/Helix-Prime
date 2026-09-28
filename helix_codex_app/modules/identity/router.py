@@ -91,7 +91,11 @@ def supabase_login(request: Request) -> RedirectResponse | JSONResponse:
     own `code`, so `state` must travel inside `redirect_to` itself.
     """
     settings = request.app.state.settings
-    if not settings.supabase_url or not settings.supabase_anon_key or not settings.supabase_redirect_uri:
+    if (
+        not settings.supabase_url
+        or not settings.supabase_anon_key
+        or not settings.supabase_redirect_uri
+    ):
         return JSONResponse({"error": "supabase_auth_not_configured"}, status_code=503)
     state = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(48)
@@ -102,8 +106,16 @@ def supabase_login(request: Request) -> RedirectResponse | JSONResponse:
         authorize_url(settings.supabase_url, redirect_uri, state=state, challenge=encoded),
         status_code=303,
     )
-    response.set_cookie("supabase_oauth_state", state, secure=settings.cookie_secure, httponly=True, samesite="lax")
-    response.set_cookie("supabase_oauth_verifier", verifier, secure=settings.cookie_secure, httponly=True, samesite="lax")
+    response.set_cookie(
+        "supabase_oauth_state", state, secure=settings.cookie_secure, httponly=True, samesite="lax"
+    )
+    response.set_cookie(
+        "supabase_oauth_verifier",
+        verifier,
+        secure=settings.cookie_secure,
+        httponly=True,
+        samesite="lax",
+    )
     return response
 
 
@@ -121,18 +133,30 @@ async def supabase_callback(request: Request) -> RedirectResponse | HTMLResponse
     if query.get("error") or not state or state != query.get("state") or not verifier:
         return HTMLResponse("Sign-in could not be verified.", status_code=400)
     try:
-        user = await exchange_code(settings.supabase_url or "", settings.supabase_anon_key or "", query.get("code", ""), verifier)
+        user = await exchange_code(
+            settings.supabase_url or "",
+            settings.supabase_anon_key or "",
+            query.get("code", ""),
+            verifier,
+        )
     except SupabaseAuthError as exc:
-        print({"event_type": "supabase_auth_error", "status": exc.status, "detail": exc.detail}, flush=True)
+        print(
+            {"event_type": "supabase_auth_error", "status": exc.status, "detail": exc.detail},
+            flush=True,
+        )
         return HTMLResponse("Sign-in could not be verified.", status_code=401)
     conn = connect(db_path=settings.db_path)
     try:
         repo = AccountRepository(conn)
         email = str(user.get("email"))
-        account = ensure_demo_account(repo, password_hash=hash_password(secrets.token_urlsafe(32)), display_name=email)
+        account = ensure_demo_account(
+            repo, password_hash=hash_password(secrets.token_urlsafe(32)), display_name=email
+        )
         if account.email != email:
             account = repo.update_account(account.account_id, email=email, display_name=email)
-        token, _session = SessionStore(conn, settings).issue_session(account, ip=_client_ip(request), user_agent=request.headers.get("user-agent"))
+        token, _session = SessionStore(conn, settings).issue_session(
+            account, ip=_client_ip(request), user_agent=request.headers.get("user-agent")
+        )
     finally:
         close(conn)
     response = RedirectResponse("/app/ops", status_code=303)

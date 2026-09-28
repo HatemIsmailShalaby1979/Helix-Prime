@@ -169,8 +169,12 @@ class OpsService:
             "tenant_id": account.tenant_id,
             "found": bool(scoped),
             "workflow": workflow_card(workflow) if workflow is not None else None,
-            "execution": engine_bridge.recorded_execution(workflow) if workflow is not None else None,
-            "events": engine_bridge.workflow_events(workflow.workflow_id) if workflow is not None else [],
+            "execution": engine_bridge.recorded_execution(workflow)
+            if workflow is not None
+            else None,
+            "events": engine_bridge.workflow_events(workflow.workflow_id)
+            if workflow is not None
+            else [],
             "audit": scoped,
             "chain": _chain_summary(scoped),
             "chain_verified": engine_bridge.audit_chain_verified(),

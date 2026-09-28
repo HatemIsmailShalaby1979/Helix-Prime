@@ -54,9 +54,7 @@ def test_supabase_callback_bridges_a_fresh_identity_to_demo_session(monkeypatch,
 
     conn = db.connect(db_path=settings.db_path)
     try:
-        row = conn.execute(
-            "SELECT role_id, email FROM accounts WHERE username = 'demo'"
-        ).fetchone()
+        row = conn.execute("SELECT role_id, email FROM accounts WHERE username = 'demo'").fetchone()
     finally:
         db.close(conn)
     assert tuple(row) == (DEMO_ROLE_ID, "visitor@example.com")

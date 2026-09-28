@@ -1,5 +1,6 @@
 import re
 import sys
+
 from fpdf import FPDF
 
 
@@ -50,7 +51,9 @@ class ArchPDF(FPDF):
         self.set_text_color(120, 120, 120)
         self.cell(0, 5, sanitize("Helix Prime -- Project Architecture Document"), align="C")
         self.ln(3)
-        self.cell(0, 5, sanitize("Generated 2026-09-21 | Commit 2c7ecd1 | 1743 tests passing"), align="C")
+        self.cell(
+            0, 5, sanitize("Generated 2026-09-21 | Commit 2c7ecd1 | 1743 tests passing"), align="C"
+        )
         self.ln(8)
         self.set_text_color(0, 0, 0)
         self.table_rows = []
@@ -93,7 +96,7 @@ class ArchPDF(FPDF):
             x_start = self.get_x()
             y_start = self.get_y()
             cell_texts = []
-            for c, cell in enumerate(row):
+            for _c, cell in enumerate(row):
                 cell = cell.strip()
                 bold = cell.startswith("**") and cell.endswith("**")
                 if bold:
@@ -117,7 +120,9 @@ class ArchPDF(FPDF):
                 else:
                     self.set_fill_color(250, 250, 252)
                     self.set_text_color(30, 30, 30)
-                lines = self.multi_cell(col_widths[c], row_h, sanitize(cell), border=0, dry_run=True, output="LINES")
+                lines = self.multi_cell(
+                    col_widths[c], row_h, sanitize(cell), border=0, dry_run=True, output="LINES"
+                )
                 max_lines = max(max_lines, len(lines))
             actual_h = max_lines * row_h
             if self.get_y() + actual_h > self.h - 25:
@@ -231,7 +236,9 @@ def generate(src, dst):
                 pdf.set_text_color(40, 40, 80)
             else:
                 pdf.set_text_color(60, 60, 90)
-            pdf.multi_cell(0, sizes.get(level, 8) * 0.45, sanitize(text), new_x="LMARGIN", new_y="NEXT")
+            pdf.multi_cell(
+                0, sizes.get(level, 8) * 0.45, sanitize(text), new_x="LMARGIN", new_y="NEXT"
+            )
             pdf.set_text_color(0, 0, 0)
             pdf.ln(1)
             continue
@@ -255,7 +262,9 @@ def generate(src, dst):
             pdf.set_x(pdf.l_margin + indent * 1.5 + 3)
             if not content[0].isdigit() if content else False:
                 pdf.cell(marker_w, 4, "-")
-            pdf.set_x(pdf.l_margin + indent * 1.5 + (6 if not (content and content[0].isdigit()) else 3))
+            pdf.set_x(
+                pdf.l_margin + indent * 1.5 + (6 if not (content and content[0].isdigit()) else 3)
+            )
             pdf.render_inline(sanitize(content), 8)
             pdf.ln(4)
             continue

@@ -124,7 +124,9 @@ def test_pure_helpers(check: Check) -> None:
         "action labels humanised",
         cockpit_ui._action_label("PULL_AUX_TO_CALLS") == "Pull auxiliary agents to calls",
     )
-    check("unknown action falls back", cockpit_ui._action_label("SOME_NEW_LEVER") == "Some New Lever")
+    check(
+        "unknown action falls back", cockpit_ui._action_label("SOME_NEW_LEVER") == "Some New Lever"
+    )
     check(
         "empty payload narrowed safely",
         cockpit_ui._as_dict(None) == {} and cockpit_ui._as_dict([]) == {},
@@ -206,7 +208,9 @@ def test_decision_lifecycle(check: Check, engine: LiveEngine) -> None:
     )
     check(
         "reasoning trace rendered",
-        any(str(intervention["reasoning_trace"])[:40] in str(block.value) for block in app.markdown),
+        any(
+            str(intervention["reasoning_trace"])[:40] in str(block.value) for block in app.markdown
+        ),
     )
     check("action centre headed", any("Action centre" in str(item.value) for item in app.subheader))
     check("exposure shown in USD", any("$" in str(metric.value) for metric in app.metric))

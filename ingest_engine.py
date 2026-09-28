@@ -367,9 +367,7 @@ class CockpitStateEngine:
             self._pending_id = None
             self._cooldown_ticks = POST_DECISION_COOLDOWN_TICKS
             outcome = (
-                "released for execution"
-                if target is InterventionStatus.APPROVED
-                else "declined"
+                "released for execution" if target is InterventionStatus.APPROVED else "declined"
             )
             event = InterventionEvent(
                 timestamp=self._clock_value,
@@ -454,9 +452,7 @@ class CockpitStateEngine:
             )
         stamps = [sample.timestamp for sample in samples]
         backlog = [float(sample.calls_waiting) for sample in samples]
-        gaps = [
-            later - earlier for earlier, later in pairwise(stamps) if later - earlier > 0.0
-        ]
+        gaps = [later - earlier for earlier, later in pairwise(stamps) if later - earlier > 0.0]
         median_gap = statistics.median(gaps) if gaps else 0.0
         slope = _ols_slope(stamps, backlog)
         if slope is None:
@@ -789,9 +785,7 @@ class ConnectionManager:
     async def _transmit(self, websocket: WebSocket, envelope: dict[str, Any]) -> bool:
         """Write one envelope to one socket, pruning it on any failure."""
         try:
-            await asyncio.wait_for(
-                websocket.send_json(envelope), timeout=self._send_timeout
-            )
+            await asyncio.wait_for(websocket.send_json(envelope), timeout=self._send_timeout)
         except Exception:
             self.disconnect(websocket)
             return False
@@ -848,9 +842,7 @@ def create_app(
 
     @application.exception_handler(InvalidTransitionError)
     async def _invalid(_: Request, exc: InvalidTransitionError) -> JSONResponse:
-        return JSONResponse(
-            status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)}
-        )
+        return JSONResponse(status_code=status.HTTP_409_CONFLICT, content={"detail": str(exc)})
 
     @application.get("/healthz", response_model=dict[str, str])
     async def healthz() -> dict[str, str]:

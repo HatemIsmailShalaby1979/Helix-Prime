@@ -43,7 +43,9 @@ LONG_RUN_TICKS = 400
 Check = Callable[[str, bool, object], None]
 
 
-def run_supervisor(*args: str, timeout: float = SUPERVISOR_TIMEOUT_SECONDS) -> subprocess.CompletedProcess[str]:
+def run_supervisor(
+    *args: str, timeout: float = SUPERVISOR_TIMEOUT_SECONDS
+) -> subprocess.CompletedProcess[str]:
     """Run the bridge as a subprocess, capturing its operator log."""
     return subprocess.run(
         [sys.executable, str(SUPERVISOR), *args],
@@ -73,10 +75,14 @@ def summary(stderr: str) -> str:
 def test_happy_path(check: Check, engine: LiveEngine) -> None:
     """Every tick reaches a live engine, and the twin's stderr is passed through."""
     result = run_supervisor(
-        "--ticks", "8",
-        "--spike-after", "3",
-        "--tick-seconds", "0.05",
-        "--endpoint", engine.telemetry_url,
+        "--ticks",
+        "8",
+        "--spike-after",
+        "3",
+        "--tick-seconds",
+        "0.05",
+        "--endpoint",
+        engine.telemetry_url,
     )
     check("exit code 0", result.returncode == 0, str(result.returncode))
     check("all eight ticks delivered", "delivered=8" in result.stderr, summary(result.stderr))
@@ -93,7 +99,9 @@ def test_happy_path(check: Check, engine: LiveEngine) -> None:
         "operator banner visible",
     )
     state = engine.state()
-    check("engine window holds the ticks", state["window_samples"] == 8, str(state["window_samples"]))
+    check(
+        "engine window holds the ticks", state["window_samples"] == 8, str(state["window_samples"])
+    )
     check(
         "spike raised interventions through the bridge",
         len(state["recommendations"]) >= 1,
@@ -104,13 +112,20 @@ def test_happy_path(check: Check, engine: LiveEngine) -> None:
 def test_backoff_and_drop(check: Check) -> None:
     """An unreachable engine holds the payload, backs off, then drops it."""
     result = run_supervisor(
-        "--ticks", "2",
-        "--spike-after", "0",
-        "--tick-seconds", "0.05",
-        "--endpoint", DEAD_ENDPOINT,
-        "--attempts", "3",
-        "--base-delay", "0.1",
-        "--max-delay", "0.4",
+        "--ticks",
+        "2",
+        "--spike-after",
+        "0",
+        "--tick-seconds",
+        "0.05",
+        "--endpoint",
+        DEAD_ENDPOINT,
+        "--attempts",
+        "3",
+        "--base-delay",
+        "0.1",
+        "--max-delay",
+        "0.4",
     )
     check("exit code 1", result.returncode == 1, str(result.returncode))
     check("both payloads dropped", "dropped=2" in result.stderr, summary(result.stderr))
@@ -125,10 +140,14 @@ def test_backoff_and_drop(check: Check) -> None:
 def test_rejection_aborts(check: Check, engine: LiveEngine) -> None:
     """A 4xx aborts the run instead of dropping every tick."""
     result = run_supervisor(
-        "--ticks", "2",
-        "--spike-after", "0",
-        "--tick-seconds", "0.05",
-        "--endpoint", f"{engine.base}/api/v1/nope",
+        "--ticks",
+        "2",
+        "--spike-after",
+        "0",
+        "--tick-seconds",
+        "0.05",
+        "--endpoint",
+        f"{engine.base}/api/v1/nope",
     )
     check("exit code 1", result.returncode == 1, str(result.returncode))
     check(
@@ -257,11 +276,16 @@ def test_interrupt_terminates(check: Check, engine: LiveEngine) -> None:
     """An operator interrupt leaves no surviving twin, whatever killed it."""
     process = subprocess.Popen(
         [
-            sys.executable, str(SUPERVISOR),
-            "--ticks", str(LONG_RUN_TICKS),
-            "--spike-after", "10",
-            "--tick-seconds", "0.5",
-            "--endpoint", engine.telemetry_url,
+            sys.executable,
+            str(SUPERVISOR),
+            "--ticks",
+            str(LONG_RUN_TICKS),
+            "--spike-after",
+            "10",
+            "--tick-seconds",
+            "0.5",
+            "--endpoint",
+            engine.telemetry_url,
         ],
         cwd=REPO_ROOT,
         stdout=subprocess.PIPE,

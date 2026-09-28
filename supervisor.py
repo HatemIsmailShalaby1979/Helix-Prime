@@ -288,9 +288,7 @@ class Supervisor:
             stderr=None,
         )
 
-    async def _pump(
-        self, process: asyncio.subprocess.Process, client: httpx.AsyncClient
-    ) -> None:
+    async def _pump(self, process: asyncio.subprocess.Process, client: httpx.AsyncClient) -> None:
         """Read stdout line by line, delivering each tick before reading the next."""
         stdout = process.stdout
         if stdout is None:

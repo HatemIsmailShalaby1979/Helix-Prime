@@ -104,7 +104,11 @@ def _exercise_stream(
             return frame
 
         first = take()
-        check("snapshot frame delivered on connect", first["type"] == "cockpit_snapshot", first["type"])
+        check(
+            "snapshot frame delivered on connect",
+            first["type"] == "cockpit_snapshot",
+            first["type"],
+        )
         check("snapshot carries cockpit state", "recommendations" in first["payload"])
         check("subscriber registered", manager.client_count == 1, f"clients={manager.client_count}")
 
@@ -128,7 +132,9 @@ def _exercise_stream(
             frames = [take() for _ in range(expected)]
             if index == 1:
                 tick = frames[0]
-                check("telemetry_tick frame emitted", tick["type"] == "telemetry_tick", tick["type"])
+                check(
+                    "telemetry_tick frame emitted", tick["type"] == "telemetry_tick", tick["type"]
+                )
                 check(
                     "tick carries metrics + velocity",
                     tick["payload"]["metrics"]["calls_waiting"]
@@ -189,7 +195,11 @@ def _exercise_stream(
         )
 
     time.sleep(PRUNE_SETTLE_SECONDS)
-    check("subscriber pruned after disconnect", manager.client_count == 0, f"clients={manager.client_count}")
+    check(
+        "subscriber pruned after disconnect",
+        manager.client_count == 0,
+        f"clients={manager.client_count}",
+    )
 
     response = client.post("/api/v1/telemetry", json=payloads[0])
     check(
@@ -261,7 +271,11 @@ def test_stalled_peer_is_pruned_within_send_timeout(check: Check) -> None:
         return delivered, time.monotonic() - started
 
     delivered, elapsed = asyncio.run(exercise())
-    check("stalled peer pruned within send_timeout", manager.client_count == 1, f"clients={manager.client_count}")
+    check(
+        "stalled peer pruned within send_timeout",
+        manager.client_count == 1,
+        f"clients={manager.client_count}",
+    )
     check(
         "broadcast bounded by send_timeout",
         elapsed < SEND_TIMEOUT_SECONDS * 3,
@@ -285,8 +299,16 @@ def test_dispatch_never_touches_a_socket(check: Check) -> None:
         return elapsed
 
     elapsed = asyncio.run(exercise())
-    check("50 dispatches to a stalled peer return immediately", elapsed < 0.05, f"{elapsed * 1000:.2f}ms")
-    check("outbox accepted every frame", manager.dropped_frames == 0, f"dropped={manager.dropped_frames}")
+    check(
+        "50 dispatches to a stalled peer return immediately",
+        elapsed < 0.05,
+        f"{elapsed * 1000:.2f}ms",
+    )
+    check(
+        "outbox accepted every frame",
+        manager.dropped_frames == 0,
+        f"dropped={manager.dropped_frames}",
+    )
 
 
 def test_backpressure_sheds_oldest(check: Check) -> None:
@@ -299,7 +321,9 @@ def test_backpressure_sheds_oldest(check: Check) -> None:
 
     async def exercise() -> list[str]:
         for index in range(4):
-            manager.dispatch("telemetry_tick", {"marker": "fresh" if index == 3 else f"old-{index}"})
+            manager.dispatch(
+                "telemetry_tick", {"marker": "fresh" if index == 3 else f"old-{index}"}
+            )
         outbox = manager._outbox
         assert outbox is not None
         retained: list[str] = []

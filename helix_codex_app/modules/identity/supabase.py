@@ -57,7 +57,11 @@ async def exchange_code(
             json={"auth_code": code, "code_verifier": verifier},
         )
         if response.is_error:
-            raise SupabaseAuthError("Supabase authorization code exchange failed", status=response.status_code, detail=_safe_error_detail(response))
+            raise SupabaseAuthError(
+                "Supabase authorization code exchange failed",
+                status=response.status_code,
+                detail=_safe_error_detail(response),
+            )
         token = response.json().get("access_token")
         if not isinstance(token, str) or not token:
             raise SupabaseAuthError("Supabase did not return an access token")
@@ -66,11 +70,16 @@ async def exchange_code(
             headers={"apikey": anon_key, "authorization": f"Bearer {token}"},
         )
         if user_response.is_error:
-            raise SupabaseAuthError("Supabase user verification failed", status=user_response.status_code, detail=_safe_error_detail(user_response))
+            raise SupabaseAuthError(
+                "Supabase user verification failed",
+                status=user_response.status_code,
+                detail=_safe_error_detail(user_response),
+            )
         user = user_response.json()
         if not isinstance(user, dict) or not user.get("id") or not user.get("email"):
             raise SupabaseAuthError("Supabase user profile is incomplete")
         return user
+
 
 def _safe_error_detail(response: httpx.Response) -> str:
     try:

@@ -234,9 +234,7 @@ class TelemetryGenerator:
         volume = _sample_poisson(self._rng, forecast_volume)
         offered_load = forecast_volume * AVG_HANDLE_TIME_SECONDS / SIM_INTERVAL_SECONDS
         calls_waiting, longest_wait, sla = self._derive_queue(offered_load, staffed_agents)
-        self._state = SimulationState(
-            is_spike_active=spike_active, current_interval_volume=volume
-        )
+        self._state = SimulationState(is_spike_active=spike_active, current_interval_volume=volume)
         return QueueMetrics(
             timestamp=self._clock,
             calls_waiting=calls_waiting,
@@ -284,9 +282,7 @@ class TelemetryGenerator:
         aux_agents = round(target_aux + self._rng.gauss(0.0, AUX_DRIFT_SIGMA))
         return active_agents, int(_clamp(aux_agents, 0, active_agents - 1))
 
-    def _derive_queue(
-        self, offered_load: float, staffed_agents: int
-    ) -> tuple[int, float, float]:
+    def _derive_queue(self, offered_load: float, staffed_agents: int) -> tuple[int, float, float]:
         """Return (calls_waiting, longest_wait_seconds, sla_percentage) for one interval."""
         capacity = float(staffed_agents)
         probability_of_waiting = _erlang_c(offered_load, staffed_agents)
@@ -298,17 +294,13 @@ class TelemetryGenerator:
                 / (1.0 - utilisation)
                 * math.exp(self._rng.gauss(0.0, QUEUE_JITTER_SIGMA))
             )
-        net_volume = (
-            (offered_load - capacity) * SIM_INTERVAL_SECONDS / AVG_HANDLE_TIME_SECONDS
-        )
+        net_volume = (offered_load - capacity) * SIM_INTERVAL_SECONDS / AVG_HANDLE_TIME_SECONDS
         backlog = (self._backlog + net_volume) * ABANDONMENT_SURVIVAL_RATE
         backlog = min(max(backlog, self._equilibrium_floor), MAX_QUEUE_LENGTH)
         self._backlog = backlog
         backlog_scale = AVG_HANDLE_TIME_SECONDS * max(backlog, 1.0) / capacity
         if offered_load < capacity:
-            wait_scale = max(
-                AVG_HANDLE_TIME_SECONDS / (capacity - offered_load), backlog_scale
-            )
+            wait_scale = max(AVG_HANDLE_TIME_SECONDS / (capacity - offered_load), backlog_scale)
         else:
             wait_scale = backlog_scale
         sla = (1.0 - probability_of_waiting * math.exp(-SLA_TARGET_SECONDS / wait_scale)) * 100.0
@@ -357,9 +349,7 @@ def main() -> None:
         parser.error("--ticks must be >= 1")
     if not 0 <= args.spike_after <= args.ticks:
         parser.error("--spike-after must fall within [0, --ticks]")
-    asyncio.run(
-        _run(args.ticks, args.spike_after, args.seed, args.tick_seconds, args.emit_state)
-    )
+    asyncio.run(_run(args.ticks, args.spike_after, args.seed, args.tick_seconds, args.emit_state))
 
 
 if __name__ == "__main__":

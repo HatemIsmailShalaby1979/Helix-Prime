@@ -447,7 +447,11 @@ def audit_entries_for_correlation(
     """
     return list(
         reversed(
-            [row for row in _audit_rows_newest_first(scan_limit) if row.get("correlation_id") == correlation_id]
+            [
+                row
+                for row in _audit_rows_newest_first(scan_limit)
+                if row.get("correlation_id") == correlation_id
+            ]
         )
     )
 

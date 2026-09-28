@@ -149,7 +149,9 @@ def demo_ctx(tmp_path):
     repo.create_domain(DEMO_DOMAIN_NAME, tenant_id=DEMO_TENANT_ID, client_id=DEMO_CLIENT_ID)
     demo = ensure_demo_account(repo, password_hash=hash_password("x"))
     settings = AppSettings(db_path=db_path, cookie_secure=False)
-    yield SimpleNamespace(conn=conn, demo=demo, settings=settings, store=SessionStore(conn, settings))
+    yield SimpleNamespace(
+        conn=conn, demo=demo, settings=settings, store=SessionStore(conn, settings)
+    )
     db.close(conn)
 
 

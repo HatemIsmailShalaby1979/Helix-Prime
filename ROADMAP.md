@@ -53,7 +53,14 @@ This is a **one-person** effort. Everything below is sized for that reality.
 
 ## Next (once the above is stable)
 
-1. **Demo assets** — the shipped `marketing/assets/Helix_Prime_5Min_Demo.mp4` and its `.vtt` still carry retracted fabricated narration. Rebuild from `marketing/DEMO_SCRIPT.md` or withdraw it from the distribution path. See `CHANGELOG.md`.
+1. ~~**Demo assets**~~ — **resolved 2026-09-29.** The stale render was withdrawn
+   from the distribution path: removed from the working tree (quarantined at
+   `E:/_quarantine_2026-09-29/`) and excluded from both the Azure bundle
+   (`marketing/azure.yaml`) and the Docker build context (`marketing/.dockerignore`).
+   `index.html` never referenced it. This item previously said the `.vtt` also
+   carried the retracted narration — **it did not**; the captions were regenerated
+   from the corrected script in `c5a88ef` and are current. Closes issue #3. See
+   `CHANGELOG.md`.
 2. **Build the container** — the Docker daemon was unavailable during validation, so the first real `docker build` may surface problems that the 32 static packaging tests cannot see.
 3. **Documentation consistency** — sweep remaining docs and screens for claims that exceed `MASTER_STORY.md`, and correct them the way this roadmap was corrected.
 4. **Decide the public product name** — the repository says Helix Prime, the commercial layer says Helix Codex OS, and the manifest says Helix-Prime-Codex.

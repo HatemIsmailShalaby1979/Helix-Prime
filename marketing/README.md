@@ -9,9 +9,9 @@ This folder markets **Helix Prime** as a digital operations team that solves rea
 | `index.html` | Marketing website (open in browser) |
 | `assets/style.css` | Site styling (dark, red-accent brand theme) |
 | `assets/screenshots/` | Real screenshots from test & deployment runs |
-| `assets/Helix_Prime_5Min_Demo.mp4` | 5-minute demo video — **STALE build output, not committed.** See the truth note in `DEMO_SCRIPT.md` before distributing |
+| `assets/Helix_Prime_5Min_Demo.mp4` | 5-minute demo video — **not committed, not shipped, and not present by default.** Rebuild it from `DEMO_SCRIPT.md`; never distribute a pre-existing copy (see the truth note there) |
 | `assets/Helix_Prime_5Min_Demo.vtt` | WebVTT captions for the demo |
-| `assets/screenshots/demo-poster.svg` | Poster frame for the `<video>` element |
+| `assets/screenshots/demo-poster.svg` | Brand poster frame — retained, but note that `index.html` carries no `<video>` element, so nothing references it |
 | `assets/build_demo.py` | Builder: parses `DEMO_SCRIPT.md`, renders slides, TTS, muxes mp4 |
 | `assets/build_demo.sh` | Bash wrapper around `build_demo.py` |
 | `helix-codex-deck/video/Helix_Codex_5Min_Animated.html` | 5-minute animated film — one file, plays in any browser, narration built in |
@@ -32,7 +32,7 @@ This folder markets **Helix Prime** as a digital operations team that solves rea
 | `render.yaml` | Render.com Docker web service config |
 | `azure.yaml` | Azure Developer CLI (azd) entry point |
 | `infra/main.bicep` | Bicep template: Azure Static Web Apps free tier |
-| `.dockerignore` | Excludes `_build/`, `.git/`, etc. from the image |
+| `.dockerignore` | Excludes `.git/`, `_build/`, `dist/` and `assets/*.mp4` from the image — the mp4 is rebuilt in the builder stage, so an on-disk copy is dead weight |
 | `.env.example` | Empty template (no secrets required) |
 | `README.md` | This file |
 
@@ -49,8 +49,10 @@ python assets/build_demo.py
 ```
 
 Produces:
-- `assets/Helix_Prime_5Min_Demo.mp4` (1920×1080, 5:00, ~6-8 MB)
-- `assets/Helix_Prime_5Min_Demo.vtt` (chapter cue timings)
+- `assets/Helix_Prime_5Min_Demo.mp4` (1920×1080, 5:00, ~6-8 MB) — a **local build
+  output**: gitignored, not committed, not shipped. Rebuild it rather than reusing
+  a copy on disk; the only render previously kept here carried retracted narration.
+- `assets/Helix_Prime_5Min_Demo.vtt` (chapter cue timings) — committed, and current
 
 The builder:
 1. Parses `DEMO_SCRIPT.md` into 5 chapters of 60 s each.
@@ -208,7 +210,10 @@ cd marketing
 # Push the repo, then in Render dashboard: New -> Blueprint -> point at render.yaml
 ```
 Health check: `GET /index.html` (returns 200 OK).
-Video: `GET /assets/Helix_Prime_5Min_Demo.mp4` (returns 200 OK, ~6-8 MB).
+Video: `GET /assets/Helix_Prime_5Min_Demo.mp4` (returns 200 OK, ~6-8 MB) — this is
+the render the **container builds** from `DEMO_SCRIPT.md` in the Dockerfile's
+builder stage, not a copy taken from the working tree, which `.dockerignore`
+excludes.
 
 ### Azure Static Web Apps (free tier)
 ```bash

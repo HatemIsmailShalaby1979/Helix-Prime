@@ -71,7 +71,10 @@ security/audit.db
 security/audit.db-*
 *.jsonl
 
-# Local demo media kept out of source (use release assets instead)
+# Local demo media kept out of source. Rebuild it from DEMO_SCRIPT.md — do NOT
+# publish a copy found on disk as a release asset. The only render ever produced
+# was stale and carried retracted narration (see the truth note in
+# marketing/DEMO_SCRIPT.md and GitHub issue #3, closed 2026-09-29).
 marketing/assets/*.mp4
 
 # Archify scratch — regenerate from specs/*.json with the archify CLI. The

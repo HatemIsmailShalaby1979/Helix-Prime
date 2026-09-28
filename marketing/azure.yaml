@@ -22,4 +22,10 @@ services:
         mkdir -p dist
         cp index.html dist/
         cp -r assets dist/
+        # The 5-minute demo mp4 is a local build output with no committed copy,
+        # and index.html carries no <video> element referencing it. It must not
+        # enter the bundle: the only render ever produced carried retracted
+        # narration (see the truth note in marketing/DEMO_SCRIPT.md). Rebuild it
+        # from the corrected script before ever publishing a video again.
+        find dist -name '*.mp4' -delete
         ls -la dist

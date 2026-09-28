@@ -1,0 +1,18 @@
+# Build context exclusions for the marketing image.
+#
+# This file did not exist before 2026-09-29, although README.md claimed it did.
+
+# The 5-minute demo mp4 is a local build output: the Dockerfile's builder stage
+# regenerates it from DEMO_SCRIPT.md, so an on-disk copy is overwritten anyway.
+# Excluding it keeps 6.7 MB of stale media — the only render ever produced, and
+# one that carried retracted narration — out of the build context entirely.
+assets/*.mp4
+
+# Repository and tooling scratch that must never enter an image.
+.git/
+_build/
+dist/
+
+# Python bytecode and editor scratch.
+**/__pycache__/
+*.pyc

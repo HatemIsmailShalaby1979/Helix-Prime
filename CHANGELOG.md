@@ -41,6 +41,32 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
    - Release: `app_pilot` gate profile with six app gates; first sign-off `CONTROLLED_PILOT_READY`
      (full suite 1395 passed, 0 failed; ruff clean under the pinned 0.1.15)
 
+### Removed
+
+- **The stale 5-minute demo render withdrawn from the distribution path** (2026-09-29) —
+  `marketing/assets/Helix_Prime_5Min_Demo.mp4` (6,745,096 bytes, dated 2026-08-27,
+  sha256 `32955fc9edbb1f97daebfb1d4d453eb582e47455ad3ee787b5728097bda2c9b3`)
+  predated the 2026-09-13 script correction and carried the **retracted** narration
+  — the invented "proof ledger", "57 auditable entries", "three client profiles
+  over 19 days", and the invented savings figures. `marketing/DEMO_SCRIPT.md`
+  instructed "rebuild it from this script before using or distributing it, or
+  remove it from the distribution path"; this takes the second option.
+  - The file was untracked and gitignored, so **no git history was rewritten** —
+    nothing was ever committed. It is held at
+    `E:/_quarantine_2026-09-29/` with a provenance note.
+  - Two deploy paths read that folder, which is what made the file reachable:
+    the Azure Static Web App predeploy ran `cp -r assets dist/` over the local
+    tree, and the Docker build context copied it into the builder stage. Both now
+    exclude `*.mp4` (`marketing/azure.yaml`, `marketing/.dockerignore`).
+    `index.html` never referenced the file — it carries no `<video>` element.
+  - **The sibling `.vtt` is unaffected and stays.** It was regenerated from the
+    corrected script in `c5a88ef` and matches it word for word. The two files
+    describing different things was the whole problem.
+  - Closes GitHub issue #3. That issue asked for the video to be published as a
+    release asset; publishing this render would have made retracted material
+    permanent and public. A video can still be published — after it is rebuilt
+    from the corrected script.
+
 ### Fixed
 
 - **Scratch-directory leaks in the release path** (2026-09-20) — eleven

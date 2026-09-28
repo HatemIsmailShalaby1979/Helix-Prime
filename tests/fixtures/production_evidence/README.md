@@ -20,6 +20,33 @@ agreeing with itself:
 openssl dgst -sha256 -sign <throwaway-key>.pem -out <gate>.evidence.json.sig <gate>.evidence.json
 ```
 
+**Sign the LF bytes, and only the LF bytes.** The signature covers the document's
+exact bytes, so the line endings are part of what is signed. `.gitattributes`
+declares `* text=auto eol=lf`, which means the committed blob — and therefore a
+Linux CI checkout — is LF. A signature produced over a CRLF working copy verifies
+on that machine and nowhere else.
+
+That is not hypothetical. All nine fixtures were originally signed over CRLF
+bytes (445 bytes for `security_review`) while the committed blobs are LF (433
+bytes), so the whole signature group passed on Windows with
+`core.autocrlf=true` and failed on `ubuntu-latest` with
+`signature does not verify against the declared key`. Re-signed over the LF bytes
+on 2026-09-28. `pathlib.Path.write_text` is the usual way to reintroduce this: it
+translates `\n` to `os.linesep`, so it writes CRLF on Windows. Write the bytes
+explicitly, then confirm before signing:
+
+```bash
+python -c "
+import pathlib
+for p in sorted(pathlib.Path('tests/fixtures/production_evidence').glob('*.evidence.json')):
+    b = p.read_bytes()
+    assert b.count(b'\r') == 0, f'{p.name} is not LF — re-signing would repeat the bug'"
+```
+
+The `.sig` files themselves are declared `binary` in `.gitattributes`, because a
+signature containing a CRLF sequence would otherwise be silently rewritten by
+Git and stop verifying.
+
 The validity window is 2020-01-01 → 2099-01-01 on purpose: wide enough that these
 fixtures cannot quietly expire and turn the suite red years from now, while still
 exercising a real `issued_at` / `expires_at` pair. `test_production_evidence.py`

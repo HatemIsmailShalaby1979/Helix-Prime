@@ -12,3 +12,10 @@
 
 # Git LFS. Must come after the general rule so that it wins for these paths.
 marketing/assets/fonts/*.ttf filter=lfs diff=lfs merge=lfs -text
+
+# Detached signatures are binary artifacts, not text: the verifier hashes their
+# exact bytes. Under `text=auto` Git would strip CRLF from a signature that
+# happens to contain one, silently invalidating it. Measured 2026-09-28: all
+# nine evidence signatures are currently NUL-containing and survive untouched,
+# but that is luck, not policy.
+tests/fixtures/production_evidence/*.sig binary

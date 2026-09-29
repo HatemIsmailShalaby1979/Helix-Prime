@@ -831,6 +831,7 @@ class Engine:
                 target_engine=getattr(request, "target_engine", None)
                 or request.input_payload.get("engine")
                 or request.input_payload.get("target_engine"),
+                requires_approval=request.requires_approval,
             )
             if gate_decision.requires_human_approval:
                 workflow.requires_approval = True

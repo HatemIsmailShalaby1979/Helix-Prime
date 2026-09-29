@@ -199,8 +199,19 @@ class RoleSpec:
         return classification in self.allowed_data_classifications
 
     def owns_engine(self, engine: Optional[str]) -> bool:
+        """
+        Whether this seat owns the engine a task names.
+
+        A task that names no ``target_engine`` (``None``) does not ask to run on
+        any engine, so the question collapses to whether the seat owns an engine
+        at all: an engine-less seat — an oversight-only role such as
+        ``compliance_quality_gm`` (``owned_engines=()``) — owns nothing and
+        answers ``False``; every other seat answers ``True``. Returning ``True``
+        unconditionally for ``None`` (the previous behaviour) let a task with no
+        engine slip past the ownership boundary into an oversight role.
+        """
         if engine is None:
-            return True
+            return bool(self.owned_engines)
         return normalize_engine(engine) in {normalize_engine(e) for e in self.owned_engines}
 
     def to_dict(self) -> Dict[str, Any]:
@@ -961,7 +972,7 @@ def evaluate_gate(
 
     Returns a GovernanceDecision naming the state the task must be written with:
       * ``dead_letter``        — hard deny (unknown role, forbidden classification,
-                                 engine outside owned_engines)
+                                 engine outside owned_engines, oversight-only role)
       * ``awaiting_approval``  — frozen for a human (financial limit crossed,
                                  low confidence, explicit approval requested)
       * ``executing``          — inside every boundary, may proceed autonomously
@@ -1060,6 +1071,27 @@ def evaluate_gate(
             reason_code="approval_requested",
             reason="task was submitted with requires_approval=True",
             state=WorkflowState.AWAITING_APPROVAL,
+            estimated_cost_usd=cost,
+            limit_usd=limit,
+        )
+
+    # Oversight boundary: a seat that only proposes and reviews must never be
+    # handed a task that executes. Checked last so the financial, confidence and
+    # explicit-approval boundaries keep their precedence, and checked
+    # *regardless of target_engine* — including the no-engine case that the
+    # ownership check above deliberately lets through (``target_engine is None``).
+    # Fail closed as a hard deny: the task is isolated, not frozen, because no
+    # human approval could make an oversight-only seat legally execute.
+    if spec.oversight_only:
+        return GovernanceDecision(
+            allowed=False,
+            requires_human_approval=False,
+            reason_code="oversight_only",
+            reason=(
+                f"role {spec.role_id!r} is oversight-only — it proposes and reviews, "
+                "it never executes a task"
+            ),
+            state=WorkflowState.DEAD_LETTER,
             estimated_cost_usd=cost,
             limit_usd=limit,
         )

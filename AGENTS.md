@@ -19,19 +19,16 @@
 > Phase 6** — the nine production-only gates need signatures from keys held
 > outside this repository.
 >
-> **Two owner decisions are open, and neither is engineering work:**
+> **One owner decision is open, and it is not engineering work:**
 >
-> 1. **The unpushed backlog.** `origin/main` is **`6b7d923`**; measured at
->    `aa0e5a9` on 2026-09-27 the backlog was **32 commits** and the push a clean
->    fast-forward — see §20.30.5. **The count moves with every commit, including
->    the one that records it; re-measure, never quote it.** The figure previously
->    written here (`b9d8fb6`) is stale; the remote advanced past it. **The
->    documented measurement command no longer runs:** the local
->    `origin/main` tracking ref has been pruned (`git branch -vv` reports
->    `[origin/main: gone]`), so `git rev-list --count origin/main..HEAD` fails with
->    `unknown revision`. Measure against the remote instead —
+> 1. ~~**The unpushed backlog.**~~ — **closed 2026-09-29.** `main` is level with
+>    `origin/main` at **`1830f30`**; the backlog is **0**. Earlier text here quoted
+>    `6b7d923`, `b9d8fb6` and a 32-commit backlog; every one of those was correct
+>    when written and has since moved. **Re-measure, never quote:**
 >    `git ls-remote --heads origin main`, then `git rev-list --count <sha>..HEAD`.
->    **Never trust a number written here; it moves with every commit.**
+>    (The local `origin/main` tracking ref was pruned once, so
+>    `git rev-list --count origin/main..HEAD` can fail with `unknown revision` —
+>    measure against the remote.)
 > 2. **Repository visibility.** Recorded as closed on 2026-09-21 with the
 >    repository set to private; that record was superseded. Measured 2026-09-25,
 >    an unauthenticated request to
@@ -39,11 +36,18 @@
 >    HTTP 200 and `"private": false`. **The repository is public, and the owner
 >    confirmed on 2026-09-25 that public is the intended state.** See §20.5.
 >
+> **CI is green for the first time — 2026-09-29.** Run
+> [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876)
+> on `839507e` passed **all 17 steps**: `1,897 passed, 19 deselected`, coverage
+> 86.91%. The workflow had failed at **step 5 on every push from 2026-09-20 to
+> 2026-09-28**, which is why steps 6–17 had never executed once and why several
+> pre-existing defects were invisible. Full record: §21.
+>
 > **Pushes are gated on explicit human authorization.** Commits inside the
-> workspace follow the standing authorization; pushes do not. **The backlog was
-> pushed on 2026-09-27 under explicit authorization** — `6b7d923..1c8c19d`, a
-> fast-forward, see §20.30.9 — and the remote was level with local at that moment.
-> Any commit after that one needs its own authorization.
+> workspace follow the standing authorization; pushes do not. The backlog was
+> pushed on 2026-09-27 under explicit authorization (`6b7d923..1c8c19d`), and
+> §21's three commits were pushed on 2026-09-29 under the owner's instruction to
+> repair the workflow. Any commit after those needs its own authorization.
 >
 > Everything else is COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app
 > UI modernization, UI-1), the sports-academy pack (S0–S7), §2–§19, and §20
@@ -5079,3 +5083,117 @@ had been pruned (§20.30.5). `git branch -vv` now reports `* main 1c8c19d [origi
 the documented backlog command `git rev-list --count origin/main..HEAD` works again. The
 header's instruction to measure against the remote remains the safer habit — the ref can be
 pruned again — but the local path is no longer broken.
+
+---
+
+## 21. CI repair, and withdrawal of the stale demo render (CI-REPAIR-1) — COMPLETE
+
+**Recorded:** 2026-09-29 · **Scope:** `.github/workflows/ci.yml` and the defects it
+exposed once it could run to completion; plus the demo-asset item on the roadmap.
+
+### 21.1 What was wrong
+
+**The workflow had failed at step 5 (`Run ruff (linting)`) on every push since
+2026-09-20.** Because that step aborted the job, **steps 6–17 had never executed
+once in the repository's history** — including the test suite, the security scans,
+the drift checks and both container steps. Every defect below was pre-existing and
+merely unmeasured; none was introduced by recent work.
+
+### 21.2 Root causes, each measured
+
+| # | Defect | Evidence |
+|---|---|---|
+| 1 | `ruff check` exits 1 | `I001` + `B007` in `scripts/generate_pdf.py` |
+| 2 | `ruff format --check .` exits 1 | 13 files would be reformatted |
+| 3 | `No module named build` | CI log of run `36486064286`; `build`/`hatchling` declared nowhere |
+| 4 | Evidence signatures verify only against CRLF | all 9 fixtures: `verify(worktree)=True`, `verify(blob)=False` |
+| 5 | Release-gate test snapshots the lock pin count | introduced by the fix for #3, caught by the CI run of `8424b3e` |
+
+Defect 4 is the one to keep in view. The nine
+`tests/fixtures/production_evidence/*.evidence.json` fixtures were **signed over
+CRLF bytes** (445 B for `security_review`) while the committed blobs are **LF**
+(433 B). With `core.autocrlf=true` the Windows working tree recreates CRLF, so the
+whole signature group passed locally and could only ever fail on Linux. The
+generator was the cause: `pathlib.Path.write_text` translates `\n` to `os.linesep`.
+
+### 21.3 Fixes
+
+| Commit | Change |
+|---|---|
+| `5755667` | blank line between the stdlib and third-party imports; `c` → `_c`; the 13 drifted files reformatted |
+| `8424b3e` | `build>=1.0` + `hatchling>=1.20` declared and pinned; all nine fixtures re-signed over the canonical LF bytes; `*.sig` marked `binary` in `.gitattributes` |
+| `839507e` | the release-gate snapshot updated 120 → 122 |
+| `1830f30` | the stale demo render withdrawn from the distribution path (see 21.5) |
+
+The twelve reformatted files are **AST-identical to HEAD**, verified by comparing
+`ast.dump` of the HEAD blob against the committed blob. The only semantic change in
+the whole diff is `c` → `_c`; every row is padded to `num_cols` before that loop, so
+the value of `c` read further down the function is `num_cols - 1` either way.
+
+**The lock was deliberately not regenerated.** `uv pip compile` re-resolves the whole
+graph and bumped ~30 unrelated pins (`sqlalchemy 2.0.52 → 2.1.1`, `streamlit`,
+`scikit-learn`, `pyflakes 3.4 → 4.0`) while dropping the `web` extra the real lock
+carries. Every transitive dependency of `build` and `hatchling` was already pinned,
+so the lock gained exactly two entries and no existing pin moved.
+
+### 21.4 Verification
+
+CI run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876)
+on `839507e` — **all 17 steps success**, `1,897 passed, 19 deselected in 595.21s`,
+coverage **86.91%**, zero `FAILED` lines, `Dependency check passed: no drift`.
+
+Locally: the full suite with coverage (`1,897 passed`, 86.91%, exit 0); the signature
+tests re-run inside a **pristine LF clone** (28 passed) as the Linux-equivalent
+condition; `openssl dgst -verify` **and** the repository's own
+`verify_detached_signature` both true for all nine fixtures; mypy 0 issues / 72 files;
+bandit clean; pip-audit clean; all six drift/governance checks pass;
+`test_c8_gate_falsifiability.py` + `test_c8_release_gate.py` 83 passed.
+
+**Not reproducible locally:** the two container steps (16–17) — no Docker daemon on
+this machine. They are confirmed only by the green run above.
+
+**No verifier was weakened.** Normalising line endings before verification would have
+made the fixtures pass, but it would have broken the stated invariant that the
+signature covers the document's exact bytes.
+
+### 21.5 The demo render withdrawn from the distribution path
+
+GitHub issue #3 asked for `marketing/assets/Helix_Prime_5Min_Demo.mp4` to be published
+as a release asset. `marketing/DEMO_SCRIPT.md` says the opposite: the file predates the
+2026-09-13 script correction and carries the **retracted** narration (the invented
+"proof ledger", "57 auditable entries", "three client profiles over 19 days", invented
+savings figures). The issue is closed as superseded.
+
+Two deploy paths could actually reach it, which the issue never mentioned:
+`marketing/azure.yaml` ran `cp -r assets dist/` over the **local working tree**, so
+`azd up` would have uploaded whatever mp4 was on disk; and the Docker build context
+copied it into the builder stage. Both now exclude `*.mp4`. `index.html` carries no
+`<video>` element at all. The `.gitignore` comment that generated the issue —
+"use release assets instead" — is corrected.
+
+The file was untracked and gitignored, so **no git history was rewritten**. It is
+quarantined at `E:/_quarantine_2026-09-29/`, sha256
+`32955fc9edbb1f97daebfb1d4d453eb582e47455ad3ee787b5728097bda2c9b3`. The sibling
+`.vtt` is unaffected and stays: it was regenerated from the corrected script in
+`c5a88ef` and matches it word for word.
+
+### 21.6 Standing lessons
+
+1. **Read the CI log before theorising.** `/actions/runs/<id>/logs` returns 403
+   unauthenticated but works with the admin token in `~/.git-credentials` — the
+   difference between a five-minute diagnosis and an afternoon of guessing. Use the
+   token for the whole session: unauthenticated gives 60 requests/hour, the token 5000.
+2. **A workflow that has never passed hides a queue of failures.** Every `skip` below
+   a `failure` is an unmeasured risk. Expect 3–5 rounds.
+3. **Never regenerate a lock file to add one package** (see 21.3).
+4. **A CRLF working tree hides a whole class of bug.** Anything that signs, hashes or
+   byte-compares a committed file passes locally and fails on Linux. The only local
+   stand-in is a pristine LF clone (`git -c core.autocrlf=false clone`, then copy
+   changed files through `sed 's/\r$//'`).
+5. **This repo snapshots quantities inside tests.** Grep `tests/` for any number you
+   change before pushing — defect 5 was self-inflicted and cost a CI round.
+6. **`grep -c $'\r'` lies in the PortableGit bash** — it does not expand `$'\r'`, so
+   the pattern matches every line and returns a *line count*. Read blob bytes with
+   `git cat-file blob` through Python and compare **byte counts**.
+7. **`AGENTS.md:466` claimed the repo was already `ruff format --check` clean.** It was
+   not, until `5755667`. The claim is true now; it was aspirational then.

@@ -19,7 +19,7 @@ Helix Prime is a **solo-built, governed operations platform**. It is `CONTROLLED
 - **2 vertical capability packs**: `capabilities/restaurant/` (the reference pattern) and `capabilities/sports_academy/` (first real vertical, built for Scoach Academy Hub)
 - **C8 release gate** — `release/gate.py`, 29 gate implementations (14 core + 6 app + 9 production-only) across 5 named profiles
 - A public repository at `github.com/HatemIsmailShalaby1979/Helix-Prime`
-- CI pipeline live with pre-commit linting, bandit, and pip-audit
+- **CI pipeline green** — `.github/workflows/ci.yml`, **all 17 steps passing** on `main` (run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876), 2026-09-29): ruff check, ruff format check, mypy, the full suite (**1,897 passed, 19 deselected**, coverage **86.91%** against an 80% floor), bandit, pip-audit, the six drift/registry/governance checks, package build, and both container steps. It had failed at step 5 on **every push from 2026-09-20 to 2026-09-28**, so steps 6–17 were never exercised until this run; see `AGENTS.md` for the repair record.
 
 **What is explicitly NOT real yet — do not claim otherwise:**
 
@@ -47,7 +47,7 @@ This is a **one-person** effort. Everything below is sized for that reality.
 
 ## Now (current focus)
 
-1. **Push the last commits.** The exposure half of this item is **closed**: the owner made the repository **private** on 2026-09-21, so the commit history, the build ledger, and the marketing surface are no longer world-readable. What remains is the push itself — `origin/main` sits at `b9d8fb6` and `main` is ahead of it by the whole unpushed backlog. Measure that backlog with `git rev-list --count origin/main..HEAD` rather than trusting a figure written here, since it moves with every commit. A push is an owner action.
+1. ~~**Push the last commits.**~~ — **closed 2026-09-29.** `main` is level with `origin/main` at `1830f30`; there is no backlog. This item previously recorded that the owner had made the repository **private** on 2026-09-21 — that record was superseded. The repository is **public** (measured 2026-09-25; the owner confirmed public is the intended state), and an unauthenticated GitHub API request returns `"private": false`. Never trust a SHA or a backlog count written here; re-measure with `git ls-remote --heads origin main`, then `git rev-list --count <sha>..HEAD`.
 2. **Run the pilot.** Turn Scoach Academy Hub from a named design partner into a dated pilot with a named operator and a consent record. This is the one gate that unlocks every commercial conversation.
 3. **Close the external production gap (Classes 2–5)** — 21 external verification items that require humans or external parties, tracked in `docs/release/handoff/production-blockers-checklist.md`. These cannot be closed by engineering.
 

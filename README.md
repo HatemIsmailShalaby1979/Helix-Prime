@@ -5,6 +5,7 @@
 **The governed operations core of Helix Codex.**
 
 ![Status](https://img.shields.io/badge/status-pre--pilot-blue)
+![CI](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/workflows/ci.yml/badge.svg)
 ![Tests](https://img.shields.io/badge/tests-1897%20passed%20%2F%200%20failed-2ea043)
 ![Production](https://img.shields.io/badge/production-NOT__READY-red)
 ![Licence](https://img.shields.io/badge/licence-MIT-blue)
@@ -126,10 +127,12 @@ This section keeps 100% of the transparency from earlier revisions. It is last b
 
 | Check | Result | Measured |
 |---|---|---|
-| Full test suite | **1,897 passed / 0 failed** — 940 in the app chunk, 957 in the parent chunk; 19 deselected as a quarantined UI tier | 2026-09-27 |
-| Governance checker (`GOVERNANCE/governance_check.py`) | **PASS** (exit 0) | 2026-09-27 |
-| CI lint (`ruff check`, the 17 paths CI names) | **3 errors** — `S311`, `I001`, `B007` | 2026-09-27 |
-| CI format (`ruff format --check .`, repo-wide) | **Fails** — 346 files would be reformatted | 2026-09-27 |
+| CI, end to end | **All 17 steps pass** — run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876) on `839507e` | 2026-09-29 |
+| Full test suite | **1,897 passed / 0 failed**; 19 deselected as a quarantined UI tier (940 app chunk + 957 parent) | 2026-09-29 |
+| Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** | 2026-09-29 |
+| CI lint (`ruff check`, the 17 paths CI names) | **0 errors** (exit 0) | 2026-09-29 |
+| CI format (`ruff format --check .`, repo-wide) | **Clean** — 429 files already formatted | 2026-09-29 |
+| Governance checker (`GOVERNANCE/governance_check.py`) | **PASS** (exit 0) | 2026-09-29 |
 | Release gate `production` | `NOT_READY` (exit 1) | 2026-09-24 |
 
 - `CONTROLLED_PILOT_READY` is an internal self-approval (`approver: "operator-pilot-consent"`), not a third-party sign-off.
@@ -138,8 +141,17 @@ This section keeps 100% of the transparency from earlier revisions. It is last b
 - Test counts move as the suite grows. Re-measure; never quote a figure from this file as current.
 - `evidence/` is git-ignored by design; the release evidence directories live only on the operator's machine.
 
+> [!NOTE]
+> **The pipeline went green on 2026-09-29 for the first time.** It had failed at
+> step 5 (`ruff check`) on **every push since 2026-09-20**, which is why steps 6–17 —
+> the test suite, the security scans, the drift checks, both container steps — had
+> never executed once. Three pre-existing defects were found behind that failure:
+> two undeclared build dependencies, and nine evidence fixtures whose signatures had
+> been made over CRLF bytes and so could never verify on Linux. Repair record:
+> `AGENTS.md` §21.
+
 > [!WARNING]
-> **What this is not.** No live paying client. The demo data is synthetic by design — a governance decision, not a limitation being hidden: the property being shown is that labelling is structural. The public surface is not durable infrastructure. The repo-wide format step and the CI lint step are red as measured above.
+> **What this is not.** No live paying client. The demo data is synthetic by design — a governance decision, not a limitation being hidden: the property being shown is that labelling is structural. The public surface is not durable infrastructure. A green pipeline is not a production claim: nine production-only gates remain red, as recorded above.
 
 ## Run it
 

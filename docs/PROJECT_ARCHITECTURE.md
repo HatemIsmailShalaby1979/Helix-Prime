@@ -6,9 +6,11 @@
 >
 > **Last verified:** 2026-09-20 — full suite: **1,758 passed, 0 failed, 0 skipped, in one uninterrupted process**
 >
-> **Correction, 2026-09-27.** That figure is a dated snapshot, not the current state. Re-measured on 2026-09-27 the suite is **1,897 passed / 0 failed** (940 app chunk + 957 parent, 19 deselected as a quarantined UI tier), and **`ruff check` is no longer clean** (3 errors across the CI paths) while `ruff format --check .` would reformat 346 files. The "ruff clean, mypy clean, bandit clean" cell below is therefore no longer true and is retained only as the record of what was verified on the date above.
+> **Correction, 2026-09-27.** That figure is a dated snapshot, not the current state. Re-measured on 2026-09-27 the suite is **1,897 passed / 0 failed** (940 app chunk + 957 parent, 19 deselected as a quarantined UI tier), and `ruff check` was **not** clean (3 errors across the CI paths) while `ruff format --check .` would have reformatted 346 files.
 >
-> **Commit:** `003709b`
+> **Resolved, 2026-09-29.** The lint debt that note recorded is cleared, and CI is **green for the first time in the repository's history**: run [36497766876](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876) on `839507e` passed **all 17 steps** — `1,897 passed, 19 deselected`, coverage 86.91%. `ruff check` on the CI path list exits 0 and `ruff format --check .` reports 429 files already formatted. The workflow had failed at step 5 on **every push since 2026-09-20**, which is why steps 6–17 had never executed once; the repair is recorded in `AGENTS.md`. The "ruff clean, mypy clean, bandit clean" cell below is therefore true again, not merely historical.
+>
+> **Commit:** `003709b` (the 2026-09-20 snapshot) · `1830f30` (current `main`)
 
 ---
 
@@ -47,7 +49,7 @@
 | Dashboard | Streamlit (secondary: `helix-cockpit`) |
 | Database | SQLite (workflow store, app store, audit trail) |
 | Governance | 23 release gates (14 C8 + app gates + 9 production-only) |
-| Test count | 1,758 collected, all passing |
+| Test count | 1,897 passed / 0 failed, 19 deselected (snapshot 2026-09-29, CI run `36497766876`; the 1,758 on the line above is the 2026-09-20 measurement) |
 
 ### Design Principles (from `00_CONSTITUTION.md`)
 
@@ -881,10 +883,10 @@ With nine signed evidence fixtures in place, `run_gate(profile="production")` ac
 
 | Dimension | Status | Notes |
 |-----------|--------|-------|
-| Code quality | ✅ Strong | 1,758 tests passing, ruff clean, mypy clean, bandit clean |
+| Code quality | ✅ Strong | 1,897 tests passing, ruff clean, mypy clean, bandit clean (measured 2026-09-29, CI run `36497766876`) |
 | Architecture | ✅ Sound | Layered, seam-governed, no circular imports in core |
 | Governance | ✅ Implemented | 23 gates, 9 production-only, fail-closed everywhere |
-| Testing | ✅ Comprehensive | 1,758 tests, 0 failing, 0 skipped |
+| Testing | ✅ Comprehensive | 1,897 passed / 0 failed, 19 deselected (measured 2026-09-29) |
 | Security posture | ✅ Good | Audit trail, classification, injection detection, secrets scanning, auth hardening |
 | Documentation | ✅ Extensive | ~60K lines across docs/ + governance docs |
 | **Production readiness** | **NOT ESTABLISHED** | Needs 9 external signatures + human sign-off |
@@ -946,7 +948,7 @@ With nine signed evidence fixtures in place, `run_gate(profile="production")` ac
 4. **Lint**: `ruff check <paths>` → 0 findings; `ruff format --check <paths>` → clean
 5. **Typecheck**: `mypy server/ connectors/ control_plane/` → no issues
 6. **Commit**: Conventional commits (`feat(academy): ...`, `test(academy): ...`, `docs: ...`)
-7. **Push**: Requires owner decision (the repository is private; the push itself is the only remaining owner action)
+7. **Push**: Requires owner decision. The repository is **public** — an unauthenticated request to the GitHub API returns HTTP 200 and `"private": false`, and the owner confirmed on 2026-09-25 that public is the intended state. `main` is level with `origin/main` at `1830f30` (2026-09-29), so there is no backlog to push.
 
 ### 8.2 Release Workflow
 

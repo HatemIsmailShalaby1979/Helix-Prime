@@ -1503,6 +1503,10 @@ App-specific rules:
       §19 cockpit tier, which the governed core does not own) is not this step's diff, and
       because 3 of the 7 are the tier §19.1 deliberately quarantines. **Owner decision, not
       a hidden deferral.**
+      **Resolved 2026-09-29.** The owner took that decision as part of the CI repair
+      (commit `5755667`): all 13 drifted files — these seven among them — were reformatted,
+      and `ruff format --check .` now reports **429 files already formatted**. CI is green
+      on all 17 steps. See `AGENTS.md` §21.
       **Two environment facts, recorded because they cost time.** (1) The PowerShell console
       renders UTF-8 em-dashes as `?`, so a `?` in tool output is **not** evidence of mojibake;
       check the file's codepoints instead (`t.count('\ufffd')`) before "fixing" an encoding bug

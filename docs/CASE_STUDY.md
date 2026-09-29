@@ -5,7 +5,7 @@ data or a reading of source, with the repo path it comes from. There is no desig
 partner and no customer traffic; the demo data is synthetic by design.
 
 **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-live WFM demo, backed by a green CI and a large test suite — but five of six engines are
+live WFM demo, backed by a green CI and a large test suite — but four of six engines are
 adapter scaffolding that report synthesized metrics. Not production-ready: nine
 production-only gates are red by design.
 
@@ -77,16 +77,16 @@ append-only, hash-chained `audit_events` ledger before it runs
   the build toolchain, re-sign the nine fixtures over LF), `839507e` (lock-pin count)
   (`AGENTS.md:5121-5137`).
 - **During this documentation audit I found the engine scaffolding gap (issue 3 of
-  `KNOWN_ISSUES.md`).** Five of six adapters return synthesized or echoed metrics: B2B
+  `KNOWN_ISSUES.md`).** Four of six adapters return synthesized or echoed metrics: B2B
   fabricates `sop_generated=True` (`engines/b2b/adapter.py:326-328`), CRM echoes inputs
   (`engines/crm/adapter.py:311-318`), Personnel hardcodes `pipeline_status` and
-  `workforce_headcount` from the request (`engines/personnel/adapter.py:297-322`), the CX
-  scorer uses a hardcoded threshold table and an incoherent AHT unit
-  (`engines/cx/src/risk_scorer.py:57-66,88`), and RTA surfaces an adherence dict without
-  computing `confidence_score`. The shared test `tests/test_c4_engines.py:113` passes
-  because it asserts adapters *return non-empty metrics*, which the fabrication satisfies.
-  This is an open finding, not yet fixed, and it is the single largest gap between the
-  README's "Six engines" framing and the code.
+  `workforce_headcount` from the request (`engines/personnel/adapter.py:297-322`), and the
+  CX scorer uses a hardcoded threshold table (`engines/cx/src/risk_scorer.py:57-66`). The
+  shared test `tests/test_c4_engines.py:113` passes because it asserts adapters *return
+  non-empty metrics*, which the fabrication satisfies. At the time five adapters were
+  scaffolding — RTA among them — and the CX AHT unit was incoherent; RTA has since been
+  wired to the engine's `analyze()` and the CX AHT unit resolved. The four adapters above
+  remain the single largest gap between the README's "Six engines" framing and the code.
 
 ## What I decided, and why
 
@@ -108,7 +108,7 @@ append-only, hash-chained `audit_events` ledger before it runs
   demo data is synthetic by design.
 - No real customer traffic, no live design-partner run (Scoach Academy Hub is a named
   first vertical via `capabilities/sports_academy/`, but no live traffic is recorded).
-- Five of six engines are not yet validated to compute correct results (issue 3).
+- Four of six engines are not yet validated to compute correct results (issue 3).
 - No independent tenant-isolation audit, no external security review, no certified data
   isolation. The 19 cockpit UI tests are quarantined (`AGENTS.md:3454`).
 - The WFM "Erlang C" result is a non-standard closed-form approximation, not the textbook

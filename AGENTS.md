@@ -5211,10 +5211,17 @@ evidence-first standard of `live-support-assistant` (README + `docs/KNOWN_ISSUES
   run-verification note stating what was and was not executed.
 - `docs/KNOWN_ISSUES.md` records 10 code-grounded issues.
 
-### 22.1 New open finding — engine adapters return synthesized/echoed metrics
+### 22.1 New open finding — engine adapters return synthesized/echoed metrics — **partly fixed**
 
-Discovered while reading source for this pass; **not yet fixed**. Five of six engines do
-not compute a result end to end — only WFM does:
+> **Status (updated 2026-09-30).** RTA is fixed and the CX AHT unit is resolved; B2B,
+> CRM, Personnel and the CX threshold table are not. `engines/rta/adapter.py` now calls
+> `calc.analyze()` and surfaces `confidence_score` (`fix/rta-wire-real-analyze`, merged as
+> `77a0c39`); the CX AHT unit was corrected and its risk band recalibrated
+> (`fix/cx-aht-normalization`, merged as `381f4f6`). The finding below is kept as the
+> record of what it originally was.
+
+Discovered while reading source for this pass; **not yet fixed** at the time. Five of six
+engines did not compute a result end to end — only WFM did:
 
 - B2B fabricates `sop_generated=True` / `onboarding_status="completed"`
   (`engines/b2b/adapter.py:326-328`); only `add_client` + `get_client_summary` are called.
@@ -5224,24 +5231,32 @@ not compute a result end to end — only WFM does:
   request on an empty manager (`engines/personnel/adapter.py:297-322`).
 - CX thresholds hardcoded in `RiskScorer.__init__`
   (`engines/cx/src/risk_scorer.py:57-66`); AHT normalized as `max(0,1-value/0.5)` assumes
-  AHT ≤ 0.5 min, so any realistic AHT → 0 (`risk_scorer.py:88`).
-- RTA surfaces an adherence dict without computing `confidence_score`.
+  AHT ≤ 0.5 min, so any realistic AHT → 0 (`risk_scorer.py:88`). *(AHT unit resolved; the
+  threshold table is still hardcoded.)*
+- RTA surfaces an adherence dict without computing `confidence_score`. *(Resolved: the
+  adapter now calls `analyze()` and maps its `confidence_score`.)*
 
 Consequence: the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) passes because it asserts non-empty
 metrics, not correctness — so `engines/README.md:52` ("invokes real engine code, not
-fake") overstates the adapter *output*. The 1,897-test suite certifies plumbing + WFM
-math, not the five engines' accuracy. This is the largest gap between the README's
+fake") overstates the adapter *output*. The 1,897-test suite certifies plumbing + WFM and
+RTA math, not the four engines' accuracy. This is the largest gap between the README's
 "Six engines" framing and the code.
 
-### 22.2 Gate enforcement gaps (also open)
+### 22.2 Gate enforcement gaps — **fixed**
+
+> **Status (updated 2026-09-30).** Both fixed. `evaluate_gate()` now hard-denies an
+> oversight-only seat and `owns_engine(None)` reflects an engine-less seat; `Engine.submit`
+> forwards `requires_approval`, so the `approval_requested` branch is reachable
+> (`2c9d606`, `64928da`; merged as `2e7651a`). Kept as the record of what was found.
 
 - `oversight_only` is declared (`governance.py:176`) but never read in `evaluate_gate`
   (`governance.py:950-1075`); `owns_engine(None)` returns `True` (`governance.py:201-204`),
   so an oversight role with no `target_engine` can still reach `EXECUTING`.
+  **(Fixed in `2c9d606`/`64928da`.)**
 - `Engine.submit` calls `evaluate_gate` without `requires_approval`
   (`control_plane/engine.py:826-834`), so the gate's `approval_requested` branch is
-  unreachable on that path.
+  unreachable on that path. **(Fixed in `64928da`.)**
 
 ### 22.3 Verification this session (honest)
 

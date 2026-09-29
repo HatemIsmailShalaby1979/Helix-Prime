@@ -1,7 +1,7 @@
 # Helix Prime — production status
 
 **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-live WFM demo, backed by a green CI and a large test suite — but five of six engines are
+live WFM demo, backed by a green CI and a large test suite — but four of six engines are
 adapter scaffolding that report synthesized metrics. Not production-ready: nine
 production-only gates are red by design.
 

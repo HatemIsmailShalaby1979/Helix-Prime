@@ -137,7 +137,7 @@ This section keeps 100% of the transparency from earlier revisions. It is last b
 | Full test suite | **1,897 passed / 0 failed**; 19 deselected as a quarantined UI tier (940 app chunk + 957 parent) | 2026-09-29 |
 | Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** | 2026-09-29 |
 | CI lint (`ruff check`, the 17 paths CI names) | **0 errors** (exit 0) | 2026-09-29 |
-| CI format (`ruff format --check .`, repo-wide) | **Clean** — 429 files already formatted | 2026-09-29 |
+| CI format (`ruff format --check .`, repo-wide) | **Clean** — 431 files already formatted | 2026-09-30 |
 | Governance checker (`GOVERNANCE/governance_check.py`) | **PASS** (exit 0) | 2026-09-29 |
 | Release gate `production` | `NOT_READY` (exit 1) | 2026-09-24 |
 

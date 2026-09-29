@@ -45,14 +45,14 @@ release.
 - CI, end to end: all 17 steps pass (run `36497766876`, `839507e`, 2026-09-29).
 - Full test suite: 1,897 passed / 0 failed (repo CI, snapshot 2026-09-29); 19 quarantined UI tests deselected; this session re-ran a claims-relevant subset (122 passed).
 - Coverage: 86.91% (server + connectors, 80% floor; repo CI).
-- Six engines named; **one** (WFM) computes a real result end to end — five adapters
+- Six engines named; **two** (WFM, RTA) compute a real result end to end — four adapters
   return synthesized/echoed metrics (`docs/KNOWN_ISSUES.md` issue 3).
 
 ## Does NOT show
 
 - No real customer traffic, design partner, or pilot. Demo data is `simulated_realistic`
   by design.
-- No proof that five of six engines compute correct results. The suite asserts adapter
+- No proof that four of six engines compute correct results. The suite asserts adapter
   contracts, not engine accuracy.
 - No production deployment; nine production-only gates red (`AGENTS.md:1516-1519`).
 - No external security audit, certified data isolation, or signed installer.

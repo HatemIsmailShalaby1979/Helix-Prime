@@ -13,7 +13,7 @@ kpi_thresholds:
   csat: { critical: 0.6, high: 0.7, medium: 0.8 }
   sla:  { critical: 0.8, high: 0.9, medium: 0.95 }
   fcr:  { critical: 0.7, high: 0.8, medium: 0.9 }
-  aht:  { critical: 0.3, high: 0.2, medium: 0.1 }   # lower is better → inverted
+  aht:  { critical: 0.3, high: 0.5, medium: 0.7 }   # lower is better → inverted (goodness = 1 - aht_fraction)
 
 # Overall weighted-score → risk level bands
 risk_bands:

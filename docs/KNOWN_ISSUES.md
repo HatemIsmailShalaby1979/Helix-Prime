@@ -60,11 +60,11 @@ explicit approval requests inconsistently.
   explicit-approval branch is dead on one of the two paths. **(Resolved in `2c9d606`:
   the branch is now reachable from both paths.)**
 
-## 3. Five of six engine adapters return synthesized or echoed metrics, not computed analytics
+## 3. Four of six engine adapters return synthesized or echoed metrics, not computed analytics
 
 The demo and the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) confirm adapters *import and call*
-engine modules and return non-empty metrics. But the **returned metrics** for five
+engine modules and return non-empty metrics. But the **returned metrics** for four
 engines are adapter-synthesized or echoed, not the engine's computed output:
 
 - **B2B** — `engines/b2b/adapter.py:313-318` calls only `add_client` +
@@ -82,18 +82,22 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
   thresholds are hardcoded in `__init__` (`risk_scorer.py:57-66`) and the AHT unit is
   incoherent (see issue 5); the richer `cx` modules (`kpi_aggregator`,
   `alert_dispatcher`, `sql_extractor`, `dashboard_feed`) are not invoked by the adapter.
-- **RTA** — `engines/rta/src/calculations.py:92` computes `adherence_percentage`; the
-  adapter surfaces that dict, but `confidence_score` is only set by `analyze()`, not on
-  the adapter's `calc.calculate_adherence` path.
+- **RTA** — *no longer scaffolding.* `engines/rta/adapter.py` now calls `calc.analyze()`,
+  which runs `calculate_adherence` internally and additionally returns the engine's
+  aggregated schedule, performance and variance metrics and `confidence_score`; the
+  adapter maps that output into its metrics. (Previously it called `calculate_adherence`
+  alone, whose dict carried no `confidence_score`.)
 
-Only **WFM** drives a real computation end-to-end (Erlang C, `engines/wfm/src/erlang_c.py`).
+**WFM** (`engines/wfm/src/erlang_c.py`, Erlang C) and **RTA**
+(`engines/rta/src/calculations.py`) drive a real computation end-to-end; the four
+adapters above remain scaffolding.
 
 - Limits the headline "Six engines" claim and the statement at `engines/README.md:52`
   that "Each adapter invokes real engine code (not fake)" — true for *invocation*,
-  false for the *computed result* of five engines. The "not fake" wording overstates
+  false for the *computed result* of four engines. The "not fake" wording overstates
   what the adapter output represents.
 - The 1,897-test suite asserts the adapter *contract*, so green tests do **not** validate
-  that RTA/CX/B2B/Personnel/CRM compute correct results. See Tier 2 in `README.md`.
+  that CX/B2B/Personnel/CRM compute correct results. See Tier 2 in `README.md`.
 
 ## 4. The WFM "Erlang C" formula is a non-standard closed form, and its docstring is corrupted
 
@@ -112,15 +116,31 @@ match the code. `optimize_agents` binary-searches agent counts
 - Limits the claim that WFM performs standard Erlang C forecasting — it is a plausible
   heuristic, not the textbook formula, and its stated confidence band is nominal.
 
-## 5. CX churn scorer assumes AHT is at most 0.5 minutes
+## 5. ~~CX churn scorer assumes AHT is at most 0.5 minutes~~ — RESOLVED
 
-`engines/cx/src/risk_scorer.py:88` normalizes AHT as
-`max(0, 1 - (value / 0.5))` with the comment "Assume max AHT is 0.5 minutes". Any
-realistic handle time (e.g. 5 minutes) yields `0`, i.e. maximum risk, regardless of the
-actual value. The adapter/sample data treat AHT as a 0–1 fraction while the scorer
-assumes minutes (`engines/cx/contracts.py`), so the two disagree on units.
+**Resolved in `fix/cx-aht-normalization`.** The scorer assumed AHT was measured in
+minutes (`max(0, 1 - value / 0.5)` at `engines/cx/src/risk_scorer.py:88`), but every
+caller on the CX scoring path supplies AHT as a **0–1 fraction** — the adapter sample
+(`engines/cx/adapter.py:253` → `aht: 0.3`), the engine `__main__` demo
+(`risk_scorer.py:537-540` → `0.1–0.8`), `kpi_aggregator.py:338`, the engine's own
+`config/risk_thresholds.yaml:16`, and the tests/fixtures
+(`test_c4_engines.py:150,335,1080`; `tests/fixtures/c5/fixtures.py:79-81`). Reading
+those values as seconds or minutes is physically absurd for a contact-center handle
+time, which confirms the field is a fraction. The only duration-typed AHT is the
+separate `aht_seconds` field in `engines/contracts.py:75` (330 s ≈ 5.5 min), which the
+scorer does not consume.
 
-- Limits the accuracy of the CX Churn Sentinel risk score on any realistic input.
+**Fix:** normalize AHT as `goodness = 1 - value` (clamped to `[0,1]`) and recalibrate the
+threshold band at `risk_scorer.py:57-66` to `{critical: 0.3, high: 0.5, medium: 0.7}` so
+a higher AHT fraction yields a lower goodness and therefore a higher risk. The parallel
+band in `config/risk_thresholds.yaml:16` was updated to match (the engine hardcodes its
+thresholds and does not read the YAML). A regression test
+(`tests/test_cx_aht_normalization.py`) pins that a realistic AHT fraction is no longer
+collapsed to `0` and that risk is monotonic in the fraction.
+
+- Remaining (minor) limitation: the thresholds are still hardcoded in the engine rather
+  than loaded from `config/risk_thresholds.yaml` (deliberate, per the YAML header), but
+  the AHT unit is now coherent.
 
 ## 6. Rate limiting trusts a header set by an external Worker
 
@@ -171,8 +191,8 @@ by the UI" (`AGENTS.md:3445`).
 ## 10. Engine correctness is not validated by the passing test suite
 
 The suite reaches the 80% coverage floor (`README.md:132`), but coverage measures code
-execution, not result correctness. Because five adapters return synthesized/echoed
-metrics (issue 3), the passing tests certify the plumbing and the WFM math, not that
+execution, not result correctness. Because four adapters return synthesized/echoed
+metrics (issue 3), the passing tests certify the plumbing and the WFM and RTA math, not that
 the engines produce correct operational numbers. There is no independent
 tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant), no
 external security review, and no certified data-isolation evidence.

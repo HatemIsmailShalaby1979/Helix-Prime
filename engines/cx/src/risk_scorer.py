@@ -58,11 +58,16 @@ class RiskScorer:
             "csat": {"critical": 0.6, "high": 0.7, "medium": 0.8},
             "sla": {"critical": 0.8, "high": 0.9, "medium": 0.95},
             "fcr": {"critical": 0.7, "high": 0.8, "medium": 0.9},
+            # AHT arrives as a 0-1 fraction (higher = longer handle time = worse).
+            # `normalized_score` below is the inverted "goodness" (1 - fraction), so a
+            # lower goodness means higher risk. Band recalibrated for the corrected
+            # normalization; under the old `1 - value / 0.5` the band was compressed
+            # onto value in [0, 0.5] and was no longer valid once that divisor was removed.
             "aht": {
                 "critical": 0.3,
-                "high": 0.2,
-                "medium": 0.1,
-            },  # Lower is better for AHT
+                "high": 0.5,
+                "medium": 0.7,
+            },
         }
 
     def calculate_kpi_score(self, kpi_data: dict[str, float]) -> dict[str, Any]:
@@ -84,8 +89,11 @@ class RiskScorer:
 
             # Calculate normalized score (0-1)
             if kpi == "aht":
-                # Lower AHT is better (inverse scoring)
-                normalized_score = max(0, 1 - (value / 0.5))  # Assume max AHT is 0.5 minutes
+                # AHT is supplied as a 0-1 fraction (higher = longer handle time = worse).
+                # Normalize to a "goodness" score (higher = better) by inverting the
+                # fraction, clamped to [0, 1]. The previous `1 - value / 0.5` assumed a
+                # unit (minutes) that no caller supplies and pinned any realistic AHT to 0.
+                normalized_score = max(0.0, min(1.0, 1.0 - float(value)))
             else:
                 # Higher KPI is better
                 normalized_score = min(1, value)
@@ -220,7 +228,7 @@ class RiskScorer:
                 elif kpi == "fcr":
                     risk_factors.append(f"Low first contact resolution (FCR: {kpi_data[kpi]:.2f})")
                 elif kpi == "aht":
-                    risk_factors.append(f"High average handle time (AHT: {kpi_data[kpi]:.2f}s)")
+                    risk_factors.append(f"High average handle time (AHT: {kpi_data[kpi]:.2f})")
 
         return risk_factors
 

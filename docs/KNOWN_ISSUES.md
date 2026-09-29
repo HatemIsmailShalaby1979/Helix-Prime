@@ -60,12 +60,12 @@ explicit approval requests inconsistently.
   explicit-approval branch is dead on one of the two paths. **(Resolved in `2c9d606`:
   the branch is now reachable from both paths.)**
 
-## 3. Two of six engine adapters return synthesized or echoed metrics, not computed analytics
+## 3. One of six engine adapters returns synthesized or echoed metrics, not computed analytics
 
 The demo and the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) confirm adapters *import and call*
-engine modules and return non-empty metrics. But the **returned metrics** for three
-engines are adapter-synthesized or echoed, not the engine's computed output:
+engine modules and return non-empty metrics. But the **returned metrics** for one
+engine are adapter-synthesized or echoed, not the engine's computed output:
 
 - **B2B** — *no longer scaffolding.* `engines/b2b/adapter.py` now calls
   `OnboardingAutomator.generate_sop()` and `generate_staffing_plan()` after
@@ -91,9 +91,22 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
   remnant) is dropped; `pipeline_status` is retained but now derived from the computed
   totals. (Fixed in branch `fix/crm-wire-real-pipeline`; pinned by
   `tests/test_c4_engines.py::test_crm_adapter_wires_real_pipeline_analytics`.)
-- **Personnel** — `engines/personnel/adapter.py:297-322` calls `get_pipeline_analytics()`
-  on an empty `PipelineManager` (returns `{}`), then hardcodes
-  `pipeline_status="active"` and `workforce_headcount` from the request input.
+- **Personnel** — *no longer scaffolding.* `engines/personnel/adapter.py` now builds
+  real `Candidate`/`JobPosting` objects from the request (`candidate` → `Candidate`,
+  `workforce` → `JobPosting`) via `add_candidate`/`create_job_posting`, calls
+  `PipelineManager.screen_candidates()` when the job posting carries real
+  `required_skills` and a positive `experience_level`, and then calls
+  `get_pipeline_analytics()` so the returned `total_candidates`, `total_job_postings`,
+  `status_distribution`, `stage_distribution`, `average_days_in_pipeline`, and
+  `pipeline_efficiency` are the engine's computed values — not the previous
+  empty-result analytics that ran before any candidate was added. `pipeline_status` is
+  now derived from the computed totals (`active` when `total_candidates +
+  total_job_postings > 0`, else `empty`); the fabricated `workforce_headcount` echo
+  (previously seeded from the request's `headcount`) is dropped, because
+  `PipelineManager` models candidates and job postings, not an existing headcount, so
+  no real source exists for it. (Fixed in branch `fix/personnel-wire-real-pipeline`;
+  pinned by
+  `tests/test_c4_engines.py::test_personnel_adapter_wires_real_pipeline_analytics`.)
 - **CX** — `engines/cx/src/risk_scorer.py` computes the churn score, but its risk
   thresholds are hardcoded in `__init__` (`risk_scorer.py:57-66`); the AHT unit
   incoherence was resolved (see issue 5). The richer `cx` modules (`kpi_aggregator`,
@@ -107,15 +120,16 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
 **WFM** (`engines/wfm/src/erlang_c.py`, Erlang C), **RTA**
 (`engines/rta/src/calculations.py`), **B2B** (`engines/b2b/adapter.py` →
 `engines/b2b/src/automator.py`), and **CRM** (`engines/crm/adapter.py` →
-`engines/crm/src/sales_pipeline.py`) drive a real computation end-to-end; the two
-adapters above (Personnel, CX) remain scaffolding.
+`engines/crm/src/sales_pipeline.py`), and **Personnel** (`engines/personnel/adapter.py`
+→ `engines/personnel/src/pipeline_manager.py`) drive a real computation end-to-end; the
+one adapter above (CX) remains scaffolding.
 
 - Limits the headline "Six engines" claim and the statement at `engines/README.md:52`
   that "Each adapter invokes real engine code (not fake)" — true for *invocation*,
-  false for the *computed result* of two engines. The "not fake" wording overstates
+  false for the *computed result* of one engine. The "not fake" wording overstates
   what the adapter output represents.
 - The 1,897-test suite asserts the adapter *contract*, so green tests do **not** validate
-  that Personnel/CX compute correct results. See Tier 2 in `README.md`.
+  that CX computes a correct result. See Tier 2 in `README.md`.
 
 ## 4. The WFM "Erlang C" formula is a non-standard closed form, and its docstring is corrupted
 
@@ -209,7 +223,7 @@ by the UI" (`AGENTS.md:3445`).
 ## 10. Engine correctness is not validated by the passing test suite
 
 The suite reaches the 80% coverage floor (`README.md:132`), but coverage measures code
-execution, not result correctness. Because two adapters return synthesized/echoed
+execution, not result correctness. Because one adapter returns synthesized/echoed
 metrics (issue 3), the passing tests certify the plumbing and the WFM and RTA math, not that
 the engines produce correct operational numbers. There is no independent
 tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant), no

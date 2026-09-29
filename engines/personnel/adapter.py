@@ -289,40 +289,85 @@ def adapt(
         )
 
     try:
-        from engines.personnel.src.pipeline_manager import PipelineManager
+        from engines.personnel.src.pipeline_manager import Candidate, JobPosting, PipelineManager
 
         mgr = PipelineManager()
-        # Try to get analytics; the engine may have different methods
-        try:
-            analytics = (
-                mgr.get_pipeline_analytics() if hasattr(mgr, "get_pipeline_analytics") else {}
-            )
-        except Exception:
-            analytics = {}
 
-        # If candidate provided, try to add or analyze
-        if candidate:
+        # Populate the manager with real engine objects BEFORE computing analytics,
+        # so get_pipeline_analytics() runs over data the caller actually supplied
+        # (previously the analytics ran first on an empty manager, then the raw
+        # candidate dict was passed to add_candidate and failed silently).
+        if candidate is not None:
+            cand = Candidate(
+                candidate_id=str(
+                    candidate.get("id", candidate.get("candidate_id", "cand_unknown"))
+                ),
+                name=str(candidate.get("name", "Unknown Candidate")),
+                email=str(candidate.get("email", "candidate@example.com")),
+                position=str(candidate.get("position", candidate.get("role", "Unknown Position"))),
+                experience=int(candidate.get("experience", 0)),
+                skills=list(candidate.get("skills", [])),
+                score=float(candidate.get("score", 0.0)),
+            )
+            mgr.add_candidate(cand)
+
+        job_id = None
+        if workforce is not None:
+            # The workforce payload describes hiring demand; model it as a real
+            # JobPosting. Required fields the request does not supply are defaulted
+            # explicitly to a neutral "Open Position", not invented as business
+            # meaning.
+            job_id = str(workforce.get("job_id", workforce.get("id", "job_workforce")))
+            job = JobPosting(
+                job_id=job_id,
+                title=str(workforce.get("title", "Open Position")),
+                department=str(workforce.get("department", "General")),
+                required_skills=list(workforce.get("required_skills", [])),
+                experience_level=int(workforce.get("experience_level", 0)),
+                salary_range=dict(workforce.get("salary_range", {"min": 0.0, "max": 0.0})),
+                deadline=str(workforce.get("deadline", "2099-12-31")),
+            )
+            mgr.create_job_posting(job)
+
+        # Screen candidates against the posting only when the input actually
+        # supports a meaningful screen (job-like fields present).
+        if (
+            job_id is not None
+            and workforce.get("required_skills")
+            and int(workforce.get("experience_level", 0)) > 0
+        ):
             try:
-                # Try to use talent_acquisition or pipeline manager
-                if hasattr(mgr, "add_candidate"):
-                    mgr.add_candidate(candidate)
-                analytics["candidate_processed"] = candidate.get("name", "unknown")
+                mgr.screen_candidates(job_id)
             except Exception:
                 pass
 
-        if isinstance(analytics, dict):
-            metrics = analytics
-        else:
-            metrics = {"analytics": str(analytics)}
+        # Compute analytics over the populated manager — real, not empty.
+        analytics = mgr.get_pipeline_analytics()
+        metrics = analytics
 
-        metrics.setdefault("pipeline_status", "active")
-        metrics.setdefault(
-            "workforce_headcount",
-            workforce.get("headcount", 100) if isinstance(workforce, dict) else 100,
+        # pipeline_status is derived from the real pipeline state, not hardcoded.
+        metrics["pipeline_status"] = (
+            "active"
+            if (metrics.get("total_candidates", 0) + metrics.get("total_job_postings", 0)) > 0
+            else "empty"
         )
-        # Distinguish calculated vs recommended
+        # Surface real job-posting detail when a posting was created.
+        if job_id is not None:
+            metrics["job_posting_status"] = mgr.get_job_posting_status(job_id)
+        # NOTE: the previously hardcoded `workforce_headcount` (echoed from the
+        # request input) is dropped — PipelineManager models candidates and job
+        # postings, not an existing workforce headcount, so no real headcount can be
+        # sourced. The real computed totals (total_candidates, total_job_postings,
+        # job_posting_status) are the honest workforce-related figures.
+
+        # Distinguish calculated vs recommended — derive from real counts, not the
+        # old hardcoded open_positions default of 5.
         recommendations = [
-            {"type": "hiring", "value": metrics.get("open_positions", 5), "source": "calculated"}
+            {
+                "type": "hiring",
+                "value": metrics.get("total_job_postings", 0),
+                "source": "calculated",
+            }
         ]
 
         if is_sample:

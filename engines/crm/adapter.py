@@ -294,39 +294,64 @@ def adapt(
         )
 
     try:
-        from engines.crm.src.sales_pipeline import SalesPipeline
+        from engines.crm.src.sales_pipeline import Deal, Lead, SalesPipeline
 
-        pipeline = SalesPipeline() if callable(SalesPipeline) else SalesPipeline
-        # Try to create pipeline instance; the engine may have different API
-        try:
-            # The engine's SalesPipeline might need no args or specific
-            if callable(pipeline):
-                try:
-                    pipe_instance = pipeline()
-                except TypeError:
-                    pipe_instance = pipeline
-            else:
-                pipe_instance = pipeline
-            # Try to get analytics
-            if hasattr(pipe_instance, "get_pipeline_analytics"):
-                metrics = pipe_instance.get_pipeline_analytics()
-            elif hasattr(pipe_instance, "get_analytics"):
-                metrics = pipe_instance.get_analytics()
-            elif hasattr(pipe_instance, "analyze"):
-                metrics = pipe_instance.analyze({"client": client, "deal": deal})
-            else:
-                metrics = {"status": "active", "client": client, "deal": deal}
-        except Exception as inner_e:
-            # Fallback: use the engine's functions directly
-            metrics = {"client": client, "deal": deal, "ticket": ticket, "fallback": str(inner_e)}
+        pipe = SalesPipeline()
 
-        if isinstance(metrics, dict):
-            pass
-        else:
-            metrics = {"result": str(metrics)}
+        # Map the adapter's request input into real engine objects so that
+        # get_sales_analytics() computes over data the caller actually supplied
+        # (leads and deals), instead of echoing the input back.
+        if client is not None:
+            lead = Lead(
+                lead_id=str(client.get("id", "client_unknown")),
+                name=str(client.get("name", "Unknown Client")),
+                email=str(client.get("email", "client@example.com")),
+                company=str(client.get("company", client.get("name", "Unknown Company"))),
+                source=str(client.get("source", "crm_adapter")),
+                score=float(client.get("score", 0.0)),
+            )
+            pipe.add_lead(lead)
 
-        metrics.setdefault("pipeline_status", "active")
-        metrics.setdefault("support_status", "open")
+        if deal is not None:
+            stage = str(deal.get("stage", "proposal"))
+            # Deal.probability is a required constructor argument. The CRM request
+            # schema carries no probability field, so default it from the engine's
+            # own stage config — an explicit, documented default rather than
+            # invented business meaning.
+            probability = (
+                float(deal["probability"])
+                if "probability" in deal
+                else float(pipe.config["pipeline_stages"].get(stage, {}).get("probability", 0.5))
+            )
+            deal_obj = Deal(
+                deal_id=str(deal.get("id", "deal_unknown")),
+                lead_id=str(client.get("id", "client_unknown"))
+                if client is not None
+                else "lead_unknown",
+                title=str(deal.get("title", f"Deal {deal.get('id', 'unknown')}")),
+                value=float(deal.get("value", 0.0)),
+                stage=stage,
+                probability=probability,
+                close_date=deal.get("close_date"),
+            )
+            pipe.create_deal(deal_obj)
+
+        # score_lead is intentionally NOT called. Its signature requires
+        # company_size, industry, budget, and timeline business attributes that the
+        # CRM request schema does not carry. Scoring a lead from fabricated
+        # attributes would re-introduce the same invented-metrics defect this fix
+        # removes. The pipeline-analytics request type is about deal/lead
+        # distribution and value, not lead scoring.
+        metrics = pipe.get_sales_analytics()
+
+        # Keep the consumer-facing pipeline_status flag (asserted by
+        # tests/test_c5_vertical_slice.py); derive it from real data rather than
+        # hardcoding it.
+        metrics["pipeline_status"] = (
+            "active"
+            if (metrics.get("total_deals", 0) + metrics.get("total_leads", 0)) > 0
+            else "empty"
+        )
         # For client-confidential/financial, ensure warnings
         if data_class == DataClassification.FINANCIAL:
             warnings.append("financial data — handled as client_confidential/financial")

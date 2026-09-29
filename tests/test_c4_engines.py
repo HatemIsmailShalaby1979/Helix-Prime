@@ -439,6 +439,48 @@ def test_valid_input_output_crm():
     assert res.data_classification in ("client_confidential", "financial")
 
 
+def test_crm_adapter_wires_real_pipeline_analytics():
+    """The adapter builds Lead/Deal objects and returns real computed analytics.
+
+    Before this fix, the adapter probed get_pipeline_analytics / get_analytics /
+    analyze — none of which exist on SalesPipeline — and fell through to
+    {"status": "active", "client": ..., "deal": ...}: an echo of the inputs,
+    not a computed pipeline analysis (KNOWN_ISSUES.md issue 3, CRM row). After
+    wiring, the metrics come from SalesPipeline.get_sales_analytics() computed
+    over the supplied deal/lead.
+    """
+    from engines.crm.adapter import adapt
+
+    res = adapt(
+        {
+            "client": {"name": "ClientY", "id": "client_999"},
+            "deal": {"id": "deal_1", "value": 8000, "stage": "proposal"},
+        },
+        "t",
+        "c",
+        "corr_crm_real",
+        None,
+        "sami",
+        is_sample=False,
+    )
+    assert res.error is None
+    metrics = res.metrics
+    # The input is NOT echoed back as a raw client/deal blob.
+    assert not isinstance(metrics.get("client"), dict)
+    assert not isinstance(metrics.get("deal"), dict)
+    # Real computed fields from get_sales_analytics() must be present and reflect
+    # the supplied deal.
+    assert metrics["total_deals"] == 1
+    assert metrics["total_leads"] == 1
+    assert metrics["stage_distribution"] == {"proposal": 1}
+    assert metrics["average_deal_value"] == 8000.0
+    # total_pipeline_value = value * probability; stage "proposal" -> 0.5.
+    assert metrics["total_pipeline_value"] == 4000.0
+    # pipeline_status is retained (consumer contract) but derived, not a hardcoded
+    # echo.
+    assert "pipeline_status" in metrics
+
+
 # ── malformed input for each engine ────────────────────────────────────────
 
 

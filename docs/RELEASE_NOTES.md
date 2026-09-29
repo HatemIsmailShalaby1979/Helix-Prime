@@ -23,7 +23,7 @@ release.
 - **One engine exercised end to end.** WFM (Erlang C) drives the governed demo through
   the gate (`helix_codex_app/integration/engine_bridge.py:529-587`).
 - **Green CI (first time, 2026-09-29).** All 17 steps pass on run `36497766876`
-  (`839507e`): **__N_PASSED__ passed / 0 failed**, coverage **__COV_PCT__%**, `ruff
+  (`839507e`): **1,897 passed / 0 failed**, coverage **86.91%**, `ruff
   check` clean on 17 paths, `ruff format --check` clean (429 files), governance checker
   PASS, build OK (`AGENTS.md:39-44`, §21). Verified locally this session: `ruff check`
   exit 0, `ruff format --check` exit 0.

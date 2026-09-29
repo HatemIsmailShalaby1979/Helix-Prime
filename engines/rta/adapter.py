@@ -337,31 +337,26 @@ def adapt(
         if isinstance(actual, dict):
             actual = pd.DataFrame(actual)
 
-        # Try to call the engine's method
-        try:
-            result = calc.calculate_adherence(schedule, actual)
-        except TypeError:
-            # Alternative API
-            result = (
-                calc.analyze(schedule, actual)
-                if hasattr(calc, "analyze")
-                else calc.calculate(schedule, actual)
-            )
+        # analyze() runs calculate_adherence internally *and* aggregates the
+        # schedule, performance and variance metrics and sets confidence_score —
+        # none of which the bare calculate_adherence() path produced. Calling it
+        # directly makes the adapter's metrics the engine's computed output rather
+        # than a single slice of it.
+        analysis = calc.analyze(schedule, actual)
 
-        # Normalize result to metrics
-        if isinstance(result, dict):
-            metrics = result
-        elif hasattr(result, "__dict__"):
-            metrics = {k: v for k, v in result.__dict__.items() if not k.startswith("_")}
-            # Flatten adherence_metrics if present
-            if "adherence_metrics" in metrics and isinstance(metrics["adherence_metrics"], dict):
-                metrics.update(metrics["adherence_metrics"])
-        else:
-            metrics = {"result": str(result)}
-
-        # Ensure adherence/variance result present
-        if "adherence" not in str(metrics).lower() and "overall" not in str(metrics).lower():
-            metrics.setdefault("adherence_result", str(metrics)[:200])
+        # Map the analysis onto the adapter's flat metric shape: the adherence
+        # figures stay top-level (unchanged from the previous path) and the
+        # aggregated blocks are added alongside them.
+        metrics = dict(analysis.adherence_metrics)
+        metrics.update(
+            {
+                "schedule_metrics": analysis.schedule_metrics,
+                "performance_metrics": analysis.performance_metrics,
+                "variance_analysis": analysis.variance_analysis,
+                "optimization_recommendations": analysis.optimization_recommendations,
+                "confidence_score": analysis.confidence_score,
+            }
+        )
 
         if is_sample:
             warnings.append("sample/demo data — not live operational data")

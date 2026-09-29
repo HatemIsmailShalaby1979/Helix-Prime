@@ -280,6 +280,54 @@ def test_valid_input_output_rta(tmp_path):
     assert res.metrics is not None
 
 
+def test_rta_adapter_surfaces_engine_confidence_score():
+    """The adapter calls ``analyze()``, so its metrics carry the engine's confidence.
+
+    Before this, the adapter called ``calculate_adherence()`` directly and the
+    returned dict had no ``confidence_score`` (KNOWN_ISSUES.md issue 3, RTA row).
+    """
+    import pandas as pd
+
+    from engines.rta.adapter import adapt
+
+    schedule = pd.DataFrame(
+        {
+            "agent_id": ["A1", "A2"],
+            "date": ["2026-08-27"] * 2,
+            "hour": [9, 9],
+            "scheduled_hours": [8, 8],
+        }
+    )
+    actual = pd.DataFrame(
+        {
+            "agent_id": ["A1", "A2"],
+            "date": ["2026-08-27"] * 2,
+            "hour": [9, 9],
+            "actual_hours": [7.8, 7.6],
+        }
+    )
+    res = adapt(
+        {"schedule": schedule, "actual": actual},
+        "t",
+        "c",
+        "corr_rta_confidence",
+        None,
+        "sami",
+        is_sample=False,
+    )
+
+    assert res.error is None
+    # confidence_score is produced only by analyze(); it must be present, a real
+    # number, and not the RTACalculationResult default of 0.0.
+    assert "confidence_score" in res.metrics
+    confidence = res.metrics["confidence_score"]
+    assert isinstance(confidence, float)
+    assert confidence > 0.0
+    # The aggregated blocks analyze() adds are mapped into the adapter's shape too.
+    for key in ("schedule_metrics", "performance_metrics", "variance_analysis"):
+        assert key in res.metrics
+
+
 def test_valid_input_output_cx():
     from engines.cx.adapter import adapt
 

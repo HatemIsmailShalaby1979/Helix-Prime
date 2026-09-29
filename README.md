@@ -25,7 +25,7 @@ surface — so a decision is gated, recorded, and inspectable before it runs.
 
 > [!IMPORTANT]
 > **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-> live WFM demo, backed by a green CI and a large test suite — but four of six engines are
+> live WFM demo, backed by a green CI and a large test suite — but three of six engines are
 > adapter scaffolding that report synthesized metrics, not computed results. Not
 > production-ready: nine production-only gates are red by design.
 
@@ -185,7 +185,7 @@ shown at all.
 
 | Limit | Measured | Source |
 | --- | --- | --- |
-| Four of six engines return synthesized / echoed metrics, not computed analytics | B2B fabricates `sop_generated=True` (`:326-328`); CRM echoes inputs (`:311-318`); Personnel hardcodes `pipeline_status`/`workforce_headcount` (`:297-322`); CX computes a real churn score but keeps its scoring thresholds hardcoded in `:57-66` (engine does not load `config/risk_thresholds.yaml`) — the AHT unit incoherence there was resolved in `fix/cx-aht-normalization` | `engines/b2b/adapter.py`, `engines/crm/adapter.py`, `engines/personnel/adapter.py`, `engines/cx/src/risk_scorer.py:57-66` |
+| Three of six engines return synthesized / echoed metrics, not computed analytics | CRM echoes inputs (`:311-318`); Personnel hardcodes `pipeline_status`/`workforce_headcount` (`:297-322`); CX computes a real churn score but keeps its scoring thresholds hardcoded in `:57-66` (engine does not load `config/risk_thresholds.yaml`) — the AHT unit incoherence there was resolved in `fix/cx-aht-normalization`. (B2B no longer scaffolds: `engines/b2b/adapter.py` now calls `generate_sop()`/`generate_staffing_plan()` and maps their real output; fixed in `fix/b2b-wire-real-onboarding`.) | `engines/crm/adapter.py`, `engines/personnel/adapter.py`, `engines/cx/src/risk_scorer.py:57-66` |
 | WFM "Erlang C" is a non-standard closed form; docstring corrupted | no factorial/series term at `:124`; non-Latin glyphs at `:8`; `confidence_interval` fixed `0.05*agents` (`:243`), `confidence_level` unused | `engines/wfm/src/erlang_c.py:8,40,124,243` |
 | Rate limiting trusts a header set by an external Worker | `x-helix-client-ip` trust fails if app exposed without the Worker | `helix_codex_app/security/route_limits.py:124`; `client_ip.py:24-28` |
 | Cockpit UI tier quarantined | 19 tests deselected | `README.md:131`; `AGENTS.md:3454` |
@@ -203,6 +203,7 @@ was wrong is kept here rather than deleted.
 | Gate `oversight_only` flag parsed but never enforced | an oversight role with no `target_engine` could still reach `EXECUTING` | `2c9d606`, `64928da` — `evaluate_gate()` hard-denies oversight-only seats (`oversight_only`, `dead_letter`) regardless of `target_engine`; `owns_engine(None)` reflects an engine-less seat; `Engine.submit` and `GovernedWorkflowManager.submit` both act on the refusal. `tests/test_gate_oversight_and_approval.py` |
 | `Engine.submit` did not forward `requires_approval` to the gate | the gate's `approval_requested` branch was unreachable on the `Engine.submit` path | `2c9d606` — `Engine.submit` now forwards `requires_approval`; both submission paths agree on the gate's verdict. `tests/test_gate_oversight_and_approval.py` |
 | CX churn scorer assumed AHT ≤ 0.5 minutes | the `/0.5` (minutes) divisor pinned any realistic AHT to 0 (max risk); callers actually pass AHT as a 0-1 fraction | `fix/cx-aht-normalization` — AHT normalized as `1 - value` (goodness); threshold band recalibrated to critical 0.3/high 0.5/medium 0.7 in `risk_scorer.py:57-66`; `config/risk_thresholds.yaml:16` synced; regression test `tests/test_cx_aht_normalization.py` |
+| B2B adapter fabricated its onboarding result | `engines/b2b/adapter.py` called only `add_client` + `get_client_summary`, then set `sop_generated=True` and `onboarding_status="completed"` by hand; `generate_sop`/`generate_staffing_plan` were never invoked, so the SOP and staffing plan were never computed | `fix/b2b-wire-real-onboarding` — adapter now calls `OnboardingAutomator.generate_sop()` and `generate_staffing_plan()` and maps their real return values (`sop`, `staffing_plan`, `workload_data`); the fabricated fields are removed; regression test `tests/test_c4_engines.py::test_b2b_adapter_wires_real_sop_and_staffing_plan` |
 
 ### Tier 3 — NOT PROVEN
 
@@ -212,7 +213,7 @@ was wrong is kept here rather than deleted.
 | Production deployment | `production` gate `NOT_READY`; nine production-only gates red by construction | `AGENTS.md:1451-1452`, `:1516-1519` |
 | External security audit / certified data isolation | None. No signed installer, no certified isolation evidence. |
 | Multi-tenant isolation under real load | No independent tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant). |
-| Engine accuracy at real corpus scale | Not measured; four engines are scaffolding (Tier 2 row 1). |
+| Engine accuracy at real corpus scale | Not measured; three engines are scaffolding (Tier 2 row 1). |
 | Design-partner live traffic | Scoach Academy Hub is a named first vertical (`capabilities/sports_academy/`), but no live client traffic is recorded. |
 
 ### Tried and rejected

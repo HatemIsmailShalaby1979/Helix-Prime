@@ -311,21 +311,56 @@ def adapt(
             profile = ClientProfile(client_profile)
 
         automator.add_client(profile)
+
+        # Real computation — call the engine's SOP and staffing-plan generators.
+        # These were never invoked before (KNOWN_ISSUES.md issue 3, B2B row); the
+        # adapter fabricated sop_generated=True / onboarding_status="completed"
+        # instead. We now map the engine's actual return values.
+        sop_document = automator.generate_sop(profile.client_id)
+
+        # workload_data is required by generate_staffing_plan, but the B2B request
+        # schema carries no staffing-workload fields. We do NOT invent business
+        # meaning. If the caller supplied workload_data, use it verbatim; otherwise
+        # derive a minimal, explicitly-defaulted shape from fields the caller DID
+        # supply (complexity, requirements) so the call is real and transparent, not
+        # a measured workload. The note key makes the default visible in the output.
+        workload_data = input_payload.get("workload_data")
+        if not isinstance(workload_data, dict):
+            workload_data = {
+                "project_duration_days": 90,
+                "complexity": client_profile.get("complexity", "Standard"),
+                "resources_requested": list(client_profile.get("requirements", [])),
+                "note": (
+                    "default: request carried no workload_data; derived from the "
+                    "supplied profile only, not a measured staffing workload"
+                ),
+            }
+        staffing_plan = automator.generate_staffing_plan(profile.client_id, workload_data)
+
+        # Map the engine's actual outputs. get_client_summary is called to read the
+        # engine's own truth flags (has_sop / has_staffing_plan), not to synthesize.
         summary = (
             automator.get_client_summary(profile.client_id)
             if hasattr(automator, "get_client_summary")
-            else {"status": "onboarded"}
+            else {
+                "has_sop": True,
+                "has_staffing_plan": True,
+                "requirements_count": len(client_profile.get("requirements", [])),
+            }
         )
-
-        if isinstance(summary, dict):
-            metrics = summary
-        else:
-            metrics = {"summary": str(summary)}
-
-        # Ensure SOP/onboarding result present
-        if "sop" not in str(metrics).lower() and "onboarding" not in str(metrics).lower():
-            metrics.setdefault("onboarding_status", "completed")
-            metrics.setdefault("sop_generated", True)
+        metrics = {
+            "client_id": profile.client_id,
+            "name": profile.name,
+            "industry": profile.industry,
+            "size": profile.size,
+            "complexity": profile.complexity,
+            "requirements_count": summary.get("requirements_count", len(profile.requirements)),
+            "sop": sop_document.to_dict(),
+            "staffing_plan": staffing_plan.to_dict(),
+            "workload_data": workload_data,
+            "has_sop": summary.get("has_sop", True),
+            "has_staffing_plan": summary.get("has_staffing_plan", True),
+        }
 
         if is_sample:
             warnings.append("sample/demo data — not live operational data")
@@ -352,11 +387,16 @@ def adapt(
             duration_ms=duration,
         )
 
-        # B2B recommendations are model-generated (e.g., staffing plan)
+        # B2B recommendations surface the real computed artifacts, not a fabricated
+        # status field.
         recommendations = [
             {
                 "type": "onboarding",
-                "value": metrics.get("onboarding_status", "completed"),
+                "value": {
+                    "sop_title": metrics["sop"]["title"],
+                    "staffing_roles": [r["name"] for r in metrics["staffing_plan"]["roles"]],
+                    "staffing_total_cost": metrics["staffing_plan"]["total_cost"],
+                },
                 "source": "calculated",
             }
         ]

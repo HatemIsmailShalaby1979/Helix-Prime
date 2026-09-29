@@ -8,7 +8,22 @@ reported exactly as found in code or measured on simulated data.
 > synthetic data or a reading of source. There is no real customer traffic; the demo
 > data is synthetic by design.
 
-## 1. The gate's `oversight_only` flag is parsed but never enforced
+> **Fixed, retained as the record.** Issues 1 and 2 are fixed in commits `2c9d606`
+> and `64928da` and kept below, unchanged, as the record of what was wrong. The
+> remaining issues are open.
+
+## 1. The gate's `oversight_only` flag is parsed but never enforced — **FIXED**
+
+> **Fixed** in commits `2c9d606` and `64928da`. `evaluate_gate()` refuses `EXECUTING`
+> for an oversight-only seat — a hard deny (`reason_code="oversight_only"`,
+> `dead_letter`), independent of `target_engine` — and `RoleSpec.owns_engine(None)`
+> now answers whether the seat owns any engine at all. Both submission paths act on
+> the refusal: `GovernedWorkflowManager.submit`, and `Engine.submit`, which previously
+> inspected only `requires_human_approval` and let a `dead_letter` decision fall
+> through to `EXECUTING` (`64928da`). Pinned by
+> `tests/test_gate_oversight_and_approval.py::test_oversight_only_role_never_reaches_executing_without_a_target_engine`
+> and `::test_oversight_only_submission_dead_letters_through_engine_submit`.
+> The description below is kept unchanged as the record of the defect.
 
 `control_plane/governance.py:176` declares `oversight_only: bool = False` on the
 `RoleSpec`. `compliance_quality_gm` is created with `oversight_only=True` and
@@ -21,9 +36,17 @@ cost 0 and confidence ≥ 0.75 therefore reaches `EXECUTING` (`governance.py:106
 despite being an oversight-only role.
 
 - Limits the claim that oversight roles "do not execute" — true in prose, not enforced
-  by the gate.
+  by the gate. **(Resolved in `2c9d606` and `64928da`: enforced on both submission
+  paths.)**
 
-## 2. `Engine.submit` does not forward `requires_approval` to the gate
+## 2. `Engine.submit` does not forward `requires_approval` to the gate — **FIXED**
+
+> **Fixed** in commit `2c9d606`. `Engine.submit` now forwards
+> `request.requires_approval` to `evaluate_gate()`, so the gate's
+> `approval_requested` branch is reachable from both submission paths and they agree
+> on the verdict. Pinned by
+> `tests/test_gate_oversight_and_approval.py::test_explicit_approval_is_gated_identically_on_both_submission_paths`.
+> The description below is kept unchanged as the record of the defect.
 
 `control_plane/engine.py:826-834` calls `evaluate_gate()` without the
 `requires_approval` argument. The gate's `approval_requested` branch
@@ -34,7 +57,8 @@ hold happens instead via the separate `workflow.requires_approval` flag set at
 explicit approval requests inconsistently.
 
 - Limits the claim that "every submission is gated before execution" — the gate's own
-  explicit-approval branch is dead on one of the two paths.
+  explicit-approval branch is dead on one of the two paths. **(Resolved in `2c9d606`:
+  the branch is now reachable from both paths.)**
 
 ## 3. Five of six engine adapters return synthesized or echoed metrics, not computed analytics
 

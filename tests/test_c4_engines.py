@@ -360,6 +360,53 @@ def test_valid_input_output_b2b():
     assert res.metrics is not None
 
 
+def test_b2b_adapter_wires_real_sop_and_staffing_plan():
+    """The adapter calls generate_sop + generate_staffing_plan and maps their real
+    output — not the fabricated sop_generated/onboarding_status it set by hand.
+
+    Before this fix, the adapter invoked only add_client + get_client_summary, then
+    set ``sop_generated=True`` and ``onboarding_status="completed"``
+    (KNOWN_ISSUES.md issue 3, B2B row). This test therefore fails on the old adapter
+    (the fabricated keys are present and the real artifacts absent) and passes once
+    the engine's generated SOP and staffing plan are wired through.
+    """
+    from engines.b2b.adapter import adapt
+
+    res = adapt(
+        {
+            "client_profile": {
+                "name": "Acme",
+                "industry": "Tech",
+                "size": "Mid-Market",
+                "complexity": "Standard",
+            }
+        },
+        "t",
+        "c",
+        "corr_b2b_real",
+        None,
+        "sami",
+        is_sample=False,
+    )
+    assert res.error is None
+    metrics = res.metrics
+    # Fabricated fields must be gone.
+    assert "sop_generated" not in metrics
+    assert "onboarding_status" not in metrics
+    # Real computed artifacts must be present and well-formed.
+    assert "sop" in metrics
+    assert "staffing_plan" in metrics
+    sop = metrics["sop"]
+    assert sop.get("client_id")
+    assert isinstance(sop.get("content"), dict) and sop["content"]
+    plan = metrics["staffing_plan"]
+    assert isinstance(plan.get("roles"), list) and len(plan["roles"]) > 0
+    assert isinstance(plan.get("total_cost"), (int, float))
+    # The staffing plan was driven by a (default) workload_data, surfaced for
+    # transparency rather than hidden.
+    assert "workload_data" in metrics
+
+
 def test_valid_input_output_personnel():
     from engines.personnel.adapter import adapt
 

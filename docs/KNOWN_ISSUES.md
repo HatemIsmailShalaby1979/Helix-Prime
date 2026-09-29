@@ -60,17 +60,23 @@ explicit approval requests inconsistently.
   explicit-approval branch is dead on one of the two paths. **(Resolved in `2c9d606`:
   the branch is now reachable from both paths.)**
 
-## 3. Four of six engine adapters return synthesized or echoed metrics, not computed analytics
+## 3. Three of six engine adapters return synthesized or echoed metrics, not computed analytics
 
 The demo and the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) confirm adapters *import and call*
-engine modules and return non-empty metrics. But the **returned metrics** for four
+engine modules and return non-empty metrics. But the **returned metrics** for three
 engines are adapter-synthesized or echoed, not the engine's computed output:
 
-- **B2B** — `engines/b2b/adapter.py:313-318` calls only `add_client` +
-  `get_client_summary`; `generate_sop`/`generate_staffing_plan` are never invoked. The
-  adapter then fabricates the result: `metrics.setdefault("sop_generated", True)` and
-  `onboarding_status="completed"` at `engines/b2b/adapter.py:326-328`.
+- **B2B** — *no longer scaffolding.* `engines/b2b/adapter.py` now calls
+  `OnboardingAutomator.generate_sop()` and `generate_staffing_plan()` after
+  `add_client` and maps their actual return values (`sop`, `staffing_plan`,
+  `workload_data`) into the adapter metrics; the fabricated `sop_generated=True` and
+  `onboarding_status="completed"` defaults are gone (previously set at `:326-328`).
+  The request schema carries no staffing-workload fields, so when `workload_data` is
+  absent the adapter derives a minimal, explicitly-defaulted shape from the supplied
+  profile rather than inventing business meaning. (Fixed in branch
+  `fix/b2b-wire-real-onboarding`; pinned by
+  `tests/test_c4_engines.py::test_b2b_adapter_wires_real_sop_and_staffing_plan`.)
 - **CRM** — `engines/crm/adapter.py:311-318` falls through to
   `{"status": "active", "client": ..., "deal": ...}` when `SalesPipeline` exposes no
   analytics method; the returned object is an echo of the inputs, not a computed
@@ -88,9 +94,10 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
   adapter maps that output into its metrics. (Previously it called `calculate_adherence`
   alone, whose dict carried no `confidence_score`.)
 
-**WFM** (`engines/wfm/src/erlang_c.py`, Erlang C) and **RTA**
-(`engines/rta/src/calculations.py`) drive a real computation end-to-end; the four
-adapters above remain scaffolding.
+**WFM** (`engines/wfm/src/erlang_c.py`, Erlang C), **RTA**
+(`engines/rta/src/calculations.py`), and **B2B** (`engines/b2b/adapter.py` →
+`engines/b2b/src/automator.py`) drive a real computation end-to-end; the three
+adapters above (CRM, Personnel, CX) remain scaffolding.
 
 - Limits the headline "Six engines" claim and the statement at `engines/README.md:52`
   that "Each adapter invokes real engine code (not fake)" — true for *invocation*,

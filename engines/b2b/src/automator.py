@@ -89,7 +89,10 @@ class StaffingPlan:
         """Calculate total staffing cost."""
         total = 0
         for role in self.roles:
-            total += role.get("cost", 0) * role.get("duration", 1)
+            # `duration` is a human-readable string ("N days"); the numeric
+            # day count lives in `duration_days`. Multiplying by the string
+            # raised TypeError, so use the numeric field.
+            total += role.get("cost", 0) * role.get("duration_days", 1)
         return total
 
     def to_dict(self) -> dict:
@@ -318,7 +321,13 @@ class OnboardingAutomator:
         adjusted_roles = []
         for role in roles:
             if "Developer" in role:
-                count = int(role.split("-")[0].split(" ")[1])
+                # role is "<lo>-<hi> Developers"; the leading token is the
+                # headcount range. Use the lower bound as the planning baseline.
+                # (Previously ``role.split("-")[0].split(" ")[1]`` split on "-"
+                # first and then indexed a space-delimited token that does not
+                # exist, raising IndexError for every Developer role.)
+                headcount_token = role.split(" ", 1)[0]
+                count = int(headcount_token.split("-")[0])
                 adjusted_count = max(1, int(count * multiplier))
                 adjusted_roles.append(f"{adjusted_count} {role.split(' ', 1)[1]}")
             else:
@@ -328,14 +337,24 @@ class OnboardingAutomator:
         structured_roles = []
         for i, role in enumerate(adjusted_roles):
             role_parts = role.split(" ", 1)
-            role_name = role_parts[0] if len(role_parts) > 0 else role
+            # adjusted_roles for developers is "<count> Developers"; keep the
+            # numeric headcount separate from a readable role name so the role is
+            # not surfaced as a bare number.
+            if len(role_parts) > 1 and role_parts[0].isdigit():
+                headcount = int(role_parts[0])
+                role_name = role_parts[1]
+            else:
+                headcount = None
+                role_name = role_parts[0] if len(role_parts) > 0 else role
             role_desc = role_parts[1] if len(role_parts) > 1 else role
 
             structured_roles.append(
                 {
                     "id": f"role_{i + 1}",
                     "name": role_name,
+                    "headcount": headcount,
                     "description": role_desc,
+                    "duration_days": 3 * (i + 1),
                     "duration": f"{3 * (i + 1)} days",
                     "cost": 1000 * (i + 1) * multiplier,
                     "skills": self._get_role_skills(role_name),
@@ -375,7 +394,10 @@ class OnboardingAutomator:
             ],
         }
 
-        return skills_mapping.get(role_name, ["General Skills"])
+        key = role_name
+        if key not in skills_mapping and key.endswith("s"):
+            key = key[:-1]
+        return skills_mapping.get(key, ["General Skills"])
 
     def _generate_timeline(self, roles: list[dict]) -> dict:
         """Generate timeline for staffing plan."""

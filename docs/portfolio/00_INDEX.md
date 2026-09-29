@@ -25,6 +25,15 @@ been demonstrated; unfinished items are listed separately in
   **one governed memory** with tenant isolation and an intact audit chain.
 
 ## Verification summary (reproducible)
+
+> **Currency note, 2026-09-29.** Every figure in this package is a dated snapshot
+> from **2026-09-12**, kept as the record of what was measured then. The suite has
+> grown since: as of 2026-09-29 it is **1,897 passed / 0 failed** (19 deselected as
+> a quarantined UI tier) at **86.91%** coverage over `server/` and `connectors/`,
+> and CI is green on all 17 steps. Where a count in this package and the root
+> `README.md` disagree, the README carries the current measurement and this package
+> carries the historical one. See `AGENTS.md` §21 for the CI repair.
+
 - **Tests:** 621 passed (`pytest tests/ -q`; recounted 2026-09-12). See [`15_verified_test_results.md`](15_verified_test_results.md).
 - **Governance:** `python3 -m GOVERNANCE.governance_check check` → `governance=PASS`.
 - **Security:** `release.security_gate.run_security_gate()` → `all_ok=True` (0 secret findings, deny-by-default, redaction, audit integrity).

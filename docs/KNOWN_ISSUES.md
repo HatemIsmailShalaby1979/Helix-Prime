@@ -60,7 +60,7 @@ explicit approval requests inconsistently.
   explicit-approval branch is dead on one of the two paths. **(Resolved in `2c9d606`:
   the branch is now reachable from both paths.)**
 
-## 3. Three of six engine adapters return synthesized or echoed metrics, not computed analytics
+## 3. Two of six engine adapters return synthesized or echoed metrics, not computed analytics
 
 The demo and the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) confirm adapters *import and call*
@@ -77,10 +77,20 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
   profile rather than inventing business meaning. (Fixed in branch
   `fix/b2b-wire-real-onboarding`; pinned by
   `tests/test_c4_engines.py::test_b2b_adapter_wires_real_sop_and_staffing_plan`.)
-- **CRM** — `engines/crm/adapter.py:311-318` falls through to
-  `{"status": "active", "client": ..., "deal": ...}` when `SalesPipeline` exposes no
-  analytics method; the returned object is an echo of the inputs, not a computed
-  pipeline analysis.
+- **CRM** — *no longer scaffolding.* `engines/crm/adapter.py` now maps the request's
+  `client`/`deal` into real `Lead`/`Deal` objects via `add_lead`/`create_deal`, then
+  calls `SalesPipeline.get_sales_analytics()` and returns its computed
+  `stage_distribution`, `status_distribution`, `average_deal_value`,
+  `total_pipeline_value` and 12-month forecast — not the previous
+  `{"status": "active", "client": ..., "deal": ...}` echo (previously at `:311-318`).
+  `Deal.probability` is required by the engine; the CRM request schema carries no
+  probability, so it is defaulted from the engine's own stage config rather than
+  invented. `score_lead` is deliberately not called: its signature requires
+  company_size/industry/budget/timeline attributes the request schema does not provide,
+  so calling it would re-introduce fabricated metrics. `support_status` (a hardcoded
+  remnant) is dropped; `pipeline_status` is retained but now derived from the computed
+  totals. (Fixed in branch `fix/crm-wire-real-pipeline`; pinned by
+  `tests/test_c4_engines.py::test_crm_adapter_wires_real_pipeline_analytics`.)
 - **Personnel** — `engines/personnel/adapter.py:297-322` calls `get_pipeline_analytics()`
   on an empty `PipelineManager` (returns `{}`), then hardcodes
   `pipeline_status="active"` and `workforce_headcount` from the request input.
@@ -95,16 +105,17 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
   alone, whose dict carried no `confidence_score`.)
 
 **WFM** (`engines/wfm/src/erlang_c.py`, Erlang C), **RTA**
-(`engines/rta/src/calculations.py`), and **B2B** (`engines/b2b/adapter.py` →
-`engines/b2b/src/automator.py`) drive a real computation end-to-end; the three
-adapters above (CRM, Personnel, CX) remain scaffolding.
+(`engines/rta/src/calculations.py`), **B2B** (`engines/b2b/adapter.py` →
+`engines/b2b/src/automator.py`), and **CRM** (`engines/crm/adapter.py` →
+`engines/crm/src/sales_pipeline.py`) drive a real computation end-to-end; the two
+adapters above (Personnel, CX) remain scaffolding.
 
 - Limits the headline "Six engines" claim and the statement at `engines/README.md:52`
   that "Each adapter invokes real engine code (not fake)" — true for *invocation*,
-  false for the *computed result* of four engines. The "not fake" wording overstates
+  false for the *computed result* of two engines. The "not fake" wording overstates
   what the adapter output represents.
 - The 1,897-test suite asserts the adapter *contract*, so green tests do **not** validate
-  that CX/B2B/Personnel/CRM compute correct results. See Tier 2 in `README.md`.
+  that Personnel/CX compute correct results. See Tier 2 in `README.md`.
 
 ## 4. The WFM "Erlang C" formula is a non-standard closed form, and its docstring is corrupted
 
@@ -198,7 +209,7 @@ by the UI" (`AGENTS.md:3445`).
 ## 10. Engine correctness is not validated by the passing test suite
 
 The suite reaches the 80% coverage floor (`README.md:132`), but coverage measures code
-execution, not result correctness. Because four adapters return synthesized/echoed
+execution, not result correctness. Because two adapters return synthesized/echoed
 metrics (issue 3), the passing tests certify the plumbing and the WFM and RTA math, not that
 the engines produce correct operational numbers. There is no independent
 tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant), no

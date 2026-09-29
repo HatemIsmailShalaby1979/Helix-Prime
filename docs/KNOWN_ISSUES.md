@@ -79,8 +79,8 @@ engines are adapter-synthesized or echoed, not the engine's computed output:
   on an empty `PipelineManager` (returns `{}`), then hardcodes
   `pipeline_status="active"` and `workforce_headcount` from the request input.
 - **CX** — `engines/cx/src/risk_scorer.py` computes the churn score, but its risk
-  thresholds are hardcoded in `__init__` (`risk_scorer.py:57-66`) and the AHT unit is
-  incoherent (see issue 5); the richer `cx` modules (`kpi_aggregator`,
+  thresholds are hardcoded in `__init__` (`risk_scorer.py:57-66`); the AHT unit
+  incoherence was resolved (see issue 5). The richer `cx` modules (`kpi_aggregator`,
   `alert_dispatcher`, `sql_extractor`, `dashboard_feed`) are not invoked by the adapter.
 - **RTA** — *no longer scaffolding.* `engines/rta/adapter.py` now calls `calc.analyze()`,
   which runs `calculate_adherence` internally and additionally returns the engine's

@@ -5197,3 +5197,59 @@ quarantined at `E:/_quarantine_2026-09-29/`, sha256
    `git cat-file blob` through Python and compare **byte counts**.
 7. **`AGENTS.md:466` claimed the repo was already `ruff format --check` clean.** It was
    not, until `5755667`. The claim is true now; it was aspirational then.
+
+## 22 Documentation-standard alignment — LIVE-Support-Assistant model (2026-09-29)
+
+Branch `docs/claims-standard-2026-09-29`. Brought Helix Prime's docs up to the
+evidence-first standard of `live-support-assistant` (README + `docs/KNOWN_ISSUES.md`,
+`CASE_STUDY.md`, `PRODUCTION_STATUS.md`, `RELEASE_NOTES.md`). No product code changed.
+
+- README gained: a positioning callout; a three-tier claims table (Tier 1 DEMONSTRATED /
+  Tier 2 MEASURED LIMITS / Tier 3 NOT PROVEN) with `file:line` citations; a
+  tried-and-rejected section (Helix Prime has **no** measured-and-rejected experiment
+  branches — only deletions of unwired code: `cfbfa8d`, `c00dec5`, `898d2d0`); and a
+  run-verification note stating what was and was not executed.
+- `docs/KNOWN_ISSUES.md` records 10 code-grounded issues.
+
+### 22.1 New open finding — engine adapters return synthesized/echoed metrics
+
+Discovered while reading source for this pass; **not yet fixed**. Five of six engines do
+not compute a result end to end — only WFM does:
+
+- B2B fabricates `sop_generated=True` / `onboarding_status="completed"`
+  (`engines/b2b/adapter.py:326-328`); only `add_client` + `get_client_summary` are called.
+- CRM echoes inputs (`{"status":"active","client":...,"deal":...}`) when `SalesPipeline`
+  exposes no analytics method (`engines/crm/adapter.py:311-318`).
+- Personnel hardcodes `pipeline_status="active"` and `workforce_headcount` from the
+  request on an empty manager (`engines/personnel/adapter.py:297-322`).
+- CX thresholds hardcoded in `RiskScorer.__init__`
+  (`engines/cx/src/risk_scorer.py:57-66`); AHT normalized as `max(0,1-value/0.5)` assumes
+  AHT ≤ 0.5 min, so any realistic AHT → 0 (`risk_scorer.py:88`).
+- RTA surfaces an adherence dict without computing `confidence_score`.
+
+Consequence: the shared test `tests/test_c4_engines.py:113`
+(`test_all_six_adapters_invoke_real_engine_code`) passes because it asserts non-empty
+metrics, not correctness — so `engines/README.md:52` ("invokes real engine code, not
+fake") overstates the adapter *output*. The 1,897-test suite certifies plumbing + WFM
+math, not the five engines' accuracy. This is the largest gap between the README's
+"Six engines" framing and the code.
+
+### 22.2 Gate enforcement gaps (also open)
+
+- `oversight_only` is declared (`governance.py:176`) but never read in `evaluate_gate`
+  (`governance.py:950-1075`); `owns_engine(None)` returns `True` (`governance.py:201-204`),
+  so an oversight role with no `target_engine` can still reach `EXECUTING`.
+- `Engine.submit` calls `evaluate_gate` without `requires_approval`
+  (`control_plane/engine.py:826-834`), so the gate's `approval_requested` branch is
+  unreachable on that path.
+
+### 22.3 Verification this session (honest)
+
+- `ruff check` (17 CI paths): exit 0. `ruff format --check .`: 429 files, exit 0.
+- Full `pytest` suite attempted but **did not terminate** (~55 min, killed): blocked on
+  `tests/integration` (UI/browser + Supabase/Ollama) unavailable in this sandbox. A
+  claims-relevant subset (`tests/test_governance*.py`, `test_c4_engines.py`,
+  `test_c2_control_plane.py`, `test_c2_preflight_regression.py`, `test_governed_memory.py`)
+  passed **122 / 0** in 102s. Repo CI claims 1,897 / 0 + 86.91% coverage (snapshot
+  2026-09-29) — authoritative green, not reproduced here.
+- CI container steps (16–17) not reproducible locally (Docker not running).

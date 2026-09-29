@@ -31,5 +31,7 @@ gate or an explicit out-of-scope decision.
 
 ## What IS completed (for contrast)
 See [`00_INDEX.md`](00_INDEX.md) and [`15_verified_test_results.md`](15_verified_test_results.md):
-the governed core, the controlled pilot, the restaurant capability pack, the sports-academy capability pack, the synthetic demo, 621
-passing tests, `governance=PASS`, security `all_ok=True`, and the release gates.
+the governed core, the controlled pilot, the restaurant capability pack, the sports-academy
+capability pack, the synthetic demo, **1,897 passing tests** (19 deselected; measured 2026-09-29),
+`governance=PASS`, security `all_ok=True`, the release gates, and a CI pipeline green on all 17
+steps.

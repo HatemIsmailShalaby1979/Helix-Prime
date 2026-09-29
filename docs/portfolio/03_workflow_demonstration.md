@@ -19,7 +19,7 @@ python3 demo/synthetic_demo.py
 ```
 Exit code 0 = success.
 
-## Actual output (clean setup, 2026-08-29)
+## Actual output (clean setup; first recorded 2026-08-29, re-run 2026-09-29 — byte-for-byte the same run)
 ```
 [call-centre pilot] tenants: ['cc-1'] diagnoses: 1
 [call-centre pilot] approval summary: {'total': 3, 'approved': 0, 'denied': 0, 'draft': 3, 'rolled_back': 0}

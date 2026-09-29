@@ -25,7 +25,7 @@ surface — so a decision is gated, recorded, and inspectable before it runs.
 
 > [!IMPORTANT]
 > **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-> live WFM demo, backed by a green CI and a large test suite — but five of six engines are
+> live WFM demo, backed by a green CI and a large test suite — but four of six engines are
 > adapter scaffolding that report synthesized metrics, not computed results. Not
 > production-ready: nine production-only gates are red by design.
 
@@ -185,13 +185,12 @@ shown at all.
 
 | Limit | Measured | Source |
 | --- | --- | --- |
-| Five of six engines return synthesized / echoed metrics, not computed analytics | B2B fabricates `sop_generated=True` (`:326-328`); CRM echoes inputs (`:311-318`); Personnel hardcodes `pipeline_status`/`workforce_headcount` (`:297-322`); CX thresholds hardcoded + AHT unit incoherent (`:57-66`); RTA surfaces adherence dict without `confidence_score` | `engines/b2b/adapter.py`, `engines/crm/adapter.py`, `engines/personnel/adapter.py`, `engines/cx/src/risk_scorer.py:57-66,88`, `engines/rta/src/calculations.py:92` |
+| Four of six engines return synthesized / echoed metrics, not computed analytics | B2B fabricates `sop_generated=True` (`:326-328`); CRM echoes inputs (`:311-318`); Personnel hardcodes `pipeline_status`/`workforce_headcount` (`:297-322`); CX computes a real churn score but keeps its scoring thresholds hardcoded in `:57-66` (engine does not load `config/risk_thresholds.yaml`) — the AHT unit incoherence there was resolved in `fix/cx-aht-normalization` | `engines/b2b/adapter.py`, `engines/crm/adapter.py`, `engines/personnel/adapter.py`, `engines/cx/src/risk_scorer.py:57-66` |
 | WFM "Erlang C" is a non-standard closed form; docstring corrupted | no factorial/series term at `:124`; non-Latin glyphs at `:8`; `confidence_interval` fixed `0.05*agents` (`:243`), `confidence_level` unused | `engines/wfm/src/erlang_c.py:8,40,124,243` |
-| CX churn scorer assumes AHT ≤ 0.5 minutes | any realistic AHT → `0` (max risk) | `engines/cx/src/risk_scorer.py:88` |
 | Rate limiting trusts a header set by an external Worker | `x-helix-client-ip` trust fails if app exposed without the Worker | `helix_codex_app/security/route_limits.py:124`; `client_ip.py:24-28` |
 | Cockpit UI tier quarantined | 19 tests deselected | `README.md:131`; `AGENTS.md:3454` |
 | `dispatch.py` agent dispatch is a stub returning fake output | `Called …` / `Task submitted` placeholders | `app/command_center/agents/dispatch.py:84,187,204,217,262` |
-| Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM math, not five engines' accuracy | `README.md:132` + Tier 2 row 1 |
+| Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM/RTA math, not four engines' accuracy | `README.md:132` + Tier 2 row 1 |
 | CI container steps (16–17) not reproducible locally | Docker not running here; rest on remote green run | `AGENTS.md:5152-5153` |
 
 #### Fixed since this table was written
@@ -203,6 +202,7 @@ was wrong is kept here rather than deleted.
 | --- | --- | --- |
 | Gate `oversight_only` flag parsed but never enforced | an oversight role with no `target_engine` could still reach `EXECUTING` | `2c9d606`, `64928da` — `evaluate_gate()` hard-denies oversight-only seats (`oversight_only`, `dead_letter`) regardless of `target_engine`; `owns_engine(None)` reflects an engine-less seat; `Engine.submit` and `GovernedWorkflowManager.submit` both act on the refusal. `tests/test_gate_oversight_and_approval.py` |
 | `Engine.submit` did not forward `requires_approval` to the gate | the gate's `approval_requested` branch was unreachable on the `Engine.submit` path | `2c9d606` — `Engine.submit` now forwards `requires_approval`; both submission paths agree on the gate's verdict. `tests/test_gate_oversight_and_approval.py` |
+| CX churn scorer assumed AHT ≤ 0.5 minutes | the `/0.5` (minutes) divisor pinned any realistic AHT to 0 (max risk); callers actually pass AHT as a 0-1 fraction | `fix/cx-aht-normalization` — AHT normalized as `1 - value` (goodness); threshold band recalibrated to critical 0.3/high 0.5/medium 0.7 in `risk_scorer.py:57-66`; `config/risk_thresholds.yaml:16` synced; regression test `tests/test_cx_aht_normalization.py` |
 
 ### Tier 3 — NOT PROVEN
 
@@ -212,7 +212,7 @@ was wrong is kept here rather than deleted.
 | Production deployment | `production` gate `NOT_READY`; nine production-only gates red by construction | `AGENTS.md:1451-1452`, `:1516-1519` |
 | External security audit / certified data isolation | None. No signed installer, no certified isolation evidence. |
 | Multi-tenant isolation under real load | No independent tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant). |
-| Engine accuracy at real corpus scale | Not measured; five engines are scaffolding (Tier 2 row 1). |
+| Engine accuracy at real corpus scale | Not measured; four engines are scaffolding (Tier 2 row 1). |
 | Design-partner live traffic | Scoach Academy Hub is a named first vertical (`capabilities/sports_academy/`), but no live client traffic is recorded. |
 
 ### Tried and rejected

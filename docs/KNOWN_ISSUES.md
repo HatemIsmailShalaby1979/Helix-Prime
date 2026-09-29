@@ -8,17 +8,21 @@ reported exactly as found in code or measured on simulated data.
 > synthetic data or a reading of source. There is no real customer traffic; the demo
 > data is synthetic by design.
 
-> **Fixed, retained as the record.** Issues 1 and 2 are fixed in commit `2c9d606`
-> and kept below, unchanged, as the record of what was wrong. The remaining issues
-> are open.
+> **Fixed, retained as the record.** Issues 1 and 2 are fixed in commits `2c9d606`
+> and `64928da` and kept below, unchanged, as the record of what was wrong. The
+> remaining issues are open.
 
 ## 1. The gate's `oversight_only` flag is parsed but never enforced — **FIXED**
 
-> **Fixed** in commit `2c9d606`. `evaluate_gate()` now refuses `EXECUTING` for an
-> oversight-only seat — a hard deny (`reason_code="oversight_only"`, `dead_letter`),
-> independent of `target_engine` — and `RoleSpec.owns_engine(None)` now answers
-> whether the seat owns any engine at all. Pinned by
-> `tests/test_gate_oversight_and_approval.py::test_oversight_only_role_never_reaches_executing_without_a_target_engine`.
+> **Fixed** in commits `2c9d606` and `64928da`. `evaluate_gate()` refuses `EXECUTING`
+> for an oversight-only seat — a hard deny (`reason_code="oversight_only"`,
+> `dead_letter`), independent of `target_engine` — and `RoleSpec.owns_engine(None)`
+> now answers whether the seat owns any engine at all. Both submission paths act on
+> the refusal: `GovernedWorkflowManager.submit`, and `Engine.submit`, which previously
+> inspected only `requires_human_approval` and let a `dead_letter` decision fall
+> through to `EXECUTING` (`64928da`). Pinned by
+> `tests/test_gate_oversight_and_approval.py::test_oversight_only_role_never_reaches_executing_without_a_target_engine`
+> and `::test_oversight_only_submission_dead_letters_through_engine_submit`.
 > The description below is kept unchanged as the record of the defect.
 
 `control_plane/governance.py:176` declares `oversight_only: bool = False` on the
@@ -32,7 +36,8 @@ cost 0 and confidence ≥ 0.75 therefore reaches `EXECUTING` (`governance.py:106
 despite being an oversight-only role.
 
 - Limits the claim that oversight roles "do not execute" — true in prose, not enforced
-  by the gate. **(Resolved in `2c9d606`: the gate now enforces it.)**
+  by the gate. **(Resolved in `2c9d606` and `64928da`: enforced on both submission
+  paths.)**
 
 ## 2. `Engine.submit` does not forward `requires_approval` to the gate — **FIXED**
 

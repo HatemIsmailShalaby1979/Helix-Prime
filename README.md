@@ -201,7 +201,7 @@ was wrong is kept here rather than deleted.
 
 | Formerly a limit | What was wrong | Fixed in |
 | --- | --- | --- |
-| Gate `oversight_only` flag parsed but never enforced | an oversight role with no `target_engine` could still reach `EXECUTING` | `2c9d606` — `evaluate_gate()` hard-denies oversight-only seats (`oversight_only`, `dead_letter`) regardless of `target_engine`; `owns_engine(None)` reflects an engine-less seat. `tests/test_gate_oversight_and_approval.py` |
+| Gate `oversight_only` flag parsed but never enforced | an oversight role with no `target_engine` could still reach `EXECUTING` | `2c9d606`, `64928da` — `evaluate_gate()` hard-denies oversight-only seats (`oversight_only`, `dead_letter`) regardless of `target_engine`; `owns_engine(None)` reflects an engine-less seat; `Engine.submit` and `GovernedWorkflowManager.submit` both act on the refusal. `tests/test_gate_oversight_and_approval.py` |
 | `Engine.submit` did not forward `requires_approval` to the gate | the gate's `approval_requested` branch was unreachable on the `Engine.submit` path | `2c9d606` — `Engine.submit` now forwards `requires_approval`; both submission paths agree on the gate's verdict. `tests/test_gate_oversight_and_approval.py` |
 
 ### Tier 3 — NOT PROVEN

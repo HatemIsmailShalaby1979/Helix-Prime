@@ -1,7 +1,8 @@
 # 4. Security Model
 
 Security is enforced in code and verified by the release security gate
-(`release.security_gate.run_security_gate()` → `all_ok=True`).
+(`release.security_gate.run_security_gate()` → `all_ok=True`; re-verified
+2026-09-29, all six checks passing).
 
 ## Checks (all passing)
 | Check | Result | Notes |

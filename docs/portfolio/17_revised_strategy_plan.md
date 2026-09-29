@@ -1,6 +1,17 @@
 # 17. Revised Strategy Plan — Two Tracks, Not One Founder Bet
 
-**Supersedes:** the founder-bootstrap framing in `16_market_research_strategy_roadmap.md`.
+> **Verified 2026-09-29.** The figures this plan leans on were re-checked against the
+> repositories they describe, rather than taken on trust: **helix-education 447 tests**
+> (its own README status table), **L&D Command Center 730 tests / 93.62% coverage**
+> (`LD_Command_Center/AGENT_LOG.md:590` — "730 passed / 7 deselected. Coverage 93.62%"),
+> with a `v1.0.0` tag present on the remote and a packaged `dist/ldcc.exe` build. Both
+> hold.
+>
+> One dangling reference: **`SURVIVAL_PLAN.md` exists nowhere in this workspace.** It is
+> an external planning document, not a file in any of these repositories — read it as
+> "the job-search plan", not as a path you can open.
+>
+> **Supersedes:** the founder-bootstrap framing in `16_market_research_strategy_roadmap.md`.
 **Core correction:** you are not a solo founder deciding between bootstrap/seed/employment.
 You are an employed engineer (ByteDance/TikTok LIVE) running an active 60-day job search
 (Project Phoenix) with two shipped portfolio assets — Helix ecosystem and L&D Command Center

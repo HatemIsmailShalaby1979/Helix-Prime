@@ -1,9 +1,23 @@
 # 15. Verified Test Results
 
-> **[SUPERSEDED — HISTORICAL SNAPSHOT]** All numbers below come from a clean
-> run on **2026-08-29** and record that day's state. The current suite is
-> **621 collected / 621 passed / 0 failed** (recounted 2026-09-12). Keep this
-> file for the audit trail; do not compare current runs against it.
+> **[HISTORICAL SNAPSHOT]** Everything below is a clean run on **2026-08-29** and
+> records that day's state — **445 tests across 26 modules**. Keep this file for the
+> audit trail; do not compare current runs against it.
+
+## Current state (measured 2026-09-29)
+
+| Check | Result |
+|---|---|
+| Full suite | **1,897 passed / 0 failed**, 19 deselected as a quarantined UI tier |
+| Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** |
+| CI | **green on all 17 steps** — run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876) |
+| `ruff check` (the 17 CI paths) / `ruff format --check .` | 0 findings / 429 files already formatted |
+| `governance_check` | `governance=PASS` |
+
+The suite has grown from 445 (2026-08-29) to 621 (2026-09-12) to 1,897. The
+per-module table below is the 445 snapshot and is deliberately left as written.
+
+---
 
 All numbers below are from a clean run on 2026-08-29. Reproduce with the commands shown.
 

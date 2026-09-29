@@ -6,6 +6,13 @@ AI governance and agent orchestration, evaluates open-core/licensing business mo
 infrastructure founder, and produces a sequenced, evidence-gated sprint plan plus a
 career/financial roadmap.
 
+> **Superseded in part by [`17_revised_strategy_plan.md`](17_revised_strategy_plan.md).** That
+> document replaces this one's founder-bootstrap framing (§7's paths, the financial scenario
+> table, and the MRR gates) with a two-track plan built around an active job search. The market
+> research in §1–§6 is retained as narrative context, not as a forecast — its figures are dated
+> **2026-08-29** and were not re-measured in this pass. §10 ("What this plan explicitly does NOT
+> claim") carries forward unchanged and is the reason this file is kept.
+
 > Compare with [`12_roadmap.md`](12_roadmap.md) (in-repo product roadmap) and
 > [`11_known_limitations.md`](11_known_limitations.md) (honest boundaries). This document adds the
 > external market and commercial layer on top of what is already demonstrated in this repository.
@@ -132,7 +139,7 @@ Every credible 2025–2026 source converges on the same bottleneck:
 
 The market is explicitly asking for **the governed, read-only-first, human-approved operating
 layer** — which is precisely what this repository demonstrates end-to-end (see
-[`01_architecture_overview.md`](01_architecture_overview.md) and the 621-test baseline in
+[`01_architecture_overview.md`](01_architecture_overview.md) and the **1,897-test** suite in
 [`15_verified_test_results.md`](15_verified_test_results.md)). Big-tech platforms will own the
 general-purpose agent runtime (CB Insights); independents win by solving **accountability that
 cuts across platforms** — a neutral governance/orchestration substrate with an immutable
@@ -286,7 +293,7 @@ leverage**. No branch is "failure"; each is a deliberate, evidenced choice.
 
 ### Path C — Portfolio-as-leverage (employment/senior role)
 - **Use case:** if a multi-year solo build is not the right risk profile yet.
-- The 15-document portfolio (621 tests, `governance=PASS`, security `all_ok=True`, published
+- The 15-document portfolio (1,897 tests, `governance=PASS`, security `all_ok=True`, published
   demo) is direct, verifiable evidence for **AI governance / agent-infrastructure leadership**
   roles: CTO/Staff-IC at agent platforms, AI-governance product owner at TRiSM vendors
   (OneTrust, Credo AI, Fiddler), or "head of AI governance" at a regulated enterprise.

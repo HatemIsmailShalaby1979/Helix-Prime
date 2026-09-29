@@ -21,26 +21,44 @@ been demonstrated; unfinished items are listed separately in
   minimum data, tenant isolation, retention, rollback, and an evidence pack.
 - A first business capability pack (small restaurant) that **reuses the same core** and
   starts read-only with synthetic data.
+- A second capability pack (**sports academy**, built for Scoach Academy Hub) reusing the
+  same core, with its own ontology, roles, KPIs and a read-only phase behind SOD approval.
+- A governed FastAPI spine (**`helix-api`**, `server/`) as the canonical entry point:
+  loopback-bound, auth-protected, with a kill switch and authenticated metrics.
 - A synthetic demonstration running both a call-centre tenant and a restaurant tenant in
   **one governed memory** with tenant isolation and an intact audit chain.
 
 ## Verification summary (reproducible)
 
-> **Currency note, 2026-09-29.** Every figure in this package is a dated snapshot
-> from **2026-09-12**, kept as the record of what was measured then. The suite has
-> grown since: as of 2026-09-29 it is **1,897 passed / 0 failed** (19 deselected as
-> a quarantined UI tier) at **86.91%** coverage over `server/` and `connectors/`,
-> and CI is green on all 17 steps. Where a count in this package and the root
-> `README.md` disagree, the README carries the current measurement and this package
-> carries the historical one. See `AGENTS.md` §21 for the CI repair.
+Measured **2026-09-29** on `main` (`4310c3f`). Every command below is reproducible; the
+dated earlier runs are kept as the audit trail in
+[`15_verified_test_results.md`](15_verified_test_results.md).
 
-- **Tests:** 621 passed (`pytest tests/ -q`; recounted 2026-09-12). See [`15_verified_test_results.md`](15_verified_test_results.md).
+- **Tests:** **1,897 passed / 0 failed**, 19 deselected as a quarantined UI tier
+  (`pytest tests/ -q -m "not smoke"`). The 445- and 621-test figures in this package are
+  dated snapshots (2026-08-29 and 2026-09-12) and are retained as history, not as current.
+- **Coverage:** **86.91%** over `server/` and `connectors/`, against an 80% floor.
+- **CI:** **green on all 17 steps** — run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876).
+  The pipeline had failed at step 5 on every push since 2026-09-20, so steps 6–17 had never
+  executed once; the repair is recorded in `AGENTS.md` §21.
+- **Lint / format / types / dependencies:** `ruff check` 0 findings on the CI path list;
+  `ruff format --check .` 429 files already formatted; mypy 0 issues; bandit clean;
+  pip-audit clean.
 - **Governance:** `python3 -m GOVERNANCE.governance_check check` → `governance=PASS`.
-- **Security:** `release.security_gate.run_security_gate()` → `all_ok=True` (0 secret findings, deny-by-default, redaction, audit integrity).
-- **Synthetic demo (clean setup):** `python3 demo/synthetic_demo.py` → exits 0, audit chain intact, 0 live-customer records, no external writes.
-- **Release gates:** `controlled_pilot` → `CONTROLLED_PILOT_READY`; `production` → `NOT_READY`.
+- **Security:** `release.security_gate.run_security_gate()` → `all_ok=True` — 0 secret
+  findings, canonical classification set, deny-by-default, redaction, typed malformed-output
+  handling, audit integrity.
+- **Synthetic demo (clean setup):** `python3 demo/synthetic_demo.py` → exits 0; 41 governed
+  records across two tenants; audit chain intact; 0 live-customer records; no external writes.
+- **Release gates** (re-run 2026-09-29, `write_evidence=False`, manifest untouched):
+  `app_pilot` → `CONTROLLED_PILOT_READY`; `controlled_pilot` → `CONTROLLED_PILOT_READY`;
+  `production_candidate` → `PRODUCTION_CANDIDATE`; `production` → `NOT_READY` (exit 1 — the
+  nine production-only gates are red by design and require external evidence).
 
 ## Documents in this package
+
+**Evidence documents (1–15)** — what is built and measured.
+
 1. [Architecture overview](01_architecture_overview.md)
 2. [Governance model](02_governance_model.md)
 3. [Workflow demonstration](03_workflow_demonstration.md)
@@ -56,6 +74,12 @@ been demonstrated; unfinished items are listed separately in
 13. [Five-minute demo script](13_five_minute_demo_script.md)
 14. [Technical decision log](14_technical_decision_log.md)
 15. [Verified test results](15_verified_test_results.md)
+
+**Strategy documents (16–17)** — external and commercial planning, not evidence about the
+code. Both are dated and neither is a claim about this repository's state.
+
+16. [Market research, strategic sprint plan & career/financial roadmap](16_market_research_strategy_roadmap.md) — prepared 2026-08-29; superseded in part by 17
+17. [Revised strategy plan — two tracks, not one founder bet](17_revised_strategy_plan.md) — supersedes 16's founder-bootstrap framing
 
 ## Status
 - **Pilot package ready:** TRUE

@@ -423,6 +423,44 @@ def test_valid_input_output_personnel():
     assert res.data_classification == "personnel_sensitive"
 
 
+def test_personnel_adapter_wires_real_pipeline_analytics():
+    """Adapter populates PipelineManager before analytics; no hardcoded echo.
+
+    Before this fix the adapter called get_pipeline_analytics() on an empty manager
+    (all zeros), then hardcoded pipeline_status="active" and workforce_headcount from
+    the request input; the raw candidate dict was passed to add_candidate and failed
+    silently, so nothing was ever populated (KNOWN_ISSUES.md issue 3, Personnel row).
+    After the fix the manager is populated from real Candidate/JobPosting objects
+    first, and metrics carry the engine's computed totals.
+    """
+    from engines.personnel.adapter import adapt
+
+    res = adapt(
+        {
+            "candidate": {"name": "Alice", "role": "Agent", "skills": ["CS", "Sales"]},
+            "workforce": {"headcount": 10, "open_positions": 5},
+        },
+        "t",
+        "c",
+        "corr_pers_real",
+        None,
+        "sami",
+        is_sample=False,
+    )
+    assert res.error is None
+    metrics = res.metrics
+    # The previously hardcoded-from-input field must be gone.
+    assert "workforce_headcount" not in metrics
+    # Real computed totals must reflect the single added candidate + job posting
+    # (pre-fix these were 0 because the manager was never populated).
+    assert metrics["total_candidates"] == 1
+    assert metrics["total_job_postings"] == 1
+    assert metrics["status_distribution"] == {"applied": 1}
+    assert metrics["pipeline_status"] == "active"  # derived, not the old constant
+    # Real job-posting detail is surfaced.
+    assert "job_posting_status" in metrics
+
+
 def test_valid_input_output_crm():
     from engines.crm.adapter import adapt
 

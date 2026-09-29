@@ -833,6 +833,58 @@ class Engine:
                 or request.input_payload.get("target_engine"),
                 requires_approval=request.requires_approval,
             )
+            if not gate_decision.allowed:
+                # Hard deny (unknown role, forbidden classification, engine outside
+                # owned_engines, or an oversight-only seat). Checked before the
+                # approval branch, because a hard deny carries
+                # requires_human_approval=False and inspecting only that flag let a
+                # refused task fall through to EXECUTING. Isolate it — failed, then
+                # dead-letter — exactly as GovernedWorkflowManager.submit does, so
+                # both submission paths treat a refusal identically. The gate's own
+                # reason_code is not a valid AgentError code (contracts.task
+                # constrains that set), so it is carried in the event/log payload
+                # and the error uses the engine's governance-denial code.
+                workflow.error = AgentError(
+                    error_id=f"err_{workflow.workflow_id}",
+                    correlation_id=request.correlation.correlation_id,
+                    code="policy_denied",
+                    message=gate_decision.reason,
+                    timestamp=_now_iso(),
+                )
+                workflow.transition(WorkflowState.FAILED, request.requesting_actor)
+                self.store.update_workflow(workflow)
+                self._emit_event(
+                    workflow,
+                    "workflow_failed",
+                    request.requesting_actor,
+                    {"reason_code": gate_decision.reason_code, "reason": gate_decision.reason},
+                )
+                self._audit(
+                    "governance_denied", workflow, request.requesting_actor, decision="denied"
+                )
+                workflow.transition(WorkflowState.DEAD_LETTER, "system")
+                self.store.update_workflow(workflow)
+                self._emit_event(
+                    workflow,
+                    "workflow_dead_letter",
+                    "system",
+                    {"reason_code": gate_decision.reason_code, "reason": gate_decision.reason},
+                )
+                self._audit("workflow_dead_letter", workflow, "system", decision="denied")
+                self._log(
+                    "governance_denied",
+                    workflow,
+                    request.requesting_actor,
+                    result_status="denied",
+                    error_code=gate_decision.reason_code,
+                    payload={
+                        "reason": gate_decision.reason,
+                        "estimated_financial_cost": gate_decision.estimated_cost_usd,
+                        "limit_usd": gate_decision.limit_usd,
+                    },
+                )
+                return workflow
+
             if gate_decision.requires_human_approval:
                 workflow.requires_approval = True
                 workflow.transition(WorkflowState.AWAITING_APPROVAL, request.requesting_actor)

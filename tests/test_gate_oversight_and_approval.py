@@ -40,7 +40,13 @@ TS = "2026-09-29T00:00:00Z"
 # ── builders ───────────────────────────────────────────────────────────────
 
 
-def _engine_request(*, requires_approval: bool) -> TaskRequest:
+def _engine_request(
+    *,
+    requires_approval: bool,
+    actor: str = "sami",
+    role: str = "ops_gm",
+    capability: str = "wfm_forecast",
+) -> TaskRequest:
     """A canonical C1 request that reaches the C2 gate with no boundary breach."""
     return TaskRequest(
         request_id="req-engine-approval",
@@ -51,9 +57,9 @@ def _engine_request(*, requires_approval: bool) -> TaskRequest:
             client_id="Account Alpha",
             created_at=TS,
         ),
-        requesting_actor="sami",
-        owning_role_id="ops_gm",
-        capability="wfm_forecast",
+        requesting_actor=actor,
+        owning_role_id=role,
+        capability=capability,
         input_payload={},
         requires_approval=requires_approval,
         status="proposed",
@@ -147,6 +153,43 @@ def test_oversight_only_role_never_reaches_executing_without_a_target_engine(tmp
     )
     assert record.state == WorkflowState.DEAD_LETTER
     assert record.reason_code == "oversight_only"
+
+
+def test_oversight_only_submission_dead_letters_through_engine_submit(tmp_path):
+    """Issue 1 on the ``Engine.submit`` path.
+
+    The same oversight-only, no-``target_engine`` case, submitted directly through
+    ``Engine.submit``. The gate refuses it with ``requires_human_approval=False``;
+    ``Engine.submit`` must act on ``allowed=False`` and isolate the task instead of
+    falling through to ``EXECUTING``.
+    """
+    engine = Engine(
+        store=Store(db_path=str(tmp_path / "wf.db")),
+        audit_db_path=str(tmp_path / "audit.db"),
+        log_path=str(tmp_path / "logs.jsonl"),
+    )
+    workflow = engine.submit(
+        _engine_request(
+            requires_approval=False,
+            actor="andy",
+            role="compliance_quality_gm",
+            capability="policy_enforcement",
+        )
+    )
+
+    assert workflow.state != WorkflowState.EXECUTING
+    assert workflow.state == WorkflowState.DEAD_LETTER
+    assert workflow.error is not None
+    # AgentError.code is constrained by contracts.task, so the gate's specific
+    # reason_code is carried on the dead-letter event instead of the error code.
+    assert workflow.error.code == "policy_denied"
+    dead_letter_events = [
+        event
+        for event in engine.store.get_events(workflow.workflow_id)
+        if event.event_type == "workflow_dead_letter"
+    ]
+    assert dead_letter_events
+    assert dead_letter_events[-1].payload.get("reason_code") == "oversight_only"
 
 
 # ── issue 2 — requires_approval must be forwarded on both paths ────────────

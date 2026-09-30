@@ -6,7 +6,6 @@
 
 ![Status](https://img.shields.io/badge/status-pre--pilot-blue)
 ![CI](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/workflows/ci.yml/badge.svg)
-![Tests](https://img.shields.io/badge/tests-1897%20passed%20%2F%200%20failed-2ea043)
 ![Production](https://img.shields.io/badge/production-NOT__READY-red)
 ![Licence](https://img.shields.io/badge/licence-MIT-blue)
 ![Python](https://img.shields.io/badge/python-3.12%2B-3776ab)
@@ -174,23 +173,23 @@ shown at all.
 | Fail-closed gate: unknown role / unknown classification / forbidden classification / non-owned engine → `dead_letter` | enforced; 4 hard-deny branches | `control_plane/governance.py:972-1022`; `tests/test_governance_fail_closed.py` |
 | Gate boundaries → `awaiting_approval`: financial limit exceeded, confidence < `0.75`, explicit approval | 3 boundary branches | `control_plane/governance.py:1027-1065`; `MIN_AUTONOMY_CONFIDENCE` at `:64` |
 | Every governance decision is written to the hash-chained `audit_events` ledger before it runs | emit at submit | `control_plane/engine.py:839-840` |
-| Full test suite passes (repo CI, snapshot 2026-09-29) | **1,897 passed / 0 failed** — this session re-ran a claims-relevant subset (**122 passed / 0 failed**) and the full run did not terminate locally (blocked on `tests/integration` network/browser paths) | `README.md:131`; this session subset run |
-| Coverage floor (80%) met (repo CI, snapshot 2026-09-29) | **86.91%** — not re-measured this session (coverage run blocked with the full suite) | `README.md:132` |
-| `ruff check` clean on the 17 CI paths (this run) | **0 errors** (exit 0) | local run, 2026-09-29 |
-| `ruff format --check .` clean repo-wide (this run) | **429 files formatted** (exit 0) | local run, 2026-09-29 |
-| WFM demo returns an Erlang C answer through the gate, recorded in the audit trail | four-number input → answer | `helix_codex_app/integration/engine_bridge.py:529-587`; `helix_codex_app/modules/ops/router.py:207` |
+| Full test suite passes | **1,951 tests, 0 failures observed** (local full-suite evidence, 2026-09-30: 1,949 passed; the 2 non-passes were the local safe-delete guard on file-unlink tests, both green on isolated re-run with the documented override; CI re-baselines on the next push) | `pytest tests/ -q -m "not smoke"`; `AGENTS.md` §23.4 |
+| Coverage floor (80%) met | **86.91%** (CI run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876), 2026-09-29; re-baselines on the next push) | `.github/workflows/ci.yml` test step |
+| `ruff check` clean on the 17 CI paths | **0 errors** (exit 0) | local run, 2026-09-30 |
+| `ruff format --check .` clean repo-wide | **433 files formatted** (exit 0) | local run, 2026-09-30 |
+| WFM demo returns an Erlang C answer through the gate, recorded in the audit trail | four-number input → answer; demonstrated end to end on a real server 2026-09-30 (`POST /app/api/ops/demo/wfm` → 201, `GET /app/ops/audit/{correlation_id}` → 200) | `helix_codex_app/integration/engine_bridge.py:529-587`; `helix_codex_app/modules/ops/router.py:207`; `docs/verification/2026-09-30.md` |
 | `data_mode: "simulated_realistic"` and `is_sample: true` are server-owned; a request cannot set them | injected at bridge; extra keys refused `400` | `engine_bridge.py:586-587`, `:538-539`; `router.py:223-227` |
-| Least-privilege demo identity: one permission (`ops.view`), not in the engine catalog | design enforced | `README.md:58-63`; `helix_codex_app/security/permissions.py` |
+| Least-privilege demo identity: one permission (`ops.view`), not in the engine catalog | design enforced | "The governed public demo" section above; `helix_codex_app/security/permissions.py` |
 
 ### Tier 2 — MEASURED LIMITS
 
 | Limit | Measured | Source |
 | --- | --- | --- |
 | Rate limiting trusts a header set by an external Worker | `x-helix-client-ip` trust fails if app exposed without the Worker | `helix_codex_app/security/route_limits.py:124`; `client_ip.py:24-28` |
-| Cockpit UI tier quarantined | 19 tests deselected | `README.md:131`; `AGENTS.md:3454` |
+| Cockpit UI tier quarantined | 19 tests deselected | `tests/integration/ui/cockpit/` conftest (quarantined tier); `AGENTS.md` §19 |
 | `dispatch.py` agent dispatch is a stub returning fake output | `Called …` / `Task submitted` placeholders | `app/command_center/agents/dispatch.py:84,187,204,217,262` |
 | Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM/RTA math, not the engines' accuracy | `README.md:132` |
-| CI container steps (16–17) not reproducible locally | Docker not running here; rest on remote green run | `AGENTS.md:5152-5153` |
+| CI container steps (16–17) not reproducible locally | Docker not running here; rest on remote green run | `AGENTS.md` §21 |
 
 #### Fixed since this table was written
 
@@ -213,7 +212,7 @@ is kept rather than deleted.
 | Not proven | Why |
 | --- | --- |
 | Real customer traffic | None exists. Demo data is `simulated_realistic` by design (`engine_bridge.py:53,564,586-587`). |
-| Production deployment | `production` gate `NOT_READY`; nine production-only gates red by construction | `AGENTS.md:1451-1452`, `:1516-1519` |
+| Production deployment | `production` gate `NOT_READY`; nine production-only gates red by construction | `AGENTS.md` §18 |
 | External security audit / certified data isolation | None. No signed installer, no certified isolation evidence. |
 | Multi-tenant isolation under real load | No independent tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant). |
 | Engine accuracy at real corpus scale | Not measured; the engines are not independently validated for accuracy at real corpus scale. |
@@ -266,25 +265,18 @@ helix-cockpit                            # binds 127.0.0.1:8501
 
 Ollama is optional; without it the system runs in deterministic offline mode and reports the limitation clearly.
 
-### What was verified for this documentation pass (2026-09-29)
+### Verification records
 
-Run on the `docs/claims-standard-2026-09-29` branch with the repo's managed
-`.venv-py312` (Python 3.12.10):
+What was verified, when, on which machine, with what result — including the
+claims that could not be re-verified locally and why — is kept as dated
+records under [`docs/verification/`](docs/verification/):
 
-- **Test suite (claims-relevant subset, this session):** `pytest tests/test_governance*.py tests/test_c4_engines.py tests/test_c2_control_plane.py tests/test_c2_preflight_regression.py tests/test_governed_memory.py -q` → **122 passed / 0 failed** in 102s (log below). The **full** suite (`pytest tests/ -q -m "not smoke" --cov=server --cov=connectors --cov-fail-under=80`) was attempted but did **not terminate** within ~55 min and was killed; it is blocked on `tests/integration` (UI/browser + external services: Supabase/Ollama) that cannot resolve in this sandbox. The repo's own CI reports **1,897 passed / 0 failed**, coverage **86.91%** (snapshot 2026-09-29, `README.md:131-132`) — that is the authoritative green and was not independently reproduced here.
-- **`ruff check`** on the 17 CI paths → exit 0 (0 errors).
-- **`ruff format --check .`** → 429 files already formatted (exit 0).
-
-**Not run in this pass (stated, not guessed):**
-- The full API/demo boot was not started here. It requires installing the package and,
-  for any non-demo auth, a Supabase project; the passwordless demo needs
-  `HELIX_APP_ENABLE_PASSWORDLESS_DEMO=true` and must never be enabled on a deployed
-  instance.
-- The two CI container steps (16–17, `docker compose` build + readiness probe) are not
-  reproducible on this machine (Docker is not running); they rest on the remote green
-  run `36497766876` (`AGENTS.md:5152-5153`).
-- `mypy` was not executed in this pass (it is a CI step; its result is the CI run's, not
-  re-measured here).
+- [`docs/verification/2026-09-30.md`](docs/verification/2026-09-30.md) — the
+  Erlang C engine rewrite (ERLANGC-1): the deviation tables before and after,
+  the reference method, the pinned self-test anchors, the end-to-end demo run
+  with audit-trail readback, and the test runs.
+- [`docs/verification/2026-09-29.md`](docs/verification/2026-09-29.md) — the
+  documentation claims pass.
 
 A reviewer without the install or credentials can still run the test suite and
 `ruff`, and can read the audit-ledger design in `control_plane/engine.py` and

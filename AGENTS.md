@@ -5442,3 +5442,21 @@ recursion already in `telemetry_simulator.py:_erlang_c`.
   not done unbidden.
 - Fresh local measurements feeding step 5's rows: `ruff check` on the 17 CI
   paths exit 0; `ruff format --check .` → 433 files formatted (both 2026-09-30).
+
+### 23.5 Step 5 — session-log voice removed; verification narrative moved (this commit)
+
+- Static "Tests 1897" shields.io badge removed; the live CI badge
+  (`actions/workflows/ci.yml/badge.svg`) remains the only test-status badge,
+  per the README's own rule that a figure in the file is never current.
+- Session-log voice stripped from the claims tables: "this session re-ran…",
+  the "(this run)" phrasing, and the self-line-references (`README.md:131`,
+  `:132`, `:58-63`) are gone; the "What was verified for this documentation
+  pass (2026-09-29)" narrative moved verbatim to
+  `docs/verification/2026-09-29.md` and the README now links a
+  `docs/verification/` records block instead.
+- Drifting `AGENTS.md:NNNN` line pointers replaced with section references
+  (§18, §19, §21) that survive ledger edits.
+- The two ruff rows re-measured today: 17 CI paths exit 0; 433 files
+  formatted. The coverage row stays cited to CI run `36497766876`
+  (re-baselines on the next push). The WFM-demo row now cites today's
+  end-to-end demonstration.

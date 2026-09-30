@@ -137,9 +137,9 @@ This section keeps 100% of the transparency from earlier revisions. It is last b
 
 | Check | Result | Measured |
 |---|---|---|
-| CI, end to end | **All 17 steps pass** — run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876) on `839507e` | 2026-09-29 |
-| Full test suite | **1,951 tests, 0 failures observed.** The 2026-09-30 full run passed 1,949; the 2 non-passes were the local safe-delete guard blocking file-unlink tests (environmental, not repo failures), and both pass green on isolated re-run with the documented `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` override. CI (Linux, no such guard) re-baselines on the next push | 2026-09-30 |
-| Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** | 2026-09-29 |
+| CI, end to end | **All 17 steps pass** — run [`36777053113`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36777053113) on `c589aa2` | 2026-09-30 |
+| Full test suite | **1,951 tests, 0 failures, 19 deselected** (CI run [`36777053113`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36777053113), 2026-09-30). A 2026-09-30 local full run passed 1,949; the 2 non-passes were the local safe-delete guard blocking file-unlink tests (environmental, not repo failures), both green on isolated re-run with the documented `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` override. CI (Linux, no such guard) passes the full 1,951 | 2026-09-30 |
+| Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** (CI run [`36777053113`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36777053113), 2026-09-30) | 2026-09-30 |
 | CI lint (`ruff check`, the 17 paths CI names) | **0 errors** (exit 0) | 2026-09-29 |
 | CI format (`ruff format --check .`, repo-wide) | **Clean** — 431 files already formatted | 2026-09-30 |
 | Governance checker (`GOVERNANCE/governance_check.py`) | **PASS** (exit 0) | 2026-09-29 |
@@ -177,8 +177,8 @@ shown at all.
 | Fail-closed gate: unknown role / unknown classification / forbidden classification / non-owned engine → `dead_letter` | enforced; 4 hard-deny branches | `control_plane/governance.py:972-1022`; `tests/test_governance_fail_closed.py` |
 | Gate boundaries → `awaiting_approval`: financial limit exceeded, confidence < `0.75`, explicit approval | 3 boundary branches | `control_plane/governance.py:1027-1065`; `MIN_AUTONOMY_CONFIDENCE` at `:64` |
 | Every governance decision is written to the hash-chained `audit_events` ledger before it runs | emit at submit | `control_plane/engine.py:839-840` |
-| Full test suite passes | **1,951 tests, 0 failures observed** (local full-suite evidence, 2026-09-30: 1,949 passed; the 2 non-passes were the local safe-delete guard on file-unlink tests, both green on isolated re-run with the documented override; CI re-baselines on the next push) | `pytest tests/ -q -m "not smoke"`; `AGENTS.md` §23.4 |
-| Coverage floor (80%) met | **86.91%** (CI run [`36497766876`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36497766876), 2026-09-29; re-baselines on the next push) | `.github/workflows/ci.yml` test step |
+| Full test suite passes | **1,951 tests, 0 failures, 19 deselected** (CI run [`36777053113`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36777053113), 2026-09-30; a 2026-09-30 local run passed 1,949, the 2 gaps being the local safe-delete guard on file-unlink tests, both green on isolated re-run with the documented `CODEBUDDY_SAFE_DELETE_BULK_THRESHOLD` override) | `pytest tests/ -q -m "not smoke"`; `AGENTS.md` §23.4 |
+| Coverage floor (80%) met | **86.91%** (CI run [`36777053113`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36777053113), 2026-09-30) | `.github/workflows/ci.yml` test step |
 | `ruff check` clean on the 17 CI paths | **0 errors** (exit 0) | local run, 2026-09-30 |
 | `ruff format --check .` clean repo-wide | **433 files formatted** (exit 0) | local run, 2026-09-30 |
 | WFM demo returns an Erlang C answer through the gate, recorded in the audit trail | four-number input → answer; demonstrated end to end on a real server 2026-09-30 (`POST /app/api/ops/demo/wfm` → 201, `GET /app/ops/audit/{correlation_id}` → 200) | `helix_codex_app/integration/engine_bridge.py:529-587`; `helix_codex_app/modules/ops/router.py:207`; `docs/verification/2026-09-30.md` |

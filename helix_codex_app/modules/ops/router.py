@@ -51,7 +51,7 @@ WFM_DEMO_FIELD_HELP: dict[str, dict[str, Any]] = {
         "label": "Service-level target",
         "default": 0.8,
         "unit": "fraction",
-        "hint": "The share of callers you want answered immediately. 0.8 means 80%.",
+        "hint": "The share of callers you want answered within 20 seconds. 0.8 means 80%.",
     },
     "average_calls_per_period": {
         "label": "Calls per day (your own history)",

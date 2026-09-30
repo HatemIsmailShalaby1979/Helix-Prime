@@ -378,6 +378,13 @@ def adapt(
         if "optimal_agents" not in metrics and "required_staffing" not in metrics:
             # Try to infer from engine's other attributes
             metrics.setdefault("optimal_agents", metrics.get("required_staffing", 0))
+        # The answer threshold the service level was computed against is part of
+        # the result's meaning; report it so a reader can interpret the figure.
+        metrics["target_answer_time_seconds"] = engine.params.target_answer_time
+        # The wall-clock measurement stays on the result object but is dropped
+        # from the reported metrics: a timing is not a function of the four
+        # inputs, and same-input runs must produce identical reported records.
+        metrics.pop("calculation_time", None)
         # Add calculated vs recommended distinction: metrics are calculated, recommendations are separate
         recommendations = []
         if metrics.get("optimal_agents") is not None:

@@ -5307,3 +5307,74 @@ computed results — see §22.4.)*
 - **Verification (this sandbox):** `ruff check` + `ruff format --check` clean on the
   changed files; `test_c4_engines.py` 36/0; consumer set 72/0; `test_c5_vertical_slice.py`
   27/0 (3 runs). The full 1,897-test suite was **not** re-run here.
+
+---
+
+## 23. Erlang C engine rewrite and README claims alignment (ERLANGC-1) — IN PROGRESS
+
+> **Status (opened 2026-09-30).** Owner brief: verify the WFM Erlang C engine
+> against the textbook formula, fix it, pin it with tests, and make the README
+> claims match reality. One commit per numbered step; the step table with SHAs
+> lands in §23.7 when the task closes.
+
+### 23.1 Step 1 — the deviation verified (no commit; evidence only)
+
+The pre-rewrite `engines/wfm/src/erlang_c.py` was driven through its own API
+against three independent textbook formulations that agree with each other to
+2.2e-16: the Erlang B forward recursion, the factorial closed form
+(wfm-forecasting-calculator `shared_utils/erlang_c.py`), and the stable 1/B
+recursion already in `telemetry_simulator.py:_erlang_c`.
+
+- The reference repo's self-test anchors reproduced exactly by the independent
+  computation: C(10, 8.5) = 0.5299; SL(12, 8.5, t=20 s, AHT=180 s) = 86.70%;
+  ASA(12, 8.5, 180 s) = 10.09 s; occupancy(8.5, 12) = 70.83%;
+  required_agents(100 calls, 180 s AHT, 30 min, 80/20) = 14.
+- Deviation of the shipped engine (probability of waiting): (10, 8.5) 0.5426 vs
+  0.5299; (12, 8.5) 0.5891 vs 0.1962; (50, 45) 0.7627 vs 0.3639; (100, 80)
+  0.7692 vs 0.0196 (~39x); worst absolute deviation 0.8112 at (200, 170).
+- ASA off by 21.0-26.3 s across the sampled pairs; SL off by 5.5-10.3 pp.
+- Demo-shaped scenario (50 calls/hr, AHT 5 min, target 0.80): the old engine
+  answered **5 agents** on the strength of a fake SL of 93.29% — its formula
+  `exp(-rho*AHT)` has no Erlang C term and no answer threshold. The textbook
+  answer for 80-in-20 is **7 agents**: understaffed by 2 of 7 (29%).
+- The factorial closed form itself overflows at N=200 — the reason the fix
+  uses the recursion. Full tables: `docs/verification/2026-09-30.md`.
+
+### 23.2 Step 2 — engine replaced with the textbook formulation (this commit)
+
+`engines/wfm/src/erlang_c.py` rewritten:
+
+- Erlang C on the stable Erlang B forward recursion (`B(0)=1`;
+  `B(n)=A*B(n-1)/(n+A*B(n-1))`; `C = N*B/(N-A*(1-B))`) — O(N), no factorials,
+  no overflow at large N. Provenance (wfm-forecasting-calculator
+  `shared_utils/erlang_c.py`) cited in the module docstring; its self-test
+  values pinned in `tests/test_wfm_erlang_c.py` (step 3).
+- Explicit unstable-queue boundary: A >= N means Pw = 1.0, ASA = inf, SL = 0.0.
+- Service level now has a documented answer threshold:
+  `ErlangCParameters.target_answer_time` (seconds, default 20 — the classic
+  80/20 rule), `SL(t) = 1 - C*exp(-(N-A)*t/AHT)`. The adapter reports
+  `target_answer_time_seconds` in the metrics, so the demo names the threshold
+  its figure was computed against instead of disclaiming one.
+- ASA corrected to `C*AHT/(N-A)`; the old form (`rho*AHT/(N*(1-rho))`) omitted
+  the Erlang C factor entirely.
+- Honest field semantics: `ErlangCResult.traffic_intensity` is the offered load
+  A in Erlangs (was mislabelled per-agent utilisation), `utilization` is A/N;
+  the cockpit label gains "(Erlangs)".
+- Removed, by design: the fake `confidence_interval` (flat `0.05*agents` band,
+  no statistical content), the never-read `confidence_level` parameter, the
+  global `warnings.filterwarnings("ignore")` import side effect, and the
+  mojibake docstring. `calculation_time` is now measured on the result object
+  and excluded from reported metrics (a timing is not a function of the four
+  inputs, and same-input demo runs must produce identical records — pinned by
+  a test).
+- Demo screen (`wfm_demo_result.html`, `ops/router.py` hint): the result names
+  the 20-second threshold; the dead "Agent range around that figure" block is
+  gone; the screen tests updated to the new honest wording
+  (`test_the_service_level_names_its_answer_threshold`).
+- Verification (this sandbox): fixed engine vs the independent reference —
+  worst deviation 0.00e+00 across all 12 reference pairs; ASA and SL exact;
+  N=200/2000/5000 stable; the demo scenario now answers 7 agents (Pw 0.1598,
+  SL 86.77% within 20 s, ASA 16.9 s, occupancy 59.5%).
+  `test_c4_engines.py` 36/0; `test_wfm_demo_governed_path.py` 47/0;
+  `test_wfm_demo_screen.py` 23/0; `ruff check` + `ruff format --check` clean
+  on all changed files.

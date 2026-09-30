@@ -83,20 +83,6 @@
         <dd class="wfm-demo__absent">not reported</dd>
         {% endif %}
       </div>
-      <div class="wfm-demo__metric">
-        <dt>Agent range around that figure</dt>
-        {% if report.metrics.confidence_interval is defined %}
-        {#- A tuple, so it is shown as the range it is rather than as a Python
-            repr (Jinja would print "(1.9, 2.1)"). The engine builds it as a flat
-            5% band either side of the calculated optimum, so it is labelled a
-            range and NOT a confidence interval: no sampling error or probability
-            is computed, and naming it "confidence" would overclaim. -#}
-        <dd>{{ "%.1f"|format(report.metrics.confidence_interval[0]) }}
-            – {{ "%.1f"|format(report.metrics.confidence_interval[1]) }} agents</dd>
-        {% else %}
-        <dd class="wfm-demo__absent">not reported</dd>
-        {% endif %}
-      </div>
     </dl>
     {% if inputs is defined and inputs.service_level_target is defined %}
     <p class="wfm-demo__note">
@@ -104,10 +90,16 @@
       {{ "%.0f"|format(inputs.service_level_target * 100) }}%, an arrival rate of
       {{ inputs.arrival_rate }} calls per hour, and an average handling time of
       {{ inputs.average_handling_time }} minutes per call. Handling time is the
-      talk-plus-wrap length of a call, not a speed-of-answer target — the engine
-      is given no waiting-time threshold, so it reports the service level and
-      the average speed of answer it derived above rather than a share answered
-      within some deadline.
+      talk-plus-wrap length of a call, not a speed-of-answer target.
+      {% if report.metrics.target_answer_time_seconds is defined %}
+      The service level is the share of calls answered within a
+      {{ "%.0f"|format(report.metrics.target_answer_time_seconds) }}-second
+      answer threshold — the engine's documented default, the classic 80/20
+      rule; the demo form does not offer a different one — and the staffing
+      figure is the smallest agent count that reaches the target within it.
+      {% else %}
+      The service level is reported without an answer threshold.
+      {% endif %}
     </p>
     {% endif %}
     {% elif not report.gated and not report.error %}

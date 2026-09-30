@@ -159,7 +159,7 @@ def test_the_demo_runs_the_governed_path_and_reports_what_the_engine_produced(cl
         "probability_waiting",
         "average_speed_of_answer",
         "service_level_achieved",
-        "confidence_interval",
+        "target_answer_time_seconds",
     ):
         assert metric in report["metrics"], f"{metric} missing from the reported metrics"
     assert report["metrics"]["optimal_agents"] > 0

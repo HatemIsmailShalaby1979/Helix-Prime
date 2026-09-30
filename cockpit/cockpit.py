@@ -317,7 +317,7 @@ def call_wfm(client):
                 "Value": round(result.service_level_achieved, 4),
             },
             {
-                "Parameter": "Traffic Intensity",
+                "Parameter": "Traffic Intensity (Erlangs)",
                 "Value": round(result.traffic_intensity, 3),
             },
             {"Parameter": "Utilization", "Value": round(result.utilization, 4)},

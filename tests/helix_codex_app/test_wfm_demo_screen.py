@@ -458,36 +458,31 @@ def test_the_run_is_labelled_sample_data_and_names_its_own_ids(client, ctx, monk
     assert "live" not in html.lower()
 
 
-def test_the_service_level_is_never_described_as_a_deadline(client, ctx):
-    """The engine is given no waiting-time threshold, so the screen must not imply one.
+def test_the_service_level_names_its_answer_threshold(client, ctx):
+    """The engine computes the service level against a documented threshold.
 
-    The derived service level is the share answered *without waiting*, and the
-    submitted target is a fraction the caller set. Reading either as "answered
-    within X seconds" would be a claim the engine never made, and it is the
-    single most likely misreading of a staffing forecast. The screen therefore
-    carries the correction in full, and this asserts the correction is what is
-    there — the sentence is the deliverable, not the absence of a word.
+    The engine's answer threshold defaults to 20 seconds — the classic 80/20
+    rule — and the run reports the value it actually used next to the figure
+    (`target_answer_time_seconds` in the metrics). Reading the service level
+    as "answered immediately" would now be the misreading, so the screen names
+    the threshold in full, and the form hint says the same thing where the
+    number is first set.
     """
     html = _run(client, ctx, ctx.demo, htmx=True).text
     prose = _prose(html)
     assert "Handling time is the talk-plus-wrap length of a call" in prose
     assert "not a speed-of-answer target" in prose
-    assert "rather than a share answered" in prose
+    # The threshold the run actually used is named, not hardcoded prose: the
+    # metrics carry it, and the sentence renders it.
+    assert "answered within a 20-second answer threshold" in prose
     # The target is shown as the percentage a visitor set, not as a raw 0.8.
     assert "service-level target of 80%" in prose
-    # No affirmative deadline claim anywhere on the result.
-    for claim in ("answered within the", "within 20 seconds", "answer within"):
-        assert claim not in prose.lower()
 
     # The form hint matters as much as the result prose, and this is where the
     # misreading starts: the visitor sets 0.8 here, before any run has produced
-    # a single figure. The correction was carried on the result and left off
-    # this one line, so the result explained the number the form had already
-    # misdescribed. Same rule, both places the sentence can appear.
+    # a single figure. Same rule, both places the sentence can appear.
     hint = _hint_for("service_level_target")
-    assert "answered immediately" in hint
-    for claim in ("answered within the", "within 20 seconds", "answer within"):
-        assert claim not in hint.lower()
+    assert "answered within 20 seconds" in hint
 
 
 def test_the_numbers_are_shown_in_the_units_the_engine_returned(client, ctx, monkeypatch):
@@ -507,11 +502,11 @@ def test_the_numbers_are_shown_in_the_units_the_engine_returned(client, ctx, mon
     assert _dd(html, "Service level achieved") == f"{metrics['service_level_achieved'] * 100:.1f}%"
     assert _dd(html, "Probability of waiting") == f"{metrics['probability_waiting'] * 100:.1f}%"
     assert _dd(html, "Agents needed") == str(metrics["optimal_agents"])
-
-    # The band is two numbers read as a range, not a Python tuple repr.
-    low, high = metrics["confidence_interval"]
-    assert _dd(html, "Agent range around that figure") == f"{low:.1f} \u2013 {high:.1f} agents"
-    assert "(1.9, 2.1)" not in html
+    # The agent-range band the engine used to report alongside these was a flat
+    # ±5% of the optimum with no statistical content, and was removed with the
+    # engine rewrite; the screen shows the four figures the engine computes.
+    assert "Agent range around that figure" not in html
+    assert "confidence_interval" not in metrics
 
 
 def test_demo_entry_bootstraps_an_empty_database_without_a_password(ctx):

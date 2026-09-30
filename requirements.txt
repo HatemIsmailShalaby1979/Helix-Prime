@@ -37,7 +37,7 @@ PyYAML>=6.0,<7.0
 # Upper bounds are hard: pandas 3.x and numpy 2.x change dtype promotion rules,
 # which would silently change forecast and risk numbers.
 pandas>=2.0.0,<3.0.0
-numpy>=1.24.0,<2.0.0
+numpy>=1.24.0,<3.0.0
 scipy>=1.12.0,<2.0.0
 scikit-learn>=1.4.0,<2.0.0
 

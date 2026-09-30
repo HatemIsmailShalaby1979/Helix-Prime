@@ -5378,3 +5378,35 @@ recursion already in `telemetry_simulator.py:_erlang_c`.
   `test_c4_engines.py` 36/0; `test_wfm_demo_governed_path.py` 47/0;
   `test_wfm_demo_screen.py` 23/0; `ruff check` + `ruff format --check` clean
   on all changed files.
+
+### 23.3 Step 3 — reference tests pinned and wired into CI (this commit)
+
+`tests/test_wfm_erlang_c.py` (42 tests):
+
+- The ten reference pairs are asserted against an in-file independent Erlang B
+  recursion to 1e-12; three small-N pairs are cross-checked against the
+  factorial closed form, which is itself asserted to raise `OverflowError` at
+  (200, 170) where the recursion holds.
+- The five wfm-forecasting-calculator self-test anchors are pinned through the
+  engine API: C(10, 8.5) = 0.5299; SL(12, 8.5, 20 s, 180 s) = 86.70%;
+  ASA = 10.09 s; occupancy(8.5, 12) = 70.83%; required_agents = 14.
+- Boundaries: A >= N unstable (Pw 1, ASA inf, SL 0); the M/M/1 property
+  C(1, A) = A; zero load; N = 2000/5000 stability; invalid parameters
+  (including `target_answer_time <= 0` and `max_agents <= 0`); and the removed
+  `confidence_interval`/`confidence_level` asserted to stay removed.
+- Properties: Pw in [0, 1] and non-increasing in agents, SL non-decreasing in
+  agents (40-point sweeps at four loads); `optimize_agents` returns the
+  MINIMUM agent count meeting the target (N-1 fails); result field semantics;
+  same-input runs produce identical semantic metrics.
+- CI wiring: `.github/workflows/ci.yml` runs `pytest tests/ -q -m "not smoke"`;
+  the module is unmarked, so CI collects it with no workflow change. Verified
+  by collection: `pytest tests/ -q -m "not smoke" --collect-only` selects
+  1,951 (19 deselected) — 1,909 before this module (1,897 from the 2026-09-27
+  snapshot + 12 from the §22.4 batch) + 42 new.
+- End-to-end: a real uvicorn boot of `helix_codex_app` with the passwordless
+  demo fixture — `GET /app/auth/demo` 303, `POST /app/api/ops/demo/wfm` 201
+  (`state=closed`, executed), metrics `optimal_agents=3, Pw=0.15547,
+  ASA=0.5330 min, SL=0.8589 within 20 s` (matching the hand-computed textbook
+  values for A=1.25 Erlangs), then `GET /app/ops/audit/{correlation_id}` 200
+  with the correlation id and `wf_15598e74f768` on the recorded chain page.
+- Module run: `pytest tests/test_wfm_erlang_c.py -q` → 42 passed.

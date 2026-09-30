@@ -17,6 +17,7 @@ import logging
 import warnings
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -25,6 +26,44 @@ warnings.filterwarnings("ignore")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# Packaged config is the single source of truth for tunable scoring parameters.
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "risk_thresholds.yaml"
+
+
+def load_risk_config(path: "Path | None" = None) -> dict[str, Any]:
+    """Load tunable CX scoring config from ``config/risk_thresholds.yaml``.
+
+    The YAML is the single source of truth; the built-in ``_DEFAULT_CONFIG`` below is
+    only a safety net if PyYAML or the file is unavailable (e.g. a stripped
+    distribution), so the engine never raises on construction.
+
+    Returns a dict with ``kpi_weights``, ``kpi_thresholds`` and ``risk_bands``.
+    """
+    _DEFAULT_CONFIG: dict[str, Any] = {
+        "kpi_weights": {"csat": 0.3, "sla": 0.3, "fcr": 0.2, "aht": 0.2},
+        "kpi_thresholds": {
+            "csat": {"critical": 0.6, "high": 0.7, "medium": 0.8},
+            "sla": {"critical": 0.8, "high": 0.9, "medium": 0.95},
+            "fcr": {"critical": 0.7, "high": 0.8, "medium": 0.9},
+            "aht": {"critical": 0.3, "high": 0.5, "medium": 0.7},
+        },
+        "risk_bands": {"critical": 0.8, "high": 0.6, "medium": 0.4},
+    }
+    cfg_path = Path(path) if path is not None else DEFAULT_CONFIG_PATH
+    try:
+        import yaml
+
+        with open(cfg_path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+        merged = dict(_DEFAULT_CONFIG)
+        for key in ("kpi_weights", "kpi_thresholds", "risk_bands"):
+            if isinstance(data.get(key), dict):
+                merged[key] = data[key]
+        return merged
+    except Exception:
+        return dict(_DEFAULT_CONFIG)
 
 
 class RiskScoringResult:
@@ -44,31 +83,19 @@ class RiskScorer:
     Risk scoring engine for CX Churn Sentinel with 4-KPI analysis.
     """
 
-    def __init__(self, kpi_weights: dict[str, float] | None = None):
-        # Default KPI weights (can be customized)
-        self.kpi_weights = kpi_weights or {
-            "csat": 0.3,  # Customer Satisfaction Score
-            "sla": 0.3,  # Service Level Agreement compliance
-            "fcr": 0.2,  # First Contact Resolution
-            "aht": 0.2,  # Average Handle Time
-        }
-
-        # KPI thresholds for risk classification
-        self.kpi_thresholds = {
-            "csat": {"critical": 0.6, "high": 0.7, "medium": 0.8},
-            "sla": {"critical": 0.8, "high": 0.9, "medium": 0.95},
-            "fcr": {"critical": 0.7, "high": 0.8, "medium": 0.9},
-            # AHT arrives as a 0-1 fraction (higher = longer handle time = worse).
-            # `normalized_score` below is the inverted "goodness" (1 - fraction), so a
-            # lower goodness means higher risk. Band recalibrated for the corrected
-            # normalization; under the old `1 - value / 0.5` the band was compressed
-            # onto value in [0, 0.5] and was no longer valid once that divisor was removed.
-            "aht": {
-                "critical": 0.3,
-                "high": 0.5,
-                "medium": 0.7,
-            },
-        }
+    def __init__(
+        self,
+        kpi_weights: dict[str, float] | None = None,
+        kpi_thresholds: dict[str, dict[str, float]] | None = None,
+        risk_bands: dict[str, float] | None = None,
+    ):
+        # Tunable parameters load from config/risk_thresholds.yaml (the single source
+        # of truth). Explicit arguments override and are used by tests; this closes the
+        # earlier gap where the thresholds were hard-coded in this module.
+        cfg = load_risk_config()
+        self.kpi_weights = kpi_weights or cfg["kpi_weights"]
+        self.kpi_thresholds = kpi_thresholds or cfg["kpi_thresholds"]
+        self.risk_bands = risk_bands or cfg["risk_bands"]
 
     def calculate_kpi_score(self, kpi_data: dict[str, float]) -> dict[str, Any]:
         """
@@ -146,20 +173,13 @@ class RiskScorer:
         return total_score / total_weight if total_weight > 0 else 0.0
 
     def classify_risk_level(self, weighted_score: float) -> str:
-        """
-        Classify overall risk level based on weighted score.
-
-        Args:
-            weighted_score: Weighted risk score (0-1)
-
-        Returns:
-            Risk level classification
-        """
-        if weighted_score >= 0.8:
+        """Classify overall risk level from the configured ``risk_bands``."""
+        bands = self.risk_bands
+        if weighted_score >= bands.get("critical", 0.8):
             return "critical"
-        elif weighted_score >= 0.6:
+        elif weighted_score >= bands.get("high", 0.6):
             return "high"
-        elif weighted_score >= 0.4:
+        elif weighted_score >= bands.get("medium", 0.4):
             return "medium"
         else:
             return "low"
@@ -451,8 +471,17 @@ class RiskScorerEngine:
     Main risk scoring engine for CX Churn Sentinel.
     """
 
-    def __init__(self):
-        self.risk_scorer = RiskScorer()
+    def __init__(
+        self,
+        kpi_weights: dict[str, float] | None = None,
+        kpi_thresholds: dict[str, dict[str, float]] | None = None,
+        risk_bands: dict[str, float] | None = None,
+    ):
+        self.risk_scorer = RiskScorer(
+            kpi_weights=kpi_weights,
+            kpi_thresholds=kpi_thresholds,
+            risk_bands=risk_bands,
+        )
 
     def score_customers(self, customer_data: list[dict[str, Any]]) -> RiskScoringResult:
         """
@@ -520,17 +549,15 @@ class RiskScorerEngine:
 
 def create_risk_scorer(
     kpi_weights: dict[str, float] | None = None,
+    kpi_thresholds: dict[str, dict[str, float]] | None = None,
+    risk_bands: dict[str, float] | None = None,
 ) -> RiskScorerEngine:
-    """
-    Factory function to create risk scorer.
-
-    Args:
-        kpi_weights: Optional KPI weights
-
-    Returns:
-        RiskScorerEngine instance
-    """
-    return RiskScorerEngine()
+    """Factory: create a RiskScorerEngine with config-loaded (or overridden) params."""
+    return RiskScorerEngine(
+        kpi_weights=kpi_weights,
+        kpi_thresholds=kpi_thresholds,
+        risk_bands=risk_bands,
+    )
 
 
 if __name__ == "__main__":

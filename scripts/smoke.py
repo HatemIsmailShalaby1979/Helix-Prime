@@ -125,23 +125,12 @@ for rel in ["cockpit/cockpit.py", "cockpit/memory/cognitive_log.py"]:
     except Exception as e:
         log(f"COCKPIT ✗ {rel}: {e}")
 
-# 5) pytest quick run (capture)
-try:
-    import subprocess
-
-    r = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q"],
-        cwd=str(ROOT),
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    log("PYTEST STDOUT:\n" + r.stdout[:2000])
-    if r.stderr:
-        log("PYTEST STDERR:\n" + r.stderr[:2000])
-    log(f"PYTEST exit={r.returncode}")
-except Exception as e:
-    log(f"PYTEST run failed: {e}")
+# NOTE: a previous version ran a nested `pytest -q` here. That launched a whole-suite
+# run inside this subprocess, creating SQLite sidecars and cache in the long basetemp
+# and in the repo, and tripping the test-suite's file-locking / delete-guard artifact —
+# the flaky `test_c5_vertical_slice.py::test_existing_c0_c4_regression`. The nested run
+# was removed: this smoke command checks engine/agent/orchestrator/cockpit imports only,
+# which is its purpose.
 
 log(f"SUMMARY engines {ok_eng}/6 agents {agents_ok}/4")
 # exit code based on baseline green

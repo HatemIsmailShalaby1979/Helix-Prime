@@ -1,7 +1,10 @@
 # CX Churn Sentinel — risk thresholds & KPI weights
 # Single source of truth for tunable scoring parameters.
-# Loaded by callers and passed into create_risk_scorer(kpi_weights=...);
-# the engine never reads this file itself (Constitution 000: no hardcoded config).
+# Loaded by the engine itself (risk_scorer.load_risk_config) as the source of truth,
+# with a built-in fallback so it never raises; callers/tests may override via
+# create_risk_scorer(kpi_weights=..., kpi_thresholds=..., risk_bands=...).
+# This closes the earlier gap where risk_scorer.py hardcoded these values
+# (Constitution 000: no hardcoded config).
 
 kpi_weights:
   csat: 0.3   # Customer Satisfaction

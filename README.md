@@ -192,7 +192,7 @@ shown at all.
 | Rate limiting trusts a header set by an external Worker | `x-helix-client-ip` trust fails if app exposed without the Worker | `helix_codex_app/security/route_limits.py:124`; `client_ip.py:24-28` |
 | Cockpit UI tier quarantined | 19 tests deselected | `tests/integration/ui/cockpit/` conftest (quarantined tier); `AGENTS.md` §19 |
 | `dispatch.py` agent dispatch is a stub returning fake output | `Called …` / `Task submitted` placeholders | `app/command_center/agents/dispatch.py:84,187,204,217,231` |
-| Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM/RTA math, not the engines' accuracy | `README.md:132` |
+| Coverage floor measures execution, not result correctness | the suite now pins WFM's Erlang C to textbook reference values (`tests/test_wfm_erlang_c.py`); the other engines' result accuracy is still not validated against an external reference | `docs/verification/2026-09-30.md` |
 | CI container steps (16–17) not reproducible locally | Docker not running here; rest on remote green run | `AGENTS.md` §21 |
 
 #### Fixed since this table was written

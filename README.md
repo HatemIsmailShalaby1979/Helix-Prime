@@ -25,9 +25,10 @@ surface — so a decision is gated, recorded, and inspectable before it runs.
 
 > [!IMPORTANT]
 > **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-> live WFM demo, backed by a green CI and a large test suite — but one of six engines is
-> adapter scaffolding that reports a synthesized metric, not a computed result. Not
-> production-ready: nine production-only gates are red by design.
+> live WFM demo, backed by a green CI and a large test suite — all six engines now drive
+> a real computation end-to-end, and CX's risk thresholds load from
+> `config/risk_thresholds.yaml` rather than hardcoded values. Not production-ready: nine
+> production-only gates are red by design.
 
 The canonical artifact is **`helix-api`**, a governed FastAPI spine where identity,
 RBAC, approvals, the kill switch, metrics, and the audit chain are enforced. The
@@ -185,18 +186,17 @@ shown at all.
 
 | Limit | Measured | Source |
 | --- | --- | --- |
-| One of six engines returns synthesized / echoed metrics, not computed analytics | CX computes a real churn score but keeps its scoring thresholds hardcoded in `:57-66` (engine does not load `config/risk_thresholds.yaml`) — the AHT unit incoherence there was resolved in `fix/cx-aht-normalization`. (Personnel no longer scaffolds: `engines/personnel/adapter.py` now builds real `Candidate`/`JobPosting` objects via `add_candidate`/`create_job_posting`, calls `screen_candidates()` when the job carries real skills, then `get_pipeline_analytics()`, returning computed `total_candidates`/`total_job_postings`/`status_distribution` and a derived `pipeline_status`; the fabricated `workforce_headcount` echo is dropped; fixed in `fix/personnel-wire-real-pipeline`. CRM no longer scaffolds: `engines/crm/adapter.py` now maps `client`/`deal` into `Lead`/`Deal` via `add_lead`/`create_deal` and calls `get_sales_analytics()`, returning computed distribution/value fields instead of the `:311-318` echo; fixed in `fix/crm-wire-real-pipeline`. B2B no longer scaffolds: `engines/b2b/adapter.py` now calls `generate_sop()`/`generate_staffing_plan()` and maps their real output; fixed in `fix/b2b-wire-real-onboarding`.) | `engines/cx/src/risk_scorer.py:57-66` |
 | WFM "Erlang C" is a non-standard closed form; docstring corrupted | no factorial/series term at `:124`; non-Latin glyphs at `:8`; `confidence_interval` fixed `0.05*agents` (`:243`), `confidence_level` unused | `engines/wfm/src/erlang_c.py:8,40,124,243` |
 | Rate limiting trusts a header set by an external Worker | `x-helix-client-ip` trust fails if app exposed without the Worker | `helix_codex_app/security/route_limits.py:124`; `client_ip.py:24-28` |
 | Cockpit UI tier quarantined | 19 tests deselected | `README.md:131`; `AGENTS.md:3454` |
 | `dispatch.py` agent dispatch is a stub returning fake output | `Called …` / `Task submitted` placeholders | `app/command_center/agents/dispatch.py:84,187,204,217,262` |
-| Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM/RTA math, not one engine's accuracy | `README.md:132` + Tier 2 row 1 |
+| Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM/RTA math, not the engines' accuracy | `README.md:132` |
 | CI container steps (16–17) not reproducible locally | Docker not running here; rest on remote green run | `AGENTS.md:5152-5153` |
 
 #### Fixed since this table was written
 
-Two former Tier 2 rows are removed because the defects are fixed. The record of what
-was wrong is kept here rather than deleted.
+The Tier 2 rows that have since been fixed are moved here. The record of what was wrong
+is kept rather than deleted.
 
 | Formerly a limit | What was wrong | Fixed in |
 | --- | --- | --- |
@@ -206,6 +206,7 @@ was wrong is kept here rather than deleted.
 | B2B adapter fabricated its onboarding result | `engines/b2b/adapter.py` called only `add_client` + `get_client_summary`, then set `sop_generated=True` and `onboarding_status="completed"` by hand; `generate_sop`/`generate_staffing_plan` were never invoked, so the SOP and staffing plan were never computed | `fix/b2b-wire-real-onboarding` — adapter now calls `OnboardingAutomator.generate_sop()` and `generate_staffing_plan()` and maps their real return values (`sop`, `staffing_plan`, `workload_data`); the fabricated fields are removed; regression test `tests/test_c4_engines.py::test_b2b_adapter_wires_real_sop_and_staffing_plan` |
 | CRM adapter echoed its pipeline inputs | `engines/crm/adapter.py` probed `get_pipeline_analytics`/`get_analytics`/`analyze` (none exist on `SalesPipeline`) and fell through to `{"status":"active","client":...,"deal":...}`; `add_lead`/`create_deal`/`get_sales_analytics` were never called | `fix/crm-wire-real-pipeline` — adapter now maps `client`/`deal` into real `Lead`/`Deal` objects via `add_lead`/`create_deal` and calls `get_sales_analytics()`, returning computed `stage_distribution`/`average_deal_value`/`total_pipeline_value` and the 12-month forecast; `score_lead` is intentionally omitted (its signature needs company_size/industry/budget/timeline the request schema lacks); `support_status` dropped, `pipeline_status` derived from computed totals; regression test `tests/test_c4_engines.py::test_crm_adapter_wires_real_pipeline_analytics` |
 | Personnel adapter reported empty analytics and echoed its input | `engines/personnel/adapter.py` called `get_pipeline_analytics()` on an empty `PipelineManager` (before any candidate was added) and returned `{}`, then hardcoded `pipeline_status="active"` and `workforce_headcount` from the request's `headcount` | `fix/personnel-wire-real-pipeline` — adapter now builds real `Candidate`/`JobPosting` objects via `add_candidate`/`create_job_posting`, calls `screen_candidates()` when the job carries real `required_skills` and a positive `experience_level`, then `get_pipeline_analytics()`, returning computed `total_candidates`/`total_job_postings`/`status_distribution`/`stage_distribution`/`average_days_in_pipeline`/`pipeline_efficiency`; `pipeline_status` derived from computed totals; the fabricated `workforce_headcount` echo dropped (no real headcount source in `PipelineManager`); regression test `tests/test_c4_engines.py::test_personnel_adapter_wires_real_pipeline_analytics` |
+| CX risk thresholds hardcoded in code | `engines/cx/src/risk_scorer.py` hardcoded `kpi_thresholds`, and `classify_risk_level` hardcoded the 0.8/0.6/0.4 bands, while `config/risk_thresholds.yaml` existed as the intended single source of truth the engine never read | `4e4f98d` — `load_risk_config()` now reads `config/risk_thresholds.yaml`; `RiskScorer`/`RiskScorerEngine`/`create_risk_scorer` load `kpi_weights`/`kpi_thresholds`/`risk_bands` from it (safe fallback if the file or PyYAML is absent); `classify_risk_level` uses the loaded bands; regression test `tests/test_cx_config_loading.py` |
 
 ### Tier 3 — NOT PROVEN
 
@@ -215,7 +216,7 @@ was wrong is kept here rather than deleted.
 | Production deployment | `production` gate `NOT_READY`; nine production-only gates red by construction | `AGENTS.md:1451-1452`, `:1516-1519` |
 | External security audit / certified data isolation | None. No signed installer, no certified isolation evidence. |
 | Multi-tenant isolation under real load | No independent tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant). |
-| Engine accuracy at real corpus scale | Not measured; one engine is scaffolding (Tier 2 row 1). |
+| Engine accuracy at real corpus scale | Not measured; the engines are not independently validated for accuracy at real corpus scale. |
 | Design-partner live traffic | Scoach Academy Hub is a named first vertical (`capabilities/sports_academy/`), but no live client traffic is recorded. |
 
 ### Tried and rejected

@@ -60,12 +60,13 @@ explicit approval requests inconsistently.
   explicit-approval branch is dead on one of the two paths. **(Resolved in `2c9d606`:
   the branch is now reachable from both paths.)**
 
-## 3. One of six engine adapters returns synthesized or echoed metrics, not computed analytics
+## 3. All six engine adapters now drive a real computation end-to-end (CX config-loading gap closed)
 
 The demo and the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) confirm adapters *import and call*
-engine modules and return non-empty metrics. But the **returned metrics** for one
-engine are adapter-synthesized or echoed, not the engine's computed output:
+engine modules and return non-empty metrics. As of 2026-09-30 **all six adapters drive a
+real computation end-to-end** — the earlier findings below (fabricated/echoed output in
+B2B, CRM and Personnel; hardcoded thresholds in CX) are closed:
 
 - **B2B** — *no longer scaffolding.* `engines/b2b/adapter.py` now calls
   `OnboardingAutomator.generate_sop()` and `generate_staffing_plan()` after
@@ -107,10 +108,14 @@ engine are adapter-synthesized or echoed, not the engine's computed output:
   no real source exists for it. (Fixed in branch `fix/personnel-wire-real-pipeline`;
   pinned by
   `tests/test_c4_engines.py::test_personnel_adapter_wires_real_pipeline_analytics`.)
-- **CX** — `engines/cx/src/risk_scorer.py` computes the churn score, but its risk
-  thresholds are hardcoded in `__init__` (`risk_scorer.py:57-66`); the AHT unit
-  incoherence was resolved (see issue 5). The richer `cx` modules (`kpi_aggregator`,
-  `alert_dispatcher`, `sql_extractor`, `dashboard_feed`) are not invoked by the adapter.
+- **CX** — *no longer scaffolding.* `engines/cx/src/risk_scorer.py` now loads its
+  `kpi_weights`, `kpi_thresholds` and `risk_bands` from `config/risk_thresholds.yaml`
+  via `load_risk_config()` (previously hardcoded in `__init__`, and `classify_risk_level`
+  hardcoded the 0.8/0.6/0.4 bands), with a safe fallback if the file or PyYAML is
+  absent; the AHT unit incoherence was resolved earlier (see issue 5). The richer `cx`
+  modules (`kpi_aggregator`, `alert_dispatcher`, `sql_extractor`, `dashboard_feed`) are
+  still not invoked by the adapter. (Fixed in `4e4f98d`; pinned by
+  `tests/test_cx_config_loading.py`.)
 - **RTA** — *no longer scaffolding.* `engines/rta/adapter.py` now calls `calc.analyze()`,
   which runs `calculate_adherence` internally and additionally returns the engine's
   aggregated schedule, performance and variance metrics and `confidence_score`; the
@@ -118,18 +123,19 @@ engine are adapter-synthesized or echoed, not the engine's computed output:
   alone, whose dict carried no `confidence_score`.)
 
 **WFM** (`engines/wfm/src/erlang_c.py`, Erlang C), **RTA**
-(`engines/rta/src/calculations.py`), **B2B** (`engines/b2b/adapter.py` →
-`engines/b2b/src/automator.py`), and **CRM** (`engines/crm/adapter.py` →
+(`engines/rta/src/calculations.py`), **CX** (`engines/cx/adapter.py` →
+`engines/cx/src/risk_scorer.py`), **B2B** (`engines/b2b/adapter.py` →
+`engines/b2b/src/automator.py`), **CRM** (`engines/crm/adapter.py` →
 `engines/crm/src/sales_pipeline.py`), and **Personnel** (`engines/personnel/adapter.py`
-→ `engines/personnel/src/pipeline_manager.py`) drive a real computation end-to-end; the
-one adapter above (CX) remains scaffolding.
+→ `engines/personnel/src/pipeline_manager.py`) all drive a real computation end-to-end;
+no adapter is scaffolding.
 
-- Limits the headline "Six engines" claim and the statement at `engines/README.md:52`
-  that "Each adapter invokes real engine code (not fake)" — true for *invocation*,
-  false for the *computed result* of one engine. The "not fake" wording overstates
-  what the adapter output represents.
+- The headline "Six engines" claim and the statement at `engines/README.md:52` that
+  "Each adapter invokes real engine code (not fake)" are now true for both *invocation*
+  and *computed result* across all six adapters.
 - The 1,897-test suite asserts the adapter *contract*, so green tests do **not** validate
-  that CX computes a correct result. See Tier 2 in `README.md`.
+  that any engine computes the *correct* operational numbers — only that each
+  returns a computed result. See Tier 2 in `README.md`.
 
 ## 4. The WFM "Erlang C" formula is a non-standard closed form, and its docstring is corrupted
 
@@ -223,8 +229,8 @@ by the UI" (`AGENTS.md:3445`).
 ## 10. Engine correctness is not validated by the passing test suite
 
 The suite reaches the 80% coverage floor (`README.md:132`), but coverage measures code
-execution, not result correctness. Because one adapter returns synthesized/echoed
-metrics (issue 3), the passing tests certify the plumbing and the WFM and RTA math, not that
+execution, not result correctness. The passing tests certify the plumbing and that all
+six adapters now return computed results (issue 3), not that
 the engines produce correct operational numbers. There is no independent
 tenant-isolation audit (cf. the 500/500 tagged-row count in LIVE Support Assistant), no
 external security review, and no certified data-isolation evidence.

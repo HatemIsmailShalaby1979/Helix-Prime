@@ -5,8 +5,9 @@ data or a reading of source, with the repo path it comes from. There is no desig
 partner and no customer traffic; the demo data is synthetic by design.
 
 **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-live WFM demo, backed by a green CI and a large test suite — but four of six engines are
-adapter scaffolding that report synthesized metrics. Not production-ready: nine
+live WFM demo, backed by a green CI and a large test suite — all six engines now drive a
+real computation end-to-end, and CX's risk thresholds load from
+`config/risk_thresholds.yaml` rather than hardcoded values. Not production-ready: nine
 production-only gates are red by design.
 
 ## The problem
@@ -77,16 +78,20 @@ append-only, hash-chained `audit_events` ledger before it runs
   the build toolchain, re-sign the nine fixtures over LF), `839507e` (lock-pin count)
   (`AGENTS.md:5121-5137`).
 - **During this documentation audit I found the engine scaffolding gap (issue 3 of
-  `KNOWN_ISSUES.md`).** Four of six adapters return synthesized or echoed metrics: B2B
-  fabricates `sop_generated=True` (`engines/b2b/adapter.py:326-328`), CRM echoes inputs
-  (`engines/crm/adapter.py:311-318`), Personnel hardcodes `pipeline_status` and
+  `KNOWN_ISSUES.md`).** Four of six adapters returned synthesized or echoed metrics: B2B
+  fabricated `sop_generated=True` (`engines/b2b/adapter.py:326-328`), CRM echoed inputs
+  (`engines/crm/adapter.py:311-318`), Personnel hardcoded `pipeline_status` and
   `workforce_headcount` from the request (`engines/personnel/adapter.py:297-322`), and the
-  CX scorer uses a hardcoded threshold table (`engines/cx/src/risk_scorer.py:57-66`). The
-  shared test `tests/test_c4_engines.py:113` passes because it asserts adapters *return
-  non-empty metrics*, which the fabrication satisfies. At the time five adapters were
-  scaffolding — RTA among them — and the CX AHT unit was incoherent; RTA has since been
-  wired to the engine's `analyze()` and the CX AHT unit resolved. The four adapters above
-  remain the single largest gap between the README's "Six engines" framing and the code.
+  CX scorer used a hardcoded threshold table (`engines/cx/src/risk_scorer.py:57-66`). The
+  shared test `tests/test_c4_engines.py:113` passed because it asserts adapters *return
+  non-empty metrics*, which the fabrication satisfied. At the time five adapters were
+  scaffolding — RTA among them — and the CX AHT unit was incoherent; all have since been
+  closed: RTA wired to the engine's `analyze()`, the CX AHT unit resolved, and — in the
+  2026-09-30 batch — B2B, CRM and Personnel wired to real engine analytics
+  (`fix/b2b-wire-real-onboarding`, `fix/crm-wire-real-pipeline`,
+  `fix/personnel-wire-real-pipeline`) and CX's thresholds loaded from
+  `config/risk_thresholds.yaml` (`4e4f98d`). All six adapters now drive a real computation
+  end-to-end; the audit's scaffolding finding is closed.
 
 ## What I decided, and why
 
@@ -108,7 +113,8 @@ append-only, hash-chained `audit_events` ledger before it runs
   demo data is synthetic by design.
 - No real customer traffic, no live design-partner run (Scoach Academy Hub is a named
   first vertical via `capabilities/sports_academy/`, but no live traffic is recorded).
-- Four of six engines are not yet validated to compute correct results (issue 3).
+- The engines are not yet independently validated for accuracy; all six now return
+  computed results (issue 3), but correctness is unproven.
 - No independent tenant-isolation audit, no external security review, no certified data
   isolation. The 19 cockpit UI tests are quarantined (`AGENTS.md:3454`).
 - The WFM "Erlang C" result is a non-standard closed-form approximation, not the textbook

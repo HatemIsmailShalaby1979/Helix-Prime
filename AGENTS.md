@@ -3,7 +3,9 @@
 > **Purpose:** Any agent (or human) can pick up exactly where the last one stopped.
 > **ACTIVE WORK: no engineering work is open.** The §20 B-, A- and follow-up
 > sections are CLOSED — **§20.30 carries the closure table with the commit SHAs for
-> each, and the suite's final run: 1,897 passed, 0 failed across both chunks.**
+> each, and the suite's final run: 1,897 passed, 0 failed across both chunks.** The
+> §22.1 adapter findings are also CLOSED — **§22.4 carries the 2026-09-30 closure
+> batch: all six adapters now drive a real computation end-to-end.**
 > §18 (GOV-1) is marked IN PROGRESS above only because of the owner-driven item
 > below; its engineering work is complete, and §18.10 closed its last open item.
 >
@@ -5211,14 +5213,17 @@ evidence-first standard of `live-support-assistant` (README + `docs/KNOWN_ISSUES
   run-verification note stating what was and was not executed.
 - `docs/KNOWN_ISSUES.md` records 10 code-grounded issues.
 
-### 22.1 New open finding — engine adapters return synthesized/echoed metrics — **partly fixed**
+### 22.1 Engine adapters return synthesized/echoed metrics — **fixed (2026-09-30)**
 
-> **Status (updated 2026-09-30).** RTA is fixed and the CX AHT unit is resolved; B2B,
-> CRM, Personnel and the CX threshold table are not. `engines/rta/adapter.py` now calls
+> **Status (updated 2026-09-30).** All fixed. `engines/rta/adapter.py` calls
 > `calc.analyze()` and surfaces `confidence_score` (`fix/rta-wire-real-analyze`, merged as
 > `77a0c39`); the CX AHT unit was corrected and its risk band recalibrated
-> (`fix/cx-aht-normalization`, merged as `381f4f6`). The finding below is kept as the
-> record of what it originally was.
+> (`fix/cx-aht-normalization`, merged as `381f4f6`); B2B, CRM and Personnel now map their
+> requests into real engine objects and return computed analytics, and CX loads its
+> thresholds from `config/risk_thresholds.yaml` (`fix/b2b-wire-real-onboarding`,
+> `fix/crm-wire-real-pipeline`, `fix/personnel-wire-real-pipeline`, all merged into `main`
+> on 2026-09-30; CX config-loading in `4e4f98d`). See §22.4 for the closure batch. The
+> finding below is kept as the record of what it originally was.
 
 Discovered while reading source for this pass; **not yet fixed** at the time. Five of six
 engines did not compute a result end to end — only WFM did:
@@ -5231,17 +5236,18 @@ engines did not compute a result end to end — only WFM did:
   request on an empty manager (`engines/personnel/adapter.py:297-322`).
 - CX thresholds hardcoded in `RiskScorer.__init__`
   (`engines/cx/src/risk_scorer.py:57-66`); AHT normalized as `max(0,1-value/0.5)` assumes
-  AHT ≤ 0.5 min, so any realistic AHT → 0 (`risk_scorer.py:88`). *(AHT unit resolved; the
-  threshold table is still hardcoded.)*
+  AHT ≤ 0.5 min, so any realistic AHT → 0 (`risk_scorer.py:88`). *(Resolved: AHT unit
+  corrected and the threshold table now loads from `config/risk_thresholds.yaml`.)*
 - RTA surfaces an adherence dict without computing `confidence_score`. *(Resolved: the
   adapter now calls `analyze()` and maps its `confidence_score`.)*
 
 Consequence: the shared test `tests/test_c4_engines.py:113`
 (`test_all_six_adapters_invoke_real_engine_code`) passes because it asserts non-empty
 metrics, not correctness — so `engines/README.md:52` ("invokes real engine code, not
-fake") overstates the adapter *output*. The 1,897-test suite certifies plumbing + WFM and
-RTA math, not the four engines' accuracy. This is the largest gap between the README's
-"Six engines" framing and the code.
+fake") overstated the adapter *output*. The 1,897-test suite certifies plumbing + WFM and
+RTA math, not the four engines' accuracy. This was the largest gap between the README's
+"Six engines" framing and the code. *(Closed 2026-09-30: all six adapters now return
+computed results — see §22.4.)*
 
 ### 22.2 Gate enforcement gaps — **fixed**
 
@@ -5268,3 +5274,36 @@ RTA math, not the four engines' accuracy. This is the largest gap between the RE
   passed **122 / 0** in 102s. Repo CI claims 1,897 / 0 + 86.91% coverage (snapshot
   2026-09-29) — authoritative green, not reproduced here.
 - CI container steps (16–17) not reproducible locally (Docker not running).
+
+### 22.4 2026-09-30 closure batch — all six adapters real — **closed**
+
+> **Status (updated 2026-09-30).** The three stacked adapter branches were merged into
+> `main` (each `--no-ff`, verified, no conflicts) and the last two gaps were fixed on
+> `main`. All six engines now drive a real computation end-to-end; no adapter is
+> scaffolding.
+
+- **Merges into `main` (`--no-ff`, dependency order):** `fix/b2b-wire-real-onboarding` →
+  merge `dc7cda5`; `fix/crm-wire-real-pipeline` → merge `e5704e4`;
+  `fix/personnel-wire-real-pipeline` → merge `0b5efc4`. Each merge re-ran `ruff check`,
+  `ruff format --check`, `tests/test_c4_engines.py` (34 → 35 → 36 passed), the consumer
+  set (`test_capabilities_sports_academy`, `test_c1a_capability_discovery`,
+  `test_control_seam`; 72 passed) and the non-network subset of
+  `test_c5_vertical_slice.py` — all green.
+- **CX config-loading gap closed (`4e4f98d`).** `engines/cx/src/risk_scorer.py` hardcoded
+  `kpi_thresholds` and `classify_risk_level` hardcoded the 0.8/0.6/0.4 bands while
+  `config/risk_thresholds.yaml` existed as the intended single source of truth the engine
+  never read. `load_risk_config()` now reads that YAML; `RiskScorer`/`RiskScorerEngine`/
+  `create_risk_scorer` load `kpi_weights`/`kpi_thresholds`/`risk_bands` from it (safe
+  fallback if the file or PyYAML is absent). Pinned by `tests/test_cx_config_loading.py`.
+- **c5 flake fixed (same commit).** `scripts/smoke.py` ran a nested `pytest -q` (step 5)
+  inside the `test_existing_c0_c4_regression` subprocess — a whole-suite run that created
+  SQLite sidecars/cache in the long basetemp and repo, tripping the §18.4 file-locking /
+  delete-guard artifact. Removing the nested run fixed the flake at its source;
+  `test_c5_vertical_slice.py` now passes **27/27** without deselecting it (3/3 runs).
+- **Docs swept for stale counts.** `README.md`, `docs/KNOWN_ISSUES.md`,
+  `docs/PRODUCTION_STATUS.md`, `docs/RELEASE_NOTES.md`, `docs/CASE_STUDY.md` now state
+  that all six engines drive a real computation end-to-end (CX thresholds config-loaded);
+  no "X of six … scaffolding" claim remains. The historical records are kept.
+- **Verification (this sandbox):** `ruff check` + `ruff format --check` clean on the
+  changed files; `test_c4_engines.py` 36/0; consumer set 72/0; `test_c5_vertical_slice.py`
+  27/0 (3 runs). The full 1,897-test suite was **not** re-run here.

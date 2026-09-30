@@ -12,7 +12,7 @@ All six engines are productized via typed adapters that invoke actual engine cod
 
 - `engines/rta/adapter.py` — RTA Command Center (`rta_adherence`, `schedule_tracking`) → `RTACalculator.calculate_adherence(schedule, actual)` → metrics `adherence`/`overall_adherence`. Validates schedule/actual not empty, handles dict→DataFrame. Sample fallback with warning. `rta_engine`, `ops_gm`, `internal`.
 
-- `engines/cx/adapter.py` — CX Churn Sentinel (`churn_risk_scoring`, `risk_scoring`, `cx_monitoring`) → `RiskScorerEngine.score_customers(customers)` → metrics `overall_risk_score`, `high_risk_customers`. Validates `customers` list, KPI ranges 0-1, clamps out-of-range with warning. `cx_engine`, `ops_gm`, `client_confidential`.
+- `engines/cx/adapter.py` — CX Churn Sentinel (`churn_risk_scoring`, `risk_scoring`, `cx_monitoring`) → `RiskScorerEngine.score_customers(customers)` → metrics `overall_risk_score`, `high_risk_customers`. Loads its risk thresholds/bands from `config/risk_thresholds.yaml`. Validates `customers` list, KPI ranges 0-1, clamps out-of-range with warning. `cx_engine`, `ops_gm`, `client_confidential`.
 
 - `engines/b2b/adapter.py` — B2B Onboarding (`b2b_onboarding`, `sop_generation`, `b2b_handoff`) → `OnboardingAutomator`/`ClientProfile` → metrics `onboarding_status`, `sop_generated`. Validates `client_profile.name` required, incomplete → sample default with warning. `b2b_engine`, `sales_gm`, `internal`.
 

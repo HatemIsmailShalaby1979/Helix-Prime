@@ -1,8 +1,9 @@
 # Helix Prime — production status
 
 **Positioning.** Pre-pilot governed operations core: a verified fail-closed gate and a
-live WFM demo, backed by a green CI and a large test suite — but four of six engines are
-adapter scaffolding that report synthesized metrics. Not production-ready: nine
+live WFM demo, backed by a green CI and a large test suite — all six engines now drive a
+real computation end-to-end, and CX's risk thresholds load from
+`config/risk_thresholds.yaml` rather than hardcoded values. Not production-ready: nine
 production-only gates are red by design.
 
 **What it does.** Helix Prime is the governed, local-first operations core of Helix
@@ -43,9 +44,9 @@ author-written:
   (repo CI, snapshot 2026-09-29; `README.md:131-132`). This session re-ran a
   claims-relevant subset — **122 passed / 0 failed** — but the full run did not
   terminate locally (blocked on `tests/integration`). The suite asserts the
-  adapter/contract/gate plumbing and the WFM math; it does **not** validate that
-  RTA/CX/B2B/Personnel/CRM compute correct results, because those adapters return
-  synthesized or echoed metrics (`docs/KNOWN_ISSUES.md` issue 3).
+  adapter/contract/gate plumbing and the WFM math; it does **not** validate that the
+  engines compute correct results — all six adapters now return computed results, but the
+  suite asserts contracts, not accuracy (`docs/KNOWN_ISSUES.md` issue 3).
 - WFM demo produces an Erlang C answer through the gate on synthetic four-number input.
   The "Erlang C" formula is a non-standard closed form
   (`engines/wfm/src/erlang_c.py:8,124`), not the textbook expression.

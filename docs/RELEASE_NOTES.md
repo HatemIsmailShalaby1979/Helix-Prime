@@ -45,15 +45,17 @@ release.
 - CI, end to end: all 17 steps pass (run `36497766876`, `839507e`, 2026-09-29).
 - Full test suite: 1,897 passed / 0 failed (repo CI, snapshot 2026-09-29); 19 quarantined UI tests deselected; this session re-ran a claims-relevant subset (122 passed).
 - Coverage: 86.91% (server + connectors, 80% floor; repo CI).
-- Six engines named; **two** (WFM, RTA) compute a real result end to end — four adapters
-  return synthesized/echoed metrics (`docs/KNOWN_ISSUES.md` issue 3).
+- Six engines named; **all six** compute a real result end to end — CX's risk thresholds
+  load from `config/risk_thresholds.yaml`; no adapter is scaffolding
+  (`docs/KNOWN_ISSUES.md` issue 3).
 
 ## Does NOT show
 
 - No real customer traffic, design partner, or pilot. Demo data is `simulated_realistic`
   by design.
-- No proof that four of six engines compute correct results. The suite asserts adapter
-  contracts, not engine accuracy.
+- No proof that the engines compute correct results. All six adapters now return computed
+  results (CX's risk thresholds load from `config/risk_thresholds.yaml`), but the suite
+  asserts adapter contracts, not engine accuracy.
 - No production deployment; nine production-only gates red (`AGENTS.md:1516-1519`).
 - No external security audit, certified data isolation, or signed installer.
 - The two CI container steps (16–17) are not reproducible on this machine (Docker not

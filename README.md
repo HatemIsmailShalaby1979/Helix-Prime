@@ -41,8 +41,12 @@ implementation. On conflict, the earlier link in the chain wins.
 ## What it does
 
 Six engines — WFM (Erlang C), RTA, CX Churn Sentinel, B2B Onboarding, Personnel,
-CRM — routed by nine AI agents (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA,
-TOMY) by content. Beyond the engines:
+CRM — routed by content across nine defined role seats (SAMI, SUBY, PHILI, WILI,
+ANDY, NONO, MAYA, LIZA, TOMY — the RoleSpec matrix at the bottom of this file).
+The seats are governed roles, not running autonomous agents: the agent-dispatch
+surface (`app/command_center/agents/dispatch.py`) is an unfinished stub, so
+routing happens through the governed role/permission model, not through
+dispatch (see Tier 2). Beyond the engines:
 
 - Tenant identity and deny-by-default authorization.
 - A workflow state machine with approvals, retries, and dead-letter handling.
@@ -187,7 +191,7 @@ shown at all.
 | --- | --- | --- |
 | Rate limiting trusts a header set by an external Worker | `x-helix-client-ip` trust fails if app exposed without the Worker | `helix_codex_app/security/route_limits.py:124`; `client_ip.py:24-28` |
 | Cockpit UI tier quarantined | 19 tests deselected | `tests/integration/ui/cockpit/` conftest (quarantined tier); `AGENTS.md` §19 |
-| `dispatch.py` agent dispatch is a stub returning fake output | `Called …` / `Task submitted` placeholders | `app/command_center/agents/dispatch.py:84,187,204,217,262` |
+| `dispatch.py` agent dispatch is a stub returning fake output | `Called …` / `Task submitted` placeholders | `app/command_center/agents/dispatch.py:84,187,204,217,231` |
 | Coverage floor measures execution, not result correctness | green suite certifies plumbing + WFM/RTA math, not the engines' accuracy | `README.md:132` |
 | CI container steps (16–17) not reproducible locally | Docker not running here; rest on remote green run | `AGENTS.md` §21 |
 
@@ -233,7 +237,7 @@ was run, found wanting on a metric, and kept only as evidence. The closest recor
 
 These are removals of unused code. Do not treat them as "experiments to re-run"; there
 is nothing to re-run. `app/command_center/agents/dispatch.py` is an **unfinished stub**,
-not a rejected experiment (TODOs at `:84,:187,:204,:217,:262` returning placeholder
+not a rejected experiment (TODOs at `:84,:187,:204,:217,:231` returning placeholder
 text — see `docs/KNOWN_ISSUES.md` issue 7).
 
 ## Run it

@@ -5,9 +5,13 @@
 > sections are CLOSED — **§20.30 carries the closure table with the commit SHAs for
 > each, and the suite's final run: 1,897 passed, 0 failed across both chunks.** The
 > §22.1 adapter findings are also CLOSED — **§22.4 carries the 2026-09-30 closure
-> batch: all six adapters now drive a real computation end-to-end.**
-> §18 (GOV-1) is marked IN PROGRESS above only because of the owner-driven item
-> below; its engineering work is complete, and §18.10 closed its last open item.
+> batch: all six adapters now drive a real computation end-to-end.** §23
+> (ERLANGC-1) is CLOSED — the WFM Erlang C engine was rewritten on the textbook
+> Erlang B recursion (`caabcb9`), pinned by 42 reference tests (`0f8c4a1`), and
+> the README/KNOWN_ISSUES claims were aligned to it (`6f57d74`, `e32a0ca`, and
+> the §23.6 commit); §23.7 carries the step table. §18 (GOV-1) is marked IN
+> PROGRESS above only because of the owner-driven item below; its engineering
+> work is complete, and §18.10 closed its last open item.
 >
 > §18.9 closed a systemic leak worth keeping in view: all eleven
 > `tempfile.mkdtemp` sites in the release path route through
@@ -5310,12 +5314,13 @@ computed results — see §22.4.)*
 
 ---
 
-## 23. Erlang C engine rewrite and README claims alignment (ERLANGC-1) — IN PROGRESS
+## 23. Erlang C engine rewrite and README claims alignment (ERLANGC-1) — COMPLETE
 
-> **Status (opened 2026-09-30).** Owner brief: verify the WFM Erlang C engine
-> against the textbook formula, fix it, pin it with tests, and make the README
-> claims match reality. One commit per numbered step; the step table with SHAs
-> lands in §23.7 when the task closes.
+> **Status (closed 2026-09-30).** The WFM Erlang C engine was verified against
+> the textbook formula, found deviating by up to 0.811 absolute on the
+> probability of waiting, and rewritten on the stable Erlang B recursion with a
+> documented 20-second answer threshold. Pinned by 42 tests; README claims and
+> `docs/KNOWN_ISSUES.md` issue 4 now match. The step table with SHAs is §23.7.
 
 ### 23.1 Step 1 — the deviation verified (no commit; evidence only)
 
@@ -5460,3 +5465,29 @@ recursion already in `telemetry_simulator.py:_erlang_c`.
   formatted. The coverage row stays cited to CI run `36497766876`
   (re-baselines on the next push). The WFM-demo row now cites today's
   end-to-end demonstration.
+
+### 23.6 Step 6 — "nine AI agents" reworded to the verifiable claim (this commit)
+
+`app/command_center/agents/dispatch.py` was re-read: it is still an unfinished
+stub — TODOs at `:84,:187,:204,:217,:231`, `_handle_call_agent` returning
+`"Called {agent} with: {message}"`, `_handle_submit_task` returning
+`"Task submitted for approval"` (`:188`, `:207`). Decision per the owner's
+brief: **reword, not implement** — implementing nine real agents is product
+work beyond this brief and the stub is already recorded (`docs/KNOWN_ISSUES.md`
+issue 7). The README "What it does" section now says "nine defined role seats
+(SAMI … TOMY — the RoleSpec matrix)"; the seats are governed roles, not running
+autonomous agents, and routing goes through the governed role/permission model
+rather than dispatch. The stale dispatch TODO line refs (`:262` → `:231`,
+checked against the file) corrected in the Tier 2 row and the
+"Tried and rejected" section.
+
+### 23.7 ERLANGC-1 step table
+
+| Step | Commit | What landed |
+| --- | --- | --- |
+| 1 — verify the deviation | (no commit; evidence) | engine vs three independent references: worst deviation 0.811 absolute on Pw; ASA off 21-26 s; SL off 5.5-10.3 pp; demo scenario 5 vs 7 agents; anchors 0.5299/86.70%/10.09 s/70.83%/14 reproduced |
+| 2 — fix the engine | `caabcb9` | textbook Erlang C on the Erlang B recursion; documented 20 s threshold; honest field semantics; fake CI/unused param/mojibake removed; demo screen updated |
+| 3 — pin with tests | `0f8c4a1` | `tests/test_wfm_erlang_c.py` (42 tests); CI wiring verified by collection (1,951 selected / 19 deselected); end-to-end demo run with audit readback |
+| 4 — README claims | `6f57d74` | Tier 2 row → "Fixed since"; KNOWN_ISSUES issue 4 → FIXED; suite row re-measured; `docs/verification/2026-09-30.md` |
+| 5 — voice + badge | `e32a0ca` | static Tests badge removed; session-log voice and self-line-refs stripped; 2026-09-29 narrative moved to `docs/verification/2026-09-29.md` |
+| 6 — nine agents | this commit | "nine AI agents" → "nine defined role seats; dispatch is a stub"; TODO line refs corrected |

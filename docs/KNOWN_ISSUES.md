@@ -137,7 +137,20 @@ no adapter is scaffolding.
   that any engine computes the *correct* operational numbers — only that each
   returns a computed result. See Tier 2 in `README.md`.
 
-## 4. The WFM "Erlang C" formula is a non-standard closed form, and its docstring is corrupted
+## 4. ~~The WFM "Erlang C" formula is a non-standard closed form, and its docstring is corrupted~~ — FIXED
+
+**Fixed in `caabcb9` (ERLANGC-1, 2026-09-30).** The engine was rewritten on the stable
+Erlang B recursion (`B(n,A) = A·B(n-1,A)/(n+A·B(n-1,A))`, `C = N·B/(N−A·(1−B))`), with
+the service level defined against a documented 20-second answer threshold
+(`SL(t) = 1 − C·exp(−(N−A)·t/AHT)`, `target_answer_time` default 20 s — the classic
+80/20 rule); ASA corrected to `C·AHT/(N−A)`; the fake `confidence_interval` (flat
+`0.05·agents`) and the unused `confidence_level` parameter removed; the corrupted
+docstring rewritten; provenance (wfm-forecasting-calculator `shared_utils/erlang_c.py`)
+cited in the module docstring. The old implementation deviated from the textbook
+probability of waiting by up to 0.811 absolute ((100, 80): 0.769 vs 0.0196) and
+understaffed the demo-shaped scenario 5 vs the textbook 7 agents. Pinned by
+`tests/test_wfm_erlang_c.py` (42 tests). Record: `docs/verification/2026-09-30.md`.
+What was wrong is kept below.
 
 `engines/wfm/src/erlang_c.py:124` computes
 `probability_waiting = (p * (1 - ρ)) / (n*(1-ρ) + ρ*(1-(1-ρ)^(n-1)))`. This is a

@@ -87,6 +87,8 @@ marketing/assets/*.mp4
 .workbuddy-ai/
 .tmp/
 .claude/worktrees/
+.claude/settings.local.json
+.claude/*.local.json
 cookies.txt
 
 # Local planning artifacts intentionally kept outside the release tree

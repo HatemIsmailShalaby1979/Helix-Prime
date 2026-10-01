@@ -29,8 +29,11 @@ from helix_codex_app.security.accounts import AccountRepository
 from helix_codex_app.security.passwords import hash_password
 from helix_codex_app.security.sessions import SESSION_COOKIE, SessionStore
 
-FROM = "2026-09-01T00:00:00+00:00"
-TO = "2026-10-01T00:00:00+00:00"
+
+def _list_range() -> tuple[str, str]:
+    """A listing window that always contains shifts created around now."""
+    now = datetime.now(timezone.utc)
+    return (now - timedelta(days=1)).isoformat(), (now + timedelta(days=7)).isoformat()
 
 
 @pytest.fixture()
@@ -236,7 +239,8 @@ def test_list_shifts_is_tenant_scoped(ctx):
             backup_account_id=ctx.omar.account_id,
         ),
     )
-    listed = ctx.service.list_shifts(ctx.amira, FROM, TO)
+    from_at, to_at = _list_range()
+    listed = ctx.service.list_shifts(ctx.amira, from_at, to_at)
     assert len(listed) == 1
     assert listed[0].primary_account_id == ctx.amira.account_id
 
@@ -249,8 +253,9 @@ def test_list_shifts_never_mixes_foreign_tenant(ctx):
             backup_account_id=ctx.omar.account_id,
         ),
     )
-    assert len(ctx.service.list_shifts(ctx.amira, FROM, TO)) == 1
-    listed_for_ghada = ctx.service.list_shifts(ctx.ghada, FROM, TO)
+    from_at, to_at = _list_range()
+    assert len(ctx.service.list_shifts(ctx.amira, from_at, to_at)) == 1
+    listed_for_ghada = ctx.service.list_shifts(ctx.ghada, from_at, to_at)
     assert listed_for_ghada == []
 
 

@@ -54,8 +54,8 @@ def _fill(document: pathlib.Path, **overrides) -> None:
     data.update(
         {
             "issuer": "Example Assurance LLP",
-            "issued_at": "2026-09-20T10:00:00+00:00",
-            "expires_at": "2027-09-20T10:00:00+00:00",
+            "issued_at": "2020-01-01T00:00:00+00:00",
+            "expires_at": "2099-01-01T00:00:00+00:00",
             "payload": {"note": "synthetic test content"},
         }
     )

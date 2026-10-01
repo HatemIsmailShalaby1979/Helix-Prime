@@ -12,6 +12,7 @@ HTMX fragment path, CSRF, and cross-tenant isolation.
 from __future__ import annotations
 
 import json
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -28,8 +29,12 @@ from helix_codex_app.security.accounts import AccountRepository
 from helix_codex_app.security.passwords import hash_password
 from helix_codex_app.security.sessions import SESSION_COOKIE, SessionStore
 
-FROM = "2026-09-01T00:00:00+00:00"
-TO = "2026-10-01T00:00:00+00:00"
+
+def _month_range() -> tuple[str, str]:
+    """The current UTC month as [from, to) ISO bounds, computed at call time."""
+    start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end = (start + timedelta(days=32)).replace(day=1)
+    return start.isoformat(), end.isoformat()
 
 
 @pytest.fixture()
@@ -104,10 +109,11 @@ def _latest_node(conn, kind: str) -> dict:
 
 
 def _event_args(**overrides):
+    start = datetime.now(timezone.utc).replace(day=1, hour=9, minute=0, second=0, microsecond=0)
     args = {
         "title": "Intake meeting",
-        "starts_at": "2026-09-01T09:00:00+00:00",
-        "ends_at": "2026-09-01T10:00:00+00:00",
+        "starts_at": start.isoformat(),
+        "ends_at": (start + timedelta(hours=1)).isoformat(),
     }
     args.update(overrides)
     return args
@@ -158,21 +164,23 @@ def test_foreign_tenant_event_invisible(ctx):
 
 def test_foreign_tenant_list_is_empty(ctx):
     ctx.service.create_event(ctx.amira, **_event_args())
-    events = ctx.service.list_events(ctx.ghada, FROM, TO)
+    from_at, to_at = _month_range()
+    events = ctx.service.list_events(ctx.ghada, from_at, to_at)
     assert events == []
 
 
 def test_range_is_inclusive_of_start_exclusive_of_end(ctx):
+    from_at, to_at = _month_range()
     inside = ctx.service.create_event(ctx.amira, **_event_args())
     at_end = ctx.service.create_event(
         ctx.amira,
         **_event_args(
             title="At the end",
-            starts_at="2026-10-01T00:00:00+00:00",
-            ends_at="2026-10-01T01:00:00+00:00",
+            starts_at=to_at,
+            ends_at=(datetime.fromisoformat(to_at) + timedelta(hours=1)).isoformat(),
         ),
     )
-    events = ctx.service.list_events(ctx.amira, FROM, TO)
+    events = ctx.service.list_events(ctx.amira, from_at, to_at)
     titles = [e.title for e in events]
     assert inside.title in titles
     assert at_end.title not in titles
@@ -181,7 +189,8 @@ def test_range_is_inclusive_of_start_exclusive_of_end(ctx):
 def test_cancelled_event_excluded_from_range(ctx):
     event = ctx.service.create_event(ctx.amira, **_event_args())
     ctx.service.cancel_event(ctx.amira, event.event_id)
-    assert ctx.service.list_events(ctx.amira, FROM, TO) == []
+    from_at, to_at = _month_range()
+    assert ctx.service.list_events(ctx.amira, from_at, to_at) == []
 
 
 def test_rsvp_updates_attendee_row(ctx):
@@ -285,27 +294,43 @@ def test_self_attendee_never_notifies(ctx):
 
 
 def test_daily_recurrence_expands(ctx):
-    event = ctx.service.create_event(ctx.amira, **_event_args(recurrence_rule="daily"))
-    events = ctx.service.list_events(ctx.amira, FROM, TO)
-    assert len(events) == 30
+    from_at, to_at = _month_range()
+    args = _event_args(recurrence_rule="daily")
+    event = ctx.service.create_event(ctx.amira, **args)
+    events = ctx.service.list_events(ctx.amira, from_at, to_at)
+    month_days = (datetime.fromisoformat(to_at) - datetime.fromisoformat(from_at)).days
+    assert len(events) == month_days
     assert all(e.event_id == event.event_id for e in events)
-    assert events[0].starts_at == "2026-09-01T09:00:00+00:00"
-    assert events[1].starts_at == "2026-09-02T09:00:00+00:00"
-    assert events[1].ends_at == "2026-09-02T10:00:00+00:00"
+    assert events[0].starts_at == args["starts_at"]
+    assert (
+        events[1].starts_at
+        == (datetime.fromisoformat(args["starts_at"]) + timedelta(days=1)).isoformat()
+    )
+    assert (
+        events[1].ends_at
+        == (datetime.fromisoformat(args["starts_at"]) + timedelta(days=1, hours=1)).isoformat()
+    )
 
 
 def test_weekly_recurrence_expands(ctx):
-    event = ctx.service.create_event(ctx.amira, **_event_args(recurrence_rule="weekly"))
-    events = ctx.service.list_events(ctx.amira, FROM, TO)
-    assert len(events) == 5
-    assert {e.starts_at for e in events} == {
-        f"2026-09-{day:02d}T09:00:00+00:00" for day in (1, 8, 15, 22, 29)
-    }
+    from_at, to_at = _month_range()
+    args = _event_args(recurrence_rule="weekly")
+    event = ctx.service.create_event(ctx.amira, **args)
+    events = ctx.service.list_events(ctx.amira, from_at, to_at)
+    start = datetime.fromisoformat(args["starts_at"])
+    month_end = datetime.fromisoformat(to_at)
+    expected = set()
+    occurrence = start
+    while occurrence < month_end:
+        expected.add(occurrence.isoformat())
+        occurrence += timedelta(days=7)
+    assert {e.starts_at for e in events} == expected
 
 
 def test_single_event_does_not_expand(ctx):
     event = ctx.service.create_event(ctx.amira, **_event_args())
-    events = ctx.service.list_events(ctx.amira, FROM, TO)
+    from_at, to_at = _month_range()
+    events = ctx.service.list_events(ctx.amira, from_at, to_at)
     assert len(events) == 1
     assert events[0].event_id == event.event_id
 
@@ -405,18 +430,20 @@ def test_create_event_api_rejects_bad_payload(ctx, client):
 
 def test_list_events_api_returns_range(ctx, client):
     ctx.service.create_event(ctx.amira, **_event_args())
+    from_at, to_at = _month_range()
     cookies, _ = _login(ctx, ctx.amira)
-    response = client.get("/app/api/events", params={"from": FROM, "to": TO}, cookies=cookies)
+    response = client.get("/app/api/events", params={"from": from_at, "to": to_at}, cookies=cookies)
     assert response.status_code == 200
     payload = response.json()
-    assert payload["from"] == FROM
-    assert payload["to"] == TO
+    assert payload["from"] == from_at
+    assert payload["to"] == to_at
     assert [e["title"] for e in payload["events"]] == ["Intake meeting"]
 
 
 def test_list_events_api_requires_both_range_edges(ctx, client):
+    from_at, _to_at = _month_range()
     cookies, _ = _login(ctx, ctx.amira)
-    response = client.get("/app/api/events", params={"from": FROM}, cookies=cookies)
+    response = client.get("/app/api/events", params={"from": from_at}, cookies=cookies)
     assert response.status_code == 400
 
 
@@ -472,7 +499,8 @@ def test_cancel_via_put_hides_event_from_range(ctx, client):
     )
     assert put.status_code == 200
     assert put.json()["status"] == "cancelled"
-    listed = client.get("/app/api/events", params={"from": FROM, "to": TO}, cookies=cookies)
+    from_at, to_at = _month_range()
+    listed = client.get("/app/api/events", params={"from": from_at, "to": to_at}, cookies=cookies)
     assert listed.json()["events"] == []
     assert _node_count(ctx.conn, "event") == 2
 

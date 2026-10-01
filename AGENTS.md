@@ -54,10 +54,21 @@
 > pushed on 2026-09-27 under explicit authorization (`6b7d923..1c8c19d`), and
 > §21's three commits were pushed on 2026-09-29 under the owner's instruction to
 > repair the workflow. Any commit after those needs its own authorization.
-> **Standing authorization granted 2026-10-01** (owner, in-session): future
-> pushes of sanctioned Helix Codex OS work are pre-authorized; no per-commit
-> re-confirmation required. Phase 6 production-only gates (signed external
-> parties) remain outside this grant and still need their own keys.
+> **Standing push authorization — bounded, granted 2026-10-01.** Scope: this
+> repository only; branch `main` only; fast-forward pushes only. Covered:
+> documentation, tests, bug fixes, and commits following a task the owner has
+> assigned in the session. **Not covered — each needs the owner's explicit
+> approval for that action:** force-push or history rewrite; creating or moving
+> tags or releases; changes to dependencies or lockfiles; changes to
+> `.github/workflows` or CI triggers; changes to repo settings, visibility,
+> branch protection or pins; deleting branches; anything under the Phase 6
+> production-only gates. **Condition:** before each push the full
+> CI-equivalent check set must pass locally, or the last CI run on `main` must
+> be green; after each push, poll the public Actions API for the run on the
+> pushed SHA and report every job's conclusion — if any job is red, stop and
+> report; do not fix forward without asking. **Expiry:** this grant lapses on
+> **2026-10-15** unless the owner renews it. It does not apply to any other
+> repository.
 >
 > Everything else is COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app
 > UI modernization, UI-1), the sports-academy pack (S0–S7), §2–§19, and §20

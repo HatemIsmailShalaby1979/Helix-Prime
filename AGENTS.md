@@ -5518,3 +5518,98 @@ checked against the file) corrected in the Tier 2 row and the
 | 4 — README claims | `6f57d74` | Tier 2 row → "Fixed since"; KNOWN_ISSUES issue 4 → FIXED; suite row re-measured; `docs/verification/2026-09-30.md` |
 | 5 — voice + badge | `e32a0ca` | static Tests badge removed; session-log voice and self-line-refs stripped; 2026-09-29 narrative moved to `docs/verification/2026-09-29.md` |
 | 6 — nine agents | this commit | "nine AI agents" → "nine defined role seats; dispatch is a stub"; TODO line refs corrected |
+
+## 24. Date time-bomb purge, shifted-clock proof, full local CI run (TIME-BOMB-1) — COMPLETE
+
+**Recorded:** 2026-10-01. Owner-assigned after CI failed on 2026-10-01 for the first
+time since the green repair: four test failures caused by dates hardcoded in test
+fixtures that broke at the September→October rollover. Commit chain: `a4762d7`
+(calendar/oncall/evidence fixtures), `885fc75` (attendance records window), plus
+this ledger commit.
+
+### 24.1 Root cause of the 2026-10-01 red runs
+
+Three push runs failed on `main` on 2026-10-01, all at the "Run test suite" step,
+none caused by their own commits (all three touched docs only):
+
+| Run | SHA | Created (UTC) | Failures |
+| --- | --- | --- | --- |
+| `36793864341` | `6600c83` | 2026-09-30T23:59:19 | 2 (calendar screen tests only — oncall shifts still started before midnight UTC) |
+| `36803133485` | `856c285` | 2026-10-01T01:52:11 | 4 |
+| `36804203269` | `a805517` | 2026-10-01T02:04+ | 4 |
+
+Fixture bugs: `test_calendar.py` seeded an event at fixed `2026-09-01T09:00Z` while
+`/app/calendar` renders the current month; `test_oncall.py` listed shifts inside a
+fixed window `[2026-09-01, 2026-10-01)` for shifts created at `now − 1 h`.
+
+### 24.2 Fixes (`a4762d7`, `885fc75`)
+
+- `tests/helix_codex_app/test_calendar.py`: `FROM`/`TO` constants → `_month_range()`
+  (current UTC month at call time); `_event_args` anchored to day 1 09:00 of the
+  current month; daily/weekly recurrence expectations computed from the window
+  instead of hardcoded September day lists; range-edge test anchored to the
+  computed window end.
+- `tests/helix_codex_app/test_oncall.py`: `FROM`/`TO` → `_list_range()`
+  (`now − 1 d … now + 7 d`), which always contains the now-relative shifts.
+- `tests/helix_codex_app/test_attendance.py`: `test_records_api_returns_visible_records`
+  queried the fixed window `[2026-01-01, 2027-01-01)` for a punch stamped `now` —
+  fails from 2027-01-01; window is now `now ± 1 d`.
+- `tests/test_produce_production_evidence.py`: `_fill` wrote
+  `issued_at 2026-09-20 / expires_at 2027-09-20`, and `release/production_evidence.py::
+  validate_claims` compares `expires_at` against the wall clock — expired 2027-09-20;
+  widened to the fixture design window `2020-01-01 → 2099-01-01`.
+
+### 24.3 Audit of the same bug class
+
+Grepped `tests/` (incl. `tests/fixtures/`) for hardcoded 2026 dates, ISO
+datetimes, month names, and `now()`/`today()` usage. Every hit triaged:
+
+- **Safe (self-consistent):** fixed seed + fixed query window with no clock read —
+  the bulk of the hits (`test_c1*`…`test_c7` fixed timestamps, `test_attendance_rules`
+  fixed seeds/windows, `test_calendar_isolation`, `test_messaging*` cursor round-trips,
+  `test_governed_memory` explicit retention timestamps, `test_c2_control_plane`
+  2020 deadlines, evidence fixtures 2020→2099 validity windows, cockpit tests with
+  explicit `as_of`).
+- **Safe (explicit clock parameter):** `pilot/consent.py::validate_consent` takes
+  `as_of` from the caller; `test_production_evidence.py` freezes `now` explicitly.
+- **Time-bombs fixed:** the four files in §24.2. `tests/fixtures/c5/fixtures.py::
+  now_iso()` is dead code (never called).
+
+### 24.4 Shifted-clock proof (libfaketime in Docker)
+
+The full suite was re-run under six faked UTC clocks — 2026-10-31 23:59,
+2026-11-15, 2026-12-31 23:59, 2027-01-01 00:01, 2027-02-28, 2028-02-29 — using
+`faketime` (Debian libfaketime) inside the test image, repo baked in, `/tmp` tmpfs.
+Method artifacts, not repo defects: five SSE/timing-loop test files
+(`test_chat_stream`, `test_sse_isolation`, `test_notifications_routes`,
+`test_server_spine`, `test_messaging_routes`) hang or fail under libfaketime at
+every faked date and are excluded from the faked runs; they pass at the real clock.
+
+| Clock | Result |
+| --- | --- |
+| real (E9 image) | 1,950 passed, 1 failed — `test_existing_c0_c4_regression`, a container path-layout artifact; passes in the CI-shaped layout (repo at `<parent>/Helix-Prime`), verified 1 passed |
+| 2026-10-31 23:59 | 1,909 passed, 2 failed (messaging SSE artifact + c5 layout artifact) |
+| 2026-11-15 | 1,909 passed, 2 failed (same) |
+| 2026-12-31 23:59 | 1,909 passed, 2 failed (same) |
+| 2027-01-01 00:01 | 1,908 passed, 3 failed (same + attendance time-bomb) |
+| 2027-02-28 | 1,908 passed, 3 failed (same + attendance time-bomb) |
+| 2028-02-29 | 1,908 passed, 3 failed (same + attendance time-bomb) |
+
+The shifted-clock sweep found exactly one additional time-bomb (attendance, fixed
+by `885fc75`). After the fix: `tests/helix_codex_app/test_attendance.py` = 38
+passed under both 2027-02-28 and 2028-02-29 faked clocks. No date-dependent
+failure remains; the two per-date artifacts are method artifacts identical at
+every clock.
+
+### 24.5 Full local CI-equivalent run (grant condition)
+
+All 15 `ci.yml` steps executed locally, in order (Python 3.12.10 venv; Docker for
+the container steps): Install dependencies — locked versions verified present;
+`ruff check` 17 paths — exit 0; `ruff format --check .` — 433 files clean; `mypy`
+— "Success: no issues found in 72 source files"; test suite — full suite at real
+clock in the container (see §24.4 real row; the one failure is the layout artifact
+verified green in CI-shaped layout); bandit — exit 0 ("No issues identified" at
+`-ll`); pip-audit — "No known vulnerabilities found" (exit 0); dependency check,
+migration drift, governance catalog drift, capability mirrors, governance
+authority — all exit 0; `python -m build` — sdist+wheel built; `docker compose
+config` + `build helix-api` — exit 0; container smoke test — `/readyz` OK.

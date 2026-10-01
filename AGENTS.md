@@ -62,13 +62,25 @@
 > tags or releases; changes to dependencies or lockfiles; changes to
 > `.github/workflows` or CI triggers; changes to repo settings, visibility,
 > branch protection or pins; deleting branches; anything under the Phase 6
-> production-only gates. **Condition:** before each push the full
-> CI-equivalent check set must pass locally, or the last CI run on `main` must
-> be green; after each push, poll the public Actions API for the run on the
-> pushed SHA and report every job's conclusion — if any job is red, stop and
-> report; do not fix forward without asking. **Expiry:** this grant lapses on
-> **2026-10-15** unless the owner renews it. It does not apply to any other
-> repository.
+> production-only gates. **Condition:** before each push, every step in
+> `.github/workflows/ci.yml` (job `check`) must pass — meaning those exact
+> commands run locally, in order — or the last CI run on `main` must be green
+> for the same commit's parent. The steps, named exactly as in the file:
+> `Set up Python ${{ matrix.python-version }}`; `Install dependencies`;
+> `Run ruff (linting)`; `Run ruff format check`; `Run mypy (type checking)`;
+> `Run test suite`; `Run security scans`; `Check dependencies`;
+> `Check migration drift (store schema vs alembic head)`;
+> `Check governance catalog drift (runtime catalog vs role-catalog.yaml)`;
+> `Check capability registry mirrors are current`;
+> `Check governance authority (constitution + doc authority chain)`;
+> `Build package`; `Validate API container definition`;
+> `Smoke test API container readiness`. After each push, poll the public
+> Actions API for the run on the pushed SHA and report every job's conclusion
+> — if any job is red, stop and report; do not fix forward without asking.
+> **Expiry:** this grant lapses on **2026-10-15** unless the owner renews it.
+> It does not apply to any other repository. Any change to this note, to the
+> push rules in `AGENTS.md`, or to the expiry date requires the owner's
+> explicit approval for that change; this grant never covers editing itself.
 >
 > Everything else is COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app
 > UI modernization, UI-1), the sports-academy pack (S0–S7), §2–§19, and §20

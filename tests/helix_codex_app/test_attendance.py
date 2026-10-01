@@ -12,7 +12,7 @@ summary APIs, the HTMX fragment path, and cross-tenant isolation.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -455,9 +455,13 @@ def test_punch_api_htmx_fragment_updates_label(ctx, client):
 def test_records_api_returns_visible_records(ctx, client):
     ctx.service.punch_in(ctx.amira)
     cookies, _ = _login(ctx, ctx.amira)
+    now = datetime.now(timezone.utc)
     response = client.get(
         "/app/api/attendance/records",
-        params={"from": "2026-01-01T00:00:00+00:00", "to": "2027-01-01T00:00:00+00:00"},
+        params={
+            "from": (now - timedelta(days=1)).isoformat(),
+            "to": (now + timedelta(days=1)).isoformat(),
+        },
         cookies=cookies,
     )
     assert response.status_code == 200

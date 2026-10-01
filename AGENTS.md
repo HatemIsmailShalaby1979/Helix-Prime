@@ -54,6 +54,10 @@
 > pushed on 2026-09-27 under explicit authorization (`6b7d923..1c8c19d`), and
 > §21's three commits were pushed on 2026-09-29 under the owner's instruction to
 > repair the workflow. Any commit after those needs its own authorization.
+> **Standing authorization granted 2026-10-01** (owner, in-session): future
+> pushes of sanctioned Helix Codex OS work are pre-authorized; no per-commit
+> re-confirmation required. Phase 6 production-only gates (signed external
+> parties) remain outside this grant and still need their own keys.
 >
 > Everything else is COMPLETE history: §1 (Production Hardening, H0–H3), §1A (app
 > UI modernization, UI-1), the sports-academy pack (S0–S7), §2–§19, and §20

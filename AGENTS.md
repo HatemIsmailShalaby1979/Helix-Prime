@@ -3644,16 +3644,13 @@ A single authoritative specification was written first
 (`E:\_helix_docs_2026-09-25\CANONICAL_STORY_AND_VOICE.md`) defining the story, the
 placement of each repository within it, canonical vocabulary, a banned-word list,
 voice rules, and reusable text blocks. All eleven repositories were then rewritten
-from it. The shared narrative: 28 years in contact-centre operations → career
-switch April 2026 → full-time solo self-taught build → four **building attempts**
-published May–June 2026 → convergence into **Helix Codex**, with Helix Prime as
-its operations core.
+from it. That previous owner narrative has been superseded. The profile repository
+is the current source for public owner background and positioning.
 
 **In this repository, exactly two files changed:** `README.md` and `index.html`.
 The subagent brief restricted edits to those files, and this was verified
-afterwards — `grep -rl "The founder's story"` returns `./README.md` and nothing
-else. The other 38 dirty paths in the working tree are line-ending churn and
-pre-existing uncommitted work, and were deliberately left untouched.
+afterwards — the prior biography audit is retained here only as process history.
+The current public author attribution is maintained in the profile repository.
 
 Two facts that previously disagreed are now recorded rather than reconciled
 silently, in both `README.md` and `index.html`:
@@ -3674,8 +3671,8 @@ mojibake, required sections, snapshot dates, self-referential links and HTML
 structure across all eleven repositories.
 
 **Final run: 0 failures.** All eleven passed on banned vocabulary, superseded
-identity and mojibake; all eleven READMEs carry the founder's story, honest
-boundary, author block, canonical email and canonical GitHub URL.
+identity and mojibake; all eleven READMEs carried an author attribution and honest
+boundary, canonical email and canonical GitHub URL.
 
 Remote state after the four pushes, confirmed with `git ls-remote` and the GitHub
 contents API — not against a remembered hash:
@@ -4600,6 +4597,24 @@ recorded in §A5.3.
 | A5 — hosted evidence runs | COMPLETE — §20.25, §20.26 |
 
 Remaining before Phase C: the full-suite and ledger-consolidation step.
+
+### 20.27 Owner-story truth alignment — local verification complete
+
+The owner-supplied career/positioning statement is now the sole biography source in
+public project text. Removed unsupported role titles, 28-year biography claims,
+career-switch/employment assumptions, and self-taught/solo claims. The dated
+career strategy note was superseded; project facts and honest alpha/pre-pilot
+boundaries remain. Public narration/subtitle sources were corrected; no video or
+audio was regenerated. Existing narration clips are stale at beat-003–006 and
+beat-054–057 (mapping checked with `build_voice.py --dry-run`); see the session
+checkpoint for the re-record/regenerate task.
+
+**Changed scope:** docs, README/index/marketing text, narration HTML/VTT sources,
+and this ledger only. No code, tests, workflows, binaries, MP4s, or audio files
+were changed. `git diff --check` passed; `python GOVERNANCE/governance_check.py
+check` returned `governance=PASS`; `ruff format --check .` returned
+`433 files already formatted`. Full pytest was not rerun because only text sources
+changed. Push and exact-SHA Actions polling remain the final gates for this entry.
 
 ### 20.27 Post-Phase-A verification and the two-ledger resolution
 

@@ -7,7 +7,7 @@
 
 ## Where the project actually stands
 
-Helix Prime is a **solo-built, governed operations platform**. It is `CONTROLLED_PILOT_READY`, not a product: it has no customers, no revenue, and makes no deployment claims.
+Helix Prime is a governed operations platform. It is `CONTROLLED_PILOT_READY`, not a product: it has no customers, no revenue, and makes no deployment claims.
 
 **What is real today (verified):**
 

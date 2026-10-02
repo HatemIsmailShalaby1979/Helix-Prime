@@ -1,6 +1,6 @@
 # Helix Codex App — Master Plan & Build Plan
 
-**Prepared:** 2026-09-13 · **For:** Hatem Shalaby (solo builder) · **Repo:** `E:\Helix-Prime`
+**Prepared:** 2026-09-13 · **For:** Hatem Shalaby · **Repo:** `E:\Helix-Prime`
 
 ---
 
@@ -82,7 +82,7 @@ and mounts the authenticated cockpit section. It includes the existing ops route
 `helix-app`.
 
 Why not a second service: two processes means two ports, two auth systems, and cross-service calls —
-exactly the operational burden a solo builder cannot afford to carry.
+exactly the operational burden that should be assessed before adding another service.
 
 ### 3.2 The extraction seam
 

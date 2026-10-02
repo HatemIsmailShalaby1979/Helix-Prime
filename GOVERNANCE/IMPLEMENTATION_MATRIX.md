@@ -607,7 +607,7 @@ business yet.
 
 ## 23. RELEASE / PORTFOLIO EVIDENCE PACKAGE — Prompt 12
 
-Founder/CTO review artifact (`docs/portfolio/`). Narrative claims are tied to demonstrated
+Owner review artifact (`docs/portfolio/`). Narrative claims are tied to demonstrated
 code/tests only. Documents: `00_INDEX` (positioning + completed/unfinished split),
 `01_architecture_overview`, `02_governance_model`, `03_workflow_demonstration`,
 `04_security_model`, `05_evidence_model`, `06_memory_model`, `07_metacognitive_improvement_model`,

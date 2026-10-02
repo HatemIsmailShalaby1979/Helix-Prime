@@ -142,7 +142,7 @@ This project needed zero environment patches to verify — the strongest "as adv
 ## 4. Live Support Assistant
 
 **Location:** `E:\live-support-assistant`
-**Status:** Not deeply re-verified this pass beyond repo hygiene. Original report's functional description (client-side React, TikTok LIVE policy keyword matching, no backend) not independently re-confirmed — treat as unverified until tested directly.
+**Status:** Not deeply re-verified this pass beyond repo hygiene. Original report's functional description (client-side React, platform-policy keyword matching, no backend) not independently re-confirmed — treat as unverified until tested directly.
 
 ### Repo hygiene (corrected)
 - `.gitignore`: present ✅ (original report's "no .gitignore" claim was false)

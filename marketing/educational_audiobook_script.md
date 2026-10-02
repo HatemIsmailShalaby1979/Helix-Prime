@@ -28,7 +28,7 @@ Let’s begin our journey into the world of Helix Prime.
 
 **Narrator:** For decades, businesses have faced persistent challenges in their operations. Imagine this: a contact center manager receives a forecast indicating they need 500 agents for the upcoming month. They hire accordingly, but the actual call patterns differ significantly from the forecast. Before long, they find themselves drowning in understaffed shifts or overstaffed ones, leading to inefficiencies, burnout, and lost revenue.
 
-This scenario is all too common. For nearly three decades, Hatem Shalaby, the founder of Helix Prime, witnessed these challenges firsthand. He saw the same patterns repeat themselves year after year, causing unnecessary waste and inefficiency.
+This scenario is common in contact-centre operations. Forecasts, staffing, and actual demand can diverge, leading to understaffed or overstaffed shifts.
 
 **Key Points:**
 - Traditional forecasting methods often fail to account for real-time changes.

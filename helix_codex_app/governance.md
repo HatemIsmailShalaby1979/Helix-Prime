@@ -80,7 +80,7 @@ permission, or the integration seam changes, and cite a test for every invariant
 
 1. 2026-09-13. Deliverables go in `E:\Helix-Prime\docs`. Assumption: one repo, one git history, one place to look. A separate folder would fragment the record.
 2. 2026-09-13. Frontend is a server-rendered PWA (FastAPI, HTMX, Alpine). Assumption: one language and no build tooling keep the operational cost low, and a PWA avoids app stores.
-3. 2026-09-13. Deployment is hybrid: self-hosted now, cloud-portable later. Assumption: the first client runs on its own hardware, and a second service is more operational weight than a solo builder can carry.
+3. 2026-09-13. Deployment is hybrid: self-hosted now, cloud-portable later. Assumption: the first client runs on its own hardware, and a second service adds operational weight that should be justified by evidence.
 4. 2026-09-13. v1 is the whole daily-use product: collab core plus ops and cockpit. Assumption: a product with only a few daily surfaces is not sellable, and phases keep the build manageable.
 5. 2026-09-13. Username is `username@domain`, and one domain maps to one tenant. Assumption: a small business maps cleanly to a domain, which gives a simpler login and simpler scoping.
 6. 2026-09-13. Per-user memory is a truly isolated store. Assumption: real isolation is the product promise and is worth paying the index cost for, so a rotating verification sweep keeps it honest (master plan §6.6).

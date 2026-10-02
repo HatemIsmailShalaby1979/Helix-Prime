@@ -112,7 +112,7 @@ Each engine is a specialized module that solves one operational domain. They are
 
 ---
 
-*Architecture designed and implemented by **Hatem Shalaby**. Constitution 000: Architecture serves as the expression of truth.*
+*Constitution 000: Architecture serves as the expression of truth.*
 
 ---
 

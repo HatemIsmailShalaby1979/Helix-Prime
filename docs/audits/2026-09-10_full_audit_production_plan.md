@@ -365,9 +365,7 @@ Only after P0: Scoach roster CSV import, real-data adapter swap, KPI target cali
 
 # PART III — CAREER COACH
 
-*Assumption: you are the founder-engineer commercialising Helix Codex OS. If you are
-instead a hired lead, substitute "your team" for "you" below — the technical order is
-unchanged.*
+*Scenario: commercialization options for Helix Codex OS. This section does not define the owner's title or employment status; use the portfolio profile for current background and positioning.*
 
 ### What this repo says about you (honestly)
 
@@ -380,7 +378,7 @@ produce a verification artefacts at all.
 The weakness is equally diagnostic: **the governance discipline was applied to the
 product's internals but not to the product's delivery.** Dead CI, no auth, 7 competing
 authority docs, a manifest describing a 3-commit-old tree. That is the classic
-founder-engineer asymmetry — rigour where the work is interesting, drift where it is
+implementation/release asymmetry — rigour where the work is interesting, drift where it is
 administrative. Buyers do not experience your internals; they experience the drift.
 
 ### The reframe that matters

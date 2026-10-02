@@ -42,9 +42,7 @@ The schedule says you have enough people — but the phones are ringing off the 
 The client meeting is in two weeks — and you're still writing the onboarding manual by hand.
 The top performer just quit — and you didn't see it coming.
 
-For 28 years, Hatem Shalaby lived these problems. Not as a consultant — as the person in the room when the numbers didn't add up.
-He watched the same waste repeat itself, year after year.
-So he decided to build something different."
+These are the operational problems Helix Prime is designed to model."
 
 ---
 

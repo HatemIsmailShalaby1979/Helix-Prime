@@ -3,7 +3,7 @@
 
 ## The Helix Ecosystem
 
-Helix is an accumulated operations solution — 28 years of contact-centre, WFM, and BPO operations — that has evolved from AI-as-a-tool into a full automated agentic organization.
+Helix is a governed operations platform with workflow, workforce-management, and customer-experience capabilities.
 
 ---
 
@@ -2056,7 +2056,7 @@ Helix is an accumulated operations solution — 28 years of contact-centre, WFM,
 Single Source of Truth
 
 ## Origin: An Accumulated Operations Solution
-Helix is not a tutorial project and not a chatbot wrapper. It is the accumulated operational solution of 28 years in contact-centre, Workforce Management (WFM), and BPO operations. Every engine encodes hard-won operational truth: how staffing actually fails, why adherence slips, what makes a client churn, where onboarding breaks.
+Helix is an operations platform covering contact-centre, Workforce Management (WFM), and customer-experience workflows.
 
 ## AI as a Tool, Then an Agentic Organization
 We began by using AI as a tool - local models and scripts that solved one painful workflow at a time (Erlang C staffing, real-time adherence, churn risk, client SOP generation). Those tools compounded. They became a system of specialized agents and domain engines that observe, reason, remember, and act. Helix is now a full automated agentic organization: humans supervise, the system executes.

@@ -1,10 +1,10 @@
 # 16. Market Research, Strategic Sprint Plan & Career/Financial Roadmap
 
 **Prepared:** 2026-08-29
-**Purpose:** External strategy document for Helix Codex. Synthesizes current market research on
-AI governance and agent orchestration, evaluates open-core/licensing business models for a solo
-infrastructure founder, and produces a sequenced, evidence-gated sprint plan plus a
-career/financial roadmap.
+**Purpose:** External strategy document for Helix Codex. Synthesizes market research on
+AI governance and agent orchestration, evaluates open-core/licensing business models, and
+produces a sequenced, evidence-gated sprint plan plus a career/financial roadmap. The
+personal career and founder-positioning assumptions in this dated document are superseded.
 
 > **Superseded in part by [`17_revised_strategy_plan.md`](17_revised_strategy_plan.md).** That
 > document replaces this one's founder-bootstrap framing (§7's paths, the financial scenario
@@ -37,7 +37,7 @@ append-only audit trails, evidence-bounded change, separation of duties — are 
 buying criteria for governed agentics in 2026.** The market is moving *to* Helix Codex's
 design, not away from it.
 
-Recommended commercial posture for a solo infrastructure founder:
+Historical commercialization scenario:
 
 1. **Open-core**, not closed SaaS-only: publish the governed core free, sell the governed
    surface (observability, compliance packs, SSO/RBAC, support).
@@ -147,7 +147,7 @@ evidence chain. That is a platform-agnostic position big tech cannot credibly oc
 
 ---
 
-## 4. Open-core & licensing strategy for a solo infrastructure founder
+## 4. Open-core & licensing strategy
 
 ### 4.1 Why open-core fits infrastructure (research consensus)
 
@@ -186,12 +186,12 @@ the rationale (see [`14_technical_decision_log.md`](14_technical_decision_log.md
 - Target: SMEs / mid-market (the underpenetrated segment). Reference solo/indie-SaaS pricing
   points run $29–199/mo per seat or workflow; compliance/audit value justifies the upper band.
 - Entry plan: **$0 open core → $150–400/mo per tenant** (paid tier) → 20–50 paying tenants =
-  $3–20k MRR. This is the validated solo-founder range ($5–100k/mo) and needs no sales force:
+  $3–20k MRR. This is an unvalidated range ($5–100k/mo) and needs no sales force:
   adoption-first funnel.
 - Sequencing: open core first (trust + validation), paid tier second, never reverse
   (relicensing is always disruptive).
 
-### 4.4 Solo-founder operational implications
+### 4.4 Small-team operational implications
 
 - Solo/no-VC startups grew from 22% (2015) to 38% (2024); AI now absorbs ~80% of the
   "grunt work"; but solo success comes from **narrow niche + quantifiable pain + organic CAC +
@@ -276,7 +276,7 @@ leverage**. No branch is "failure"; each is a deliberate, evidenced choice.
 
 ## 7. Career / financial roadmap (options, scenario-based)
 
-### Path A — Bootstrap solo founder (recommended default)
+### Path A — Bootstrap (historical scenario; not the current positioning)
 - **Capital:** $5–15k out of pocket; $0 infra (local-first, [`09_cost_assumptions.md`](09_cost_assumptions.md)).
 - **Timeline:** 12 weeks to first gates; 12–24 months to $10–20k MRR.
 - **Upside:** full ownership, control, zero dilution; consistent with COSS solo trend growth.
@@ -291,13 +291,11 @@ leverage**. No branch is "failure"; each is a deliberate, evidenced choice.
 - **Decision rule:** raise only if the marginal capital buys a *provably* faster path to the
   mid-market segment data shows VC's favor; otherwise stay bootstrapped. Never raise to "survive."
 
-### Path C — Portfolio-as-leverage (employment/senior role)
-- **Use case:** if a multi-year solo build is not the right risk profile yet.
-- The 15-document portfolio (1,897 tests, `governance=PASS`, security `all_ok=True`, published
-  demo) is direct, verifiable evidence for **AI governance / agent-infrastructure leadership**
-  roles: CTO/Staff-IC at agent platforms, AI-governance product owner at TRiSM vendors
-  (OneTrust, Credo AI, Fiddler), or "head of AI governance" at a regulated enterprise.
-- **Effect:** portfolio compounds regardless of which path is taken — it is never wasted spend.
+### Path C — Portfolio alongside employment or independent work
+- **Use case:** combine roles with development of the portfolio where appropriate.
+- The portfolio records software prototypes and pre-pilot projects; it has no production deployment,
+  external audit, revenue, team, or funding.
+- For current role positioning, see the profile repository.
 
 ### Financial scenarios (12-month horizon, Path A baseline)
 
@@ -320,7 +318,7 @@ red) production gates.
 |------|-----------|------------|
 | Big-tech commoditizes HITL governance (MSFT/OpenAI/Anthropic) | Medium | Neutral cross-platform substrate + open-core trust; do not compete on runtime; compete on accountable evidence across runtimes |
 | Source-available/BSL churn confuses the community | Medium | Early, documented license decision; Apache-2.0 start; re-license only on evidenced cloud-cannibalization |
-| Solo capacity / bus-factor | High | Documented evidence packs make the codebase reviewable by outsiders; recruit maintainers (Sprint 2 gate); deterministic gates prevent scope creep |
+| Delivery capacity / bus-factor | High | Documented evidence packs make the codebase reviewable by outsiders; recruit maintainers (Sprint 2 gate); deterministic gates prevent scope creep |
 | Regulatory turbulence (EU AI Act amendments, US policy swings) | Medium | Design is framework-agnostic (NIST + EU mappings are packs, not core); watch the policy line quarterly |
 | Shadow-AI/guardrail markets attract incumbents (OneTrust, Zscaler, BigID already listed as TRiSM players) | Medium | Niche-first (SME verticals) and governance-as-execution (not registry/compliance docs) differentiation; SME underpenetration is the research-flagged edge |
 | Open-core adoption with zero revenue (benevolent failure is possible) | Low-Medium | Gate-3 stopper: no un-evidenced scaling; Path C preserves employment optionality |
@@ -343,7 +341,7 @@ red) production gates.
 - Linux Foundation / Serena / COSSA — *State of Commercial Open Source 2025* ($9B/yr, 90% infra, M&A bench: IBM/HashiCorp, Tabular, Isovalent, WSO2).
 - Grokipedia — *Open-core model* (GitLab >$700M ARR; YC >40% OSS portfolio; Redis RSALv2/SSPL; Ollama/LlamaFarm AI-open-core exemplars).
 - Stackmatix — Open-core mechanics; license trade-offs; classic paid-tier split; "adoption before sales."
-- BigIdeasDB / Solofoundr / Startupik / startupfounderstories — solo-founder stats (22%→38%), budgets ($5–15k; diminishing returns past $1k), MRR ranges ($5–100k/mo), cold-start channels, founder-infrastructure stack, Pieter Levels build-in-public playbook.
+- BigIdeasDB / Solofoundr / Startupik / startupfounderstories — startup stats (22%→38%), budgets ($5–15k; diminishing returns past $1k), MRR ranges ($5–100k/mo), cold-start channels, operating infrastructure, Pieter Levels build-in-public playbook.
 
 *Analyst figures are third-party estimates with differing base years/methodologies. They are
 directional anchors for a strategy sprint, not audited production figures — the same

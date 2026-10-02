@@ -30,7 +30,7 @@
 **Recommendation:** Proceed. This is a real problem with a real customer who is already in pain. The fit between Helix Codex's six engines and a sports academy's six core operational needs is remarkably tight. **Status (2026-09-12): the sports-academy capability pack (v1.0.0) has been BUILT** — `capabilities/sports_academy/` with attendance, coach KPIs, athlete profiles, facility, payments, roles, workflows, and cockpit views on simulated data — so the "new vertical, no pack" risk is retired. What remains is proving value on a narrow scope via the pilot, not selling the full vision.
 
 **Key risks:**
-- You are a solo builder with no prior clients in this vertical
+- No external evidence for this vertical is available yet
 - Helix Codex is pre-pilot (no external evidence yet)
 - Competitors have polished, mobile-first products
 - The client may expect a finished SaaS, not an alpha platform
@@ -401,7 +401,7 @@ I'd like to do this as a **pilot** — free for the first 60 days. You pay nothi
 | "How much does it cost?" | "The pilot is free for 60 days. After that, we'd talk about $350-600/month depending on how many athletes and coaches you have. But let's see if it's worth anything to you first." |
 | "We already use WhatsApp and spreadsheets" | "Those work when you have 20 athletes. At 100+, the information is scattered and you lose track. How many athletes do you have now? And how many do you want next year?" |
 | "Can it do [feature X]?" | "Tell me what problem that feature would solve. If it's a top-3 pain, I'll build it in the pilot. If it's nice-to-have, let's focus on the burning issues first." |
-| "Are you a company? How long have you been doing this?" | "I'm a solo builder. This is my first client in this industry — which is why I'm offering it free for 60 days and building it specifically for your academy. You get a system tailored to you, not a generic tool." |
+| "Are you a company? How long have you been doing this?" | "Built by Hatem Ismail Shalaby, Contact Centre Operations & AI Implementation Lead | WFM & CX Transformation. Background: https://github.com/HatemIsmailShalaby1979" |
 | "What about [competitor X]?" | "They're good at [one thing]. But they don't give you an operating system — they give you a tool. If you want to manage one thing, use them. If you want to run the whole academy from one dashboard, that's what I build." |
 | "I need to think about it" | "Of course. Here's what I'd suggest: let me come in for one day, shadow your operations, and write up a specific plan for your academy. No cost, no commitment. Then you decide." |
 
@@ -411,7 +411,7 @@ I'd like to do this as a **pilot** — free for the first 60 days. You pay nothi
 
 ### 7.1 Pricing principles (from research)
 
-Based on solo-founder pricing research (solofoundr.co, 2026):
+Based on pricing research (solofoundr.co, 2026):
 
 1. **Price on value, not cost** — if Helix saves the owner 10 hours/week and prevents 5 athletes from churning (each worth $200/month), that's $1,000+/month in value. Price at 20-30% of value created.
 2. **Start slightly high, not low** — if 8/10 prospects say yes immediately, you're too cheap. If 2/10 say yes, you're in range.
@@ -585,7 +585,7 @@ PILOT AGREEMENT
 | Client's data is messy or incomplete | High | Data cleaning is part of the pilot. Build an import script. Don't expect clean data. |
 | Competitor swoops in with a demo | Medium | Your moat is depth + governance + customization. A competitor can demo faster, but can't adapt to the client's specific needs. |
 | Client doesn't adopt the system | High | Train 1-2 key staff first. The owner alone cannot drive adoption. Make the dashboard addictive — they should WANT to check it. |
-| You get overwhelmed as a solo builder | High | Scope strictly. One engine at a time. Say "not yet" to feature requests. Don't try to build everything. |
+
 | Client asks for mobile app | Medium | "Not in the pilot scope. The web cockpit works on mobile browsers. Native app is a future roadmap item." |
 | Client asks for payment integration | Medium | "Start with manual payment tracking. Payment integration requires compliance (PCI DSS) and is a Phase 2 conversation." |
 | Client churns during pilot | Medium | If they churn during a free pilot, the problem is either product or relationship. Ask: "What didn't work?" Listen. Fix. Move on. |

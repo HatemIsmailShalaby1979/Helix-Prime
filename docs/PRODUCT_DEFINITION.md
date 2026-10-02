@@ -9,7 +9,7 @@
 
 Helix Prime is a **public alpha** operations system: six business engines (WFM/Erlang C, RTA, CX Churn Sentinel, B2B Onboarding, Personnel, CRM) and nine AI agents (SAMI, SUBY, PHILI, WILI, ANDY, NONO, MAYA, LIZA, TOMY) connected to a local Ollama model, with content-based request routing and a Streamlit Operations Cockpit.
 
-It is built by one person, Hatem Shalaby, after 28 years working on the operations floor — contact-centre forecasting, scheduling, onboarding, and floor management. It is the direct result of that experience: the system models the workflows he ran.
+Built by Hatem Ismail Shalaby, Contact Centre Operations & AI Implementation Lead | WFM & CX Transformation. Background: https://github.com/HatemIsmailShalaby1979
 
 ## What it is NOT (verified, per MASTER_STORY.md)
 
@@ -51,6 +51,4 @@ Alpha, run locally. `helix-api` (FastAPI spine, loopback-bound) is the canonical
 
 ## Contact
 
-Built and maintained by Hatem Shalaby. Public contact is via `github.com/HatemIsmailShalaby1979/Helix-Prime`.
-
-*Built from 28 years on the operations floor, encoded into software — honestly, one verified increment at a time.*
+Built by Hatem Ismail Shalaby, Contact Centre Operations & AI Implementation Lead | WFM & CX Transformation. Background: https://github.com/HatemIsmailShalaby1979

@@ -1,4 +1,4 @@
-# Helix Codex — Founder/CTO Portfolio & Release Evidence Package
+# Helix Codex — Project Portfolio & Release Evidence Package
 
 **Positioning (design intent, realized by demonstrated mechanisms):**
 
@@ -79,7 +79,7 @@ dated earlier runs are kept as the audit trail in
 code. Both are dated and neither is a claim about this repository's state.
 
 16. [Market research, strategic sprint plan & career/financial roadmap](16_market_research_strategy_roadmap.md) — prepared 2026-08-29; superseded in part by 17
-17. [Revised strategy plan — two tracks, not one founder bet](17_revised_strategy_plan.md) — supersedes 16's founder-bootstrap framing
+17. [Revised strategy plan — superseded](17_revised_strategy_plan.md) — the personal career assumptions in 16 are no longer current
 
 ## Status
 - **Pilot package ready:** TRUE

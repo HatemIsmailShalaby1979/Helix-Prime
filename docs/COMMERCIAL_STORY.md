@@ -7,7 +7,9 @@
 
 ## The honest story
 
-Helix Prime exists because its builder, Hatem Shalaby, spent 28 years inside the operational problems the system models — contact-centre forecasting, scheduling, adherence, onboarding, and floor management. It is a solo-built, private alpha: six business engines, nine AI agents, content-based routing, and a Streamlit cockpit, documented honestly in the repository README.
+Helix Prime is a private alpha with six business engines, nine AI agents, content-based routing, and a Streamlit cockpit.
+
+Built by Hatem Ismail Shalaby, Contact Centre Operations & AI Implementation Lead | WFM & CX Transformation. Background: https://github.com/HatemIsmailShalaby1979
 
 **What this project is not yet:**
 - Not a product with paying customers. There are no deployments and no revenue, but one **named design partner**: **Scoach Academy Hub** (a private sports academy) — contractually optional, commercially pre-revenue. A first vertical capability pack (`capabilities/sports_academy/`, v1.0.0) was built for them on synthetic data; see `docs/scoach_academy_hub_opportunity_report.md` and `docs/sports_academy_pack.md`.
@@ -23,7 +25,7 @@ Helix Prime exists because its builder, Hatem Shalaby, spent 28 years inside the
 - An orchestrator with real content-based routing.
 - A Streamlit Operations Cockpit.
 - A CI pipeline with pre-commit linting.
-- A verified track record of the underlying operational domain: 28 years on the operations floor (see `MASTER_STORY.md`, Part 2 — real titles, real dates).
+
 
 ## Commercial position
 
@@ -31,4 +33,4 @@ There is none to publish. This is an honest alpha. Commercialization would only 
 
 ## Contact
 
-Hatem Shalaby. Public contact via `github.com/HatemIsmailShalaby1979`.
+Built by Hatem Ismail Shalaby, Contact Centre Operations & AI Implementation Lead | WFM & CX Transformation. Background: https://github.com/HatemIsmailShalaby1979

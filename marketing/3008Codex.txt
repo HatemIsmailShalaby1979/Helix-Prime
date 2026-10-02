@@ -464,7 +464,7 @@ Verification:
 
 ## Prompt 12 — Final release and career evidence package
 
-Prepare Helix Codex for review as a Founder/CTO portfolio project.
+Prepare Helix Codex for review as a governed operations-software portfolio project.
 
 Produce:
 

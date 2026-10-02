@@ -530,7 +530,7 @@
           <div class="mark"></div>
           <div class="wm">Helix <span>Codex</span></div>
         </div>
-        <div class="actline" id="actline">Act 1 · <b>The founder and the problem</b></div>
+        <div class="actline" id="actline">Act 1 · <b>Operations and implementation</b></div>
       </div>
       <div class="topright">
         <div class="tcrow">
@@ -552,7 +552,7 @@
 
     <div class="actflash" id="actflash">
       <div class="k" id="afk">ACT 1</div>
-      <div class="n" id="afn">The founder and the problem</div>
+      <div class="n" id="afn">Operations and implementation</div>
     </div>
 
     <div id="sceneMount"></div>
@@ -638,7 +638,7 @@ const ic = (n, cls) => '<svg class="'+(cls||'')+'" viewBox="0 0 24 24"><path d="
 
 /* ============================== acts ============================== */
 const ACTS = [
-  {n:1, name:"The founder and the problem", start:0},
+  {n:1, name:"Operations and implementation", start:0},
   {n:2, name:"One app for the whole company", start:60},
   {n:3, name:"The intelligence", start:120},
   {n:4, name:"The proof", start:180},
@@ -664,31 +664,31 @@ const SCENES = [
     '</div>'
 },
 {
-  id:"founder", act:1, start:10, dur:24, title:"The founder",
-  visual:"Portrait card slides in from the left. Name resolves, '28' counts up, three remembered failures list in one at a time.",
+  id:"positioning", act:1, start:10, dur:24, title:"Operations and implementation",
+  visual:"The headline appears, followed by the operating experience and portfolio status.",
   beats:[
-    {t:0.0, line:"Meet Hatem Shalaby. Twenty-eight years in operations — not advising them. Running them."},
-    {t:7.6, line:"He sat in the room when the numbers didn't add up. The roster that never matched the phones."},
-    {t:13.5, line:"The SOP nobody could find. The client who left without warning."},
-    {t:19.1, line:"So instead of buying another tool, he built the system he kept wishing existed."}
+    {t:0.0, line:"Hatem Ismail Shalaby: Contact Centre Operations and AI Implementation Lead, focused on WFM and CX Transformation."},
+    {t:7.6, line:"He combines deep operating-floor judgment with hands-on skill building software tools that solve daily operational friction."},
+    {t:13.5, line:"The portfolio consists of prototypes and pre-pilot software, not production deployments."},
+    {t:19.1, line:"The work focuses on streamlining team workflows, improving queue response times, and practical, human-guided automation."}
   ],
   render:()=>'<div class="scene">'+
     '<div class="founder">'+
       '<div class="portrait b1"><div class="scrim"></div><div class="mono">HS</div>'+
-        '<div class="cap">Hatem Shalaby<small>Founder · Helix Codex OS</small></div></div>'+
+        '<div class="cap">Hatem Ismail Shalaby<small>Contact Centre Operations & AI Implementation Lead | WFM & CX Transformation</small></div></div>'+
       '<div>'+
-        '<div class="eyebrow b1" style="transition-delay:.08s">The founder</div>'+
-        '<h1 class="big b1" style="transition-delay:.14s">Twenty-eight years <em>inside</em> the operations he now automates.</h1>'+
+        '<div class="eyebrow b1" style="transition-delay:.08s">Operations and implementation</div>'+
+        '<h1 class="big b1" style="transition-delay:.14s">Contact Centre Operations &amp; AI Implementation Lead</h1>'+
         '<div class="fstats">'+
-          '<div class="st b1" style="transition-delay:.22s"><b data-count="28" data-b="1">0</b><span>Years in operations</span></div>'+
+          '<div class="st b1" style="transition-delay:.22s"><b data-count="6" data-b="1">0</b><span>Business engines</span></div>'+
           '<div class="st b2"><b data-count="9" data-b="2">0</b><span>Named agent roles</span></div>'+
           '<div class="st b2"><b data-count="1395" data-b="2">0</b><span>Automated tests in the suite</span></div>'+
         '</div>'+
         '<div class="fnotes">'+
-          '<div class="b2"><i></i><span>The roster that never matched the phones.</span></div>'+
-          '<div class="b3"><i></i><span>The SOP nobody could find when it mattered.</span></div>'+
-          '<div class="b3"><i></i><span>The client who left without warning.</span></div>'+
-          '<div class="b4"><i></i><span>So he built the system he kept wishing existed.</span></div>'+
+          '<div class="b2"><i></i><span>Deep operating-floor judgment.</span></div>'+
+          '<div class="b3"><i></i><span>Hands-on software tools for daily operational friction.</span></div>'+
+          '<div class="b3"><i></i><span>Workflow streamlining and faster queue response.</span></div>'+
+          '<div class="b4"><i></i><span>Practical, human-guided automation.</span></div>'+
         '</div>'+
       '</div>'+
     '</div></div>'
@@ -900,7 +900,7 @@ const SCENES = [
     return '<div class="scene">'+
       '<div class="eyebrow b1">Memory</div>'+
       '<h1 class="big b1" style="transition-delay:.08s">A memory that improves with use.</h1>'+
-      '<div class="mem">'+ l +
+      '<div class="mem">'+l +
         '<div class="review b2" style="transition-delay:.2s">'+
           '<div class="h">What the reviewer actually sees</div>'+
           '<div class="bar"><div class="bl"><span>Baseline rate before the change</span><b>61%</b></div>'+
@@ -1057,7 +1057,7 @@ const SCENES = [
 },
 {
   id:"cta", act:5, start:286, dur:14, title:"Start with one academy",
-  visual:"Wide closing card: the ask, three steps, then founder credit, repo and wordmark. Hold the final frame.",
+  visual:"Wide closing card: the ask, three steps, then author credit, repo and wordmark. Hold the final frame.",
   beats:[
     {t:0.0, line:"Start with one academy."},
     {t:1.8, line:"Scoach Academy Hub is the first deployment — a working pilot in weeks, not quarters."},
@@ -1068,18 +1068,18 @@ const SCENES = [
     '<div class="ctaGrid">'+
       '<div>'+
         '<div class="eyebrow b1">The ask</div>'+
-        '<div class="word b1" style="transition-delay:.08s">Start with <em>one academy.</em></div>'+
-        '<div class="sub b2">Scoach Academy Hub is the first deployment. A working pilot in weeks, not quarters.</div>'+
+        '<div class="word b1" style="transition-delay:.08s">One design-partner <em>shadow-mode pilot.</em></div>'+
+        '<div class="sub b2">Pilot prerequisites are not yet met. No production deployment is claimed.</div>'+
         '<div class="credit b4">'+
-          '<span>Founder <b>Hatem Shalaby</b></span>'+
+          '<span>Contact Centre Operations &amp; AI Implementation Lead | WFM &amp; CX Transformation</span>'+
           '<span>Helix Codex OS · 2026</span>'+
           '<span class="repo">github.com/HatemIsmailShalaby1979/Helix-Prime</span>'+
         '</div>'+
       '</div>'+
       '<div class="ctasteps">'+
-        '<div class="ctastep b2"><div class="n">01</div><div><b>Run the pilot</b><p>Sixty days, your data, your hardware, no migration project.</p></div></div>'+
-        '<div class="ctastep b3"><div class="n">02</div><div><b>Add your capability pack</b><p>The sections and metrics your business actually uses — not a generic template.</p></div></div>'+
-        '<div class="ctastep b4"><div class="n">03</div><div><b>Own the result</b><p>The code, the data and the audit trail stay with you.</p></div></div>'+
+        '<div class="ctastep b2"><div class="n">01</div><div><b>Meet prerequisites</b><p>Confirm scope, data handling, integrations and human handoff.</p></div></div>'+
+        '<div class="ctastep b3"><div class="n">02</div><div><b>Validate the workflow</b><p>Use a bounded shadow-mode pilot only after prerequisites are met.</p></div></div>'+
+        '<div class="ctastep b4"><div class="n">03</div><div><b>Keep human oversight</b><p>Automation remains practical and human-guided.</p></div></div>'+
       '</div>'+
     '</div></div>'
 }

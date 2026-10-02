@@ -9,7 +9,6 @@
 > - No cryptographic proof ledger and no "immutable audit trail" exists in the codebase.
 > - No client deployments and no customer accounts exist.
 > - Real company names (VF UK, Lufthansa) must never appear as simulated accounts.
-> - The "14 years of AI automation engineering" career claim is not verified and is void.
 >
 > The workspace has since been consolidated into a single public repository
 > (`github.com/HatemShelby/Helix-Prime`). For the current architecture, see

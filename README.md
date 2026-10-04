@@ -278,7 +278,9 @@ closed: it requires an `X-Cockpit-Key` header matching the `HELIX_COCKPIT_APPROV
 environment variable, and refuses with `503` when that variable is unset unless
 `HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true` is set. That override is for local development
 and tests only and must never be enabled in production. The `manager_id` sent with a
-decision is recorded as asserted by the key holder, not independently verified.
+decision is recorded as asserted by the key holder, not independently verified. In the
+local compose profile the cockpit service publishes on `127.0.0.1:8001` (engine port
+`8000`), so point the UI at `http://127.0.0.1:8001` there via `HELIX_COCKPIT_ENDPOINT`.
 
 ### Verification records
 

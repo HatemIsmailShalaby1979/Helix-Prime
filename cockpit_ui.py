@@ -66,7 +66,7 @@ import httpx
 import pandas as pd
 import streamlit as st
 
-DEFAULT_ENDPOINT: Final[str] = "http://127.0.0.1:8000"
+DEFAULT_ENDPOINT: Final[str] = os.environ.get("HELIX_COCKPIT_ENDPOINT", "http://127.0.0.1:8000")
 STATE_PATH: Final[str] = "/api/v1/cockpit/state"
 APPROVE_PATH: Final[str] = "/api/v1/cockpit/approve"
 DEFAULT_MANAGER_ID: Final[str] = "MGR-01"

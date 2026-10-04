@@ -711,6 +711,9 @@ class Engine:
             self._emit_event(
                 workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
             )
+            self._audit(
+                "workflow_dead_letter", workflow, request.requesting_actor, decision="denied"
+            )
             return workflow
 
         # Validate owning role matches capability owner (deterministic routing)
@@ -738,6 +741,9 @@ class Engine:
                 "workflow_dead_letter",
                 request.requesting_actor,
                 {"reason": workflow.error.message},
+            )
+            self._audit(
+                "workflow_dead_letter", workflow, request.requesting_actor, decision="denied"
             )
             return workflow
 
@@ -772,6 +778,12 @@ class Engine:
                         request.requesting_actor,
                         {"reason": workflow.error.message},
                     )
+                    self._audit(
+                        "workflow_dead_letter",
+                        workflow,
+                        request.requesting_actor,
+                        decision="denied",
+                    )
                     return workflow
             except ValueError as e:
                 workflow = Workflow.new(
@@ -793,6 +805,9 @@ class Engine:
                 self.store.create_workflow(workflow)
                 self._emit_event(
                     workflow, "workflow_dead_letter", request.requesting_actor, {"reason": str(e)}
+                )
+                self._audit(
+                    "workflow_dead_letter", workflow, request.requesting_actor, decision="denied"
                 )
                 return workflow
 

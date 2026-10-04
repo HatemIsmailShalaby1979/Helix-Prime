@@ -88,6 +88,12 @@ jobs:
           python -m build
 
       - name: Validate API container definition
+        env:
+          # The compose file requires HELIX_COCKPIT_APPROVE_KEY (${VAR:?}) and
+          # `docker compose config` interpolates the whole file. Supply a fixed,
+          # CI-only dummy so the definition can be validated. The :? guard is
+          # unchanged and production still supplies the real key.
+          HELIX_COCKPIT_APPROVE_KEY: ci-dummy-key-0123456789
         run: |
           docker compose -f infra/docker/docker-compose.yml config --quiet
           docker compose -f infra/docker/docker-compose.yml build helix-api

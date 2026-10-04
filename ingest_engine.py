@@ -834,6 +834,8 @@ def _require_approve_auth(http_request: Request) -> JSONResponse | None:
 
     Fails closed. With no configured key the endpoint is unavailable unless the
     local-dev override is set; with a key set the X-Cockpit-Key header must match.
+    Both keys are compared as UTF-8 bytes so a non-ASCII header value cannot raise
+    and turn into a 500.
     """
     configured_key = os.environ.get("HELIX_COCKPIT_APPROVE_KEY")
     if configured_key is None:
@@ -854,7 +856,9 @@ def _require_approve_auth(http_request: Request) -> JSONResponse | None:
             },
         )
     provided = http_request.headers.get("X-Cockpit-Key")
-    if provided is None or not hmac.compare_digest(provided, configured_key):
+    if provided is None or not hmac.compare_digest(
+        provided.encode("utf-8"), configured_key.encode("utf-8")
+    ):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "approve endpoint requires a valid X-Cockpit-Key header"},

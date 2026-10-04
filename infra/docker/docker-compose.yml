@@ -54,6 +54,23 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Ops Cockpit ingestion + intervention engine (ingest_engine.py at repo root).
+  # It serves POST /api/v1/cockpit/approve, which fails closed unless
+  # HELIX_COCKPIT_APPROVE_KEY is supplied. The variable is passed through from the
+  # host environment with no default, so a missing key leaves the approve endpoint
+  # refusing with 503 rather than starting unauthenticated.
+  cockpit:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    command: >
+      uvicorn ingest_engine:create_app --factory --host 0.0.0.0 --port 8000
+    ports:
+      - "8001:8000"
+    environment:
+      HELIX_COCKPIT_APPROVE_KEY: ${HELIX_COCKPIT_APPROVE_KEY}
+    restart: unless-stopped
+
   # Ollama is an external local model runtime, not part of the deterministic
   # engine image. GPU flags are opt-in; the control plane remains CPU-safe.
   ollama:

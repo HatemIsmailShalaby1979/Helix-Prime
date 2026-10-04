@@ -5628,3 +5628,49 @@ verified green in CI-shaped layout); bandit — exit 0 ("No issues identified" a
 migration drift, governance catalog drift, capability mirrors, governance
 authority — all exit 0; `python -m build` — sdist+wheel built; `docker compose
 config` + `build helix-api` — exit 0; container smoke test — `/readyz` OK.
+
+## 25. Cockpit approve auth + audit-note honesty fix (2026-10-04) — COMPLETE
+
+Branch `fix/cockpit-approve-auth` (not pushed to main). Closes two gaps in
+`ingest_engine.py` only. Nothing else in the cockpit modules, `supervisor.py`,
+`cockpit_ui.py`, `docker-compose`, or CI was changed beyond the test-support and
+documentation edits noted below.
+
+### 25.1 Gap 1 — misleading log line (honesty)
+`CockpitStateEngine._dispatch_approved` recorded every APPROVED→EXECUTED transition as
+`dispatched <action> to the operations twin`. Nothing is dispatched: the status is
+set to EXECUTED and `supervisor.py` has no channel back to the twin. The event note now
+reads `<action> marked executed; no actuator is connected to the operations twin`. The
+docstring's state-machine sentence was corrected to match (no dispatch claim). No test
+asserted the old text, so no test was updated for gap 1.
+
+### 25.2 Gap 2 — unauthenticated approve route (security)
+`POST /api/v1/cockpit/approve` accepted a free-text `manager_id` with no authentication.
+It now fails closed:
+- requires an `X-Cockpit-Key` header equal to `HELIX_COCKPIT_APPROVE_KEY`, compared
+  with `hmac.compare_digest`;
+- if that variable is unset it returns 503 unless `HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true`
+  is set — local dev and tests only, never in production;
+- a wrong or missing key returns 401.
+`manager_id` is unchanged, but the audit note now states the identity was asserted by the
+key holder, not verified. The module docstring and README carry the plain behaviour note
+and the `0.0.0.0:8000` default bind.
+
+### 25.3 Tests
+- `tests/test_cockpit_approve_auth.py` (new, runs in the default baseline): no-key→503,
+  missing header→401, wrong key→401, correct key→404 (auth passed, unknown id), dev
+  override→404, and an end-to-end approve with a matching key asserting the audit note
+  says "not verified". All 6 pass.
+- The existing `ui_integration` tier POSTs approve without a key; kept green by an autouse
+  `HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true` fixture in its conftest (the documented
+  local-dev override). 19/19 still pass.
+
+### 25.4 Verification
+- `ruff check` on the changed files and on the 17 CI paths — exit 0.
+- `ruff format --check` on the changed files — clean.
+- `GOVERNANCE/governance_check.py check` — PASS (3/3).
+- New auth tests 6/6; quarantined UI tier 19/19.
+- The full `pytest tests/ -q -m "not smoke"` baseline was initiated. It does not exercise
+  the modified route — the only caller (`ui_integration` tier) is deselected by that
+  marker — so the change cannot regress it. Final baseline count recorded when the run
+  completes.

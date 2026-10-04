@@ -45,9 +45,10 @@ Intervention
 
 State machine
     PENDING -> APPROVED | REJECTED on a manager decision. APPROVED -> EXECUTED
-    when the control loop dispatches the action on the next ingested tick. Every
-    other edge is refused. All timestamps live on the telemetry clock so the
-    audit trail shares one timebase.
+    when the control loop marks the action executed on the next ingested tick; no
+    actuator is connected to the twin, so nothing is dispatched. Every other edge
+    is refused. All timestamps live on the telemetry clock so the audit trail
+    shares one timebase.
 
 Streaming
     `ws /ws/v1/cockpit/stream` subscribes a cockpit client to live state so it
@@ -62,6 +63,17 @@ Streaming
     no orphan task behind.
     Clients may send `ping` (bare or `{"type": "ping"}`) to probe liveness.
 
+Approval authentication
+    `POST /api/v1/cockpit/approve` is the human-in-the-loop authority action and
+    it fails closed. It requires an `X-Cockpit-Key` header whose value must match
+    the `HELIX_COCKPIT_APPROVE_KEY` environment variable, compared with
+    `hmac.compare_digest`. When that variable is unset the endpoint refuses with
+    503 unless `HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true` is set, which exists for
+    local development and tests only and must never be enabled in production. The
+    `manager_id` in the request is recorded as asserted by the key holder, not
+    independently verified by the engine. The app binds 0.0.0.0:8000 by default
+    per the cockpit deployment spec; override with --host on an untrusted network.
+
 The engine is in-memory and single-process; `asyncio.Lock` serialises mutation
 on the event loop. Bind defaults to 0.0.0.0:8000 per the cockpit deployment
 spec, which is a deliberate departure from the repository's loopback default --
@@ -72,7 +84,9 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hmac
 import json
+import os
 import statistics
 import time
 import uuid
@@ -379,7 +393,7 @@ class CockpitStateEngine:
                     f"manager {request.manager_id} {request.decision}d "
                     f"{updated.proposed_action.value}; "
                     f"${updated.estimated_financial_saving_usd:,.2f} exposure "
-                    f"{outcome}"
+                    f"{outcome}; identity asserted by key holder, not verified"
                 ),
             )
             self._events.append(event)
@@ -434,7 +448,10 @@ class CockpitStateEngine:
                     from_status=InterventionStatus.APPROVED,
                     to_status=InterventionStatus.EXECUTED,
                     actor="control_loop",
-                    note=f"dispatched {updated.proposed_action.value} to the operations twin",
+                    note=(
+                        f"{updated.proposed_action.value} marked executed; "
+                        f"no actuator is connected to the operations twin"
+                    ),
                 )
             )
         return executed
@@ -812,6 +829,39 @@ class ConnectionManager:
                 outbox.task_done()
 
 
+def _require_approve_auth(http_request: Request) -> JSONResponse | None:
+    """Return a refusal response when the approve route must close, else None.
+
+    Fails closed. With no configured key the endpoint is unavailable unless the
+    local-dev override is set; with a key set the X-Cockpit-Key header must match.
+    """
+    configured_key = os.environ.get("HELIX_COCKPIT_APPROVE_KEY")
+    if configured_key is None:
+        if os.environ.get("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            return None
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "detail": (
+                    "approve endpoint unavailable: set HELIX_COCKPIT_APPROVE_KEY, or "
+                    "HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true for local dev/tests only"
+                )
+            },
+        )
+    provided = http_request.headers.get("X-Cockpit-Key")
+    if provided is None or not hmac.compare_digest(provided, configured_key):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={"detail": "approve endpoint requires a valid X-Cockpit-Key header"},
+        )
+    return None
+
+
 def create_app(
     engine: CockpitStateEngine | None = None, manager: ConnectionManager | None = None
 ) -> FastAPI:
@@ -887,7 +937,10 @@ def create_app(
         return await state_engine.snapshot()
 
     @application.post("/api/v1/cockpit/approve", response_model=ApprovalResponse)
-    async def approve(request: ApprovalRequest) -> ApprovalResponse:
+    async def approve(request: ApprovalRequest, http_request: Request) -> ApprovalResponse:
+        auth_failure = _require_approve_auth(http_request)
+        if auth_failure is not None:
+            return auth_failure
         result = await state_engine.decide(request)
         stream_manager.dispatch(
             StreamMessageType.INTERVENTION_UPDATED,

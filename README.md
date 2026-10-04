@@ -272,6 +272,14 @@ helix-cockpit                            # binds 127.0.0.1:8501
 
 Ollama is optional; without it the system runs in deterministic offline mode and reports the limitation clearly.
 
+The Ops Cockpit ingest engine (`ingest_engine.py`) is a separate process that binds
+`0.0.0.0:8000` by default. Its `POST /api/v1/cockpit/approve` authority action fails
+closed: it requires an `X-Cockpit-Key` header matching the `HELIX_COCKPIT_APPROVE_KEY`
+environment variable, and refuses with `503` when that variable is unset unless
+`HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true` is set. That override is for local development
+and tests only and must never be enabled in production. The `manager_id` sent with a
+decision is recorded as asserted by the key holder, not independently verified.
+
 ### Verification records
 
 What was verified, when, on which machine, with what result — including the

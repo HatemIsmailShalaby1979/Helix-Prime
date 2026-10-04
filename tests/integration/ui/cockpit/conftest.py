@@ -91,6 +91,19 @@ def check() -> Iterator[CheckLog]:
     assert not log.failures, f"{len(log.failures)} of {log.checks} check(s) failed: {log.failures}"
 
 
+@pytest.fixture(autouse=True)
+def _cockpit_tier_allows_unauthenticated_approve(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """The quarantined integration tier drives a real engine without an approve key.
+
+    It runs under the local-dev override, which is exactly what
+    ``HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true`` is for. This keeps the approve flow
+    exercised after the route became fail-closed; the subprocess inherits the variable
+    and the in-process clients read it per request.
+    """
+    monkeypatch.setenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "true")
+    yield
+
+
 def free_port() -> int:
     """Reserve an ephemeral loopback port so concurrent runs cannot collide."""
     with socket.socket() as probe:

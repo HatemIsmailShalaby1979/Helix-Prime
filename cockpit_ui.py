@@ -57,6 +57,7 @@ Run
 from __future__ import annotations
 
 import importlib.util
+import os
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, Final
@@ -168,14 +169,21 @@ def _post_decision(
     client: httpx.Client, endpoint: str, intervention_id: str, decision: str, manager_id: str
 ) -> tuple[bool, str]:
     """Submit one manager decision, translating every failure into a message."""
+    approve_key = os.environ.get("HELIX_COCKPIT_APPROVE_KEY")
+    if not approve_key:
+        return False, (
+            "Approval key not configured: set the HELIX_COCKPIT_APPROVE_KEY "
+            "environment variable on the cockpit process before deciding."
+        )
     body = {
         "intervention_id": intervention_id,
         "decision": decision,
         "manager_id": manager_id,
     }
+    headers = {"X-Cockpit-Key": approve_key}
     short_id = intervention_id[:8]
     try:
-        response = client.post(f"{endpoint.rstrip('/')}{APPROVE_PATH}", json=body)
+        response = client.post(f"{endpoint.rstrip('/')}{APPROVE_PATH}", json=body, headers=headers)
     except httpx.HTTPError as error:
         return False, (
             f"{decision} failed for {short_id}: engine unreachable "
@@ -376,7 +384,7 @@ def _render_audit(payload: dict[str, Any]) -> None:
     st.dataframe(pd.DataFrame(rows), hide_index=True)
     st.caption(
         "Operational time is the twin's simulated clock. EXECUTED follows APPROVED "
-        "once the control loop dispatches the action on the next ingested tick."
+        "once the action is marked executed and no actuator is connected to the twin."
     )
 
 

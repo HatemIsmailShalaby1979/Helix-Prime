@@ -127,3 +127,27 @@ def test_approve_records_identity_as_asserted_not_verified(monkeypatch: pytest.M
         note = response.json()["execution_trace"]["note"]
         assert "MGR-07" in note
         assert "not verified" in note
+
+
+def test_approve_non_ascii_key_header_returns_401_not_500(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """A non-ASCII X-Cockpit-Key header must be refused with 401, never raise a
+    TypeError that escapes as a 500. Both keys are compared as UTF-8 bytes, so an
+    arbitrary non-ASCII header value cannot trip compare_digest's str guard.
+    """
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", KEY)
+    monkeypatch.delenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", raising=False)
+    # Raw UTF-8 bytes ride the wire; Starlette decodes the header as latin-1, so the
+    # server sees a non-ASCII str -- exactly the input that used to raise.
+    headers = [(b"X-Cockpit-Key", "café-🔑-naïve".encode("utf-8"))]
+    response = client.post(
+        APPROVE_URL,
+        json={
+            "intervention_id": "does-not-exist",
+            "decision": "approve",
+            "manager_id": "MGR-01",
+        },
+        headers=headers,
+    )
+    assert response.status_code == 401

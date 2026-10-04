@@ -832,26 +832,47 @@ class ConnectionManager:
 def _require_approve_auth(http_request: Request) -> JSONResponse | None:
     """Return a refusal response when the approve route must close, else None.
 
-    Fails closed. With no configured key the endpoint is unavailable unless the
-    local-dev override is set; with a key set the X-Cockpit-Key header must match.
-    Both keys are compared as UTF-8 bytes so a non-ASCII header value cannot raise
-    and turn into a 500.
+    Fails closed. ``HELIX_COCKPIT_ALLOW_UNAUTHENTICATED`` is a master switch for
+    local development and the quarantined integration tier only: when set, the
+    endpoint is open and unauthenticated. It must never be enabled in production, so
+    this branch is inert there and the key below is always enforced. When the override
+    is off, a usable ``HELIX_COCKPIT_APPROVE_KEY`` is required: an empty,
+    whitespace-only, or sub-16-character key is refused with 503, and a usable key
+    must be matched by the ``X-Cockpit-Key`` header. Both keys are compared as UTF-8
+    bytes so a non-ASCII header value cannot raise and turn into a 500.
     """
+    # Checked first so it stays a single, explicit switch. The integration tier sets
+    # it alongside a real key to keep the approve flow exercised without coupling the
+    # tests to header plumbing; production never sets it, so the key is always enforced.
+    if os.environ.get("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return None
     configured_key = os.environ.get("HELIX_COCKPIT_APPROVE_KEY")
-    if configured_key is None:
-        if os.environ.get("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "").lower() in {
-            "1",
-            "true",
-            "yes",
-            "on",
-        }:
-            return None
+    # An empty or whitespace-only key is not a secret: treat it exactly like an
+    # unset one so a request carrying an empty X-Cockpit-Key header cannot pass.
+    if configured_key is None or not configured_key.strip():
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={
                 "detail": (
                     "approve endpoint unavailable: set HELIX_COCKPIT_APPROVE_KEY, or "
                     "HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true for local dev/tests only"
+                )
+            },
+        )
+    # Fail closed on a key too short to be a real secret: a short key that
+    # "matches" an equally short header is no authentication at all.
+    if len(configured_key) < 16:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "detail": (
+                    "approve endpoint unavailable: HELIX_COCKPIT_APPROVE_KEY must be at "
+                    "least 16 characters"
                 )
             },
         )

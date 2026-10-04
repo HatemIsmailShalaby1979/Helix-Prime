@@ -151,3 +151,48 @@ def test_approve_non_ascii_key_header_returns_401_not_500(
         headers=headers,
     )
     assert response.status_code == 401
+
+
+def test_approve_empty_key_with_empty_header_does_not_authenticate(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """A configured key of "" is not a secret: it must be refused like an unset one.
+
+    Even when the caller sends an empty X-Cockpit-Key header that would "match" an
+    empty key, the endpoint returns 503 (unavailable), never 200 or 404.
+    """
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", "")
+    monkeypatch.delenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", raising=False)
+    response = _post_approve(client, key="")
+    assert response.status_code == 503
+
+
+def test_approve_whitespace_only_key_does_not_authenticate(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """A whitespace-only key is treated as unset, so it cannot authenticate."""
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", "    ")
+    monkeypatch.delenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", raising=False)
+    response = _post_approve(client, key="    ")
+    assert response.status_code == 503
+
+
+def test_approve_short_key_is_refused(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    """A key shorter than 16 characters is refused with 503, not accepted."""
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", "short")
+    monkeypatch.delenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", raising=False)
+    response = _post_approve(client, key="short")
+    assert response.status_code == 503
+    assert "16 characters" in response.json()["detail"]
+
+
+def test_approve_valid_long_key_still_works(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """A real (>=16 char) key still gates correctly: a matching header passes the
+    auth check, so an unknown id then yields 404 rather than 401 or 503.
+    """
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", "valid-long-approve-key-001")
+    monkeypatch.delenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", raising=False)
+    response = _post_approve(client, key="valid-long-approve-key-001")
+    assert response.status_code == 404

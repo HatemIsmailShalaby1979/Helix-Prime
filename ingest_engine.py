@@ -832,29 +832,29 @@ class ConnectionManager:
 def _require_approve_auth(http_request: Request) -> JSONResponse | None:
     """Return a refusal response when the approve route must close, else None.
 
-    Fails closed. ``HELIX_COCKPIT_ALLOW_UNAUTHENTICATED`` is a master switch for
-    local development and the quarantined integration tier only: when set, the
-    endpoint is open and unauthenticated. It must never be enabled in production, so
-    this branch is inert there and the key below is always enforced. When the override
-    is off, a usable ``HELIX_COCKPIT_APPROVE_KEY`` is required: an empty,
-    whitespace-only, or sub-16-character key is refused with 503, and a usable key
-    must be matched by the ``X-Cockpit-Key`` header. Both keys are compared as UTF-8
-    bytes so a non-ASCII header value cannot raise and turn into a 500.
+    Fails closed. A configured ``HELIX_COCKPIT_APPROVE_KEY`` always wins: an
+    empty, whitespace-only, or sub-16-character key is refused with 503, and a
+    usable key must be matched by the ``X-Cockpit-Key`` header. Both keys are
+    compared as UTF-8 bytes so a non-ASCII header value cannot raise and turn
+    into a 500.
+
+    ``HELIX_COCKPIT_ALLOW_UNAUTHENTICATED`` is a local-development escape hatch
+    only, and it applies *only* when no key is configured: it is consulted solely
+    inside the keyless branch below, so a configured key can never be bypassed.
     """
-    # Checked first so it stays a single, explicit switch. The integration tier sets
-    # it alongside a real key to keep the approve flow exercised without coupling the
-    # tests to header plumbing; production never sets it, so the key is always enforced.
-    if os.environ.get("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "").lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
-        return None
     configured_key = os.environ.get("HELIX_COCKPIT_APPROVE_KEY")
     # An empty or whitespace-only key is not a secret: treat it exactly like an
     # unset one so a request carrying an empty X-Cockpit-Key header cannot pass.
     if configured_key is None or not configured_key.strip():
+        # Only a genuinely keyless deployment may be opened for local dev/tests.
+        # A configured key skips this branch and is always enforced below.
+        if os.environ.get("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }:
+            return None
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content={

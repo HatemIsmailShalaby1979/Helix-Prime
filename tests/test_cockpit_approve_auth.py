@@ -89,6 +89,39 @@ def test_approve_allows_dev_override_without_key(
     assert response.status_code == 404
 
 
+def test_override_cannot_bypass_a_configured_key(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """A configured key always wins: the local-dev override must NOT open the route,
+    so a wrong header is still refused with 401, never accepted."""
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", KEY)
+    monkeypatch.setenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "true")
+    response = _post_approve(client, key="not-the-right-key")
+    assert response.status_code == 401
+
+
+def test_override_opens_the_route_when_no_key_is_configured(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """With no key configured the override still permits an unauthenticated approve;
+    an unknown id then yields 404 rather than 401/503."""
+    monkeypatch.delenv("HELIX_COCKPIT_APPROVE_KEY", raising=False)
+    monkeypatch.setenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "true")
+    response = _post_approve(client, key=None)
+    assert response.status_code == 404
+
+
+def test_configured_key_with_correct_header_still_works(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient
+) -> None:
+    """The normal path is unaffected by the override nesting: a configured key plus a
+    matching header passes auth, so an unknown id yields 404."""
+    monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", KEY)
+    monkeypatch.delenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", raising=False)
+    response = _post_approve(client, key=KEY)
+    assert response.status_code == 404
+
+
 def test_approve_records_identity_as_asserted_not_verified(monkeypatch: pytest.MonkeyPatch) -> None:
     """End to end: a matching key approves a real intervention and the audit note
     states the manager id was asserted by the key holder, not verified."""

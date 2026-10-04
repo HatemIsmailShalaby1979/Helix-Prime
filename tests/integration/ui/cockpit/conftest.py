@@ -92,16 +92,14 @@ def check() -> Iterator[CheckLog]:
 
 
 @pytest.fixture(autouse=True)
-def _cockpit_tier_allows_unauthenticated_approve(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _cockpit_tier_uses_the_real_approve_key(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """The quarantined integration tier drives a real engine with a real approve key.
 
-    Both the engine subprocess and the in-process UI read the same key, so the UI can
-    send a valid ``X-Cockpit-Key`` header and the engine accepts it. The local-dev
-    override stays on as well, which is what ``HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true``
-    is for: it keeps the approve flow exercised after the route became fail-closed, and
-    the subprocess inherits the variable while the in-process clients read it per request.
+    The engine subprocess inherits this key and the in-process clients send it in the
+    ``X-Cockpit-Key`` header, so the approve flow is exercised against the same
+    fail-closed path production uses. The local-dev override is deliberately NOT set:
+    a configured key must always win, so the tests prove the key path on its own.
     """
-    monkeypatch.setenv("HELIX_COCKPIT_ALLOW_UNAUTHENTICATED", "true")
     monkeypatch.setenv("HELIX_COCKPIT_APPROVE_KEY", "cockpit-integration-test-key")
     yield
 

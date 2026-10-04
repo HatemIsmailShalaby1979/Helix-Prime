@@ -19,6 +19,7 @@ needs no live server and no port.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from collections.abc import Callable
 from typing import Any
@@ -161,6 +162,7 @@ def _exercise_stream(
                         "decision": "approve",
                         "manager_id": "MGR-07",
                     },
+                    headers={"X-Cockpit-Key": os.environ["HELIX_COCKPIT_APPROVE_KEY"]},
                 )
                 approved = True
                 check("approve returns 200", decision.status_code == 200, str(decision.status_code))

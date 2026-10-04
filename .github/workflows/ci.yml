@@ -99,6 +99,10 @@ jobs:
           docker compose -f infra/docker/docker-compose.yml build helix-api
 
       - name: Smoke test API container readiness
+        env:
+          # Same reason as the validate step: `docker compose up/down` interpolates
+          # the whole file, so the cockpit service's required key must be present.
+          HELIX_COCKPIT_APPROVE_KEY: ci-dummy-key-0123456789
         run: |
           set -euo pipefail
           trap 'docker compose -f infra/docker/docker-compose.yml down -v' EXIT

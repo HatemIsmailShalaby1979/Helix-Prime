@@ -28,6 +28,14 @@ class GovernanceControlUnavailable(RuntimeError):
     """Governance control unavailable — must fail-closed, not silently skip."""
 
 
+class AuditUnavailable(RuntimeError):
+    """The tamper-evident audit write failed and could not be recovered.
+
+    Raised by :meth:`Engine._audit` only when ``consequential=True`` so the
+    caller can fail the workflow closed instead of proceeding unrecorded.
+    """
+
+
 # C3 integrations (local-first, fail-closed)
 try:
     from observability.logging import log_structured
@@ -177,34 +185,21 @@ class Engine:
         input_ref: str | None = None,
         output_ref: str | None = None,
         approval_decision: str | None = None,
+        consequential: bool = False,
     ) -> None:
-        """Helper: append tamper-evident audit record (best-effort, no cloud)."""
+        """Helper: append tamper-evident audit record (best-effort, no cloud).
+
+        Audit failures must never be silent. When ``consequential`` is True (the
+        event commits a forward state change for the workflow), a write failure is
+        raised as :class:`AuditUnavailable` so the caller can fail the workflow
+        closed. The default stays best-effort so a trailing audit after a
+        dead-letter does not regress an already-resolved workflow.
+        """
         _metrics_registry.record_governance_decision(decision)
         try:
             trail = AuditTrail(db_path=self.audit_db_path)
-            prev_hash = self._chain_tip(trail)
-            rec = AuditRecord.new(
-                event_type=event_type,
-                actor=actor,
-                actor_type=actor_type,
-                decision=decision,
-                correlation_id=workflow.correlation.correlation_id,
-                tenant_id=workflow.tenant_id,
-                client_id=workflow.client_id,
-                role_id=workflow.owning_role_id,
-                workflow_id=workflow.workflow_id,
-                task_id=workflow.task_id,
-                input_ref=input_ref or workflow.workflow_id,
-                output_ref=output_ref,
-                approval_decision=approval_decision,
-                previous_hash=prev_hash,
-            )
             try:
-                trail.append(rec)
-            except ValueError:
-                # The cached tip is stale (another writer appended first). Re-read
-                # it once and retry, rather than losing the audit record.
-                prev_hash = trail.last_hash()
+                prev_hash = self._chain_tip(trail)
                 rec = AuditRecord.new(
                     event_type=event_type,
                     actor=actor,
@@ -221,11 +216,34 @@ class Engine:
                     approval_decision=approval_decision,
                     previous_hash=prev_hash,
                 )
-                trail.append(rec)
-            self._audit_prev_hash = rec.current_hash
-            trail.close()
+                try:
+                    trail.append(rec)
+                except ValueError:
+                    # The cached tip is stale (another writer appended first). Re-read
+                    # it once and retry, rather than losing the audit record.
+                    prev_hash = trail.last_hash()
+                    rec = AuditRecord.new(
+                        event_type=event_type,
+                        actor=actor,
+                        actor_type=actor_type,
+                        decision=decision,
+                        correlation_id=workflow.correlation.correlation_id,
+                        tenant_id=workflow.tenant_id,
+                        client_id=workflow.client_id,
+                        role_id=workflow.owning_role_id,
+                        workflow_id=workflow.workflow_id,
+                        task_id=workflow.task_id,
+                        input_ref=input_ref or workflow.workflow_id,
+                        output_ref=output_ref,
+                        approval_decision=approval_decision,
+                        previous_hash=prev_hash,
+                    )
+                    trail.append(rec)
+                self._audit_prev_hash = rec.current_hash
+            finally:
+                trail.close()
         except Exception:
-            # Audit failures must not silently disappear but should not crash workflow; log and continue
+            # Audit failure must surface, not disappear.
             try:
                 if log_structured:
                     log_structured(
@@ -239,6 +257,40 @@ class Engine:
                     )
             except Exception:
                 pass
+            if consequential:
+                raise AuditUnavailable(
+                    f"audit write failed for {event_type!r}; workflow failed closed"
+                ) from None
+
+    def _fail_closed_on_audit(self, workflow: Workflow, actor: str) -> Workflow:
+        """Move a workflow to DEAD_LETTER because its consequential audit write failed.
+
+        Invoked from the per-site audit guards. Must not itself perform an audit
+        write (that would recurse into the same failure), so it logs only.
+        """
+        workflow.error = AgentError(
+            error_id=f"err_{workflow.workflow_id}",
+            correlation_id=workflow.correlation.correlation_id,
+            code="dependency_unavailable",
+            message="audit write failed; workflow failed closed",
+            timestamp=_now_iso(),
+        )
+        # Direct assignment (not transition) so any starting state — proposed,
+        # validated, executing — resolves to dead_letter without a state-machine
+        # guard rejecting the jump. Matches the other dead_letter paths here.
+        workflow.state = WorkflowState.DEAD_LETTER
+        self.store.update_workflow(workflow)
+        self._emit_event(
+            workflow, "workflow_dead_letter", "system", {"reason": "audit_unavailable"}
+        )
+        self._log(
+            "audit_unavailable",
+            workflow,
+            actor,
+            result_status="denied",
+            error_code="audit_unavailable",
+        )
+        return workflow
 
     def _log(self, event_type: str, workflow: Workflow, actor: str, **kwargs) -> None:
         """Helper: structured JSON log with required identifiers, redacted payload."""
@@ -750,13 +802,17 @@ class Engine:
             request.requesting_actor,
             {"request_id": request.request_id},
         )
-        self._audit(
-            "workflow_created",
-            workflow,
-            request.requesting_actor,
-            decision="allowed",
-            input_ref=request.request_id,
-        )
+        try:
+            self._audit(
+                "workflow_created",
+                workflow,
+                request.requesting_actor,
+                decision="allowed",
+                input_ref=request.request_id,
+                consequential=True,
+            )
+        except AuditUnavailable:
+            return self._fail_closed_on_audit(workflow, request.requesting_actor)
         self._log(
             "workflow_created",
             workflow,
@@ -770,9 +826,16 @@ class Engine:
             workflow.transition(WorkflowState.VALIDATED, request.requesting_actor)
             self.store.update_workflow(workflow)
             self._emit_event(workflow, "workflow_validated", request.requesting_actor)
-            self._audit(
-                "workflow_validated", workflow, request.requesting_actor, decision="allowed"
-            )
+            try:
+                self._audit(
+                    "workflow_validated",
+                    workflow,
+                    request.requesting_actor,
+                    decision="allowed",
+                    consequential=True,
+                )
+            except AuditUnavailable:
+                return self._fail_closed_on_audit(workflow, request.requesting_actor)
             self._log(
                 "workflow_validated", workflow, request.requesting_actor, result_status="validated"
             )
@@ -965,7 +1028,16 @@ class Engine:
         workflow.transition(WorkflowState.EXECUTING, request.requesting_actor)
         self.store.update_workflow(workflow)
         self._emit_event(workflow, "workflow_executing", request.requesting_actor)
-        self._audit("workflow_executing", workflow, request.requesting_actor, decision="allowed")
+        try:
+            self._audit(
+                "workflow_executing",
+                workflow,
+                request.requesting_actor,
+                decision="allowed",
+                consequential=True,
+            )
+        except AuditUnavailable:
+            return self._fail_closed_on_audit(workflow, request.requesting_actor)
         self._log(
             "workflow_executing", workflow, request.requesting_actor, result_status="executing"
         )
@@ -1044,13 +1116,17 @@ class Engine:
                 {"approval_id": approval.approval_id},
             )
             self._emit_event(workflow, "workflow_approved", approval.approver_actor)
-            self._audit(
-                "approval_granted",
-                workflow,
-                approval.approver_actor,
-                decision="approved",
-                approval_decision="approved",
-            )
+            try:
+                self._audit(
+                    "approval_granted",
+                    workflow,
+                    approval.approver_actor,
+                    decision="approved",
+                    approval_decision="approved",
+                    consequential=True,
+                )
+            except AuditUnavailable:
+                return self._fail_closed_on_audit(workflow, approval.approver_actor)
             self._log(
                 "approval_granted",
                 workflow,
@@ -1062,7 +1138,16 @@ class Engine:
             workflow.transition(WorkflowState.EXECUTING, approval.approver_actor)
             self.store.update_workflow(workflow)
             self._emit_event(workflow, "workflow_executing", approval.approver_actor)
-            self._audit("workflow_executing", workflow, approval.approver_actor, decision="allowed")
+            try:
+                self._audit(
+                    "workflow_executing",
+                    workflow,
+                    approval.approver_actor,
+                    decision="allowed",
+                    consequential=True,
+                )
+            except AuditUnavailable:
+                return self._fail_closed_on_audit(workflow, approval.approver_actor)
             self._log(
                 "workflow_executing", workflow, approval.approver_actor, result_status="executing"
             )
@@ -1085,13 +1170,17 @@ class Engine:
                 approval.approver_actor,
                 {"reason": "approval denied"},
             )
-            self._audit(
-                "approval_denied",
-                workflow,
-                approval.approver_actor,
-                decision="denied",
-                approval_decision="denied",
-            )
+            try:
+                self._audit(
+                    "approval_denied",
+                    workflow,
+                    approval.approver_actor,
+                    decision="denied",
+                    approval_decision="denied",
+                    consequential=True,
+                )
+            except AuditUnavailable:
+                return self._fail_closed_on_audit(workflow, approval.approver_actor)
             self._log(
                 "approval_denied",
                 workflow,
@@ -1207,13 +1296,17 @@ class Engine:
                     workflow.owning_role_id,
                     {"output": result_payload},
                 )
-                self._audit(
-                    "handler_succeeded",
-                    workflow,
-                    workflow.owning_role_id,
-                    decision="succeeded",
-                    output_ref=str(result_payload)[:100],
-                )
+                try:
+                    self._audit(
+                        "handler_succeeded",
+                        workflow,
+                        workflow.owning_role_id,
+                        decision="succeeded",
+                        output_ref=str(result_payload)[:100],
+                        consequential=True,
+                    )
+                except AuditUnavailable:
+                    return self._fail_closed_on_audit(workflow, workflow.owning_role_id)
                 self._log(
                     "handler_succeeded",
                     workflow,
@@ -1225,9 +1318,16 @@ class Engine:
                 workflow.transition(WorkflowState.CLOSED, workflow.owning_role_id)
                 self.store.update_workflow(workflow)
                 self._emit_event(workflow, "workflow_closed", workflow.owning_role_id)
-                self._audit(
-                    "workflow_closed", workflow, workflow.owning_role_id, decision="succeeded"
-                )
+                try:
+                    self._audit(
+                        "workflow_closed",
+                        workflow,
+                        workflow.owning_role_id,
+                        decision="succeeded",
+                        consequential=True,
+                    )
+                except AuditUnavailable:
+                    return self._fail_closed_on_audit(workflow, workflow.owning_role_id)
                 self._log(
                     "workflow_closed", workflow, workflow.owning_role_id, result_status="succeeded"
                 )
@@ -1276,7 +1376,16 @@ class Engine:
         self._emit_event(
             workflow, "workflow_failed", workflow.owning_role_id, {"reason": str(last_error)}
         )
-        self._audit("workflow_failed", workflow, workflow.owning_role_id, decision="failed")
+        try:
+            self._audit(
+                "workflow_failed",
+                workflow,
+                workflow.owning_role_id,
+                decision="failed",
+                consequential=True,
+            )
+        except AuditUnavailable:
+            return self._fail_closed_on_audit(workflow, workflow.owning_role_id)
         self._log(
             "workflow_failed",
             workflow,

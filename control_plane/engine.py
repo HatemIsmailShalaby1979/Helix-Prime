@@ -99,8 +99,13 @@ def _actor_type_for(actor: str) -> str:
     return "human"
 
 
-def _actor_type_enum(actor: str) -> ActorType:
-    """Map an actor to a security.identity.ActorType (agent/service/human)."""
+def _actor_type_enum(actor: str) -> str:
+    """Map an actor to an ``ActorType`` constant (agent/service/human).
+
+    ``security.identity.ActorType`` is a namespace of ``str`` constants, not an
+    enum, and ``Identity.actor_type`` is typed ``str``; the return is therefore
+    annotated ``str``.
+    """
     kind = _actor_type_for(actor)
     if kind == "service":
         return ActorType.SERVICE

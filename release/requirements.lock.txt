@@ -248,7 +248,7 @@ python-dateutil==2.9.0.post0
     #   pandas
 python-discovery==1.6.0
     # via virtualenv
-python-dotenv==1.2.3
+python-dotenv==1.2.4
     # via -r requirements.txt
 python-multipart==0.0.32
     # via streamlit

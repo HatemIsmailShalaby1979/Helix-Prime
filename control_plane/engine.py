@@ -80,6 +80,35 @@ if any(s is None for s in _gov_symbols):
         f"required governance controls not loaded: {', '.join(_missing)}"
     )
 
+#: Canonical set of automation/agent actor names. Previously duplicated as a
+#: literal in three places (Engine._log, Engine._audit_halt, Engine.submit).
+#: "system" is a SERVICE actor; the remainder are AGENT actors.
+#: Deliberately NOT derived from governance.ACTOR_ALIASES, whose keys include
+#: maya/liza/andy/tomy/nono and omit "system"; using it directly would reclassify
+#: those actors and change the audit/log actor_type contract.
+_KNOWN_AGENT_ACTORS: frozenset[str] = frozenset({"sami", "suby", "phili", "wili", "system"})
+
+
+def _actor_type_for(actor: str) -> str:
+    """Return the audit/log actor_type for ``actor``: 'agent', 'service' or 'human'."""
+    lowered = (actor or "").lower()
+    if "agent" in lowered:
+        return "agent"
+    if lowered in _KNOWN_AGENT_ACTORS:
+        return "service" if lowered == "system" else "agent"
+    return "human"
+
+
+def _actor_type_enum(actor: str) -> ActorType:
+    """Map an actor to a security.identity.ActorType (agent/service/human)."""
+    kind = _actor_type_for(actor)
+    if kind == "service":
+        return ActorType.SERVICE
+    if kind == "agent":
+        return ActorType.AGENT
+    return ActorType.HUMAN
+
+
 Handler = Callable[[Workflow], Dict[str, Any]]
 
 
@@ -314,9 +343,7 @@ class Engine:
                 tenant_id=workflow.tenant_id,
                 client_id=workflow.client_id,
                 actor=actor,
-                actor_type="agent"
-                if "agent" in actor.lower() or actor in ("sami", "suby", "phili", "wili", "system")
-                else "human",
+                actor_type=_actor_type_for(actor),
                 role_id=workflow.owning_role_id,
                 capability=workflow.capability,
                 **kwargs,
@@ -363,10 +390,7 @@ class Engine:
         correlation_id: Optional[str],
         reason: str,
     ) -> None:
-        if "agent" in actor.lower() or actor in ("sami", "suby", "phili", "wili", "system"):
-            actor_type = "agent"
-        else:
-            actor_type = "human"
+        actor_type = _actor_type_for(actor)
         trail = AuditTrail(db_path=self.audit_db_path)
         try:
             prev_hash = self._chain_tip(trail)
@@ -506,10 +530,7 @@ class Engine:
             try:
                 # Infer actor_type: if actor is known agent name, it's agent, else human/service
                 actor_lower = request.requesting_actor.lower()
-                if actor_lower in ("sami", "suby", "phili", "wili", "system"):
-                    a_type = ActorType.AGENT if actor_lower != "system" else ActorType.SERVICE
-                else:
-                    a_type = ActorType.HUMAN
+                a_type = _actor_type_enum(actor_lower)
                 # Determine role for identity: try to map actor to role, else use owning_role
                 role_for_identity = request.owning_role_id
                 # If actor matches a role id, use it

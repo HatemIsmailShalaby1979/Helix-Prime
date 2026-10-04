@@ -1353,10 +1353,23 @@ def test_cost_exactly_at_limit_is_autonomous():
 
 
 def test_zero_limit_roles_freeze_any_spend():
-    for role in ("compliance_quality_gm", "fraud_revenue_gm"):
-        decision = evaluate_gate(role, estimated_financial_cost=0.01)
-        assert decision.requires_human_approval is True
-        assert decision.reason_code == "financial_limit_exceeded"
+    """A 0.0-limit role freezes on any spend; an oversight-only one dead-letters.
+
+    ``fraud_revenue_gm`` is an ordinary 0.0-limit role, so any spend freezes it for a
+    human. ``compliance_quality_gm`` is oversight-only, and the gate's
+    ``oversight_only`` hard deny is now checked *before* the financial boundary, so it
+    is isolated as ``dead_letter`` rather than frozen (see
+    ``tests/test_gate_oversight_priority.py``).
+    """
+    frozen = evaluate_gate("fraud_revenue_gm", estimated_financial_cost=0.01)
+    assert frozen.requires_human_approval is True
+    assert frozen.reason_code == "financial_limit_exceeded"
+    assert frozen.state == WorkflowState.AWAITING_APPROVAL
+
+    denied = evaluate_gate("compliance_quality_gm", estimated_financial_cost=0.01)
+    assert denied.state == WorkflowState.DEAD_LETTER
+    assert denied.reason_code == "oversight_only"
+    assert denied.requires_human_approval is False
 
 
 def test_sami_unlimited_still_autonomous_at_scale():

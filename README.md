@@ -2,6 +2,21 @@
 
 # Helix Prime
 
+
+<!-- badges:start -->
+
+[![CI](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/workflows/CI/badge.svg)](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions)
+![licence](https://img.shields.io/badge/licence-MIT-blue)
+[![last commit](https://img.shields.io/github/last-commit/HatemIsmailShalaby1979/Helix-Prime)](https://github.com/HatemIsmailShalaby1979/Helix-Prime/commits/main)
+![status](https://img.shields.io/badge/ci-success-brightgreen?label=success%20(2026-10-05))
+
+*Measured 2026-10-06 — CI **success**; head `497c8db` (2026-10-05); Python.*
+
+<!-- No static test or coverage count is shown here: a frozen
+     number decays silently. Run the suite for a current figure;
+     the CI badge above is the live status. -->
+<!-- badges:end -->
+
 **The governed operations core of Helix Codex.**
 
 ![Status](https://img.shields.io/badge/status-pre--pilot-blue)

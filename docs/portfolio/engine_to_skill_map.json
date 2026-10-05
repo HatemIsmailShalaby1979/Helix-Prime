@@ -1,0 +1,119 @@
+{
+  "generated": "2026-10-05",
+  "repo": "F:\\Personnel\\Helix-Prime",
+  "head_sha": "6133a50",
+  "head_date": "2026-10-05",
+  "engines": [
+    {
+      "engine": "b2b",
+      "name": "B2B Onboarding",
+      "source_modules": [
+        "b2b/src/automator.py"
+      ],
+      "impl_modules": [
+        "engines/b2b/adapter.py",
+        "engines/b2b/notion_adapter/notion_adapter.py",
+        "engines/b2b/src/automator.py",
+        "engines/b2b/src/main.py"
+      ],
+      "impl_loc": 1879,
+      "test_modules": 0,
+      "test_references": 1,
+      "market_skill": "Workflow design, programme management",
+      "note": "A multi-step onboarding process with state transitions and hand-offs."
+    },
+    {
+      "engine": "crm",
+      "name": "CRM Engine",
+      "source_modules": [
+        "crm/src/sales_pipeline.py"
+      ],
+      "impl_modules": [
+        "engines/crm/adapter.py",
+        "engines/crm/src/customer_support.py",
+        "engines/crm/src/sales_pipeline.py"
+      ],
+      "impl_loc": 1487,
+      "test_modules": 0,
+      "test_references": 1,
+      "market_skill": "Data modelling, audit trails",
+      "note": "A system of record where every write is attributable and replayable."
+    },
+    {
+      "engine": "cx",
+      "name": "CX Churn Sentinel",
+      "source_modules": [
+        "cx/src/risk_scorer.py"
+      ],
+      "impl_modules": [
+        "engines/cx/adapter.py",
+        "engines/cx/src/alert_dispatcher.py",
+        "engines/cx/src/dashboard_feed.py",
+        "engines/cx/src/kpi_aggregator.py",
+        "engines/cx/src/risk_scorer.py",
+        "engines/cx/src/sql_extractor.py"
+      ],
+      "impl_loc": 2117,
+      "test_modules": 2,
+      "test_references": 4,
+      "market_skill": "Applied analytics, feature engineering",
+      "note": "Turning behavioural signal into a churn risk score and an alert."
+    },
+    {
+      "engine": "personnel",
+      "name": "Personnel Engine",
+      "source_modules": [
+        "personnel/src/main.py"
+      ],
+      "impl_modules": [
+        "engines/personnel/adapter.py",
+        "engines/personnel/src/main.py",
+        "engines/personnel/src/pipeline_manager.py",
+        "engines/personnel/src/talent_acquisition.py",
+        "engines/personnel/src/workforce_planning.py"
+      ],
+      "impl_loc": 2693,
+      "test_modules": 0,
+      "test_references": 1,
+      "market_skill": "Access control, identity concepts",
+      "note": "Role, authority and personnel-sensitive data classification."
+    },
+    {
+      "engine": "rta",
+      "name": "RTA Command Center",
+      "source_modules": [
+        "rta/src/calculations.py"
+      ],
+      "impl_modules": [
+        "engines/rta/adapter.py",
+        "engines/rta/src/app.py",
+        "engines/rta/src/calculations.py",
+        "engines/rta/src/visualizations.py"
+      ],
+      "impl_loc": 1668,
+      "test_modules": 0,
+      "test_references": 3,
+      "market_skill": "Observability, incident response",
+      "note": "Real-time adherence monitoring and intervention against a target."
+    },
+    {
+      "engine": "wfm",
+      "name": "WFM Forecasting / Erlang C",
+      "source_modules": [
+        "wfm/src/erlang_c.py"
+      ],
+      "impl_modules": [
+        "engines/wfm/adapter.py",
+        "engines/wfm/src/app_wfm.py",
+        "engines/wfm/src/data_pipeline.py",
+        "engines/wfm/src/erlang_c.py",
+        "engines/wfm/src/variance_engine.py"
+      ],
+      "impl_loc": 2612,
+      "test_modules": 1,
+      "test_references": 7,
+      "market_skill": "Demand planning, capacity modelling",
+      "note": "Forecasting volume into staffing under uncertainty, via Erlang C."
+    }
+  ]
+}

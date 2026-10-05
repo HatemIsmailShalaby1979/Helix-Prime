@@ -133,7 +133,7 @@ with it.
 
 ## Production status & test coverage
 
-This section keeps 100% of the transparency from earlier revisions. It is last by design, not because the numbers are small.
+Checked 2026-10-05: the project remains pre-pilot and production is `NOT_READY`. GitHub returned no workflow run or status checks for `main` at `a2446b2`, so the CI and test figures below are dated measurements, not a fresh verification of the current branch.
 
 | Check | Result | Measured |
 |---|---|---|
@@ -271,6 +271,10 @@ helix-cockpit                            # binds 127.0.0.1:8501
 ```
 
 Ollama is optional; without it the system runs in deterministic offline mode and reports the limitation clearly.
+
+### When Ollama is unavailable
+
+Agent consultations return an `Offline` status and explain that model responses are unavailable. The local WFM, RTA, CX, and CRM calculations, approval flow, and audit trail still run; they do not call Ollama. Agent-generated answers need Ollama, and an offline response never attempts an external write.
 
 The Ops Cockpit ingest engine (`ingest_engine.py`) is a separate process that binds
 `0.0.0.0:8000` by default. Its `POST /api/v1/cockpit/approve` authority action fails

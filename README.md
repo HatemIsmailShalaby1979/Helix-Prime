@@ -177,10 +177,10 @@ shown at all.
 | Fail-closed gate: unknown role / unknown classification / forbidden classification / non-owned engine → `dead_letter` | enforced; 4 hard-deny branches | `control_plane/governance.py:972-1022`; `tests/test_governance_fail_closed.py` |
 | Gate boundaries → `awaiting_approval`: financial limit exceeded, confidence < `0.75`, explicit approval | 3 boundary branches | `control_plane/governance.py:1027-1065`; `MIN_AUTONOMY_CONFIDENCE` at `:64` |
 | Every governance decision is written to the hash-chained `audit_events` ledger before it runs | emit at submit | `control_plane/engine.py:839-840` |
-| Full test suite passes | **1,951 tests, 0 failures, 19 deselected** (CI run [`36917043028`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36917043028) on `a710804`, 2026-10-01) | `pytest tests/ -q -m "not smoke"`; `AGENTS.md` §24 |
-| Coverage floor (80%) met | **86.91%** (CI run [`36917043028`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36917043028), 2026-10-01) | `.github/workflows/ci.yml` test step |
-| `ruff check` clean on the 17 CI paths | **0 errors** (exit 0) | local run, 2026-09-30 |
-| `ruff format --check .` clean repo-wide | **433 files formatted** (exit 0) | local run, 2026-09-30 |
+| Full test suite passes | **1,967 passed, 0 failures, 19 deselected** (CI run [`37371376357`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/37371376357) on `fa150cb`, 2026-10-05) | `pytest tests/ -q -m "not smoke"`; `AGENTS.md` §24 |
+| Coverage floor (80%) met | **86.91%** (CI run [`37371376357`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/37371376357), 2026-10-05) | `.github/workflows/ci.yml` test step |
+| `ruff check` clean on the 17 CI paths | **0 errors** (exit 0) | local run, 2026-10-05 |
+| `ruff format --check .` clean repo-wide | **438 files formatted** (exit 0) | local run, 2026-10-05 |
 | WFM demo returns an Erlang C answer through the gate, recorded in the audit trail | four-number input → answer; demonstrated end to end on a real server 2026-09-30 (`POST /app/api/ops/demo/wfm` → 201, `GET /app/ops/audit/{correlation_id}` → 200) | `helix_codex_app/integration/engine_bridge.py:529-587`; `helix_codex_app/modules/ops/router.py:207`; `docs/verification/2026-09-30.md` |
 | `data_mode: "simulated_realistic"` and `is_sample: true` are server-owned; a request cannot set them | injected at bridge; extra keys refused `400` | `engine_bridge.py:586-587`, `:538-539`; `router.py:223-227` |
 | Least-privilege demo identity: one permission (`ops.view`), not in the engine catalog | design enforced | "The governed public demo" section above; `helix_codex_app/security/permissions.py` |

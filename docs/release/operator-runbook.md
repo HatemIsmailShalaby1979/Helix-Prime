@@ -82,6 +82,14 @@ API tokens are tenant-scoped: set `HELIX_API_TOKEN_TENANT_ID` (and optionally
 `docs/release/api-token-scope.md` for the binding contract, the fail-closed
 matrix, and the explicit global-operator opt-in.
 
+The Ops Cockpit approve endpoint (`POST /api/v1/cockpit/approve`) is an
+authority action that fails closed: it requires an `X-Cockpit-Key` header
+matching the `HELIX_COCKPIT_APPROVE_KEY` environment variable. The endpoint
+returns `503` when that variable is unset (unless `HELIX_COCKPIT_ALLOW_UNAUTHENTICATED=true`
+is set — local development and tests only, never in production). The
+`manager_id` sent with a decision is recorded as asserted by the key holder,
+not independently verified.
+
 ## 7. Operational limits
 
 - DBs: `control_plane/workflow.db`, `security/audit.db` (local SQLite).

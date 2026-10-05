@@ -10,7 +10,7 @@
 [![last commit](https://img.shields.io/github/last-commit/HatemIsmailShalaby1979/Helix-Prime)](https://github.com/HatemIsmailShalaby1979/Helix-Prime/commits/main)
 ![status](https://img.shields.io/badge/ci-in_progress-lightgrey?label=in_progress%20(2026-10-05))
 
-*Measured 2026-10-06 — CI **in_progress**; head `f8bb72c` (2026-10-05); Python.*
+*Measured 2026-10-06 — CI **in_progress**; head `51e7cf0` (2026-10-05); Python.*
 
 <!-- No static test or coverage count is shown here: a frozen
      number decays silently. Run the suite for a current figure;

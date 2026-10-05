@@ -5674,3 +5674,6 @@ and the `0.0.0.0:8000` default bind.
   the modified route — the only caller (`ui_integration` tier) is deselected by that
   marker — so the change cannot regress it. Final baseline count recorded when the run
   completes.
+
+### 25.5 Final Merge (2026-10-05) — COMPLETE
+Merged fix/cockpit-approve-auth into main. Verified with tests/test_cockpit_approve_auth.py (6/6 passed).

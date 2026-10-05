@@ -81,6 +81,17 @@ code. Both are dated and neither is a claim about this repository's state.
 16. [Market research, strategic sprint plan & career/financial roadmap](16_market_research_strategy_roadmap.md) — prepared 2026-08-29; superseded in part by 17
 17. [Revised strategy plan — superseded](17_revised_strategy_plan.md) — the personal career assumptions in 16 are no longer current
 
+**Supplement (added 2026-10-05, unnumbered).** Not part of the 1–17 sequence above;
+numbering is referenced elsewhere in the repository and is not renumbered for an
+append.
+
+- [Engine-to-skill map](ENGINE_TO_SKILL_MAP.md) — what each of the six engines is,
+  beside the market skill it evidences. Engine names, invoked source modules,
+  implementation size and test-module counts are measured from the tree at the
+  commit named in the document; the market-skill column is editorial and labelled
+  as such. Claims no pass rate, coverage, or CI status. Regenerate with
+  `career_automation/engine_to_skill_map.py`.
+
 ## Status
 - **Pilot package ready:** TRUE
 - **First real capability pack ready:** TRUE

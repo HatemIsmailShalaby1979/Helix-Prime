@@ -133,16 +133,16 @@ with it.
 
 ## Production status & test coverage
 
-Checked 2026-10-05: the project remains pre-pilot and production is `NOT_READY`. GitHub returned no workflow run or status checks for `main` at `a2446b2`, so the CI and test figures below are dated measurements, not a fresh verification of the current branch.
+Checked 2026-10-05: the project remains pre-pilot and production is `NOT_READY`. GitHub Actions passed all 17 CI steps on [`c0b85a6`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/commit/c0b85a60a651034ed5ac765b31cd82d225c08b3e) in [run `37340320781`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/37340320781).
 
 | Check | Result | Measured |
 |---|---|---|
-| CI, end to end | **All 17 steps pass** — run [`36917043028`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36917043028) on `a710804` | 2026-10-01 |
-| Full test suite | **1,951 tests, 0 failures, 19 deselected** (CI run [`36917043028`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36917043028), 2026-10-01) | 2026-10-01 |
-| Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** (CI run [`36917043028`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/36917043028), 2026-10-01) | 2026-10-01 |
-| CI lint (`ruff check`, the 17 paths CI names) | **0 errors** (exit 0) | 2026-09-29 |
-| CI format (`ruff format --check .`, repo-wide) | **Clean** — 431 files already formatted | 2026-09-30 |
-| Governance checker (`GOVERNANCE/governance_check.py`) | **PASS** (exit 0) | 2026-09-29 |
+| CI, end to end | **All 17 steps pass** — run [`37340320781`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/37340320781) on `c0b85a6` | 2026-10-05 |
+| Full test suite | **1,967 passed, 0 failures, 19 deselected** (CI run [`37340320781`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/37340320781)) | 2026-10-05 |
+| Coverage (`--cov=server --cov=connectors`, 80% floor) | **86.91%** (CI run [`37340320781`](https://github.com/HatemIsmailShalaby1979/Helix-Prime/actions/runs/37340320781)) | 2026-10-05 |
+| CI lint (`ruff check`, the 17 paths CI names) | **0 errors** (exit 0) | 2026-10-05 |
+| CI format (`ruff format --check .`, repo-wide) | **Clean** — 438 files already formatted | 2026-10-05 |
+| Governance checker (`GOVERNANCE/governance_check.py`) | **PASS** (exit 0) | 2026-10-05 |
 | Release gate `production` | `NOT_READY` (exit 1) | 2026-09-24 |
 
 - `CONTROLLED_PILOT_READY` is an internal self-approval (`approver: "operator-pilot-consent"`), not a third-party sign-off.

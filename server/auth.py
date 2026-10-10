@@ -74,19 +74,34 @@ async def current_identity(
 
     token = parts[1]
     expected = os.environ.get(TOKEN_VAR, "")
-    if not expected:
+    # Unset, empty, or whitespace-only is not a token: refuse before any comparison
+    # so a blank configured value can never authenticate a request.
+    if not expected.strip():
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Token not configured in environment",
+            detail=(
+                "Token not configured in environment: set HELIX_API_TOKEN to a non-empty value"
+            ),
         )
 
-    if not hmac.compare_digest(token, expected):
+    # Compare as UTF-8 bytes: hmac.compare_digest rejects non-ASCII str operands, so
+    # a non-ASCII bearer token would otherwise raise TypeError and surface as a 500.
+    if not hmac.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
         )
 
-    role_id = os.environ.get(ROLE_VAR, "sami")
+    # No default role: an unset or blank HELIX_API_TOKEN_ROLE must fail closed rather
+    # than silently authenticate as a privileged seat.
+    role_id = (os.environ.get(ROLE_VAR) or "").strip()
+    if not role_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Token role not configured: set HELIX_API_TOKEN_ROLE to a role id from the catalog"
+            ),
+        )
     actor = role_id.split(":")[0] if ":" in role_id else role_id
 
     tenant_id = (os.environ.get(TENANT_VAR) or "").strip() or None

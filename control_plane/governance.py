@@ -1034,6 +1034,26 @@ def evaluate_gate(
 
     limit = spec.financial_approval_limit_usd
 
+    # Oversight boundary: a seat that only proposes and reviews must never be handed
+    # a task that executes. Checked *before* the financial, confidence and
+    # explicit-approval boundaries so a hard deny cannot be softened into
+    # awaiting_approval — no human approval could make an oversight-only seat legally
+    # execute. Checked regardless of target_engine, including the no-engine case the
+    # ownership check above deliberately lets through (``target_engine is None``).
+    if spec.oversight_only:
+        return GovernanceDecision(
+            allowed=False,
+            requires_human_approval=False,
+            reason_code="oversight_only",
+            reason=(
+                f"role {spec.role_id!r} is oversight-only — it proposes and reviews, "
+                "it never executes a task"
+            ),
+            state=WorkflowState.DEAD_LETTER,
+            estimated_cost_usd=cost,
+            limit_usd=limit,
+        )
+
     # Financial boundary: cross the limit -> freeze for human validation.
     if limit is not None and cost > limit:
         return GovernanceDecision(
@@ -1071,27 +1091,6 @@ def evaluate_gate(
             reason_code="approval_requested",
             reason="task was submitted with requires_approval=True",
             state=WorkflowState.AWAITING_APPROVAL,
-            estimated_cost_usd=cost,
-            limit_usd=limit,
-        )
-
-    # Oversight boundary: a seat that only proposes and reviews must never be
-    # handed a task that executes. Checked last so the financial, confidence and
-    # explicit-approval boundaries keep their precedence, and checked
-    # *regardless of target_engine* — including the no-engine case that the
-    # ownership check above deliberately lets through (``target_engine is None``).
-    # Fail closed as a hard deny: the task is isolated, not frozen, because no
-    # human approval could make an oversight-only seat legally execute.
-    if spec.oversight_only:
-        return GovernanceDecision(
-            allowed=False,
-            requires_human_approval=False,
-            reason_code="oversight_only",
-            reason=(
-                f"role {spec.role_id!r} is oversight-only — it proposes and reviews, "
-                "it never executes a task"
-            ),
-            state=WorkflowState.DEAD_LETTER,
             estimated_cost_usd=cost,
             limit_usd=limit,
         )
